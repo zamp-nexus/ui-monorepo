@@ -1,0 +1,40 @@
+/**
+ * Query key exports
+ * @module query-keys
+ */
+
+// Types
+export type {
+  QueryKeyBase,
+  EntityQueryKey,
+  AnalyticsQueryKey,
+  QueryScope,
+  EntityQueryKeyFactory,
+  QueryHash,
+  QueryKeyMeta,
+  EntityTableName,
+  ConvexFunctionPath,
+  QueryFunctionRef,
+} from './types';
+
+export { TABLE_NAMES } from './types';
+
+// Factory functions
+export {
+  createQueryKeys,
+  createAnalyticsQueryKey,
+  extractQueryKeyMeta,
+  hashQueryKey,
+  matchesQueryKey,
+} from './factory';
+
+// Pre-defined key factories
+export {
+  userKeys,
+  eventKeys,
+  sessionKeys,
+  tenantKeys,
+  projectKeys,
+  dashboardKeys,
+  reportKeys,
+} from './factory';

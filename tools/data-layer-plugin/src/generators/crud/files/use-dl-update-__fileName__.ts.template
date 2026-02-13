@@ -1,0 +1,57 @@
+/**
+ * useDLMutatePatch<%= className %> Hook
+ *
+ * Updates an existing <%= name %>.
+ */
+
+import { useDLMutatePatch } from '@open-insights-web/foundation-data-layer';
+import type { <%= className %>, Update<%= className %>Input } from '<%= dataModel %>';
+import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+
+/**
+ * Update an existing <%= name %>
+ *
+ * Automatically invalidates list queries on success.
+ *
+ * @example
+ * ```tsx
+ * function Update<%= className %>Form({ <%= propertyName %> }: { <%= propertyName %>: <%= className %> }) {
+ *   const mutation = useDLMutatePatch<%= className %>();
+ *
+ *   const handleSubmit = (data: Update<%= className %>Input) => {
+ *     mutation.mutate(data, {
+ *       onSuccess: (updated<%= className %>) => {
+ *         console.log('Updated:', updated<%= className %>);
+ *       },
+ *     });
+ *   };
+ *
+ *   return (
+ *     <form onSubmit={handleSubmit}>
+ *       {mutation.isPending && <Spinner />}
+ *       ...
+ *     </form>
+ *   );
+ * }
+ * ```
+ *
+ * @example With optimistic update
+ * ```tsx
+ * import { useDLMutatePatch } from '@open-insights-web/foundation-data-layer';
+ *
+ * const mutation = useDLMutatePatch<<%= className %>, Update<%= className %>Input>({
+ *   endpoint: (input) => `<%= endpoint %>/${input.<%= idField %>}`,
+ *   invalidates: [<%= propertyName %>Keys.lists()],
+ *   optimisticUpdate: {
+ *     queryKey: <%= propertyName %>Keys.detail(id),
+ *     updater: (old, input) => ({ ...old, ...input }),
+ *   },
+ * });
+ * ```
+ */
+export function useDLMutatePatch<%= className %>() {
+  return useDLMutatePatch<<%= className %>, Update<%= className %>Input>({
+    endpoint: (input) => `<%= endpoint %>/${input.<%= idField %>}`,
+    invalidates: [<%= propertyName %>Keys.lists()],
+  });
+}

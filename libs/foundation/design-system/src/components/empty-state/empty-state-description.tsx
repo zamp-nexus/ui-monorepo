@@ -1,0 +1,34 @@
+/**
+ * EmptyState.Description sub-component
+ * @module components/empty-state
+ */
+import React from 'react';
+
+import { useTheme } from '../../theme';
+import type { EmptyStateDescriptionProps } from './empty-state';
+import { emptyStateDefaultTheme } from './empty-state';
+
+/**
+ * EmptyState.Description component
+ *
+ * Description text for the empty state
+ */
+export const EmptyStateDescription: React.FC<EmptyStateDescriptionProps> = ({
+  children,
+  className,
+  oiid,
+}) => {
+  const theme = useTheme('emptyState', emptyStateDefaultTheme);
+
+  return (
+    <p
+      className={theme.description?.({ className, size: 'md' }) ?? className}
+      data-oiid={oiid}
+      data-slot="description"
+    >
+      {children}
+    </p>
+  );
+};
+
+EmptyStateDescription.displayName = 'EmptyState.Description';

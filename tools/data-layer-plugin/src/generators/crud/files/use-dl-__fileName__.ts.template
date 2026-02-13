@@ -1,0 +1,44 @@
+/**
+ * useDLGet<%= className %>Query Hook
+ *
+ * Fetches a single <%= name %> by ID.
+ */
+
+import { useDLGetQuery, type UseDLQueryOptions } from '@open-insights-web/foundation-data-layer';
+import type { <%= className %> } from '<%= dataModel %>';
+import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+
+/**
+ * Options for useDLGet<%= className %>Query
+ */
+export type UseDLGet<%= className %>QueryOptions = Omit<
+  UseDLQueryOptions<<%= className %>>,
+  'queryKey' | 'endpoint'
+>;
+
+/**
+ * Fetch a single <%= name %> by ID
+ *
+ * @example
+ * ```tsx
+ * function <%= className %>Detail({ id }: { id: string }) {
+ *   const { data, isLoading, error } = useDLGet<%= className %>Query(id);
+ *
+ *   if (isLoading) return <Spinner />;
+ *   if (error) return <Error error={error} />;
+ *
+ *   return <div>{data.name}</div>;
+ * }
+ * ```
+ */
+export function useDLGet<%= className %>Query(
+  id: string,
+  options?: UseDLGet<%= className %>QueryOptions
+) {
+  return useDLGetQuery<<%= className %>>({
+    queryKey: <%= propertyName %>Keys.detail(id),
+    endpoint: `<%= endpoint %>/${id}`,
+    enabled: !!id,
+    ...options,
+  });
+}

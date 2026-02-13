@@ -1,0 +1,45 @@
+/**
+ * useDLMutatePost<%= className %> Hook
+ *
+ * Creates a new <%= name %>.
+ */
+
+import { useDLMutatePost } from '@open-insights-web/foundation-data-layer';
+import type { <%= className %>, Create<%= className %>Input } from '<%= dataModel %>';
+import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+
+/**
+ * Create a new <%= name %>
+ *
+ * @example
+ * ```tsx
+ * function Create<%= className %>Form() {
+ *   const mutation = useDLMutatePost<%= className %>();
+ *
+ *   const handleSubmit = (data: Create<%= className %>Input) => {
+ *     mutation.mutate(data, {
+ *       onSuccess: (created<%= className %>) => {
+ *         console.log('Created:', created<%= className %>);
+ *       },
+ *       onError: (error) => {
+ *         console.error('Failed:', error);
+ *       },
+ *     });
+ *   };
+ *
+ *   return (
+ *     <form onSubmit={handleSubmit}>
+ *       {mutation.isPending && <Spinner />}
+ *       {mutation.isError && <Error error={mutation.error} />}
+ *       ...
+ *     </form>
+ *   );
+ * }
+ * ```
+ */
+export function useDLMutatePost<%= className %>() {
+  return useDLMutatePost<<%= className %>, Create<%= className %>Input>({
+    endpoint: '<%= endpoint %>',
+    invalidates: [<%= propertyName %>Keys.lists()],
+  });
+}

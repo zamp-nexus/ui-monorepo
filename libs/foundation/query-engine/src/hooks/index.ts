@@ -1,0 +1,63 @@
+/**
+ * Query Engine Hooks
+ *
+ * Two user-facing hooks for all data operations:
+ * - useDLQueryEngine: Unified query hook (reads)
+ * - useDLMutateQueryEngine: Unified mutation hook (writes)
+ *
+ * These hooks delegate ALL execution to Data Layer hooks:
+ * - useDLAnalytics for DuckDB queries
+ * - useDLGetList for Convex queries
+ * - useDLCreate, useDLUpdate, useDLDelete for mutations
+ *
+ * Query Engine handles routing, SQL compilation, and conversion only.
+ *
+ * @module hooks
+ */
+
+// =============================================================================
+// MAIN HOOKS
+// =============================================================================
+
+export { useDLQueryEngine } from './use-dl-query-engine';
+
+export { useDLMutateQueryEngine } from './use-dl-mutate-query-engine';
+
+export {
+  useBackgroundFileSync,
+  type UseBackgroundFileSyncOptions,
+  type UseBackgroundFileSyncResult,
+  type BackgroundSyncState,
+} from '@open-insights-web/foundation-data-layer';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export {
+  // Options
+  type UseDLQueryEngineOptions,
+  type UseDLMutateQueryEngineOptions,
+
+  // Results (discriminated unions)
+  type UseDLQueryEngineResult,
+  type UseDLMutateQueryEngineResult,
+
+  // Supporting types
+  type DownloadProgress,
+  type MutationOperation,
+  type ExecutionPath,
+  type DataSource,
+
+  // Constants (const object patterns)
+  EXECUTION_PATHS,
+  DATA_SOURCES,
+  MUTATION_OPERATIONS,
+  INITIAL_DOWNLOAD_STATE,
+
+  // Type guards
+  isAnalyticsResult,
+  isTransactionalResult,
+  isPendingResult,
+  isMutationOperation,
+} from './types';

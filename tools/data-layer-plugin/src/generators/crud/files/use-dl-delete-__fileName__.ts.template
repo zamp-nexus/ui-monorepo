@@ -1,0 +1,43 @@
+/**
+ * useDLMutateDelete<%= className %> Hook
+ *
+ * Deletes a <%= name %> by ID.
+ */
+
+import { useDLMutateDelete } from '@open-insights-web/foundation-data-layer';
+import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+
+/**
+ * Delete a <%= name %> by ID
+ *
+ * Automatically invalidates list queries on success.
+ *
+ * @example
+ * ```tsx
+ * function Delete<%= className %>Button({ id }: { id: string }) {
+ *   const mutation = useDLMutateDelete<%= className %>();
+ *
+ *   const handleDelete = () => {
+ *     if (confirm('Are you sure?')) {
+ *       mutation.mutate(id, {
+ *         onSuccess: () => {
+ *           console.log('Deleted');
+ *         },
+ *       });
+ *     }
+ *   };
+ *
+ *   return (
+ *     <button onClick={handleDelete} disabled={mutation.isPending}>
+ *       {mutation.isPending ? 'Deleting...' : 'Delete'}
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useDLMutateDelete<%= className %>() {
+  return useDLMutateDelete<void, string>({
+    endpoint: (id) => `<%= endpoint %>/${id}`,
+    invalidates: [<%= propertyName %>Keys.lists()],
+  });
+}

@@ -1,0 +1,113 @@
+/**
+ * useDLGet<%= className %>ListQuery Hook
+ *
+ * Fetches a list of <%= propertyName %>s with optional filtering.
+ */
+<% if (pagination) { %>
+import { useDLGetInfiniteQuery, type PaginatedResponse } from '@open-insights-web/foundation-data-layer';
+<% } else { %>
+import { useDLGetQuery, type UseDLQueryOptions } from '@open-insights-web/foundation-data-layer';
+<% } %>
+import type { <%= className %>, <%= className %>Filters } from '<%= dataModel %>';
+import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+<% if (pagination) { %>
+/**
+ * Fetch a paginated list of <%= propertyName %>s
+ *
+ * @example
+ * ```tsx
+ * function <%= className %>List() {
+ *   const {
+ *     data,
+ *     fetchNextPage,
+ *     hasNextPage,
+ *     isFetchingNextPage,
+ *   } = useDLGet<%= className %>ListQuery({ status: 'active' });
+ *
+ *   // Flatten all pages
+ *   const all<%= className %>s = data?.pages.flatMap(page => page.data) ?? [];
+ *
+ *   return (
+ *     <div>
+ *       {all<%= className %>s.map(<%= propertyName %> => (
+ *         <div key={<%= propertyName %>.<%= idField %>}>{<%= propertyName %>.name}</div>
+ *       ))}
+ *       {hasNextPage && (
+ *         <button onClick={() => fetchNextPage()}>
+ *           {isFetchingNextPage ? 'Loading...' : 'Load More'}
+ *         </button>
+ *       )}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useDLGet<%= className %>ListQuery(filters?: <%= className %>Filters) {
+  return useDLGetInfiniteQuery<<%= className %>>({
+    queryKey: <%= propertyName %>Keys.list(filters),
+    endpoint: (cursor) => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.set(key, String(value));
+          }
+        });
+      }
+      if (cursor) {
+        params.set('cursor', String(cursor));
+      }
+      const queryString = params.toString();
+      return `<%= endpoint %>${queryString ? `?${queryString}` : ''}`;
+    },
+  });
+}
+<% } else { %>
+/**
+ * Options for useDLGet<%= className %>ListQuery
+ */
+export type UseDLGet<%= className %>ListQueryOptions = Omit<
+  UseDLQueryOptions<<%= className %>[]>,
+  'queryKey' | 'endpoint'
+>;
+
+/**
+ * Fetch a list of <%= propertyName %>s
+ *
+ * @example
+ * ```tsx
+ * function <%= className %>List() {
+ *   const { data, isLoading, error } = useDLGet<%= className %>ListQuery({ status: 'active' });
+ *
+ *   if (isLoading) return <Spinner />;
+ *   if (error) return <Error error={error} />;
+ *
+ *   return (
+ *     <ul>
+ *       {data?.map(<%= propertyName %> => (
+ *         <li key={<%= propertyName %>.<%= idField %>}>{<%= propertyName %>.name}</li>
+ *       ))}
+ *     </ul>
+ *   );
+ * }
+ * ```
+ */
+export function useDLGet<%= className %>ListQuery(
+  filters?: <%= className %>Filters,
+  options?: UseDLGet<%= className %>ListQueryOptions
+) {
+  const params = filters
+    ? new URLSearchParams(
+        Object.entries(filters)
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      ).toString()
+    : '';
+
+  return useDLGetQuery<<%= className %>[]>({
+    queryKey: <%= propertyName %>Keys.list(filters),
+    endpoint: `<%= endpoint %>${params ? `?${params}` : ''}`,
+    ...options,
+  });
+}
+<% } %>

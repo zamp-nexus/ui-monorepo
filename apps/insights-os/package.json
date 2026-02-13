@@ -1,0 +1,28 @@
+{
+  "name": "@open-insights-web/insights-os",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "insights-os",
+    "tags": [
+      "scope:app"
+    ],
+    "targets": {
+      "build": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      },
+      "serve": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      },
+      "dev": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      }
+    }
+  }
+}

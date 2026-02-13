@@ -1,0 +1,392 @@
+/**
+ * Table Types
+ *
+ * Table source, load state, and configuration types.
+ *
+ * NOTE: For ConflictStrategy type, import directly from
+ * @open-insights-web/foundation-data-model
+ *
+ * @module types/table
+ */
+
+import type { FunctionReference } from 'convex/server';
+// ConflictStrategy is both a const object (value) and a type in data-model.
+// We need the value import for the type guard `isConflictStrategy`.
+import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+
+// =============================================================================
+// TABLE SOURCE
+// =============================================================================
+
+/**
+ * Source of table data.
+ *
+ * - `convex`: Data from Convex backend (real-time via WebSocket)
+ * - `local`: Local file uploaded by user (only in DuckDB)
+ */
+export const TABLE_SOURCES = {
+  CONVEX: 'convex',
+  LOCAL: 'local',
+} as const;
+
+export type TableSource = (typeof TABLE_SOURCES)[keyof typeof TABLE_SOURCES];
+
+// =============================================================================
+// TABLE LOAD STATE
+// =============================================================================
+
+/**
+ * Load state for a table in the query engine.
+ *
+ * - `not_loaded`: Table registered but data not yet loaded
+ * - `loading`: Currently downloading/processing data
+ * - `loaded`: Data ready for querying
+ * - `error`: Failed to load data
+ * - `stale`: Data loaded but may be outdated
+ */
+export const TABLE_LOAD_STATES = {
+  NOT_LOADED: 'not_loaded',
+  LOADING: 'loading',
+  LOADED: 'loaded',
+  ERROR: 'error',
+  STALE: 'stale',
+} as const;
+
+export type TableLoadState = (typeof TABLE_LOAD_STATES)[keyof typeof TABLE_LOAD_STATES];
+
+// =============================================================================
+// FILE TYPES
+// =============================================================================
+
+/**
+ * Supported local file types.
+ */
+export const TABLE_FILE_TYPES = {
+  PARQUET: 'parquet',
+  CSV: 'csv',
+  JSON: 'json',
+} as const;
+
+/**
+ * Local file type derived from TABLE_FILE_TYPES.
+ */
+export type TableFileType = (typeof TABLE_FILE_TYPES)[keyof typeof TABLE_FILE_TYPES];
+
+// =============================================================================
+// ANALYTICS FRESHNESS LEVELS
+// =============================================================================
+
+/**
+ * Analytics freshness levels.
+ */
+export const ANALYTICS_FRESHNESS_LEVELS = {
+  REALTIME: 'realtime',
+  NEAR_REALTIME: 'near-realtime',
+  EVENTUAL: 'eventual',
+} as const;
+
+/**
+ * Analytics freshness type derived from ANALYTICS_FRESHNESS_LEVELS.
+ */
+export type AnalyticsFreshness =
+  (typeof ANALYTICS_FRESHNESS_LEVELS)[keyof typeof ANALYTICS_FRESHNESS_LEVELS];
+
+// =============================================================================
+// CONVEX FUNCTION REFERENCES
+// =============================================================================
+
+/**
+ * Convex API function references for a table.
+ * Used for real-time queries and mutations.
+ */
+export interface TableConvexFunctions {
+  /** List/query function */
+  readonly list?: FunctionReference<'query'>;
+  /** Get single item function */
+  readonly get?: FunctionReference<'query'>;
+  /** Create function */
+  readonly create?: FunctionReference<'mutation'>;
+  /** Update function */
+  readonly update?: FunctionReference<'mutation'>;
+  /** Delete function */
+  readonly delete?: FunctionReference<'mutation'>;
+}
+
+// =============================================================================
+// PARQUET FILE INFO
+// =============================================================================
+
+/**
+ * Information about a Parquet file for a table.
+ */
+export interface ParquetFileInfo {
+  /** Download URL (signed, temporary) */
+  readonly url: string;
+  /** Filename for local storage */
+  readonly filename: string;
+  /** File size in bytes */
+  readonly size: number;
+  /** Path in OPFS after download */
+  readonly opfsPath?: string;
+  /** Whether file has been downloaded */
+  readonly downloaded?: boolean;
+  /** Row count in this file (if known) */
+  readonly rowCount?: number;
+  /** File hash for change detection */
+  readonly hash?: string;
+}
+
+// =============================================================================
+// TABLE CONFIGURATION
+// =============================================================================
+
+/**
+ * Complete configuration for a table in the query engine.
+ *
+ * This combines:
+ * - Source information (Convex, local file)
+ * - Load state tracking
+ * - Parquet file metadata (for DuckDB path)
+ * - Schema information
+ * - Cache/sync settings
+ */
+export interface TableConfig {
+  /**
+   * Table name (unique identifier).
+   */
+  readonly name: string;
+
+  /**
+   * Source of data: 'convex' or 'local'.
+   */
+  readonly source: TableSource;
+
+  /**
+   * Convex API function references.
+   * Required for Convex-sourced tables that need API access.
+   */
+  readonly convex?: TableConvexFunctions;
+
+  /**
+   * Current load state.
+   */
+  readonly loadState: TableLoadState;
+
+  /**
+   * Error from last load attempt (if any).
+   */
+  readonly loadError?: Error;
+
+  /**
+   * Table schema (column name → SQL type).
+   */
+  readonly schema?: Readonly<Record<string, string>>;
+
+  /**
+   * Total row count (if known).
+   */
+  readonly rowCount?: number;
+
+  /**
+   * Parquet files for this table.
+   */
+  readonly files?: ReadonlyArray<ParquetFileInfo>;
+
+  /**
+   * Base OPFS path for table files.
+   */
+  readonly opfsPath?: string;
+
+  /**
+   * File type for local files.
+   */
+  readonly fileType?: TableFileType;
+
+  /**
+   * Whether this is a user-uploaded file.
+   */
+  readonly isUserUploaded?: boolean;
+
+  /**
+   * When data was loaded into DuckDB (client timestamp).
+   */
+  readonly loadedAt?: number;
+
+  /**
+   * When backend last ingested/updated this table's data.
+   * This is the KEY FIELD for stale-while-revalidate.
+   * If lastIngestedAt > loadedAt, newer data is available.
+   */
+  readonly lastIngestedAt?: number;
+
+  /**
+   * When this table config was registered.
+   */
+  readonly registeredAt: number;
+
+  /**
+   * Stale time override for this table (ms).
+   * If not set, uses provider's defaultStaleTime.
+   */
+  readonly staleTime?: number;
+
+  /**
+   * Whether to auto-refresh when newer data is detected.
+   */
+  readonly autoRefresh?: boolean;
+
+  /**
+   * Conflict resolution strategy for offline mutations.
+   */
+  readonly conflictStrategy?: ConflictStrategy;
+
+  /**
+   * Analytics (DuckDB) configuration.
+   */
+  readonly analytics?: {
+    /** Whether analytics is enabled for this table */
+    readonly enabled?: boolean;
+    /** Data freshness requirement */
+    readonly freshness?: AnalyticsFreshness;
+    /** Analytics-specific stale time */
+    readonly staleTime?: number;
+  };
+}
+
+// =============================================================================
+// TABLE REGISTRATION OPTIONS
+// =============================================================================
+
+/**
+ * Options for registering a new table.
+ */
+export interface RegisterTableOptions {
+  /** Table name (unique identifier) */
+  readonly name: string;
+  /** Source: 'convex' or 'local' */
+  readonly source: TableSource;
+  /** Convex API function references */
+  readonly convex?: TableConvexFunctions;
+  /** File type for local files */
+  readonly fileType?: TableFileType;
+  /** Whether this is a user-uploaded file */
+  readonly isUserUploaded?: boolean;
+  /** Stale time override (ms) */
+  readonly staleTime?: number;
+  /** Auto-refresh on update */
+  readonly autoRefresh?: boolean;
+  /** Conflict resolution strategy */
+  readonly conflictStrategy?: ConflictStrategy;
+}
+
+// =============================================================================
+// TYPE GUARDS
+// =============================================================================
+
+/**
+ * Check if value is a valid table source.
+ */
+export const isTableSource = (value: unknown): value is TableSource => {
+  return (
+    typeof value === 'string' &&
+    Object.values(TABLE_SOURCES).includes(value as TableSource)
+  );
+};
+
+/**
+ * Check if value is a valid table load state.
+ */
+export const isTableLoadState = (value: unknown): value is TableLoadState => {
+  return (
+    typeof value === 'string' &&
+    Object.values(TABLE_LOAD_STATES).includes(value as TableLoadState)
+  );
+};
+
+/**
+ * Check if value is a valid conflict strategy.
+ * Uses the canonical ConflictStrategy const from foundation-data-model.
+ */
+export const isConflictStrategy = (value: unknown): value is ConflictStrategy => {
+  return (
+    typeof value === 'string' &&
+    (Object.values(ConflictStrategy) as readonly string[]).includes(value)
+  );
+};
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+/**
+ * Check if a table is loaded and ready for querying.
+ */
+export const isTableReady = (table: TableConfig): boolean => {
+  return table.loadState === 'loaded' || table.loadState === 'stale';
+};
+
+/**
+ * Check if a table needs to be loaded.
+ */
+export const tableNeedsLoading = (table: TableConfig): boolean => {
+  return table.loadState === 'not_loaded';
+};
+
+/**
+ * Check if table is currently loading.
+ */
+export const isTableLoading = (table: TableConfig): boolean => {
+  return table.loadState === 'loading';
+};
+
+/**
+ * Check if table has load error.
+ */
+export const hasTableError = (table: TableConfig): boolean => {
+  return table.loadState === 'error';
+};
+
+/**
+ * Check if table data is stale (may need refresh).
+ */
+export const isTableStale = (table: TableConfig, defaultStaleTime: number): boolean => {
+  if (table.loadState === 'stale') {
+    return true;
+  }
+
+  if (!table.loadedAt) {
+    return true;
+  }
+
+  const staleTime = table.staleTime ?? defaultStaleTime;
+  const age = Date.now() - table.loadedAt;
+  return age > staleTime;
+};
+
+/**
+ * Check if newer data is available on the server.
+ * Compares lastIngestedAt (server) with loadedAt (client).
+ */
+export const hasNewerServerData = (table: TableConfig): boolean => {
+  if (!table.lastIngestedAt || !table.loadedAt) {
+    return false;
+  }
+  return table.lastIngestedAt > table.loadedAt;
+};
+
+/**
+ * Check if table can use API path (has list API defined).
+ */
+export const tableHasListApi = (table: TableConfig): boolean => {
+  return !!table.convex?.list;
+};
+
+/**
+ * Check if table can use API for mutations.
+ */
+export const tableHasMutationApi = (
+  table: TableConfig,
+  operation: 'create' | 'update' | 'delete'
+): boolean => {
+  return !!table.convex?.[operation];
+};

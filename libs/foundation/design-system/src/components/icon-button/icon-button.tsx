@@ -1,0 +1,79 @@
+/**
+ * IconButton component
+ * @module components/icon-button
+ */
+import React from 'react';
+
+import { useTheme } from '../../theme';
+import { Spinner } from '../spinner';
+import type { IconButtonComponent, IconButtonProps } from './icon-button';
+import { iconButtonDefaultTheme } from './icon-button';
+
+/**
+ * IconButton component
+ *
+ * A button designed for icon-only actions. Requires aria-label for accessibility.
+ *
+ * @example
+ * <IconButton aria-label="Close menu">
+ *   <CloseIcon />
+ * </IconButton>
+ *
+ * @example
+ * <IconButton aria-label="Search" size="lg" intent="primary">
+ *   <SearchIcon />
+ * </IconButton>
+ */
+export const IconButton = React.forwardRef(function IconButton<
+  T extends React.ElementType = 'button',
+>(
+  {
+    component,
+    className,
+    children,
+    oiid,
+    intent = 'secondary',
+    size = 'md',
+    disabled,
+    loading,
+    'aria-label': ariaLabel,
+    ...rest
+  }: IconButtonProps<T>,
+  ref: React.ForwardedRef<Element>,
+) {
+  const theme = useTheme('iconButton', iconButtonDefaultTheme);
+  const Element = component ?? 'button';
+
+  const isDisabled = disabled || loading;
+  const spinnerSize = size === 'lg' ? 'md' : size === 'md' ? 'sm' : 'xs';
+
+  return (
+    <Element
+      ref={ref}
+      className={theme.root({
+        className,
+        intent,
+        size,
+        disabled: isDisabled,
+        loading,
+      })}
+      data-oiid={oiid}
+      aria-disabled={isDisabled || undefined}
+      aria-busy={loading || undefined}
+      aria-label={ariaLabel}
+      disabled={Element === 'button' ? isDisabled : undefined}
+      type={Element === 'button' ? 'button' : undefined}
+      {...rest}
+    >
+      {loading ? (
+        <Spinner size={spinnerSize} aria-label="Loading" />
+      ) : (
+        <span className={theme.icon?.({ size }) ?? ''} aria-hidden="true">
+          {children}
+        </span>
+      )}
+    </Element>
+  );
+}) as IconButtonComponent;
+
+IconButton.displayName = 'IconButton';

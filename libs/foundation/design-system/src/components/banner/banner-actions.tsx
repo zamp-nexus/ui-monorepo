@@ -1,0 +1,34 @@
+/**
+ * Banner.Actions sub-component
+ * @module components/banner
+ */
+import React from 'react';
+
+import { useTheme } from '../../theme';
+import type { BannerActionsProps } from './banner';
+import { bannerDefaultTheme } from './banner';
+
+/**
+ * Banner.Actions component
+ *
+ * Container for action buttons in the banner
+ */
+export const BannerActions: React.FC<BannerActionsProps> = ({
+  children,
+  className,
+  oiid,
+}) => {
+  const theme = useTheme('banner', bannerDefaultTheme);
+
+  return (
+    <div
+      className={theme.actions?.({ className }) ?? className}
+      data-oiid={oiid}
+      data-slot="actions"
+    >
+      {children}
+    </div>
+  );
+};
+
+BannerActions.displayName = 'Banner.Actions';
