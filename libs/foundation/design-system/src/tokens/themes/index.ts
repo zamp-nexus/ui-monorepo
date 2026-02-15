@@ -4,6 +4,9 @@
  * @module tokens/themes
  */
 
+import { darkTheme } from './dark';
+import { lightTheme } from './light';
+
 // Theme contract
 export {
   createTheme,

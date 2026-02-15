@@ -3,9 +3,10 @@
  * @module native/electron-bridge
  */
 
-import { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo } from '../types/bridge';
+import type { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo } from '../types/bridge';
+import type {
+  Logger} from '@open-insights-web/foundation-utils';
 import {
-  Logger,
   createDebugLogger,
   normalizeError,
 } from '@open-insights-web/foundation-utils';
@@ -17,6 +18,7 @@ import {
   QueryCancelledError,
   QueryExecutionError,
 } from '../errors/query-errors';
+import { validateIdentifier, validateViewSql } from '../utils/sql';
 import { QueryId } from '@open-insights-web/foundation-data-model';
 
 /**
@@ -49,6 +51,24 @@ const getElectronAPI = (): ElectronDuckDBAPI | null => {
       .electronDuckDB;
   }
   return null;
+};
+
+/**
+ * Infer a DuckDB-compatible column type from a JavaScript runtime value.
+ *
+ * This provides best-effort type detection when the native bridge does not
+ * expose explicit column metadata.
+ */
+const inferColumnType = (value: unknown): string => {
+  if (value === null || value === undefined) return 'unknown';
+  if (typeof value === 'string') return 'VARCHAR';
+  if (typeof value === 'number') return Number.isInteger(value) ? 'INTEGER' : 'DOUBLE';
+  if (typeof value === 'boolean') return 'BOOLEAN';
+  if (typeof value === 'bigint') return 'BIGINT';
+  if (value instanceof Date) return 'TIMESTAMP';
+  if (Array.isArray(value)) return 'LIST';
+  if (typeof value === 'object') return 'STRUCT';
+  return 'unknown';
 };
 
 /**
@@ -146,7 +166,9 @@ export class ElectronDuckDBBridge implements DuckDBBridge {
       return {
         rows,
         columns,
-        types: columns.map(() => 'unknown'), // Type info would come from native
+        types: columns.map((col) =>
+          firstRow ? inferColumnType(firstRow[col]) : 'unknown',
+        ),
         executionTimeMs,
       };
     } catch (error) {
@@ -200,9 +222,14 @@ export class ElectronDuckDBBridge implements DuckDBBridge {
 
   async createView(view: ViewDefinition): Promise<void> {
     const api = this.getApi();
-    this.logger.debug('Create view', { name: view.name });
 
-    await api.createView(view.name, view.sql);
+    // Validate view name and SQL (matches WASM bridge validation)
+    const safeName = validateIdentifier(view.name);
+    validateViewSql(view.sql);
+
+    this.logger.debug('Create view', { name: safeName });
+
+    await api.createView(safeName, view.sql);
   }
 
   async dropView(name: string): Promise<void> {

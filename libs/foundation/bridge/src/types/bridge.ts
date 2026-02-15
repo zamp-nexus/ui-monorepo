@@ -6,7 +6,7 @@
  * @module types/bridge
  */
 
-import { Milliseconds, Timestamp } from '@open-insights-web/foundation-data-model';
+import type { Milliseconds, SqlIdentifier, Timestamp } from '@open-insights-web/foundation-data-model';
 import type { BridgeType } from '../constants';
 
 // =============================================================================
@@ -60,11 +60,11 @@ export interface QueryResult<T extends Record<string, unknown> = Record<string, 
  */
 export interface ViewDefinition {
   /** View name (must be valid SQL identifier) */
-  readonly name: string;
+  readonly name: SqlIdentifier;
   /** SQL SELECT statement */
   readonly sql: string;
   /** Tables this view depends on */
-  readonly dependencies: readonly string[];
+  readonly dependencies: readonly SqlIdentifier[];
   /** Creation timestamp */
   readonly createdAt: Timestamp;
 }

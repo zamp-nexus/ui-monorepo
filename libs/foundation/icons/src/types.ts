@@ -1,5 +1,5 @@
 import type { IconSizeType } from './constants';
-import type { IconName } from './icons/registry';
+import type { IconName } from './registry/registry';
 
 /**
  * Props for the Icon component
@@ -69,7 +69,7 @@ export interface RegisterIconOptions {
   /**
    * Name of the icon (must be unique)
    */
-  name: string;
+  name: IconName;
   /**
    * React component for the icon (should be a Lucide icon or compatible component)
    */

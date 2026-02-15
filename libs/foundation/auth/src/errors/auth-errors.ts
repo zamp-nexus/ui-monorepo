@@ -8,8 +8,8 @@
  */
 
 import {
+  FOUNDATION_ERROR_CODE,
   FoundationError,
-  FoundationErrorCode,
   type ErrorContext,
 } from '@open-insights-web/foundation-data-model';
 import { AUTH_ERROR_CODE, type AuthErrorCode } from '../core/constants';
@@ -33,7 +33,7 @@ export abstract class AuthError extends FoundationError {
    * All auth errors use the INTERNAL_ERROR code from FoundationErrorCode
    * but have their own authCode for more specific identification
    */
-  readonly code = FoundationErrorCode.INTERNAL_ERROR;
+  readonly code = FOUNDATION_ERROR_CODE.INTERNAL_ERROR;
 
   constructor(message: string, context: ErrorContext = {}, cause?: Error) {
     super(message, { ...context, domain: 'auth' }, cause);

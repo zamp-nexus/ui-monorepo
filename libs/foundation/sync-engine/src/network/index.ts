@@ -4,16 +4,18 @@
  */
 
 import axios from 'axios';
-import type { NetworkStatus, NetworkStatusListener } from '@open-insights-web/foundation-data-model';
+import {
+  SYNC_STATE_KEY,
+  type NetworkStatus,
+  type NetworkStatusListener,
+} from '@open-insights-web/foundation-data-model';
 import type { InsightsDatabase } from '@open-insights-web/foundation-database';
 import {
   getDatabase,
   DEFAULT_NETWORK_STATUS,
-  SYNC_STATE_KEYS,
 } from '@open-insights-web/foundation-database';
 import {
   AsyncDisposable,
-  CompositeDisposable,
   createDebugLogger,
   createSingletonFactory,
   ManagedInterval,
@@ -27,18 +29,16 @@ import {
 } from '../core/defaults';
 
 /**
- * Network status event constants
+ * Network status event values.
  */
 export const NETWORK_STATUS_EVENT = {
   ONLINE: 'online',
   OFFLINE: 'offline',
-  CONNECTIVITY_CHECK: 'connectivity-check',
+  CONNECTIVITY_CHECK: 'connectivity_check',
 } as const;
 
-/**
- * Network status event type
- */
-export type NetworkStatusEvent = (typeof NETWORK_STATUS_EVENT)[keyof typeof NETWORK_STATUS_EVENT];
+export type NetworkStatusEvent =
+  (typeof NETWORK_STATUS_EVENT)[keyof typeof NETWORK_STATUS_EVENT];
 
 /**
  * Network monitor configuration
@@ -89,8 +89,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
   private healthCheckInterval: ManagedInterval | null = null;
   private abortController: AbortController | null = null;
   private started = false;
-  private disposables = new CompositeDisposable();
-  private registeredDisposableKeys = new Set<string>();
+  private windowListenersAttached = false;
   private logger;
 
   constructor(config: NetworkMonitorConfig = {}) {
@@ -135,7 +134,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
 
     // Load persisted status with type validation
     try {
-      const entry = await this.db.syncState.get(SYNC_STATE_KEYS.NETWORK_STATUS);
+      const entry = await this.db.syncState.get(SYNC_STATE_KEY.NETWORK_STATUS);
       if (entry?.value) {
         if (isValidNetworkStatusValue(entry.value)) {
           this.currentStatus = entry.value;
@@ -147,27 +146,13 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
       this.handleError(error, 'Load persisted status');
     }
 
-    // Set up browser event listeners (idempotent registration)
+    // Set up browser event listeners
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', this.handleOnline);
-      window.addEventListener('offline', this.handleOffline);
+      this.attachWindowListeners();
 
-      // Add cleanup for window listeners only once
-      const windowListenersKey = 'windowListeners';
-      if (!this.registeredDisposableKeys.has(windowListenersKey)) {
-        this.registeredDisposableKeys.add(windowListenersKey);
-        this.disposables.addFunction(() => {
-          window.removeEventListener('online', this.handleOnline);
-          window.removeEventListener('offline', this.handleOffline);
-        });
-      }
-
-      // Get initial connection type if available
-      if ('connection' in navigator) {
-        const conn = (navigator as Navigator & { connection?: { type?: string } }).connection;
-        if (conn?.type) {
-          this.currentStatus.connectionType = conn.type;
-        }
+      const connectionType = this.getNavigatorConnectionType();
+      if (connectionType) {
+        this.currentStatus.connectionType = connectionType;
       }
     }
 
@@ -192,6 +177,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
     this.stopHealthChecks();
     this.abortController?.abort();
     this.abortController = null;
+    this.detachWindowListeners();
 
     // Clear listeners
     this.listeners.clear();
@@ -292,13 +278,54 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
   }
 
   /**
+   * Get connection type from navigator.connection when available.
+   */
+  private getNavigatorConnectionType = (): string | undefined => {
+    if (typeof navigator === 'undefined') {
+      return undefined;
+    }
+
+    const connectionValue = Reflect.get(navigator, 'connection');
+    if (typeof connectionValue !== 'object' || connectionValue === null) {
+      return undefined;
+    }
+
+    const typeValue = Reflect.get(connectionValue, 'type');
+    return typeof typeValue === 'string' ? typeValue : undefined;
+  };
+
+  /**
+   * Attach browser connectivity listeners once.
+   */
+  private attachWindowListeners = (): void => {
+    if (this.windowListenersAttached || typeof window === 'undefined') {
+      return;
+    }
+
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
+    this.windowListenersAttached = true;
+  };
+
+  /**
+   * Detach browser connectivity listeners.
+   */
+  private detachWindowListeners = (): void => {
+    if (!this.windowListenersAttached || typeof window === 'undefined') {
+      return;
+    }
+
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
+    this.windowListenersAttached = false;
+  };
+
+  /**
    * Async dispose implementation
    */
   protected async onDisposeAsync(): Promise<void> {
     this.stop();
-    this.disposables.dispose();
     this.listeners.clear();
-    this.registeredDisposableKeys.clear();
     this.logger.debug('Disposed');
   }
 
@@ -371,15 +398,6 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
       debug: this.config.debug,
       autoStart: true,
     });
-
-    // Add cleanup only once (idempotent registration)
-    const healthCheckKey = 'healthCheck';
-    if (!this.registeredDisposableKeys.has(healthCheckKey)) {
-      this.registeredDisposableKeys.add(healthCheckKey);
-      this.disposables.addFunction(() => {
-        this.stopHealthChecks();
-      });
-    }
   }
 
   /**
@@ -405,7 +423,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
 
     this.db.syncState
       .put({
-        key: SYNC_STATE_KEYS.NETWORK_STATUS,
+        key: SYNC_STATE_KEY.NETWORK_STATUS,
         value: persistedStatus,
         updatedAt: Date.now(),
       })

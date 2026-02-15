@@ -3,7 +3,13 @@
  * @module conflicts/resolver
  */
 
-import { ConflictStrategy, type ConflictContext, type ConflictResult, type MergeConfig } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+  type ConflictContext,
+  type ConflictResult,
+  type MergeConfig,
+} from '@open-insights-web/foundation-data-model';
 import { Disposable, createDebugLogger, createSingletonFactory } from '@open-insights-web/foundation-utils';
 import isEqual from 'react-fast-compare';
 import { strategyResolvers, DEFAULT_MERGE_CONFIG } from './strategies';
@@ -31,7 +37,7 @@ export interface ConflictResolverConfig {
  * Default conflict resolver configuration
  */
 const DEFAULT_RESOLVER_CONFIG: Required<Omit<ConflictResolverConfig, 'onConflictReview' | 'tableStrategies' | 'tableMergeConfigs'>> = {
-  defaultStrategy: ConflictStrategy.LAST_WRITE_WINS,
+  defaultStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
   mergeConfig: DEFAULT_MERGE_CONFIG,
   debug: false,
 };

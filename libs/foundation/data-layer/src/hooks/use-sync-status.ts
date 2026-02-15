@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { SyncEventType, type SyncEvent } from '@open-insights-web/foundation-data-model';
+import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-insights-web/foundation-data-model';
 import { useCallbackRef } from '@open-insights-web/foundation-hooks';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';
@@ -95,26 +95,26 @@ export const useSyncStatus = (): SyncStatus => {
     if (!mounted) return;
     
     switch (event.type) {
-      case SyncEventType.ONLINE:
+      case SYNC_EVENT_TYPE.ONLINE:
         setStatus((prev) => ({ ...prev, isOnline: true }));
         break;
-      case SyncEventType.OFFLINE:
+      case SYNC_EVENT_TYPE.OFFLINE:
         setStatus((prev) => ({ ...prev, isOnline: false }));
         break;
-      case SyncEventType.SYNC_START:
+      case SYNC_EVENT_TYPE.SYNC_START:
         setStatus((prev) => ({ ...prev, isSyncing: true }));
         break;
-      case SyncEventType.SYNC_COMPLETE:
+      case SYNC_EVENT_TYPE.SYNC_COMPLETE:
         setStatus((prev) => ({
           ...prev,
           isSyncing: false,
           lastSyncedAt: event.timestamp,
         }));
         break;
-      case SyncEventType.SYNC_ERROR:
+      case SYNC_EVENT_TYPE.SYNC_ERROR:
         setStatus((prev) => ({ ...prev, isSyncing: false }));
         break;
-      case SyncEventType.LEADER_CHANGED:
+      case SYNC_EVENT_TYPE.LEADER_CHANGED:
         if (isLeaderChangedEventData(event.data)) {
           // Capture value before closure to preserve type narrowing
           const newIsLeader = event.data.isLeader;

@@ -13,7 +13,7 @@ import type {
   TableSyncMetadataEntry,
 } from '../tables/table-sync-metadata';
 import { tableSyncMetadataEntrySchema } from '../validation/schemas';
-import { createValidationError } from '../errors';
+import { assertValid } from '../validation/assert-valid';
 
 /**
  * Table Sync Metadata Service
@@ -35,12 +35,7 @@ export class TableSyncMetadataService
    * Validates before write
    */
   set = async (entry: TableSyncMetadataEntry): Promise<void> => {
-    // Validate entry
-    const validation = tableSyncMetadataEntrySchema.safeParse(entry);
-    if (!validation.success) {
-      throw createValidationError('TableSyncMetadataEntry', validation.error.message);
-    }
-
+    assertValid(tableSyncMetadataEntrySchema, entry, 'TableSyncMetadataEntry');
     await this.db.tableSyncMetadata.put(entry);
     this.log('Table sync metadata set:', entry.name);
   };
@@ -99,16 +94,5 @@ export class TableSyncMetadataService
    */
   count = async (): Promise<number> => {
     return this.db.tableSyncMetadata.count();
-  };
-
-  /**
-   * Update metadata for a table (partial update)
-   */
-  update = async (
-    tableName: string,
-    changes: Partial<Omit<TableSyncMetadataEntry, 'name'>>
-  ): Promise<void> => {
-    await this.db.tableSyncMetadata.update(tableName, changes);
-    this.log('Table sync metadata updated:', tableName);
   };
 }

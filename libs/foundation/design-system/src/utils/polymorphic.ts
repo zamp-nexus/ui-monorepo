@@ -45,9 +45,9 @@ export function createPolymorphicComponent<
     ref: React.ForwardedRef<Element>,
   ) => React.ReactNode,
 ) {
-  const Component = React.forwardRef(render) as unknown as (<
-    T extends React.ElementType = TDefaultElement,
-  >(
+  const Component = React.forwardRef(
+    render as unknown as React.ForwardRefRenderFunction<Element, Record<string, unknown>>,
+  ) as unknown as (<T extends React.ElementType = TDefaultElement>(
     props: TProps & { component?: T } & Omit<React.ComponentPropsWithRef<T>, keyof TProps>,
   ) => React.ReactNode) & { displayName?: string };
 
@@ -69,4 +69,3 @@ export type ExtractPolymorphicProps<
  */
 export type ExtractPolymorphicRef<TComponent extends React.ElementType> =
   React.ComponentPropsWithRef<TComponent>['ref'];
-

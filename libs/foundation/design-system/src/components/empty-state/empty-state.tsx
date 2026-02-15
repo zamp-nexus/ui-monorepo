@@ -68,7 +68,7 @@ const EmptyStateRoot = React.forwardRef(function EmptyState<T extends React.Elem
       {children}
     </Element>
   );
-}) as EmptyStateComponent;
+}) as unknown as EmptyStateComponent;
 
 // Attach sub-components
 EmptyStateRoot.displayName = 'EmptyState';

@@ -104,21 +104,9 @@ export type RelationshipCardinality =
   (typeof RELATIONSHIP_CARDINALITIES)[keyof typeof RELATIONSHIP_CARDINALITIES];
 
 /**
- * Join types for JoinDefinition.
+ * JoinDefinition type derived from JOIN_TYPES.
  */
-export const JOIN_DEFINITION_TYPES = {
-  INNER: 'inner',
-  LEFT: 'left',
-  RIGHT: 'right',
-  FULL: 'full',
-  CROSS: 'cross',
-} as const;
-
-/**
- * JoinDefinition type derived from JOIN_DEFINITION_TYPES.
- */
-export type JoinDefinitionType =
-  (typeof JOIN_DEFINITION_TYPES)[keyof typeof JOIN_DEFINITION_TYPES];
+export type JoinDefinitionType = JoinType;
 
 /**
  * Relationship values for JoinDefinition.
@@ -134,6 +122,20 @@ export const JOIN_RELATIONSHIP_CARDINALITIES = {
  */
 export type JoinRelationshipCardinality =
   (typeof JOIN_RELATIONSHIP_CARDINALITIES)[keyof typeof JOIN_RELATIONSHIP_CARDINALITIES];
+
+/**
+ * Mapping from schema relationship cardinalities (underscore format: `one_to_one`)
+ * to join relationship cardinalities (hyphen format: `one-to-one`).
+ *
+ * Use this when converting between the two cardinality representations.
+ */
+export const CARDINALITY_TO_JOIN_CARDINALITY: Readonly<Record<
+  RelationshipCardinality, JoinRelationshipCardinality
+>> = {
+  [RELATIONSHIP_CARDINALITIES.ONE_TO_ONE]: JOIN_RELATIONSHIP_CARDINALITIES.ONE_TO_ONE,
+  [RELATIONSHIP_CARDINALITIES.ONE_TO_MANY]: JOIN_RELATIONSHIP_CARDINALITIES.ONE_TO_MANY,
+  [RELATIONSHIP_CARDINALITIES.MANY_TO_ONE]: JOIN_RELATIONSHIP_CARDINALITIES.MANY_TO_ONE,
+} as const;
 
 // =============================================================================
 // SCHEMA STRUCTURES

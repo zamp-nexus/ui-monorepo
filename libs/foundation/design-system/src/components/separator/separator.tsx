@@ -40,7 +40,8 @@ export const Separator = React.forwardRef(function Separator<T extends React.Ele
   const Element = component ?? 'div';
 
   // Determine ARIA attributes based on whether separator is decorative
-  const ariaOrientation = orientation === 'vertical' ? 'vertical' : undefined;
+  const ariaOrientation: 'vertical' | undefined =
+    orientation === 'vertical' ? 'vertical' : undefined;
   const semanticProps = decorative
     ? { role: 'none' as const }
     : { role: 'separator' as const, 'aria-orientation': ariaOrientation };

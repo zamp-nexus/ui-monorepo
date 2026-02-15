@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectBrowser, type BrowserInfo } from './detect-browser';
+import { detectBrowser } from './detect-browser';
 
 describe('detectBrowser', () => {
   it('should return browser info object with all required properties', () => {

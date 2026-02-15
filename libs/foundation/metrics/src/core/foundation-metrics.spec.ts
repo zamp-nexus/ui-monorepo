@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { FoundationMetrics, isInitialized } from './foundation-metrics';
+import { FoundationMetrics, isInitialized, resetMetricsStateForTesting, getLifecycleState } from './foundation-metrics';
 import type { FoundationMetricsConfig } from '../types';
 
 // Mock OpenTelemetry modules
@@ -140,10 +140,11 @@ describe('FoundationMetrics', () => {
   });
 
   afterEach(async () => {
-    // Cleanup
+    // Cleanup: shutdown if running, then reset module state for next test
     if (isInitialized()) {
       await FoundationMetrics.getInstance().shutdown();
     }
+    resetMetricsStateForTesting();
   });
 
   describe('init', () => {
@@ -184,7 +185,8 @@ describe('FoundationMetrics', () => {
       if (isInitialized()) {
         await FoundationMetrics.getInstance().shutdown();
       }
-      
+      resetMetricsStateForTesting();
+
       expect(() => FoundationMetrics.getInstance()).toThrow('not initialized');
     });
 
@@ -310,9 +312,38 @@ describe('FoundationMetrics', () => {
     it('should shutdown without error', async () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       await expect(sdk.shutdown()).resolves.not.toThrow();
       expect(isInitialized()).toBe(false);
+      expect(getLifecycleState()).toBe('shutdown');
+    });
+  });
+
+  describe('lifecycle state', () => {
+    it('should start in uninitialized state', () => {
+      expect(getLifecycleState()).toBe('uninitialized');
+    });
+
+    it('should transition to ready after init', () => {
+      FoundationMetrics.init(createValidConfig());
+      expect(getLifecycleState()).toBe('ready');
+    });
+
+    it('should throw on init() after shutdown', async () => {
+      const sdk = FoundationMetrics.init(createValidConfig());
+      await sdk.shutdown();
+
+      expect(() => FoundationMetrics.init(createValidConfig())).toThrow('shut down');
+    });
+
+    it('should allow reinitialize() after shutdown', async () => {
+      const sdk = FoundationMetrics.init(createValidConfig());
+      await sdk.shutdown();
+      expect(getLifecycleState()).toBe('shutdown');
+
+      const newSdk = FoundationMetrics.reinitialize(createValidConfig());
+      expect(newSdk).toBeInstanceOf(FoundationMetrics);
+      expect(getLifecycleState()).toBe('ready');
     });
   });
 });

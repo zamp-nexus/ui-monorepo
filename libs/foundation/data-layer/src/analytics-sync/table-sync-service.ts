@@ -9,11 +9,12 @@
 
 import type { ConvexReactClient } from 'convex/react';
 import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
-import type {
-  DataSourceResponse,
-  DataSourceTableInfo,
-  DataSourceFileInfo,
-} from './types';
+import {
+  isDataSourceResponse,
+  type DataSourceResponse,
+  type DataSourceTableInfo,
+  type DataSourceFileInfo,
+} from '@open-insights-web/foundation-data-model';
 import type { ConvexQueryReference } from '../core/types';
 
 /**
@@ -99,8 +100,12 @@ export class TableSyncService {
       tables: [...tables],
     });
 
+    if (!isDataSourceResponse(response)) {
+      throw new Error('Datasource API returned an invalid response shape.');
+    }
+
     this.logger.debug('Received table info:', response);
-    return response as DataSourceResponse;
+    return response;
   };
 
   /**
@@ -128,13 +133,13 @@ export class TableSyncService {
       return true;
     }
 
-    const needsUpdate = remote.lastIngestedAt > local.loadedAt;
+    const needsUpdate = remote.lastIngestedAt > local.lastIngestedAt;
 
     if (needsUpdate) {
       this.logger.debug(
         `Table ${remote.name} needs update:`,
         `remote.lastIngestedAt=${remote.lastIngestedAt}`,
-        `> local.loadedAt=${local.loadedAt}`
+        `> local.lastIngestedAt=${local.lastIngestedAt}`
       );
     }
 
@@ -218,4 +223,3 @@ export class TableSyncService {
     this.logger.debug(`Updated local metadata for table ${tableName}`);
   };
 }
-

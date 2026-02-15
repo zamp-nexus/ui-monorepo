@@ -7,6 +7,8 @@
  * @module types/validation
  */
 
+import type { ValueOf } from './utility';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -14,7 +16,12 @@
 /**
  * Severity level for validation issues
  */
-export type ValidationSeverity = 'error' | 'warning';
+export const VALIDATION_SEVERITY = {
+  ERROR: 'error',
+  WARNING: 'warning',
+} as const;
+
+export type ValidationSeverity = ValueOf<typeof VALIDATION_SEVERITY>;
 
 /**
  * A single validation issue
@@ -101,7 +108,7 @@ export const ValidationResult = {
    */
   withWarnings: (issues: ValidationIssue[]): ValidationResultData => ({
     valid: true,
-    issues: issues.map((issue) => ({ ...issue, severity: 'warning' as const })),
+    issues: issues.map((issue) => ({ ...issue, severity: VALIDATION_SEVERITY.WARNING })),
   }),
 
   /**
@@ -125,7 +132,7 @@ export const ValidationResult = {
       issues: errors.map((message) => ({
         path,
         message,
-        severity: 'error' as const,
+        severity: VALIDATION_SEVERITY.ERROR,
       })),
     };
   },
@@ -156,7 +163,7 @@ export const ValidationResult = {
       {
         path,
         message,
-        severity: 'error',
+        severity: VALIDATION_SEVERITY.ERROR,
         code: options?.code,
         suggestion: options?.suggestion,
       },
@@ -181,7 +188,7 @@ export const ValidationResult = {
       {
         path,
         message,
-        severity: 'warning',
+        severity: VALIDATION_SEVERITY.WARNING,
         code: options?.code,
         suggestion: options?.suggestion,
       },
@@ -232,7 +239,7 @@ export const ValidationResult = {
    * @returns Array of error issues only
    */
   getErrors: (result: ValidationResultData): ReadonlyArray<ValidationIssue> =>
-    result.issues.filter((issue) => issue.severity === 'error'),
+    result.issues.filter((issue) => issue.severity === VALIDATION_SEVERITY.ERROR),
 
   /**
    * Get only warning issues from a validation result
@@ -241,7 +248,7 @@ export const ValidationResult = {
    * @returns Array of warning issues only
    */
   getWarnings: (result: ValidationResultData): ReadonlyArray<ValidationIssue> =>
-    result.issues.filter((issue) => issue.severity === 'warning'),
+    result.issues.filter((issue) => issue.severity === VALIDATION_SEVERITY.WARNING),
 
   /**
    * Check if a validation result has any errors
@@ -250,7 +257,7 @@ export const ValidationResult = {
    * @returns True if there are any error issues
    */
   hasErrors: (result: ValidationResultData): boolean =>
-    result.issues.some((issue) => issue.severity === 'error'),
+    result.issues.some((issue) => issue.severity === VALIDATION_SEVERITY.ERROR),
 
   /**
    * Check if a validation result has any warnings
@@ -259,7 +266,7 @@ export const ValidationResult = {
    * @returns True if there are any warning issues
    */
   hasWarnings: (result: ValidationResultData): boolean =>
-    result.issues.some((issue) => issue.severity === 'warning'),
+    result.issues.some((issue) => issue.severity === VALIDATION_SEVERITY.WARNING),
 
   /**
    * Map validation result to a different format
@@ -308,7 +315,9 @@ export const ValidationResult = {
    * @returns Formatted error message or empty string if valid
    */
   formatErrors: (result: ValidationResultData, separator = ', '): string => {
-    const errors = result.issues.filter((issue) => issue.severity === 'error');
+    const errors = result.issues.filter(
+      (issue) => issue.severity === VALIDATION_SEVERITY.ERROR
+    );
     if (errors.length === 0) return '';
     return errors
       .map((issue) => (issue.path ? `${issue.path}: ${issue.message}` : issue.message))
@@ -330,7 +339,7 @@ export const ValidationResult = {
   toErrorMap: (result: ValidationResultData): Record<string, string> => {
     const map: Record<string, string> = {};
     for (const issue of result.issues) {
-      if (issue.severity === 'error' && issue.path) {
+      if (issue.severity === VALIDATION_SEVERITY.ERROR && issue.path) {
         map[issue.path] = issue.message;
       }
     }

@@ -22,7 +22,10 @@ export type {
   OfflineMetadata,
   WithOfflineMetadata,
   IdMapping,
-  SimpleValidationResult,
+} from './base';
+export {
+  DATA_SOURCE,
+  OFFLINE_DATA_SOURCE,
 } from './base';
 
 // User types
@@ -135,14 +138,18 @@ export {
 export type {
   ConflictContext,
   ConflictResult,
+  ConflictStrategy,
+  ConflictWinner,
   MergeConfig,
   QueueStats,
   ProcessingResult,
   SyncState,
+  SyncEventType,
   // Network types
   NetworkStatus,
   NetworkStatusListener,
   // Cross-tab types
+  CrossTabMessageType,
   CrossTabMessagePayload,
   CrossTabMessage,
   CrossTabMessageHandler,
@@ -150,6 +157,7 @@ export type {
   SyncEvent,
   SyncEventListener,
   // Query types
+  OfflineQuerySource,
   OfflineQueryContext,
   // Mutation types
   OfflineMutationResult,
@@ -157,13 +165,43 @@ export type {
   ConflictResolvableData,
 } from './sync';
 
-// Sync-related const objects (value + type exports)
-// These follow the const pattern: `const X = { ... } as const; type X = ...`
+// Sync-related constants (value exports)
 export {
-  ConflictStrategy,
-  SyncEventType,
-  CrossTabMessageType,
+  CONFLICT_STRATEGY,
+  CONFLICT_WINNER,
+  SYNC_EVENT_TYPE,
+  CROSS_TAB_MESSAGE_TYPE,
+  OFFLINE_QUERY_SOURCE,
 } from './sync';
+
+// Shared database contracts (used by foundation-database, sync-engine, bridge)
+export type {
+  QueryCacheStatus,
+  MutationStatus,
+  MutationType,
+  MutationQueueEntry,
+  CreateMutationOptions,
+  OpfsFileType,
+  SyncStateKey,
+  DatabaseTransactionMode,
+  DatabaseTransactionTable,
+  DuckDBViewDefinition,
+  DuckDBViewsValue,
+  LastSyncValue,
+  TableSyncMetadataEntry,
+} from './database';
+export {
+  QUERY_CACHE_STATUS,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  OPFS_FILE_TYPE,
+  SYNC_STATE_KEY,
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
+  createTableSyncMetadataEntry,
+  needsTableUpdate,
+  getFilesNeedingDownload,
+} from './database';
 
 // Utility types (general-purpose type transformations)
 export type {
@@ -193,10 +231,7 @@ export type {
   ValidationIssue,
   ValidationResultData,
 } from './validation';
-export { ValidationResult } from './validation';
-
-// Compat types (kept for backward compatibility)
-export type { SimpleValidationResult as SimpleValidationResultCompat } from './compat';
+export { VALIDATION_SEVERITY, ValidationResult } from './validation';
 
 // Type guards and safe conversions
 export {
@@ -223,7 +258,7 @@ export {
   toDateIsoString,
   toDate,
   // Arrow value conversion
-  ArrowTypeId,
+  ARROW_TYPE_ID,
   convertArrowValueSafe,
   convertArrowRow,
 } from './type-guards';

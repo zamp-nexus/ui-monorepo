@@ -6,7 +6,7 @@
  * @module utils/sql
  */
 
-import { SqlIdentifier, SqlTableName } from '@open-insights-web/foundation-data-model';
+import type { SqlIdentifier, SqlTableName } from '@open-insights-web/foundation-data-model';
 import { SqlValidationError } from '../errors/query-errors';
 import { SQL } from '../constants';
 
@@ -163,6 +163,81 @@ export const isValidIdentifier = (value: unknown): value is string => {
 };
 
 // =============================================================================
+// View SQL Validation
+// =============================================================================
+
+/**
+ * DDL/DML keywords that must not appear in view SQL outside quoted strings.
+ * View definitions should only contain SELECT-like statements.
+ */
+const FORBIDDEN_VIEW_SQL_KEYWORDS: ReadonlySet<string> = new Set([
+  'DROP',
+  'CREATE',
+  'ALTER',
+  'DELETE',
+  'INSERT',
+  'UPDATE',
+  'TRUNCATE',
+  'GRANT',
+  'REVOKE',
+  'EXEC',
+  'EXECUTE',
+]);
+
+/**
+ * Strip single-quoted and double-quoted strings from SQL so keyword checks
+ * only examine non-literal portions. Handles escaped quotes ('' and "").
+ */
+const stripQuotedStrings = (sql: string): string =>
+  sql.replace(/'(?:[^']|'')*'/g, '').replace(/"(?:[^"]|"")*"/g, '');
+
+/**
+ * Validate that a SQL string is safe for use as a view definition.
+ *
+ * Rejects SQL containing DDL/DML keywords (DROP, CREATE, ALTER, DELETE,
+ * INSERT, UPDATE, TRUNCATE, etc.) outside of quoted strings and requires
+ * the statement to start with a SELECT-like keyword.
+ *
+ * @param sql - The SQL statement to validate
+ * @throws SqlValidationError if the SQL contains forbidden keywords or
+ *         doesn't look like a SELECT statement
+ *
+ * @example
+ * ```typescript
+ * validateViewSql('SELECT * FROM users WHERE active = true'); // OK
+ * validateViewSql('DROP TABLE users; SELECT 1'); // throws SqlValidationError
+ * ```
+ */
+export const validateViewSql = (sql: string): void => {
+  if (!sql || sql.trim().length === 0) {
+    throw new SqlValidationError('(empty)', 'View SQL cannot be empty');
+  }
+
+  const stripped = stripQuotedStrings(sql);
+
+  // Check that the statement starts with SELECT or WITH (CTEs)
+  const trimmedUpper = stripped.trim().toUpperCase();
+  if (!trimmedUpper.startsWith('SELECT') && !trimmedUpper.startsWith('WITH')) {
+    throw new SqlValidationError(
+      sql.slice(0, 50),
+      'View SQL must start with SELECT or WITH'
+    );
+  }
+
+  // Check for forbidden keywords as whole words in the non-quoted portion.
+  // Use word boundary (\b) to avoid matching partial words (e.g. "UPDATED_AT")
+  for (const keyword of FORBIDDEN_VIEW_SQL_KEYWORDS) {
+    const pattern = new RegExp(`\\b${keyword}\\b`, 'i');
+    if (pattern.test(stripped)) {
+      throw new SqlValidationError(
+        sql.slice(0, 50),
+        `View SQL contains forbidden keyword: ${keyword}`
+      );
+    }
+  }
+};
+
+// =============================================================================
 // SQL Building Functions
 // =============================================================================
 
@@ -272,17 +347,31 @@ export const applyLimitOffset = (
   limit?: number,
   offset?: number
 ): string => {
+  if (limit !== undefined && limit < 0) {
+    throw new SqlValidationError(
+      String(limit),
+      'LIMIT must be a non-negative number'
+    );
+  }
+
+  if (offset !== undefined && offset < 0) {
+    throw new SqlValidationError(
+      String(offset),
+      'OFFSET must be a non-negative number'
+    );
+  }
+
   let result = sql;
-  
+
   // Only add LIMIT if not already present
   if (limit !== undefined && !/\bLIMIT\b/i.test(sql)) {
     result += ` LIMIT ${Math.floor(limit)}`;
-    
+
     // Only add OFFSET if LIMIT is also being added
     if (offset !== undefined) {
       result += ` OFFSET ${Math.floor(offset)}`;
     }
   }
-  
+
   return result;
 };

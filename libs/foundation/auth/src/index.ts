@@ -91,7 +91,7 @@ export {
 
 // User role and permissions
 export type { UserRole, UserPermissions } from './core';
-export { getUserPermissions } from './core';
+export { USER_ROLES, isValidRole, getUserPermissions } from './core';
 
 export type {
   // Configuration

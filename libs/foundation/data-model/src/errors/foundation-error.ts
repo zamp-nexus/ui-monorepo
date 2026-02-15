@@ -9,10 +9,12 @@
 
 import { Timestamp } from '../types/branded';
 import {
-  FoundationErrorCode,
-  ErrorCategory,
+  FOUNDATION_ERROR_CODE,
+  ERROR_CATEGORY,
   getErrorCategory,
   isRetryableErrorCode,
+  type FoundationErrorCode,
+  type ErrorCategory,
 } from './error-codes';
 
 // =============================================================================
@@ -77,7 +79,7 @@ export interface ErrorContext {
  * @example
  * ```typescript
  * class QueryTimeoutError extends FoundationError {
- *   readonly code = FoundationErrorCode.BRIDGE_QUERY_TIMEOUT;
+ *   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT;
  *
  *   constructor(queryId: string, timeoutMs: number, cause?: Error) {
  *     super(`Query ${queryId} timed out after ${timeoutMs}ms`, { queryId, timeoutMs }, cause);
@@ -145,8 +147,8 @@ export abstract class FoundationError extends Error {
    */
   get shouldReport(): boolean {
     // Don't report user input errors or cancelled operations
-    if (this.category === ErrorCategory.USER_INPUT) return false;
-    if (this.code === FoundationErrorCode.BRIDGE_QUERY_CANCELLED) return false;
+    if (this.category === ERROR_CATEGORY.USER_INPUT) return false;
+    if (this.code === FOUNDATION_ERROR_CODE.BRIDGE_QUERY_CANCELLED) return false;
     return true;
   }
 
@@ -240,7 +242,7 @@ export class GenericFoundationError extends FoundationError {
  */
 export function toFoundationError(
   error: unknown,
-  fallbackCode: FoundationErrorCode = FoundationErrorCode.INTERNAL_ERROR,
+  fallbackCode: FoundationErrorCode = FOUNDATION_ERROR_CODE.INTERNAL_ERROR,
   context: ErrorContext = {}
 ): FoundationError {
   // Already a FoundationError

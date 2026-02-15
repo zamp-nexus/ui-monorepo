@@ -8,16 +8,20 @@
  */
 
 import { z } from 'zod';
-import { Result, ConflictStrategy } from '@open-insights-web/foundation-data-model';
-import { MutationStatus } from '../core/config';
-import { MutationType } from '../tables/mutation-queue';
-import { OpfsFileType } from '../tables/opfs-metadata';
+import {
+  CONFLICT_STRATEGY,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  OPFS_FILE_TYPE,
+  Result,
+} from '@open-insights-web/foundation-data-model';
 
 // =============================================================================
 // Reusable Base Schemas (DRY)
 // =============================================================================
 
 const timestampSchema = z.number().positive();
+const nonNegativeTimestampSchema = z.number().min(0);
 const nonEmptyStringSchema = z.string().min(1);
 const optionalStringSchema = z.string().optional();
 
@@ -44,26 +48,26 @@ export type ValidatedQueryCacheEntry = z.infer<typeof queryCacheEntrySchema>;
 // =============================================================================
 
 const mutationStatusSchema = z.enum([
-  MutationStatus.PENDING,
-  MutationStatus.IN_PROGRESS,
-  MutationStatus.COMPLETED,
-  MutationStatus.FAILED,
-  MutationStatus.OFFLINE_QUEUED,
+  MUTATION_STATUS.PENDING,
+  MUTATION_STATUS.IN_PROGRESS,
+  MUTATION_STATUS.COMPLETED,
+  MUTATION_STATUS.FAILED,
+  MUTATION_STATUS.OFFLINE_QUEUED,
 ]);
 
 const mutationTypeSchema = z.enum([
-  MutationType.CREATE,
-  MutationType.UPDATE,
-  MutationType.DELETE,
+  MUTATION_TYPE.CREATE,
+  MUTATION_TYPE.UPDATE,
+  MUTATION_TYPE.DELETE,
 ]);
 
 // Uses ConflictStrategy const from @foundation/data-model for consistency
 const conflictStrategySchema = z.enum([
-  ConflictStrategy.SERVER_WINS,
-  ConflictStrategy.CLIENT_WINS,
-  ConflictStrategy.LAST_WRITE_WINS,
-  ConflictStrategy.MERGE,
-  ConflictStrategy.MANUAL,
+  CONFLICT_STRATEGY.SERVER_WINS,
+  CONFLICT_STRATEGY.CLIENT_WINS,
+  CONFLICT_STRATEGY.LAST_WRITE_WINS,
+  CONFLICT_STRATEGY.MERGE,
+  CONFLICT_STRATEGY.MANUAL,
 ]);
 
 export const mutationQueueEntrySchema = z.object({
@@ -92,10 +96,10 @@ export type ValidatedMutationQueueEntry = z.infer<typeof mutationQueueEntrySchem
 // =============================================================================
 
 const opfsFileTypeSchema = z.enum([
-  OpfsFileType.PARQUET,
-  OpfsFileType.JSON,
-  OpfsFileType.CSV,
-  OpfsFileType.VIEW_DEFINITION,
+  OPFS_FILE_TYPE.PARQUET,
+  OPFS_FILE_TYPE.JSON,
+  OPFS_FILE_TYPE.CSV,
+  OPFS_FILE_TYPE.VIEW_DEFINITION,
 ]);
 
 const opfsFileSchemaSchema = z.object({
@@ -160,7 +164,7 @@ export const duckDBViewsValueSchema = z.object({
       dependencies: z.array(z.string()),
     })
   ),
-  lastUpdatedAt: timestampSchema,
+  lastUpdatedAt: nonNegativeTimestampSchema,
 });
 
 // =============================================================================

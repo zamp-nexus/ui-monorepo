@@ -4,7 +4,8 @@
  * @module errors/pool-errors
  */
 
-import { FoundationErrorCode, WorkerId } from '@open-insights-web/foundation-data-model';
+import type { WorkerId } from '@open-insights-web/foundation-data-model';
+import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
 import { BridgeError } from './base-error';
 
 // =============================================================================
@@ -15,7 +16,7 @@ import { BridgeError } from './base-error';
  * Error thrown when trying to use a pool that is shutting down
  */
 export class PoolShutdownError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_POOL_SHUTDOWN;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_POOL_SHUTDOWN;
 
   constructor(readonly pendingQueries?: number) {
     super('Pool is shutting down, cannot accept new queries', {
@@ -32,7 +33,7 @@ export class PoolShutdownError extends BridgeError {
  * General error from a worker
  */
 export class WorkerError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_WORKER_ERROR;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_ERROR;
 
   constructor(
     readonly workerId: WorkerId,
@@ -51,7 +52,7 @@ export class WorkerError extends BridgeError {
  * Error thrown when a worker fails to initialize
  */
 export class WorkerInitializationError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_WORKER_INIT_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_INIT_FAILED;
 
   constructor(
     readonly workerId: WorkerId,
@@ -69,7 +70,7 @@ export class WorkerInitializationError extends BridgeError {
  * Error thrown when no workers are available to handle a query
  */
 export class NoAvailableWorkersError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_WORKER_POOL_EXHAUSTED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_POOL_EXHAUSTED;
 
   constructor(
     readonly totalWorkers: number,
@@ -90,7 +91,7 @@ export class NoAvailableWorkersError extends BridgeError {
  * Error thrown when pool queue is at capacity
  */
 export class PoolCapacityError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_POOL_AT_CAPACITY;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_POOL_AT_CAPACITY;
 
   constructor(
     readonly maxCapacity: number,
@@ -102,4 +103,3 @@ export class PoolCapacityError extends BridgeError {
     });
   }
 }
-

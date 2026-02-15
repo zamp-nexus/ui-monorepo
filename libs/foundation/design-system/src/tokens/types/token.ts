@@ -7,19 +7,29 @@
 /**
  * Supported token types per W3C Design Tokens specification
  */
-export type TokenType =
-  | 'color'
-  | 'dimension'
-  | 'fontFamily'
-  | 'fontWeight'
-  | 'duration'
-  | 'cubicBezier'
-  | 'number'
-  | 'shadow'
-  | 'strokeStyle'
-  | 'border'
-  | 'transition'
-  | 'gradient';
+export const TOKEN_TYPE = {
+  COLOR: 'color',
+  DIMENSION: 'dimension',
+  FONT_FAMILY: 'fontFamily',
+  FONT_WEIGHT: 'fontWeight',
+  DURATION: 'duration',
+  CUBIC_BEZIER: 'cubicBezier',
+  NUMBER: 'number',
+  SHADOW: 'shadow',
+  STROKE_STYLE: 'strokeStyle',
+  BORDER: 'border',
+  TRANSITION: 'transition',
+  GRADIENT: 'gradient',
+} as const;
+
+export type TokenType = (typeof TOKEN_TYPE)[keyof typeof TOKEN_TYPE];
+
+export const WCAG_LEVEL = {
+  AA: 'AA',
+  AAA: 'AAA',
+} as const;
+
+export type WcagLevel = (typeof WCAG_LEVEL)[keyof typeof WCAG_LEVEL];
 
 /**
  * Extension namespace for vendor-specific metadata
@@ -34,7 +44,7 @@ export interface TokenExtensions {
   /** Accessibility metadata */
   'com.a11y'?: {
     contrastRatio?: number;
-    wcagLevel?: 'AA' | 'AAA';
+    wcagLevel?: WcagLevel;
     contrastPair?: string;
   };
   /** Platform-specific overrides */
@@ -112,7 +122,19 @@ export interface ColorToken extends DesignToken<string> {
 /**
  * Supported dimension units
  */
-export type DimensionUnit = 'px' | 'rem' | 'em' | '%' | 'vw' | 'vh' | 'dvh' | 'svh' | 'lvh';
+export const DIMENSION_UNIT = {
+  PX: 'px',
+  REM: 'rem',
+  EM: 'em',
+  PERCENT: '%',
+  VW: 'vw',
+  VH: 'vh',
+  DVH: 'dvh',
+  SVH: 'svh',
+  LVH: 'lvh',
+} as const;
+
+export type DimensionUnit = (typeof DIMENSION_UNIT)[keyof typeof DIMENSION_UNIT];
 
 /**
  * Dimension token for spacing, sizing, and measurements

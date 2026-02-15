@@ -9,8 +9,9 @@ import type {
   QueryKeyMeta,
   QueryKeyBase,
   EntityTableName,
+  QueryScope,
 } from './types';
-import { hashStringSync } from '@open-insights-web/foundation-utils';
+import { QUERY_SCOPE } from './types';
 
 /**
  * Create an entity query key factory
@@ -24,18 +25,18 @@ export function createQueryKeys<
 
     list: (filters?: TFilters) => {
       if (filters && Object.keys(filters).length > 0) {
-        return [entity, 'list', filters] as const;
+        return [entity, QUERY_SCOPE.LIST, filters] as const;
       }
-      return [entity, 'list'] as const;
+      return [entity, QUERY_SCOPE.LIST] as const;
     },
 
-    detail: (id: string) => [entity, 'detail', id] as const,
+    detail: (id: string) => [entity, QUERY_SCOPE.DETAIL, id] as const,
 
     infinite: (filters?: TFilters) => {
       if (filters && Object.keys(filters).length > 0) {
-        return [entity, 'infinite', filters] as const;
+        return [entity, QUERY_SCOPE.INFINITE, filters] as const;
       }
-      return [entity, 'infinite'] as const;
+      return [entity, QUERY_SCOPE.INFINITE] as const;
     },
   };
 }
@@ -43,25 +44,37 @@ export function createQueryKeys<
 /**
  * Create an analytics query key
  */
-export function createAnalyticsQueryKey<
-  TParams extends Record<string, unknown> | undefined = undefined
->(
+export function createAnalyticsQueryKey(
+  tables: EntityTableName | EntityTableName[],
+  queryName: string
+): readonly ['analytics', string, string];
+export function createAnalyticsQueryKey<TParams extends Record<string, unknown>>(
   tables: EntityTableName | EntityTableName[],
   queryName: string,
-  params?: TParams
-): AnalyticsQueryKey<TParams> {
+  params: TParams
+): readonly ['analytics', string, string, TParams];
+export function createAnalyticsQueryKey(
+  tables: EntityTableName | EntityTableName[],
+  queryName: string,
+  params?: Record<string, unknown>
+): AnalyticsQueryKey<Record<string, unknown>> | AnalyticsQueryKey<undefined> {
   const tablesString = Array.isArray(tables)
-    ? `tables:${tables.sort().join(',')}`
+    ? `tables:${[...tables].sort().join(',')}`
     : `tables:${tables}`;
 
   const queryString = `query:${queryName}`;
 
   if (params && Object.keys(params).length > 0) {
-    return ['analytics', tablesString, queryString, params] as unknown as AnalyticsQueryKey<TParams>;
+    return ['analytics', tablesString, queryString, params] as const;
   }
 
-  return ['analytics', tablesString, queryString] as unknown as AnalyticsQueryKey<TParams>;
+  return ['analytics', tablesString, queryString] as const;
 }
+
+const QUERY_SCOPE_SET = new Set<string>(Object.values(QUERY_SCOPE));
+
+const isQueryScope = (value: unknown): value is QueryScope =>
+  typeof value === 'string' && QUERY_SCOPE_SET.has(value);
 
 /**
  * Extract metadata from a query key
@@ -84,9 +97,7 @@ export function extractQueryKeyMeta(queryKey: QueryKeyBase): QueryKeyMeta {
 
   // Entity query
   const entity = String(first);
-  const scope = typeof second === 'string' && ['list', 'detail', 'infinite'].includes(second)
-    ? (second as 'list' | 'detail' | 'infinite')
-    : undefined;
+  const scope = isQueryScope(second) ? second : undefined;
 
   return {
     entity,
@@ -115,14 +126,25 @@ function serializeWithSortedKeys(value: unknown): string {
 }
 
 /**
+ * Compute deterministic djb2 hash for a string.
+ * Kept local to preserve data-model isolation from foundation-utils.
+ */
+function hashStringSync(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+/**
  * Generate a deterministic hash for a query key
  * Used as cache key in Dexie
  *
  * Note: Uses sorted keys serialization to ensure deterministic hashing
  * regardless of object property insertion order.
  *
- * Uses hashStringSync from foundation-utils (djb2 algorithm) for consistency
- * across the codebase.
+ * Uses local djb2 hashing to keep data-model isolated from foundation-utils.
  */
 export function hashQueryKey(queryKey: QueryKeyBase): string {
   const serialized = serializeWithSortedKeys(queryKey);

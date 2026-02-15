@@ -4,12 +4,19 @@
  */
 
 import type { QueryFunction } from '@tanstack/react-query';
-import { hashQueryKey, SCHEMA_VERSION, tryToJsonSerializable, type QueryKeyBase, type OfflineQueryContext } from '@open-insights-web/foundation-data-model';
+import {
+  hashQueryKey,
+  SCHEMA_VERSION,
+  tryToJsonSerializable,
+  OFFLINE_QUERY_SOURCE,
+  type QueryKeyBase,
+  type OfflineQueryContext,
+} from '@open-insights-web/foundation-data-model';
 import type { InsightsDatabase } from '@open-insights-web/foundation-database';
 import { getDatabase, createCacheEntry, isCacheExpired } from '@open-insights-web/foundation-database';
 import { createDebugLogger } from '@open-insights-web/foundation-utils';
-import type { NetworkStatusMonitor } from '../network';
-import { getNetworkMonitor } from '../network';
+import type { NetworkStatusMonitor } from '../network/index';
+import { getNetworkMonitor } from '../network/index';
 import {
   DEFAULT_CACHE_TTL_MS,
   DEFAULT_STALE_WHILE_REVALIDATE,
@@ -32,7 +39,7 @@ export interface OfflineQueryFnConfig<TData = unknown> {
   /** Enable debug logging */
   debug?: boolean;
   /** Deserialize cached JSON value to runtime data type */
-  deserializeCachedData?: (value: unknown) => TData;
+  deserializeCachedData: (value: unknown) => TData;
 }
 
 /**
@@ -60,9 +67,7 @@ export const createOfflineQueryFn = <TData = unknown>(
   const db = config.database ?? getDatabase();
   const networkMonitor = config.networkMonitor ?? getNetworkMonitor();
   const logger = createDebugLogger('OfflineQueryFn', debug);
-  const deserializeCachedData =
-    config.deserializeCachedData ??
-    ((value: unknown): TData => value as TData);
+  const deserializeCachedData = config.deserializeCachedData;
 
   return async ({ queryKey }): Promise<TData> => {
     const qHash = hashQueryKey(queryKey);
@@ -151,10 +156,10 @@ export const createOfflineQueryFnWithContext = <TData = unknown>(
       isOffline: !networkMonitor.isOnline,
       isStale: cached ? Date.now() - cached.dataUpdatedAt > (config.cacheTTL ?? DEFAULT_CONFIG.cacheTTL) : false,
       source: !networkMonitor.isOnline
-        ? 'offline_db'
+        ? OFFLINE_QUERY_SOURCE.OFFLINE_DB
         : cached && isCacheExpired(cached)
-          ? 'cache'
-          : 'network',
+          ? OFFLINE_QUERY_SOURCE.CACHE
+          : OFFLINE_QUERY_SOURCE.NETWORK,
       cachedAt: cached?.dataUpdatedAt,
     };
 

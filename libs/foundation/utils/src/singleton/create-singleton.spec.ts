@@ -16,7 +16,7 @@ describe('createSingletonFactory', () => {
 
   class TestService {
     constructor(public config: TestConfig) {}
-    dispose() {}
+    dispose() { return undefined; }
   }
 
   beforeEach(() => {
@@ -159,7 +159,7 @@ describe('createAsyncSingletonFactory', () => {
 
   class TestAsyncService {
     constructor(public config: TestConfig) {}
-    async disconnect() {}
+    async disconnect() { return undefined; }
   }
 
   async function createTestService(config: TestConfig): Promise<TestAsyncService> {

@@ -46,13 +46,17 @@ export {
   // Supporting types
   type DownloadProgress,
   type MutationOperation,
+  type MutationResultOperation,
+  type HookExecutionPath,
   type ExecutionPath,
+  type HookDataSource,
   type DataSource,
 
   // Constants (const object patterns)
   EXECUTION_PATHS,
   DATA_SOURCES,
   MUTATION_OPERATIONS,
+  MUTATION_RESULT_OPERATIONS,
   INITIAL_DOWNLOAD_STATE,
 
   // Type guards

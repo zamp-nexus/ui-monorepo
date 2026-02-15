@@ -222,9 +222,9 @@ export const measureUsesDistinct = (measure: MeasureSpec): boolean => {
     return true;
   }
   return (
-    measure.aggregation === 'countDistinct' ||
-    measure.aggregation === 'sumDistinct' ||
-    measure.aggregation === 'avgDistinct'
+    measure.aggregation === AGGREGATIONS.COUNT_DISTINCT ||
+    measure.aggregation === AGGREGATIONS.SUM_DISTINCT ||
+    measure.aggregation === AGGREGATIONS.AVG_DISTINCT
   );
 };
 

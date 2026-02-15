@@ -7,6 +7,10 @@
  */
 
 export {
+  assertValid,
+} from './assert-valid';
+
+export {
   // Schemas
   queryCacheEntrySchema,
   mutationQueueEntrySchema,
@@ -36,4 +40,5 @@ export {
   validateLastSyncValue,
   validateNetworkStatus,
   validateDuckDBViewsValue,
+  validateTableSyncMetadataEntry,
 } from './schemas';

@@ -86,16 +86,18 @@ export interface MutationResult<T> {
 }
 
 /**
- * Data source identifier for query results
- *
- * A simplified data source type for tracking where query data came from.
- * Use this for query state tracking.
- *
- * - 'convex': Data from Convex real-time subscription
- * - 'cache': Data from local cache
- * - 'none': No data available
+ * Data source identifiers for query results.
  */
-export type DataSource = 'convex' | 'cache' | 'none';
+export const DATA_SOURCE = {
+  CONVEX: 'convex',
+  CACHE: 'cache',
+  NONE: 'none',
+} as const;
+
+/**
+ * Data source identifier for query results.
+ */
+export type DataSource = (typeof DATA_SOURCE)[keyof typeof DATA_SOURCE];
 
 /**
  * Data source identifier for offline metadata
@@ -108,7 +110,14 @@ export type DataSource = 'convex' | 'cache' | 'none';
  * - 'network': Data from network request
  * - 'offline_db': Data from offline IndexedDB storage
  */
-export type OfflineDataSource = DataSource | 'network' | 'offline_db';
+export const OFFLINE_DATA_SOURCE = {
+  ...DATA_SOURCE,
+  NETWORK: 'network',
+  OFFLINE_DB: 'offline_db',
+} as const;
+
+export type OfflineDataSource =
+  (typeof OFFLINE_DATA_SOURCE)[keyof typeof OFFLINE_DATA_SOURCE];
 
 /**
  * Offline metadata attached to queries/mutations
@@ -136,13 +145,3 @@ export interface IdMapping {
   tableName: string;
   mappedAt: string;
 }
-
-// =============================================================================
-// Validation Types (deprecated — re-exported from compat module)
-// =============================================================================
-
-/**
- * @deprecated Use `ValidationResult` from `validation.types.ts` instead.
- * Re-exported from `compat.types.ts` for backward compatibility.
- */
-export type { SimpleValidationResult } from './compat';

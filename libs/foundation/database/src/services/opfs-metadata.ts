@@ -8,10 +8,11 @@
  */
 
 import { BaseService } from './base';
-import type { OpfsMetadataOperations, OpfsMetadataEntry } from '../tables';
-import { sortByDependencies, OpfsFileType } from '../tables';
+import { OPFS_FILE_TYPE } from '@open-insights-web/foundation-data-model';
+import type { OpfsMetadataOperations, OpfsMetadataEntry } from '../tables/opfs-metadata';
+import { sortByDependencies } from '../tables/opfs-metadata';
 import { opfsMetadataEntrySchema } from '../validation/schemas';
-import { createValidationError } from '../errors';
+import { assertValid } from '../validation/assert-valid';
 
 /**
  * OPFS Metadata Service
@@ -30,12 +31,7 @@ export class OpfsMetadataService extends BaseService implements OpfsMetadataOper
    * Validates before write
    */
   set = async (entry: OpfsMetadataEntry): Promise<void> => {
-    // Validate entry
-    const validation = opfsMetadataEntrySchema.safeParse(entry);
-    if (!validation.success) {
-      throw createValidationError('OpfsMetadataEntry', validation.error.message);
-    }
-
+    assertValid(opfsMetadataEntrySchema, entry, 'OpfsMetadataEntry');
     await this.db.opfsFiles.put(entry);
     this.log('OPFS metadata set:', entry.path);
   };
@@ -59,16 +55,14 @@ export class OpfsMetadataService extends BaseService implements OpfsMetadataOper
    * Get all registered files
    */
   getRegistered = async (): Promise<OpfsMetadataEntry[]> => {
-    return this.db.opfsFiles.filter((f) => f.isRegistered).toArray();
+    return this.db.opfsFiles.where('isRegistered').equals(1).toArray();
   };
 
   /**
    * Get all view definitions
    */
   getViews = async (): Promise<OpfsMetadataEntry[]> => {
-    return this.db.opfsFiles
-      .filter((f) => f.fileType === OpfsFileType.VIEW_DEFINITION)
-      .toArray();
+    return this.db.opfsFiles.where('fileType').equals(OPFS_FILE_TYPE.VIEW_DEFINITION).toArray();
   };
 
   /**
@@ -99,7 +93,7 @@ export class OpfsMetadataService extends BaseService implements OpfsMetadataOper
    * Get files in dependency order (topological sort)
    */
   getInDependencyOrder = async (): Promise<OpfsMetadataEntry[]> => {
-    const files = await this.db.opfsFiles.filter((f) => f.isRegistered).toArray();
+    const files = await this.getRegistered();
     return sortByDependencies(files);
   };
 

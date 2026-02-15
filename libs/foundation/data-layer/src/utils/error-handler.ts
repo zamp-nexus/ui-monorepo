@@ -7,7 +7,7 @@
  * This module builds on top of foundation-utils error utilities with
  * data-layer-specific features:
  * - Severity levels (WARN vs ERROR) for differentiated logging
- * - HookContext const for domain-specific context identifiers
+ * - HOOK_CONTEXT const for domain-specific context identifiers
  * - Additional data context for richer error logs
  * - Returns normalized errors for chaining
  *
@@ -33,25 +33,25 @@ import {
  *
  * @example
  * ```ts
- * handleError(err, { context: HookContext.USE_DL_GET, severity: ErrorSeverity.ERROR });
+ * handleError(err, { context: HOOK_CONTEXT.USE_DL_GET, severity: ERROR_SEVERITY.ERROR });
  * ```
  */
-export const ErrorSeverity = {
+export const ERROR_SEVERITY = {
   WARN: 'warn',
   ERROR: 'error',
 } as const;
 
-export type ErrorSeverityValue = (typeof ErrorSeverity)[keyof typeof ErrorSeverity];
+export type ErrorSeverityValue = (typeof ERROR_SEVERITY)[keyof typeof ERROR_SEVERITY];
 
 /**
  * Hook context identifiers for error messages
  *
  * @example
  * ```ts
- * const handleGetError = createScopedErrorHandler(HookContext.USE_DL_GET);
+ * const handleGetError = createScopedErrorHandler(HOOK_CONTEXT.USE_DL_GET);
  * ```
  */
-export const HookContext = {
+export const HOOK_CONTEXT = {
   USE_DL_GET: 'useDLGet',
   USE_DL_CREATE: 'useDLCreate',
   USE_DL_UPDATE: 'useDLUpdate',
@@ -63,7 +63,7 @@ export const HookContext = {
   DATA_LAYER_PROVIDER: 'DataLayerProvider',
 } as const;
 
-export type HookContextValue = (typeof HookContext)[keyof typeof HookContext];
+export type HookContextValue = (typeof HOOK_CONTEXT)[keyof typeof HOOK_CONTEXT];
 
 /**
  * Module-level logger for error handling.
@@ -106,17 +106,17 @@ export interface ErrorHandlerOptions {
  * @example
  * ```ts
  * // Log a warning
- * handleError(err, { context: HookContext.USE_DL_GET });
+ * handleError(err, { context: HOOK_CONTEXT.USE_DL_GET });
  *
  * // Log an error with additional data
  * handleError(err, {
- *   context: HookContext.USE_DL_CREATE,
- *   severity: ErrorSeverity.ERROR,
+ *   context: HOOK_CONTEXT.USE_DL_CREATE,
+ *   severity: ERROR_SEVERITY.ERROR,
  *   data: { table: 'users', entityId: '123' }
  * });
  *
  * // Log and rethrow
- * handleError(err, { context: HookContext.USE_DL_DELETE, rethrow: true });
+ * handleError(err, { context: HOOK_CONTEXT.USE_DL_DELETE, rethrow: true });
  * ```
  */
 export const handleError = (
@@ -125,7 +125,7 @@ export const handleError = (
 ): Error => {
   const {
     context,
-    severity = ErrorSeverity.WARN,
+    severity = ERROR_SEVERITY.WARN,
     data,
     rethrow = false,
   } = options;
@@ -134,7 +134,7 @@ export const handleError = (
   const message = formatErrorMessage(context, normalizedError.message);
 
   // Log based on severity using structured logger
-  if (severity === ErrorSeverity.ERROR) {
+  if (severity === ERROR_SEVERITY.ERROR) {
     if (data) {
       errorLogger.error(message, data, normalizedError);
     } else {
@@ -168,13 +168,13 @@ export const handleError = (
  * @example
  * ```ts
  * // Create a scoped handler for a hook
- * const handleHookError = createScopedErrorHandler(HookContext.USE_DL_CREATE);
+ * const handleHookError = createScopedErrorHandler(HOOK_CONTEXT.USE_DL_CREATE);
  *
  * // Use it throughout the hook
  * try {
  *   await someOperation();
  * } catch (err) {
- *   handleHookError(err, { severity: ErrorSeverity.ERROR });
+ *   handleHookError(err, { severity: ERROR_SEVERITY.ERROR });
  * }
  * ```
  */
@@ -200,7 +200,7 @@ export const createScopedErrorHandler = (
  * // Wrap a database operation
  * const safePersist = safeAsync(
  *   async () => await database.queries.set(entry),
- *   { context: HookContext.USE_DL_GET }
+ *   { context: HOOK_CONTEXT.USE_DL_GET }
  * );
  *
  * // Call it - errors are logged but not thrown
@@ -233,7 +233,7 @@ export const safeAsync = <T>(
  * ```ts
  * const data = await tryCatchAsync(
  *   async () => await fetchData(),
- *   { context: HookContext.USE_DL_GET },
+ *   { context: HOOK_CONTEXT.USE_DL_GET },
  *   null // Return null on error
  * );
  * ```

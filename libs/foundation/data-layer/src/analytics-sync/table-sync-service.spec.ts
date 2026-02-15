@@ -9,7 +9,7 @@ import type {
   DataSourceFileInfo,
   DataSourceTableInfo,
   DataSourceResponse,
-} from './types';
+} from '@open-insights-web/foundation-data-model';
 import {
   TableSyncService,
   type LocalTableMetadata,

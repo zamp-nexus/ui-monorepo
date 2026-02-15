@@ -85,10 +85,6 @@ export class QueryBuilder {
   private _freshnessValue?: FreshnessRequirement;
   private _backendHintValue?: QueryBackend;
 
-  constructor() {
-    // Empty constructor for fresh builder
-  }
-
   // ---------------------------------------------------------------------------
   // Query Identity
   // ---------------------------------------------------------------------------
@@ -469,8 +465,13 @@ export class QueryBuilder {
 
   /**
    * Set page (convenience for limit/offset)
+   *
+   * @param pageNumber - 1-based page number (must be >= 1)
+   * @param pageSize - Number of items per page (must be >= 1)
    */
   page = (pageNumber: number, pageSize: number): QueryBuilder => {
+    if (pageNumber < 1) throw new Error(`pageNumber must be >= 1, got ${pageNumber}`);
+    if (pageSize < 1) throw new Error(`pageSize must be >= 1, got ${pageSize}`);
     this._limitValue = pageSize;
     this._offsetValue = (pageNumber - 1) * pageSize;
     return this;

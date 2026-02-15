@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { SyncEngineContainer, SyncEngineFactory } from './container';
-import { NETWORK_STATUS_EVENT } from '../network';
+import { NETWORK_STATUS_EVENT } from '../network/index';
 import { CRUD_OPERATION } from '../convex/functions';
 
 describe('sync-engine api contract', () => {
@@ -14,7 +14,7 @@ describe('sync-engine api contract', () => {
   it('exports UPPER_SNAKE_CASE network status event constants', () => {
     expect(NETWORK_STATUS_EVENT.ONLINE).toBe('online');
     expect(NETWORK_STATUS_EVENT.OFFLINE).toBe('offline');
-    expect(NETWORK_STATUS_EVENT.CONNECTIVITY_CHECK).toBe('connectivity-check');
+    expect(NETWORK_STATUS_EVENT.CONNECTIVITY_CHECK).toBe('connectivity_check');
   });
 
   it('exports UPPER_SNAKE_CASE CRUD operation constants', () => {

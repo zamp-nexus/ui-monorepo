@@ -5,7 +5,6 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { OIComponentRef } from '../../types';
 import { cn } from '../../utils/cn';
 import type { SkeletonComponent, SkeletonProps } from './skeleton';
 import { skeletonDefaultTheme } from './skeleton';
@@ -53,7 +52,7 @@ export const Skeleton: SkeletonComponent = React.forwardRef(function Skeleton<
     style,
     ...rest
   }: SkeletonProps<T>,
-  ref: OIComponentRef<T>,
+  ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('skeleton', skeletonDefaultTheme);
   const Element = component ?? 'div';

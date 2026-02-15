@@ -19,6 +19,8 @@ import type { ConvexReactClient } from 'convex/react';
 import type { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
 import type { SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
 import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
+import type { TableSyncService } from '../analytics-sync/table-sync-service';
+import type { FileDownloadService } from '../analytics-sync/file-download-service';
 import type { ResolvedCacheConfig, ConvexQueryReference } from '../core/types';
 import type { TableRegistry } from '../core/table-registry';
 
@@ -83,6 +85,10 @@ export interface DataLayerInternals {
    * Null if not configured.
    */
   readonly datasourceApi: ConvexQueryReference | null;
+  /** Container-scoped table sync service accessor */
+  readonly getTableSyncService: () => TableSyncService;
+  /** Container-scoped file download service accessor */
+  readonly getFileDownloadService: () => Promise<FileDownloadService | null>;
 }
 
 /**

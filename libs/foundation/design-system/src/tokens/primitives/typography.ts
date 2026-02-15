@@ -11,7 +11,6 @@
  */
 
 import type {
-  DesignToken,
   FontWeightToken,
   FontFamilyToken,
   DimensionToken,

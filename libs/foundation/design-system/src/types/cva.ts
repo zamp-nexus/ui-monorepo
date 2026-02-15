@@ -4,7 +4,21 @@
  * @module types/cva
  */
 
-export type ClassPropKey = 'class' | 'className';
+export const CLASS_PROP_KEY = {
+  CLASS: 'class',
+  CLASS_NAME: 'className',
+} as const;
+
+export type ClassPropKey = (typeof CLASS_PROP_KEY)[keyof typeof CLASS_PROP_KEY];
+
+const BOOLEAN_STRING_LITERAL = {
+  TRUE: 'true',
+  FALSE: 'false',
+} as const;
+
+type BooleanStringLiteral =
+  (typeof BOOLEAN_STRING_LITERAL)[keyof typeof BOOLEAN_STRING_LITERAL];
+
 export type ClassValue = string | null | undefined | ClassValue[];
 
 export type ClassProp =
@@ -16,7 +30,7 @@ export type ClassProp =
   | { class?: never; className?: never };
 
 export type OmitUndefined<T> = T extends undefined ? never : T;
-export type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
+export type StringToBoolean<T> = T extends BooleanStringLiteral ? boolean : T;
 
 export type ConfigSchema = Record<string, Record<string, ClassValue>>;
 
@@ -81,4 +95,3 @@ export interface ComponentThemeConfigStructure {
     [variantName: string]: string;
   };
 }
-

@@ -1,6 +1,9 @@
-import { FoundationError, FoundationErrorCode } from '@open-insights-web/foundation-data-model';
-import { OpfsFileType } from '@open-insights-web/foundation-database';
-import type { DataSourceFileInfo } from './types';
+import {
+  FoundationError,
+  FOUNDATION_ERROR_CODE,
+  OPFS_FILE_TYPE,
+} from '@open-insights-web/foundation-data-model';
+import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
 import {
   DownloadError,
   FileDownloadService,
@@ -61,7 +64,7 @@ describe('DownloadError', () => {
     const cause = new Error('root cause');
     const err = new DownloadError('Download failed', 'data.parquet', 502, cause);
 
-    expect(err.code).toBe(FoundationErrorCode.NETWORK_REQUEST_FAILED);
+    expect(err.code).toBe(FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
     expect(err.filename).toBe('data.parquet');
     expect(err.statusCode).toBe(502);
     expect(err.message).toBe('Download failed');
@@ -255,21 +258,23 @@ describe('FileDownloadService', () => {
       expect(mockOpfs.writeFile).toHaveBeenCalledTimes(2);
 
       // Verify writeFile was called with correct args
-      expect(mockOpfs.writeFile).toHaveBeenCalledWith(
-        'events.parquet',
+      expect(mockOpfs.writeFile).toHaveBeenNthCalledWith(
+        1,
+        'events/a.parquet',
         expect.any(ArrayBuffer),
         expect.objectContaining({
           tableName: 'events',
-          fileType: OpfsFileType.PARQUET,
+          fileType: OPFS_FILE_TYPE.PARQUET,
           rowCount: 10,
         }),
       );
-      expect(mockOpfs.writeFile).toHaveBeenCalledWith(
-        'events.parquet',
+      expect(mockOpfs.writeFile).toHaveBeenNthCalledWith(
+        2,
+        'events/b.parquet',
         expect.any(ArrayBuffer),
         expect.objectContaining({
           tableName: 'events',
-          fileType: OpfsFileType.PARQUET,
+          fileType: OPFS_FILE_TYPE.PARQUET,
           rowCount: 20,
         }),
       );

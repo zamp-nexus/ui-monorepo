@@ -5,7 +5,7 @@
  */
 
 import {
-  FoundationErrorCode,
+  FOUNDATION_ERROR_CODE,
   QueryTimeoutError,
   QueryCancelledError,
   QueryExecutionError,
@@ -21,7 +21,7 @@ import { BridgeError } from './base-error';
  * Error thrown when SQL identifier validation fails
  */
 export class SqlValidationError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_SQL_VALIDATION_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_SQL_VALIDATION_FAILED;
 
   constructor(
     readonly identifier: string,

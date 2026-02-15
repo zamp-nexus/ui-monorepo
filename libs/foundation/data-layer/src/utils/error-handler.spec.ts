@@ -104,7 +104,10 @@ describe('error-handler utilities', () => {
       const error = new Error('test error');
       handleError(error, { context: 'useDLGet' });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[useDLGet] test error');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        '[useDLGet] test error'
+      );
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
@@ -113,6 +116,7 @@ describe('error-handler utilities', () => {
       handleError(error, { context: 'useDLCreate', severity: 'error' });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.any(String),
         '[useDLCreate] test error',
         error
       );
@@ -125,6 +129,7 @@ describe('error-handler utilities', () => {
       handleError(error, { context: 'useDLUpdate', data });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.any(String),
         '[useDLUpdate] test error',
         data
       );
@@ -136,6 +141,7 @@ describe('error-handler utilities', () => {
       handleError(error, { context: 'useDLDelete', severity: 'error', data });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.any(String),
         '[useDLDelete] test error',
         data,
         error
@@ -177,7 +183,10 @@ describe('error-handler utilities', () => {
       const error = new Error('scoped error');
       handleHookError(error);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[useDLCreate] scoped error');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        '[useDLCreate] scoped error'
+      );
     });
 
     it('should allow overriding options', () => {
@@ -227,7 +236,10 @@ describe('error-handler utilities', () => {
       const result = await safeFn();
 
       expect(result).toBeUndefined();
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[Test] async error');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        '[Test] async error'
+      );
     });
 
     it('should not rethrow errors', async () => {
@@ -287,7 +299,10 @@ describe('error-handler utilities', () => {
         },
         { context: 'TestContext' }
       );
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[TestContext] logged error');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        '[TestContext] logged error'
+      );
     });
   });
 

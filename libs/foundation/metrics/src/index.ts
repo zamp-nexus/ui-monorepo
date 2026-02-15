@@ -12,8 +12,10 @@
 export {
   FoundationMetrics,
   init,
+  reinitialize,
   getInstance,
   isInitialized,
+  getLifecycleState,
 } from './core';
 
 // ============================================

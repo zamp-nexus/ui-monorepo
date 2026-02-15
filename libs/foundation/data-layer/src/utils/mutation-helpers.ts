@@ -188,6 +188,29 @@ export interface BuildMutationResultOptions<TData, TVariables> {
   readonly isOffline: boolean;
 }
 
+export interface LocalFirstMutationExecutionOptions<TData> {
+  readonly isOnline: boolean;
+  readonly setIsQueued: (value: boolean) => void;
+  readonly queueOffline: () => Promise<void>;
+  readonly executeOnline: () => Promise<TData>;
+  readonly offlineResult: TData;
+}
+
+export const executeLocalFirstMutation = async <TData>(
+  options: LocalFirstMutationExecutionOptions<TData>
+): Promise<TData> => {
+  const { isOnline, setIsQueued, queueOffline, executeOnline, offlineResult } = options;
+
+  if (!isOnline) {
+    setIsQueued(true);
+    await queueOffline();
+    return offlineResult;
+  }
+
+  setIsQueued(false);
+  return executeOnline();
+};
+
 /**
  * Build a standardized mutation result object
  *

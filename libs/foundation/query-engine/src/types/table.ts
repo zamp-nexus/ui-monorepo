@@ -12,7 +12,14 @@
 import type { FunctionReference } from 'convex/server';
 // ConflictStrategy is both a const object (value) and a type in data-model.
 // We need the value import for the type guard `isConflictStrategy`.
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+} from '@open-insights-web/foundation-data-model';
+import {
+  type WriteOperation,
+  WRITE_OPERATIONS,
+} from './operations';
 
 // =============================================================================
 // TABLE SOURCE
@@ -77,7 +84,13 @@ export type TableFileType = (typeof TABLE_FILE_TYPES)[keyof typeof TABLE_FILE_TY
 // =============================================================================
 
 /**
- * Analytics freshness levels.
+ * Analytics freshness levels for **per-table** configuration.
+ *
+ * Describes the data freshness capability of a table's analytics (DuckDB) path.
+ * Does not include `historical` — that is a per-query concern.
+ *
+ * @see FRESHNESS_REQUIREMENTS in `./query` for per-query freshness requirements
+ *      (includes `historical` for queries that accept stale data).
  */
 export const ANALYTICS_FRESHNESS_LEVELS = {
   REALTIME: 'realtime',
@@ -310,7 +323,7 @@ export const isTableLoadState = (value: unknown): value is TableLoadState => {
 export const isConflictStrategy = (value: unknown): value is ConflictStrategy => {
   return (
     typeof value === 'string' &&
-    (Object.values(ConflictStrategy) as readonly string[]).includes(value)
+    (Object.values(CONFLICT_STRATEGY) as readonly string[]).includes(value)
   );
 };
 
@@ -322,35 +335,35 @@ export const isConflictStrategy = (value: unknown): value is ConflictStrategy =>
  * Check if a table is loaded and ready for querying.
  */
 export const isTableReady = (table: TableConfig): boolean => {
-  return table.loadState === 'loaded' || table.loadState === 'stale';
+  return table.loadState === TABLE_LOAD_STATES.LOADED || table.loadState === TABLE_LOAD_STATES.STALE;
 };
 
 /**
  * Check if a table needs to be loaded.
  */
 export const tableNeedsLoading = (table: TableConfig): boolean => {
-  return table.loadState === 'not_loaded';
+  return table.loadState === TABLE_LOAD_STATES.NOT_LOADED;
 };
 
 /**
  * Check if table is currently loading.
  */
 export const isTableLoading = (table: TableConfig): boolean => {
-  return table.loadState === 'loading';
+  return table.loadState === TABLE_LOAD_STATES.LOADING;
 };
 
 /**
  * Check if table has load error.
  */
 export const hasTableError = (table: TableConfig): boolean => {
-  return table.loadState === 'error';
+  return table.loadState === TABLE_LOAD_STATES.ERROR;
 };
 
 /**
  * Check if table data is stale (may need refresh).
  */
 export const isTableStale = (table: TableConfig, defaultStaleTime: number): boolean => {
-  if (table.loadState === 'stale') {
+  if (table.loadState === TABLE_LOAD_STATES.STALE) {
     return true;
   }
 
@@ -386,7 +399,16 @@ export const tableHasListApi = (table: TableConfig): boolean => {
  */
 export const tableHasMutationApi = (
   table: TableConfig,
-  operation: 'create' | 'update' | 'delete'
+  operation: WriteOperation
 ): boolean => {
-  return !!table.convex?.[operation];
+  switch (operation) {
+    case WRITE_OPERATIONS.CREATE:
+      return !!table.convex?.create;
+    case WRITE_OPERATIONS.UPDATE:
+      return !!table.convex?.update;
+    case WRITE_OPERATIONS.DELETE:
+      return !!table.convex?.delete;
+    default:
+      return false;
+  }
 };

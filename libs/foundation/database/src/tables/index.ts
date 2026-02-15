@@ -21,7 +21,7 @@ export {
 
 // Mutation queue
 export {
-  MutationType,
+  MUTATION_TYPE,
   createMutationEntry,
   canProcessMutation,
   shouldRetry,
@@ -33,7 +33,7 @@ export {
 
 // OPFS metadata
 export {
-  OpfsFileType,
+  OPFS_FILE_TYPE,
   createOpfsMetadata,
   sortByDependencies,
   type OpfsMetadataEntry,

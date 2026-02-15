@@ -8,7 +8,8 @@
  */
 
 import type { FoundationErrorCode, ErrorCategory } from './error-codes';
-import type { FoundationError, ErrorContext } from './foundation-error';
+import type { ErrorContext } from './foundation-error';
+import { type FoundationError, toFoundationError } from './foundation-error';
 
 // =============================================================================
 // Types
@@ -108,16 +109,6 @@ export function adaptToLegacyCallback(
   source: string
 ): LegacyErrorCallback {
   return (error: Error, context?: string) => {
-    // Import lazily to avoid circular dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { toFoundationError } = require('./foundation-error') as {
-      toFoundationError: (
-        error: unknown,
-        code?: FoundationErrorCode,
-        context?: ErrorContext
-      ) => FoundationError;
-    };
-
     const foundationError = toFoundationError(error, undefined, {
       source,
       operation: context,

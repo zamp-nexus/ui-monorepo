@@ -20,6 +20,7 @@ import {
 import {
   persistToCache,
   buildMutationResult,
+  executeLocalFirstMutation,
 } from '../utils/mutation-helpers';
 import {
   useMutationInternals,
@@ -155,32 +156,25 @@ export const useDLUpdate = <
       // Step 2: Persist optimistic data to DatabaseFacade
       await persistToCache(database, table, resolvedId, optimisticData, true);
 
-      // Step 3: If offline, queue mutation via sync-engine
-      if (!isOnline) {
-        setIsQueued(true);
-
-        // Convert payload and optimistic data with validation
-        await queueManager.enqueue({
-          type: 'update',
-          tableName: table,
-          entityId: resolvedId,
-          payload: toJsonSerializable(variables),
-          optimisticData: toJsonSerializable(optimisticData),
-          invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
-        });
-
-        // Return optimistic data when offline
-        return optimisticData;
-      }
-
-      // Step 4: Online - execute Convex mutation
-      setIsQueued(false);
-
-      // Prepare variables with resolved ID
-      const resolvedVariables = prepareResolvedVariables(variables, entityId, resolvedId);
-      const result = await convexMutation(resolvedVariables);
-
-      return result;
+      return executeLocalFirstMutation<TData>({
+        isOnline,
+        setIsQueued,
+        offlineResult: optimisticData,
+        queueOffline: async () => {
+          await queueManager.enqueue({
+            type: 'update',
+            tableName: table,
+            entityId: resolvedId,
+            payload: toJsonSerializable(variables),
+            optimisticData: toJsonSerializable(optimisticData),
+            invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
+          });
+        },
+        executeOnline: async () => {
+          const resolvedVariables = prepareResolvedVariables(variables, entityId, resolvedId);
+          return convexMutation(resolvedVariables);
+        },
+      });
     },
     [
       convexMutation,

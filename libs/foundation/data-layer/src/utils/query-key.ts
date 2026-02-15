@@ -9,7 +9,7 @@
  */
 
 import type { QueryKey } from '@tanstack/react-query';
-import type { DataSource } from '@open-insights-web/foundation-data-model';
+import { DATA_SOURCE, type DataSource } from '@open-insights-web/foundation-data-model';
 
 /**
  * Build a query key from table, entityId, and args
@@ -50,8 +50,8 @@ export const getDataSource = (
   isOnline: boolean,
   isFetching: boolean
 ): DataSource => {
-  if (!hasData) return 'none';
-  if (!isOnline) return 'cache';
-  if (isFetching) return 'cache';
-  return 'convex';
+  if (!hasData) return DATA_SOURCE.NONE;
+  if (!isOnline) return DATA_SOURCE.CACHE;
+  if (isFetching) return DATA_SOURCE.CACHE;
+  return DATA_SOURCE.CONVEX;
 };

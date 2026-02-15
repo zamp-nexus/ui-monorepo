@@ -7,7 +7,7 @@ import type { FunctionReference } from 'convex/server';
 import { getErrorMessage } from '@open-insights-web/foundation-utils';
 
 /**
- * Standard CRUD operation constants
+ * Standard CRUD operation values.
  */
 export const CRUD_OPERATION = {
   LIST: 'list',
@@ -17,9 +17,6 @@ export const CRUD_OPERATION = {
   DELETE: 'delete',
 } as const;
 
-/**
- * Standard CRUD operation type
- */
 export type CrudOperation = (typeof CRUD_OPERATION)[keyof typeof CRUD_OPERATION];
 
 /**
@@ -31,7 +28,10 @@ export const buildFunctionPath = (module: string, fn: string): string =>
 /**
  * Standard query function names by operation
  */
-export const QUERY_FN_NAMES: Record<Extract<CrudOperation, 'list' | 'get'>, string> = {
+export const QUERY_FN_NAMES: Record<
+  typeof CRUD_OPERATION.LIST | typeof CRUD_OPERATION.GET,
+  string
+> = {
   [CRUD_OPERATION.LIST]: 'list',
   [CRUD_OPERATION.GET]: 'get',
 };
@@ -39,7 +39,10 @@ export const QUERY_FN_NAMES: Record<Extract<CrudOperation, 'list' | 'get'>, stri
 /**
  * Standard mutation function names by operation
  */
-export const MUTATION_FN_NAMES: Record<Extract<CrudOperation, 'create' | 'update' | 'delete'>, string> = {
+export const MUTATION_FN_NAMES: Record<
+  typeof CRUD_OPERATION.CREATE | typeof CRUD_OPERATION.UPDATE | typeof CRUD_OPERATION.DELETE,
+  string
+> = {
   [CRUD_OPERATION.CREATE]: 'create',
   [CRUD_OPERATION.UPDATE]: 'update',
   [CRUD_OPERATION.DELETE]: 'remove', // 'delete' is reserved in JS
@@ -69,7 +72,7 @@ export const DEFAULT_TABLE_MODULE_MAP: TableModuleMap = {
  */
 export const buildQueryPath = (
   tableName: string,
-  operation: Extract<CrudOperation, 'list' | 'get'>,
+  operation: typeof CRUD_OPERATION.LIST | typeof CRUD_OPERATION.GET,
   moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP
 ): string => {
   const module = moduleMap[tableName] ?? tableName;
@@ -82,7 +85,7 @@ export const buildQueryPath = (
  */
 export const buildMutationPath = (
   tableName: string,
-  operation: Extract<CrudOperation, 'create' | 'update' | 'delete'>,
+  operation: typeof CRUD_OPERATION.CREATE | typeof CRUD_OPERATION.UPDATE | typeof CRUD_OPERATION.DELETE,
   moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP
 ): string => {
   const module = moduleMap[tableName] ?? tableName;
@@ -107,18 +110,18 @@ export const createFunctionRegistry = (
 ): ConvexFunctionRegistry => ({ queries, mutations });
 
 /**
- * Convex error types
+ * Convex error type values.
  */
-export const CONVEX_ERROR_TYPES = {
-  NOT_FOUND: 'NOT_FOUND',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  VALIDATION: 'VALIDATION_ERROR',
-  CONFLICT: 'CONFLICT',
-  RATE_LIMITED: 'RATE_LIMITED',
-  INTERNAL: 'INTERNAL_ERROR',
+export const CONVEX_ERROR_TYPE = {
+  NOT_FOUND: 'not_found',
+  UNAUTHORIZED: 'unauthorized',
+  VALIDATION: 'validation_error',
+  CONFLICT: 'conflict',
+  RATE_LIMITED: 'rate_limited',
+  INTERNAL: 'internal_error',
 } as const;
 
-export type ConvexErrorType = typeof CONVEX_ERROR_TYPES[keyof typeof CONVEX_ERROR_TYPES];
+export type ConvexErrorType = (typeof CONVEX_ERROR_TYPE)[keyof typeof CONVEX_ERROR_TYPE];
 
 /**
  * Parse Convex error to get error type
@@ -132,25 +135,25 @@ export const parseConvexError = (error: unknown): {
 
   // Check for known error patterns
   if (message.includes('not found') || message.includes('does not exist')) {
-    return { type: CONVEX_ERROR_TYPES.NOT_FOUND, message, isRetryable: false };
+    return { type: CONVEX_ERROR_TYPE.NOT_FOUND, message, isRetryable: false };
   }
 
   if (message.includes('unauthorized') || message.includes('permission denied')) {
-    return { type: CONVEX_ERROR_TYPES.UNAUTHORIZED, message, isRetryable: false };
+    return { type: CONVEX_ERROR_TYPE.UNAUTHORIZED, message, isRetryable: false };
   }
 
   if (message.includes('validation') || message.includes('invalid')) {
-    return { type: CONVEX_ERROR_TYPES.VALIDATION, message, isRetryable: false };
+    return { type: CONVEX_ERROR_TYPE.VALIDATION, message, isRetryable: false };
   }
 
   if (message.includes('conflict') || message.includes('already exists')) {
-    return { type: CONVEX_ERROR_TYPES.CONFLICT, message, isRetryable: false };
+    return { type: CONVEX_ERROR_TYPE.CONFLICT, message, isRetryable: false };
   }
 
   if (message.includes('rate limit') || message.includes('too many requests')) {
-    return { type: CONVEX_ERROR_TYPES.RATE_LIMITED, message, isRetryable: true };
+    return { type: CONVEX_ERROR_TYPE.RATE_LIMITED, message, isRetryable: true };
   }
 
   // Default to internal error (retryable)
-  return { type: CONVEX_ERROR_TYPES.INTERNAL, message, isRetryable: true };
+  return { type: CONVEX_ERROR_TYPE.INTERNAL, message, isRetryable: true };
 };

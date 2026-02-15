@@ -8,8 +8,8 @@
  */
 
 import type { FilterValue } from '../types/filter';
-import type { SqlIdentifier } from '@open-insights-web/foundation-data-model';
 import {
+  validateIdentifier as bridgeValidateIdentifier,
   isValidIdentifier as bridgeIsValidIdentifier,
   quoteIdentifier as bridgeQuoteIdentifier,
   escapeString as bridgeEscapeString,
@@ -67,10 +67,13 @@ export const isValidIdentifier = (name: string): boolean => {
  * @returns Double-quoted identifier safe for SQL
  */
 export const quoteIdentifier = (identifier: string): string => {
-  // Bridge's quoteIdentifier expects a branded SqlIdentifier. We intentionally
-  // accept any string here (the quoting itself makes any value safe) so a
-  // single cast is acceptable.
-  return bridgeQuoteIdentifier(identifier as SqlIdentifier);
+  try {
+    const validatedIdentifier = bridgeValidateIdentifier(identifier);
+    return bridgeQuoteIdentifier(validatedIdentifier);
+  } catch {
+    const escapedIdentifier = identifier.replace(/"/g, '""');
+    return `"${escapedIdentifier}"`;
+  }
 };
 
 /**

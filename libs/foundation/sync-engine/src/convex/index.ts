@@ -21,9 +21,12 @@ export {
   QUERY_FN_NAMES,
   MUTATION_FN_NAMES,
   DEFAULT_TABLE_MODULE_MAP,
-  CONVEX_ERROR_TYPES,
-  type CrudOperation,
-  type TableModuleMap,
-  type ConvexFunctionRegistry,
-  type ConvexErrorType,
+  CONVEX_ERROR_TYPE,
+} from './functions';
+
+export type {
+  CrudOperation,
+  ConvexErrorType,
+  TableModuleMap,
+  ConvexFunctionRegistry,
 } from './functions';

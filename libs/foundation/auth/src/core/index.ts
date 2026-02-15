@@ -39,7 +39,7 @@ export {
 
 // User role and permissions (defined locally, compatible with data-model)
 export type { UserRole, UserPermissions } from './types';
-export { getUserPermissions } from './types';
+export { USER_ROLES, isValidRole, getUserPermissions } from './types';
 
 export type {
   // Configuration

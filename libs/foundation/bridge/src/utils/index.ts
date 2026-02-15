@@ -4,7 +4,7 @@
  * For generic utilities, import directly from their source packages:
  * - From '@open-insights-web/foundation-utils': deepFreeze, assert, assertDefined,
  *   isPositiveInteger, isNonNegative, sleep, withTimeout
- * - From '@open-insights-web/foundation-data-model': ValidationResult, SimpleValidationResult
+ * - From '@open-insights-web/foundation-data-model': ValidationResult, ValidationResultData
  *
  * @module utils
  */

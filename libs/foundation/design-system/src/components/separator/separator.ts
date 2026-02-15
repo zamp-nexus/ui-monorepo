@@ -6,8 +6,6 @@
 import type {
   ComponentThemeConfigStructure,
   OIComponentOwnProps,
-  OIComponentRef,
-  OIDefaultProps,
   PolymorphicProps,
   PolymorphicRef,
 } from '../../types';
@@ -91,3 +89,4 @@ export const separatorDefaultTheme: ComponentThemeConfigStructure = {
     orientation: 'horizontal',
   },
 };
+

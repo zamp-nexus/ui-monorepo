@@ -8,7 +8,6 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import { IconButton } from '../icon-button';
 import { ToastActions } from './toast-actions';
 import { ToastBody } from './toast-body';
 import { ToastDescription } from './toast-description';
@@ -137,7 +136,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
       )}
     </Element>
   );
-}) as ToastComponent;
+}) as unknown as ToastComponent;
 
 // Attach sub-components
 ToastRoot.displayName = 'Toast';

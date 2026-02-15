@@ -7,9 +7,9 @@
  * @module errors/query-errors
  */
 
-import { Milliseconds, QueryId } from '../types';
+import type { Milliseconds, QueryId } from '../types/branded';
 import { FoundationError } from './foundation-error';
-import { FoundationErrorCode } from './error-codes';
+import { FOUNDATION_ERROR_CODE } from './error-codes';
 
 /**
  * Reason for query cancellation.
@@ -30,7 +30,7 @@ export type CancellationReasonKind =
  * Error thrown when a query exceeds its timeout.
  */
 export class QueryTimeoutError extends FoundationError {
-  readonly code = FoundationErrorCode.BRIDGE_QUERY_TIMEOUT;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT;
 
   constructor(
     readonly queryId: QueryId,
@@ -49,7 +49,7 @@ export class QueryTimeoutError extends FoundationError {
  * Error thrown when a query is cancelled.
  */
 export class QueryCancelledError extends FoundationError {
-  readonly code = FoundationErrorCode.BRIDGE_QUERY_CANCELLED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_QUERY_CANCELLED;
 
   constructor(
     readonly queryId: QueryId,
@@ -66,7 +66,7 @@ export class QueryCancelledError extends FoundationError {
  * Error thrown when query execution fails.
  */
 export class QueryExecutionError extends FoundationError {
-  readonly code = FoundationErrorCode.QUERY_EXECUTION_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.QUERY_EXECUTION_FAILED;
 
   constructor(
     readonly queryId: QueryId,

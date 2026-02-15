@@ -8,10 +8,11 @@
  */
 
 import {
+  FOUNDATION_ERROR_CODE,
   FoundationError,
-  FoundationErrorCode,
   isFoundationError,
   type ErrorContext,
+  type FoundationErrorCode,
 } from '@open-insights-web/foundation-data-model';
 
 // =============================================================================
@@ -43,7 +44,7 @@ export class QuotaExceededError extends DatabaseError {
     const availableMsg =
       availableBytes !== undefined ? `. Available: ${availableBytes} bytes` : '';
     super(
-      FoundationErrorCode.DATABASE_QUOTA_EXCEEDED,
+      FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED,
       `Storage quota exceeded. Requested: ${requestedBytes} bytes${availableMsg}`,
       { requestedBytes, availableBytes },
       cause
@@ -57,7 +58,7 @@ export class QuotaExceededError extends DatabaseError {
 export class OpfsNotSupportedError extends DatabaseError {
   constructor() {
     super(
-      FoundationErrorCode.DATABASE_OPFS_NOT_SUPPORTED,
+      FOUNDATION_ERROR_CODE.DATABASE_OPFS_NOT_SUPPORTED,
       'OPFS is not supported in this environment'
     );
   }
@@ -69,7 +70,7 @@ export class OpfsNotSupportedError extends DatabaseError {
 export class OpfsInitFailedError extends DatabaseError {
   constructor(reason: string, cause?: Error) {
     super(
-      FoundationErrorCode.DATABASE_OPFS_INIT_FAILED,
+      FOUNDATION_ERROR_CODE.DATABASE_OPFS_INIT_FAILED,
       `Failed to initialize OPFS: ${reason}`,
       { reason },
       cause
@@ -82,7 +83,7 @@ export class OpfsInitFailedError extends DatabaseError {
  */
 export class ValidationError extends DatabaseError {
   constructor(field: string, reason: string) {
-    super(FoundationErrorCode.VALIDATION_FAILED, `Validation failed for ${field}: ${reason}`, {
+    super(FOUNDATION_ERROR_CODE.VALIDATION_FAILED, `Validation failed for ${field}: ${reason}`, {
       field,
       reason,
     });
@@ -94,7 +95,7 @@ export class ValidationError extends DatabaseError {
  */
 export class ConfigInvalidError extends DatabaseError {
   constructor(reason: string) {
-    super(FoundationErrorCode.CONFIG_INVALID, `Invalid configuration: ${reason}`, { reason });
+    super(FOUNDATION_ERROR_CODE.CONFIG_INVALID, `Invalid configuration: ${reason}`, { reason });
   }
 }
 
@@ -104,7 +105,7 @@ export class ConfigInvalidError extends DatabaseError {
 export class NotInitializedError extends DatabaseError {
   constructor(component: string) {
     super(
-      FoundationErrorCode.DATABASE_NOT_INITIALIZED,
+      FOUNDATION_ERROR_CODE.DATABASE_NOT_INITIALIZED,
       `${component} is not initialized. Call initialize() first.`,
       { component }
     );
@@ -116,7 +117,7 @@ export class NotInitializedError extends DatabaseError {
  */
 export class DuplicateEntryError extends DatabaseError {
   constructor(key: string, type: string) {
-    super(FoundationErrorCode.DATABASE_DUPLICATE_ENTRY, `Duplicate ${type} entry with key: ${key}`, {
+    super(FOUNDATION_ERROR_CODE.DATABASE_DUPLICATE_ENTRY, `Duplicate ${type} entry with key: ${key}`, {
       key,
       entryType: type,
     });
@@ -198,7 +199,7 @@ export const isDatabaseError = (error: unknown): error is DatabaseError => {
  */
 export const isQuotaExceededError = (error: unknown): boolean => {
   // Check for DatabaseError using hasErrorCode from foundation-data-model
-  if (isFoundationError(error) && error.code === FoundationErrorCode.DATABASE_QUOTA_EXCEEDED) return true;
+  if (isFoundationError(error) && error.code === FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED) return true;
 
   // Check for native DOMException
   if (error instanceof DOMException && error.name === 'QuotaExceededError') {

@@ -4,8 +4,8 @@
  * @module tokens/utils/css-generator
  */
 
-import type { DesignToken, ColorToken, DimensionToken } from '../types';
-import { isDesignToken, isColorToken, isDimensionToken } from '../types';
+import type { DesignToken } from '../types';
+import { isDesignToken } from '../types';
 
 /**
  * Options for CSS generation

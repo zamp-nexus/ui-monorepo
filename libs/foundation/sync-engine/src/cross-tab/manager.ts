@@ -6,13 +6,13 @@
 import { z } from 'zod';
 import type { QueryKeyBase } from '@open-insights-web/foundation-data-model';
 import {
-  CrossTabMessageType,
+  CROSS_TAB_MESSAGE_TYPE,
+  type CrossTabMessageType,
   type CrossTabMessage,
   type CrossTabMessageHandler,
 } from '@open-insights-web/foundation-data-model';
 import {
   Disposable,
-  CompositeDisposable,
   createDebugLogger,
   createSingletonFactory,
   ManagedInterval,
@@ -39,17 +39,17 @@ import {
  * All valid cross-tab message types using const values from data-model
  */
 const CrossTabMessageTypeSchema = z.enum([
-  CrossTabMessageType.INVALIDATE,
-  CrossTabMessageType.MUTATION_COMPLETED,
-  CrossTabMessageType.ONLINE,
-  CrossTabMessageType.OFFLINE,
-  CrossTabMessageType.SYNC_STARTED,
-  CrossTabMessageType.SYNC_COMPLETED,
-  CrossTabMessageType.CACHE_UPDATED,
-  CrossTabMessageType.LEADER_ELECTED,
-  CrossTabMessageType.LEADER_HEARTBEAT,
-  CrossTabMessageType.LEADER_RESIGN,
-  CrossTabMessageType.LEADER_CANDIDATE,
+  CROSS_TAB_MESSAGE_TYPE.INVALIDATE,
+  CROSS_TAB_MESSAGE_TYPE.MUTATION_COMPLETED,
+  CROSS_TAB_MESSAGE_TYPE.ONLINE,
+  CROSS_TAB_MESSAGE_TYPE.OFFLINE,
+  CROSS_TAB_MESSAGE_TYPE.SYNC_STARTED,
+  CROSS_TAB_MESSAGE_TYPE.SYNC_COMPLETED,
+  CROSS_TAB_MESSAGE_TYPE.CACHE_UPDATED,
+  CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED,
+  CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT,
+  CROSS_TAB_MESSAGE_TYPE.LEADER_RESIGN,
+  CROSS_TAB_MESSAGE_TYPE.LEADER_CANDIDATE,
 ]);
 
 /**
@@ -151,14 +151,12 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
   private tabId: string;
   private handlers: Map<CrossTabMessageType, Set<CrossTabMessageHandler>> = new Map();
   private started = false;
-  private disposables = new CompositeDisposable();
-  private registeredDisposableKeys = new Set<string>();
   private logger;
   
   // Leader election state
   private _isLeader = false;
   private currentLeaderId: string | null = null;
-  private lastLeaderHeartbeat: number = 0;
+  private lastLeaderHeartbeat = 0;
   
   // Managed timers for leader heartbeat and health check
   private leaderHeartbeatTimer: SafeTimer | null = null;
@@ -171,8 +169,8 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
   
   // Election term for Raft-style leader election
   // Higher term wins in case of conflicts
-  private electionTerm: number = 0;
-  private currentLeaderTerm: number = 0;
+  private electionTerm = 0;
+  private currentLeaderTerm = 0;
   private isElectionInProgress = false;
 
   constructor(config: CrossTabManagerConfig = {}) {
@@ -222,20 +220,6 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     this.channel.onmessage = this.handleMessage;
     this.started = true;
 
-    // Add cleanup for channel only once (idempotent registration)
-    const channelKey = 'channel';
-    if (!this.registeredDisposableKeys.has(channelKey)) {
-      this.registeredDisposableKeys.add(channelKey);
-      this.disposables.addFunction(() => {
-        // Explicitly remove message handler to prevent memory leaks
-        if (this.channel) {
-          this.channel.onmessage = null;
-          this.channel.close();
-        }
-        this.channel = null;
-      });
-    }
-
     // Start leader election
     this.startLeaderElection();
 
@@ -250,7 +234,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
 
     // Resign leadership if we're the leader
     if (this._isLeader) {
-      this.broadcast(CrossTabMessageType.LEADER_RESIGN, { leaderId: this.tabId });
+      this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_RESIGN, { leaderId: this.tabId });
       this._isLeader = false;
     }
 
@@ -266,6 +250,12 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     
     this.resignElectionTimer?.dispose();
     this.resignElectionTimer = null;
+
+    if (this.channel) {
+      this.channel.onmessage = null;
+      this.channel.close();
+      this.channel = null;
+    }
 
     this.started = false;
     this.logger.debug('Stopped');
@@ -329,7 +319,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
    * Broadcast query invalidation
    */
   invalidateQueries(queryKeys: QueryKeyBase[]): void {
-    this.broadcast(CrossTabMessageType.INVALIDATE, { queryKeys });
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.INVALIDATE, { queryKeys });
   }
 
   /**
@@ -341,7 +331,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     mutationId: string,
     data?: unknown
   ): void {
-    this.broadcast(CrossTabMessageType.MUTATION_COMPLETED, {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.MUTATION_COMPLETED, {
       tableName,
       entityId,
       mutationId,
@@ -353,35 +343,35 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
    * Broadcast online status
    */
   notifyOnline(): void {
-    this.broadcast(CrossTabMessageType.ONLINE);
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.ONLINE);
   }
 
   /**
    * Broadcast offline status
    */
   notifyOffline(): void {
-    this.broadcast(CrossTabMessageType.OFFLINE);
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.OFFLINE);
   }
 
   /**
    * Broadcast sync started
    */
   notifySyncStarted(): void {
-    this.broadcast(CrossTabMessageType.SYNC_STARTED);
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.SYNC_STARTED);
   }
 
   /**
    * Broadcast sync completed
    */
   notifySyncCompleted(): void {
-    this.broadcast(CrossTabMessageType.SYNC_COMPLETED);
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.SYNC_COMPLETED);
   }
 
   /**
    * Broadcast cache update
    */
   notifyCacheUpdated(tableName: string, queryKeys: QueryKeyBase[]): void {
-    this.broadcast(CrossTabMessageType.CACHE_UPDATED, { tableName, queryKeys });
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.CACHE_UPDATED, { tableName, queryKeys });
   }
 
   /**
@@ -389,9 +379,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
    */
   protected onDispose(): void {
     this.stop();
-    this.disposables.dispose();
     this.handlers.clear();
-    this.registeredDisposableKeys.clear();
     this.logger.debug('Disposed');
   }
 
@@ -450,7 +438,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     this.logger.debug('Initiating election for term:', this.electionTerm);
     
     // Broadcast candidacy with term number
-    this.broadcast(CrossTabMessageType.LEADER_CANDIDATE, {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_CANDIDATE, {
       leaderId: this.tabId,
       term: this.electionTerm,
     });
@@ -488,7 +476,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     this.lastLeaderHeartbeat = Date.now();
 
     // Announce leadership with term
-    this.broadcast(CrossTabMessageType.LEADER_ELECTED, {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED, {
       leaderId: this.tabId,
       term: term,
     });
@@ -499,10 +487,10 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
     this.logger.debug('Became leader for term:', term);
 
     // Notify handlers
-    const handlers = this.handlers.get(CrossTabMessageType.LEADER_ELECTED);
+    const handlers = this.handlers.get(CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED);
     if (handlers) {
       const message: CrossTabMessage = {
-        type: CrossTabMessageType.LEADER_ELECTED,
+        type: CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED,
         tabId: this.tabId,
         timestamp: Date.now(),
         payload: { leaderId: this.tabId, term: term },
@@ -528,12 +516,12 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
   /**
    * Current heartbeat interval (adaptive - starts at base and increases to max).
    */
-  private currentHeartbeatInterval: number = 0;
+  private currentHeartbeatInterval = 0;
 
   /**
    * Number of consecutive heartbeats without activity (for adaptive interval).
    */
-  private consecutiveQuietHeartbeats: number = 0;
+  private consecutiveQuietHeartbeats = 0;
 
   /**
    * Start sending leader heartbeats with adaptive interval.
@@ -555,13 +543,6 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
 
     // Use adaptive scheduling instead of fixed interval
     this.scheduleNextHeartbeat();
-
-    // Register cleanup only once (idempotent)
-    const heartbeatKey = 'leaderHeartbeat';
-    if (!this.registeredDisposableKeys.has(heartbeatKey)) {
-      this.registeredDisposableKeys.add(heartbeatKey);
-      this.disposables.addFunction(() => this.stopLeaderHeartbeat());
-    }
   }
 
   /**
@@ -577,7 +558,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
       delay: this.currentHeartbeatInterval,
       callback: () => {
         if (this._isLeader && !this.isDisposed) {
-          this.broadcast(CrossTabMessageType.LEADER_HEARTBEAT, {
+          this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT, {
             leaderId: this.tabId,
             term: this.currentLeaderTerm,
           });
@@ -643,13 +624,6 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
       },
       autoStart: true,
     });
-
-    // Register cleanup only once (idempotent)
-    const checkKey = 'leaderCheck';
-    if (!this.registeredDisposableKeys.has(checkKey)) {
-      this.registeredDisposableKeys.add(checkKey);
-      this.disposables.addFunction(() => this.stopLeaderCheck());
-    }
   }
 
   /**
@@ -685,13 +659,13 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
 
     // Handle leader election messages with term-based resolution
     switch (message.type) {
-      case CrossTabMessageType.LEADER_CANDIDATE: {
+      case CROSS_TAB_MESSAGE_TYPE.LEADER_CANDIDATE: {
         // Another tab is requesting leadership
         const { term: candidateTerm } = extractLeaderPayload(message.payload);
         
         // If we're leader with a higher or equal term, reject by sending heartbeat
         if (this._isLeader && this.currentLeaderTerm >= candidateTerm) {
-          this.broadcast(CrossTabMessageType.LEADER_HEARTBEAT, {
+          this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT, {
             leaderId: this.tabId, 
             term: this.currentLeaderTerm 
           });
@@ -708,7 +682,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
         break;
       }
 
-      case CrossTabMessageType.LEADER_ELECTED: {
+      case CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED: {
         // Another tab became leader
         const { leaderId: newLeaderId, term: newTerm } = extractLeaderPayload(message.payload);
         
@@ -725,7 +699,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
                 this.logger.debug('Lost leadership to:', message.tabId, 'term:', newTerm);
               } else {
                 // We have equal or higher authority, reassert leadership
-                this.broadcast(CrossTabMessageType.LEADER_HEARTBEAT, {
+                this.broadcast(CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT, {
                   leaderId: this.tabId, 
                   term: this.currentLeaderTerm 
                 });
@@ -741,11 +715,13 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
         break;
       }
 
-      case CrossTabMessageType.LEADER_HEARTBEAT: {
+      case CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT: {
         const { leaderId: heartbeatLeaderId, term: heartbeatTerm } = extractLeaderPayload(message.payload);
         
         // Only accept heartbeat from current leader with valid term
         if (heartbeatTerm >= this.currentLeaderTerm) {
+          const previousLeaderTerm = this.currentLeaderTerm;
+
           this.currentLeaderId = heartbeatLeaderId ?? null;
           this.currentLeaderTerm = heartbeatTerm;
           this.lastLeaderHeartbeat = Date.now();
@@ -753,8 +729,10 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
           
           // Step down if we thought we were leader but someone else has equal/higher term
           if (this._isLeader && heartbeatLeaderId && heartbeatLeaderId !== this.tabId) {
-            if (heartbeatTerm > this.currentLeaderTerm || 
-                (heartbeatTerm === this.currentLeaderTerm && message.tabId < this.tabId)) {
+            if (
+              heartbeatTerm > previousLeaderTerm ||
+              (heartbeatTerm === previousLeaderTerm && message.tabId < this.tabId)
+            ) {
               this._isLeader = false;
               this.stopLeaderHeartbeat();
               this.logger.debug('Stepping down due to heartbeat from:', heartbeatLeaderId);
@@ -764,7 +742,7 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
         break;
       }
 
-      case CrossTabMessageType.LEADER_RESIGN:
+      case CROSS_TAB_MESSAGE_TYPE.LEADER_RESIGN:
         if (message.payload?.leaderId === this.currentLeaderId) {
           this.logger.debug('Leader resigned, starting election');
           this.currentLeaderId = null;

@@ -9,8 +9,8 @@
  */
 
 import {
+  FOUNDATION_ERROR_CODE,
   FoundationError,
-  FoundationErrorCode,
   type ErrorContext,
 } from '@open-insights-web/foundation-data-model';
 import { HTTP_ERROR_CODE, type HttpErrorCode, type SerializationOperation } from '../core/constants';
@@ -79,7 +79,7 @@ export abstract class HttpError extends FoundationError {
  * FoundationErrorCode: CONFIG_MISSING
  */
 export class HttpNotInitializedError extends HttpError {
-  readonly code = FoundationErrorCode.CONFIG_MISSING;
+  readonly code = FOUNDATION_ERROR_CODE.CONFIG_MISSING;
   readonly httpCode = HTTP_ERROR_CODE.NOT_INITIALIZED;
 
   constructor(operation?: string, cause?: Error) {
@@ -96,7 +96,7 @@ export class HttpNotInitializedError extends HttpError {
  * FoundationErrorCode: CONFIG_INVALID
  */
 export class HttpConfigError extends HttpError {
-  readonly code = FoundationErrorCode.CONFIG_INVALID;
+  readonly code = FOUNDATION_ERROR_CODE.CONFIG_INVALID;
   readonly httpCode = HTTP_ERROR_CODE.CONFIG_ERROR;
 
   constructor(reason: string, cause?: Error) {
@@ -114,7 +114,7 @@ export class HttpConfigError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_FAILED
  */
 export class HttpRequestError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.REQUEST_FAILED;
 
   constructor(
@@ -134,7 +134,7 @@ export class HttpRequestError extends HttpError {
  * FoundationErrorCode: NETWORK_TIMEOUT
  */
 export class HttpTimeoutError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_TIMEOUT;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_TIMEOUT;
   readonly httpCode = HTTP_ERROR_CODE.TIMEOUT;
 
   /** Timeout duration in milliseconds */
@@ -157,7 +157,7 @@ export class HttpTimeoutError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_FAILED
  */
 export class HttpNetworkError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.NETWORK_ERROR;
 
   constructor(message?: string, url?: string, method?: string, cause?: Error) {
@@ -171,7 +171,7 @@ export class HttpNetworkError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_CANCELLED
  */
 export class HttpCancelledError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_CANCELLED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_CANCELLED;
   readonly httpCode = HTTP_ERROR_CODE.CANCELLED;
 
   constructor(url?: string, method?: string, cause?: Error) {
@@ -189,7 +189,7 @@ export class HttpCancelledError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_FAILED
  */
 export class HttpUnauthorizedError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.UNAUTHORIZED;
 
   constructor(url?: string, method?: string, cause?: Error) {
@@ -208,7 +208,7 @@ export class HttpUnauthorizedError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_FAILED
  */
 export class HttpForbiddenError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.FORBIDDEN;
 
   constructor(url?: string, method?: string, cause?: Error) {
@@ -231,7 +231,7 @@ export class HttpForbiddenError extends HttpError {
  * FoundationErrorCode: RESOURCE_NOT_FOUND
  */
 export class HttpNotFoundError extends HttpError {
-  readonly code = FoundationErrorCode.RESOURCE_NOT_FOUND;
+  readonly code = FOUNDATION_ERROR_CODE.RESOURCE_NOT_FOUND;
   readonly httpCode = HTTP_ERROR_CODE.NOT_FOUND;
 
   constructor(url?: string, method?: string, cause?: Error) {
@@ -254,7 +254,7 @@ export class HttpNotFoundError extends HttpError {
  * FoundationErrorCode: NETWORK_REQUEST_FAILED
  */
 export class HttpServerError extends HttpError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.SERVER_ERROR;
 
   constructor(
@@ -283,7 +283,7 @@ export class HttpServerError extends HttpError {
  * FoundationErrorCode: VALIDATION_FAILED
  */
 export class HttpSerializationError extends HttpError {
-  readonly code = FoundationErrorCode.VALIDATION_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.VALIDATION_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.SERIALIZATION_ERROR;
 
   constructor(operation: SerializationOperation, cause?: Error) {

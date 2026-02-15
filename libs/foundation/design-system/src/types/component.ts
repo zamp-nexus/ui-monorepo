@@ -7,6 +7,14 @@ import type { ClassValue } from './cva';
 import type { PolymorphicProps, PolymorphicRef } from './polymorphic';
 import type { PropsOf, Resolve } from './utils';
 
+const OI_COMPONENT_RESERVED_PROP = {
+  COMPONENT: 'component',
+  REF: 'ref',
+} as const;
+
+type OIComponentReservedProp =
+  (typeof OI_COMPONENT_RESERVED_PROP)[keyof typeof OI_COMPONENT_RESERVED_PROP];
+
 /**
  * Base props that every OpenInsights component inherits
  */
@@ -111,7 +119,7 @@ export type SlotNames<T> = T extends (infer U)[]
  * Generates variant's and modifier's props for the component
  */
 export type OIComponentOwnProps<
-  Variants extends OIComponentVariants = object,
+  Variants extends OIComponentVariants = OIComponentVariants,
   Modifiers extends OIComponentModifiers = [],
   Slots extends OIComponentSlots = [],
   AdditionalProps = object,
@@ -132,7 +140,7 @@ export type OIComponentOwnProps<
  */
 export type OIComponentThemeConfig<
   Name extends string,
-  Variants extends OIComponentVariants = object,
+  Variants extends OIComponentVariants = OIComponentVariants,
   Modifiers extends OIComponentModifiers = [],
   Slots extends OIComponentSlots = [],
 > = {
@@ -186,7 +194,7 @@ export type OIComponentRef<T extends React.ElementType> = React.ComponentPropsWi
 export type OIComponentProps<T extends React.ElementType = React.ElementType, TProps = object> = {
   component?: T;
 } & TProps &
-  Omit<PropsOf<T>, keyof TProps | 'component' | 'ref'> & { ref?: OIComponentRef<T> };
+  Omit<PropsOf<T>, keyof TProps | OIComponentReservedProp> & { ref?: OIComponentRef<T> };
 
 /**
  * Type for component that supports polymorphism via `component` prop
@@ -228,4 +236,3 @@ export interface ComponentAnalytics {
   onInteraction?: (event: InteractionEvent) => void;
   onError?: (error: Error, componentName: string, oiid?: string) => void;
 }
-

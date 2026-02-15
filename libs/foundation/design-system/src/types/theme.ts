@@ -31,7 +31,12 @@ export interface FeatureFlags {
 /**
  * Direction for RTL support
  */
-export type Direction = 'ltr' | 'rtl';
+export const DIRECTION = {
+  LTR: 'ltr',
+  RTL: 'rtl',
+} as const;
+
+export type Direction = (typeof DIRECTION)[keyof typeof DIRECTION];
 
 /**
  * Components configuration map
@@ -145,4 +150,3 @@ export interface UseThemeReturn {
   root: (props: Record<string, unknown>) => string;
   [slotName: string]: (props: Record<string, unknown>) => string;
 }
-

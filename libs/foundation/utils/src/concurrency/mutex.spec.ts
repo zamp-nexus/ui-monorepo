@@ -2,7 +2,7 @@
  * Tests for Mutex and Semaphore
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Mutex, Semaphore } from './mutex';
 
 describe('Mutex', () => {

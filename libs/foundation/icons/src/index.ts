@@ -10,7 +10,7 @@
 
 // Initialize icon registry by importing the icons
 // This ensures all icons are registered when the library is imported
-import './icons';
+import './registry';
 
 // Export the Icon component (used by design-system)
 export { Icon } from './icon';

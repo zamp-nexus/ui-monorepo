@@ -5,7 +5,7 @@
 
 import type { ConvexReactClient } from 'convex/react';
 import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
-import type { MutationQueueEntry } from '@open-insights-web/foundation-database';
+import type { MutationQueueEntry } from '@open-insights-web/foundation-data-model';
 import type { MutationExecutorResult } from '../queue/processor';
 import {
   Disposable,
@@ -13,6 +13,7 @@ import {
   createDebugLogger,
   getErrorMessage,
   normalizeError,
+  hashPayloadSync,
   SafeTimer,
 } from '@open-insights-web/foundation-utils';
 import { DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS } from '../core/defaults';
@@ -62,6 +63,14 @@ export interface SubscriptionCallbacks<T> {
 }
 
 /**
+ * Adaptive polling configuration.
+ * When consecutive polls return unchanged data, the interval doubles
+ * (up to MAX_POLL_INTERVAL_MULTIPLIER × base). On change, it resets.
+ */
+const UNCHANGED_POLLS_BEFORE_BACKOFF = 3;
+const MAX_POLL_INTERVAL_MULTIPLIER = 4;
+
+/**
  * Internal subscription state for managing poll functions and refresh
  */
 interface SubscriptionState {
@@ -73,6 +82,12 @@ interface SubscriptionState {
   isActive: boolean;
   /** SafeTimer for polling */
   pollTimer: SafeTimer | null;
+  /** Consecutive unchanged poll count for adaptive backoff */
+  unchangedCount: number;
+  /** Current effective poll interval (adaptive) */
+  currentInterval: number;
+  /** Base poll interval configured for this subscription */
+  baseInterval: number;
 }
 
 /**
@@ -201,33 +216,45 @@ export class ConvexSyncAdapter extends Disposable {
     pollInterval = DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS
   ): () => void {
     this.ensureNotDisposed();
-    
+
     const subscriptionId = `sub_${++this.subscriptionIdCounter}`;
     this.logger.debug('Subscribing to query with polling:', queryFn, args, 'id:', subscriptionId);
 
-    let lastValueJson: string | undefined;
-    
+    let lastHash: string | undefined;
+
     // Create subscription state
     const state: SubscriptionState = {
-      unsubscribe: () => {},
-      poll: async () => {},
+      unsubscribe: () => undefined,
+      poll: async () => undefined,
       isActive: true,
       pollTimer: null,
+      unchangedCount: 0,
+      currentInterval: pollInterval,
+      baseInterval: pollInterval,
     };
-    
-    // Fetch and compare with deep equality via JSON
+
+    // Fetch and compare using structural hash (cheaper than full JSON comparison)
     const poll = async () => {
       if (!state.isActive || this.isDisposed) return;
-      
+
       try {
         const result = await this.client.query(queryFn, args);
-        
-        // Only notify if value changed (using JSON comparison for deep equality)
+
         if (state.isActive && !this.isDisposed) {
-          const resultJson = JSON.stringify(result);
-          if (resultJson !== lastValueJson) {
-            lastValueJson = resultJson;
+          const resultHash = hashPayloadSync(result);
+          if (resultHash !== lastHash) {
+            lastHash = resultHash;
             callbacks.onUpdate(result);
+            // Data changed — reset adaptive backoff
+            state.unchangedCount = 0;
+            state.currentInterval = pollInterval;
+          } else {
+            // Data unchanged — increase backoff if threshold reached
+            state.unchangedCount++;
+            if (state.unchangedCount >= UNCHANGED_POLLS_BEFORE_BACKOFF) {
+              const maxInterval = pollInterval * MAX_POLL_INTERVAL_MULTIPLIER;
+              state.currentInterval = Math.min(state.currentInterval * 2, maxInterval);
+            }
           }
         }
       } catch (error) {
@@ -236,15 +263,14 @@ export class ConvexSyncAdapter extends Disposable {
         }
       }
     };
-    
-    // Schedule next poll using SafeTimer after current poll completes
+
+    // Schedule next poll using SafeTimer with adaptive interval
     const scheduleNextPoll = () => {
       if (state.isActive && !this.isDisposed) {
-        // Dispose previous timer if exists
         state.pollTimer?.dispose();
-        
+
         state.pollTimer = new SafeTimer({
-          delay: pollInterval,
+          delay: state.currentInterval,
           callback: async () => {
             await poll();
             scheduleNextPoll();
@@ -253,7 +279,7 @@ export class ConvexSyncAdapter extends Disposable {
         });
       }
     };
-    
+
     // Assign poll function to state
     state.poll = poll;
 
@@ -265,7 +291,7 @@ export class ConvexSyncAdapter extends Disposable {
       this.subscriptions.delete(subscriptionId);
       this.logger.debug('Unsubscribed from query:', queryFn, 'id:', subscriptionId);
     };
-    
+
     state.unsubscribe = unsubscribe;
     this.subscriptions.set(subscriptionId, state);
 
@@ -273,7 +299,7 @@ export class ConvexSyncAdapter extends Disposable {
     poll().then(() => {
       scheduleNextPoll();
     });
-    
+
     return unsubscribe;
   }
 
@@ -289,10 +315,13 @@ export class ConvexSyncAdapter extends Disposable {
     
     if (subscriptionCount === 0) return;
     
-    // Trigger immediate poll for all active subscriptions
+    // Trigger immediate poll for all active subscriptions and reset adaptive backoff
     const pollPromises: Promise<void>[] = [];
     for (const [id, state] of this.subscriptions) {
       if (state.isActive) {
+        // Reset backoff since a mutation likely changed the data
+        state.unchangedCount = 0;
+        state.currentInterval = state.baseInterval;
         this.logger.debug('Triggering refresh for subscription:', id);
         pollPromises.push(state.poll());
       }

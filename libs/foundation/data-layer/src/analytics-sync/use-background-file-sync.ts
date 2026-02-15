@@ -13,14 +13,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createDebugLogger } from '@open-insights-web/foundation-utils';
-import { useDataLayerInternals } from '../provider';
+import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import {
-  TableSyncService,
-  type LocalTableMetadata,
-  type TableSyncDatabaseOperations,
-} from './table-sync-service';
-import {
-  FileDownloadService,
   type DownloadProgressState,
   INITIAL_DOWNLOAD_STATE,
 } from './file-download-service';
@@ -75,90 +69,25 @@ export const useBackgroundFileSync = (
 ): UseBackgroundFileSyncResult => {
   const { tables, enabled = true, onProgress, onComplete, onError, debug = false } = options;
 
-  const { convexClient, database, queryClient, datasourceApi, opfsManager } = useDataLayerInternals();
+  const {
+    queryClient,
+    datasourceApi,
+    getTableSyncService,
+    getFileDownloadService,
+  } = useDataLayerInternals();
   const [state, setState] = useState<BackgroundSyncState>(INITIAL_SYNC_STATE);
   const isSyncingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const logger = useMemo(
     () => createDebugLogger('useBackgroundFileSync', debug),
     [debug]
   );
 
-  const databaseOperations = useMemo((): TableSyncDatabaseOperations => {
-    return {
-      get: async (tableName: string): Promise<LocalTableMetadata | undefined> => {
-        const entry = await database.getDatabase().tableSyncMetadata.get(tableName);
-        if (!entry) {
-          return undefined;
-        }
-
-        return {
-          name: entry.name,
-          lastIngestedAt: entry.lastIngestedAt,
-          loadedAt: entry.loadedAt,
-          fileHashes: entry.fileHashes,
-          totalSize: entry.totalSize,
-          totalRows: entry.totalRows,
-        };
-      },
-      set: async (entry: LocalTableMetadata): Promise<void> => {
-        await database.getDatabase().tableSyncMetadata.put(entry);
-      },
-      getMany: async (
-        tableNames: string[]
-      ): Promise<Map<string, LocalTableMetadata | undefined>> => {
-        const result = new Map<string, LocalTableMetadata | undefined>();
-        const entries = await database.getDatabase().tableSyncMetadata.bulkGet(tableNames);
-
-        for (let index = 0; index < tableNames.length; index++) {
-          const entry = entries[index];
-          result.set(
-            tableNames[index],
-            entry
-              ? {
-                  name: entry.name,
-                  lastIngestedAt: entry.lastIngestedAt,
-                  loadedAt: entry.loadedAt,
-                  fileHashes: entry.fileHashes,
-                  totalSize: entry.totalSize,
-                  totalRows: entry.totalRows,
-                }
-              : undefined
-          );
-        }
-
-        return result;
-      },
-    };
-  }, [database]);
-
-  const syncService = useMemo(
-    () =>
-      new TableSyncService({
-        convexClient,
-        datasourceApi,
-        database: databaseOperations,
-        debug,
-      }),
-    [convexClient, datasourceApi, databaseOperations, debug]
-  );
-
-  // Memoize download service to avoid recreation on every triggerSync call
-  const downloadService = useMemo(
-    () =>
-      opfsManager
-        ? new FileDownloadService({
-            opfsManager,
-            debug,
-          })
-        : null,
-    [opfsManager, debug]
-  );
-
-  const isConfigured = datasourceApi !== null && opfsManager !== null;
+  const isConfigured = datasourceApi !== null;
 
   const triggerSync = useCallback(async (): Promise<void> => {
-    if (!enabled || tables.length === 0 || !datasourceApi || !opfsManager) {
+    if (!enabled || tables.length === 0 || !datasourceApi) {
       logger.debug('Sync skipped: not configured or disabled');
       return;
     }
@@ -169,9 +98,12 @@ export const useBackgroundFileSync = (
     }
 
     isSyncingRef.current = true;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setState((previousState) => ({ ...previousState, isChecking: true, error: null }));
 
     try {
+      const syncService = getTableSyncService();
       logger.debug('Fetching table info for:', tables);
       const response = await syncService.fetchTablesInfo(tables);
 
@@ -183,9 +115,10 @@ export const useBackgroundFileSync = (
         setState((previousState) => ({
           ...previousState,
           isChecking: false,
+          isDownloading: false,
+          downloadProgress: INITIAL_DOWNLOAD_STATE,
           lastSyncedAt: Date.now(),
         }));
-        isSyncingRef.current = false;
         return;
       }
 
@@ -198,8 +131,16 @@ export const useBackgroundFileSync = (
         tablesNeedingUpdate: tablesToUpdate,
       }));
 
+      const downloadService = await getFileDownloadService();
       if (!downloadService) {
-        logger.debug('Sync skipped: download service not available');
+        const opfsError = new Error('Background sync unavailable: OPFS manager could not be initialized.');
+        setState((previousState) => ({
+          ...previousState,
+          isChecking: false,
+          isDownloading: false,
+          error: opfsError,
+        }));
+        onError?.(opfsError);
         return;
       }
 
@@ -207,20 +148,36 @@ export const useBackgroundFileSync = (
       let filesCompleted = 0;
 
       for (const plan of updatePlans) {
-        await downloadService.downloadAndSaveFiles(plan.tableName, plan.filesToDownload, (progress) => {
-          const overallProgress: DownloadProgressState = {
-            ...progress,
-            filesTotal: totalFiles,
-            filesCompleted: filesCompleted + progress.filesCompleted,
-            progress: ((filesCompleted + progress.filesCompleted) / totalFiles) * 100,
-          };
+        await downloadService.downloadAndSaveFiles(
+          plan.tableName,
+          plan.filesToDownload,
+          (progress) => {
+            const overallProgress: DownloadProgressState = {
+              ...progress,
+              filesTotal: totalFiles,
+              filesCompleted: filesCompleted + progress.filesCompleted,
+              progress: ((filesCompleted + progress.filesCompleted) / totalFiles) * 100,
+            };
 
-          setState((previousState) => ({ ...previousState, downloadProgress: overallProgress }));
-          onProgress?.(overallProgress);
-        });
+            setState((previousState) => ({ ...previousState, downloadProgress: overallProgress }));
+            onProgress?.(overallProgress);
+          },
+          controller.signal
+        );
 
         filesCompleted += plan.filesToDownload.length;
         await syncService.updateLocalMetadata(plan.tableName, plan.remoteInfo);
+      }
+
+      if (controller.signal.aborted) {
+        logger.debug('Sync aborted');
+        setState((previousState) => ({
+          ...previousState,
+          isChecking: false,
+          isDownloading: false,
+          downloadProgress: INITIAL_DOWNLOAD_STATE,
+        }));
+        return;
       }
 
       logger.debug('Invalidating queries');
@@ -241,6 +198,18 @@ export const useBackgroundFileSync = (
       logger.debug('Sync completed for:', tablesToUpdate);
       onComplete?.(tablesToUpdate);
     } catch (error) {
+      if (controller.signal.aborted) {
+        logger.debug('Sync aborted by signal');
+        setState((previousState) => ({
+          ...previousState,
+          isChecking: false,
+          isDownloading: false,
+          downloadProgress: INITIAL_DOWNLOAD_STATE,
+          error: null,
+        }));
+        return;
+      }
+
       const syncError = error instanceof Error ? error : new Error(String(error));
       logger.debug('Sync error:', syncError);
 
@@ -254,14 +223,16 @@ export const useBackgroundFileSync = (
       onError?.(syncError);
     } finally {
       isSyncingRef.current = false;
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
   }, [
     enabled,
     tables,
     datasourceApi,
-    opfsManager,
-    downloadService,
-    syncService,
+    getTableSyncService,
+    getFileDownloadService,
     queryClient,
     onProgress,
     onComplete,
@@ -270,10 +241,17 @@ export const useBackgroundFileSync = (
   ]);
 
   useEffect(() => {
-    if (enabled && datasourceApi && opfsManager && tables.length > 0) {
+    if (enabled && datasourceApi && tables.length > 0) {
       void triggerSync();
     }
-  }, [enabled, datasourceApi, opfsManager, tables, triggerSync]);
+  }, [enabled, datasourceApi, tables, triggerSync]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    };
+  }, []);
 
   return {
     ...state,
@@ -281,4 +259,3 @@ export const useBackgroundFileSync = (
     isConfigured,
   };
 };
-

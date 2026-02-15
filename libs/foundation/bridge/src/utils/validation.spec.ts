@@ -15,42 +15,45 @@ import {
   isPositiveInteger,
   isNonNegative,
 } from '@open-insights-web/foundation-utils';
-import type { DuckDBPoolConfig } from '../types/pool';
+import type { ValidationResultData } from '@open-insights-web/foundation-data-model';
+
+const getMessages = (result: ValidationResultData): string[] =>
+  result.issues.map((issue) => issue.message);
 
 describe('validatePoolConfig', () => {
   it('should pass for empty config (uses defaults)', () => {
     const result = validatePoolConfig({});
 
     expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
+    expect(getMessages(result)).toHaveLength(0);
   });
 
   it('should pass for valid workerCount', () => {
     const result = validatePoolConfig({ workerCount: 4 });
 
     expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
+    expect(getMessages(result)).toHaveLength(0);
   });
 
   it('should fail for workerCount < 1', () => {
     const result = validatePoolConfig({ workerCount: 0 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('workerCount must be a positive integer');
+    expect(getMessages(result)).toContain('workerCount must be a positive integer');
   });
 
   it('should fail for non-integer workerCount', () => {
     const result = validatePoolConfig({ workerCount: 2.5 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('workerCount must be a positive integer');
+    expect(getMessages(result)).toContain('workerCount must be a positive integer');
   });
 
   it('should warn for workerCount > 16', () => {
     const result = validatePoolConfig({ workerCount: 20 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
+    expect(getMessages(result)).toContain(
       'workerCount should not exceed 16 (diminishing returns with more workers)'
     );
   });
@@ -65,28 +68,28 @@ describe('validatePoolConfig', () => {
     const result = validatePoolConfig({ maxQueuePerWorker: 0 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('maxQueuePerWorker must be a positive integer');
+    expect(getMessages(result)).toContain('maxQueuePerWorker must be a positive integer');
   });
 
   it('should warn for maxQueuePerWorker > 100', () => {
     const result = validatePoolConfig({ maxQueuePerWorker: 150 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('maxQueuePerWorker should not exceed 100');
+    expect(getMessages(result)).toContain('maxQueuePerWorker should not exceed 100');
   });
 
   it('should fail for negative defaultQueryTimeout', () => {
     const result = validatePoolConfig({ defaultQueryTimeout: -1 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('defaultQueryTimeout must be non-negative');
+    expect(getMessages(result)).toContain('defaultQueryTimeout must be non-negative');
   });
 
   it('should warn for defaultQueryTimeout > 300000', () => {
     const result = validatePoolConfig({ defaultQueryTimeout: 400000 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
+    expect(getMessages(result)).toContain(
       'defaultQueryTimeout should not exceed 300000ms (5 minutes)'
     );
   });
@@ -95,21 +98,21 @@ describe('validatePoolConfig', () => {
     const result = validatePoolConfig({ workerInitTimeout: 500 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('workerInitTimeout should be at least 1000ms');
+    expect(getMessages(result)).toContain('workerInitTimeout should be at least 1000ms');
   });
 
   it('should warn for workerInitTimeout > 60000', () => {
     const result = validatePoolConfig({ workerInitTimeout: 70000 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('workerInitTimeout should not exceed 60000ms');
+    expect(getMessages(result)).toContain('workerInitTimeout should not exceed 60000ms');
   });
 
   it('should fail for negative workerIdleTimeout', () => {
     const result = validatePoolConfig({ workerIdleTimeout: -1 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('workerIdleTimeout must be non-negative');
+    expect(getMessages(result)).toContain('workerIdleTimeout must be non-negative');
   });
 
   it('should pass for null workerIdleTimeout (disabled)', () => {
@@ -126,7 +129,7 @@ describe('validatePoolConfig', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors.length).toBeGreaterThanOrEqual(3);
+    expect(result.issues.length).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -135,7 +138,7 @@ describe('validateRouterConfig', () => {
     const result = validateRouterConfig({});
 
     expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
+    expect(getMessages(result)).toHaveLength(0);
   });
 
   it('should pass for valid forceBridgeType wasm', () => {
@@ -154,7 +157,7 @@ describe('validateRouterConfig', () => {
     const result = validateRouterConfig({ forceBridgeType: 'invalid' as 'wasm' });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('forceBridgeType must be "wasm" or "native"');
+    expect(getMessages(result)).toContain('forceBridgeType must be "wasm" or "native"');
   });
 
   it('should pass for valid idleTimeout', () => {
@@ -167,14 +170,14 @@ describe('validateRouterConfig', () => {
     const result = validateRouterConfig({ idleTimeout: -1 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('idleTimeout must be non-negative');
+    expect(getMessages(result)).toContain('idleTimeout must be non-negative');
   });
 
   it('should warn for idleTimeout > 1 hour', () => {
     const result = validateRouterConfig({ idleTimeout: 4000000 });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('idleTimeout should not exceed 3600000ms (1 hour)');
+    expect(getMessages(result)).toContain('idleTimeout should not exceed 3600000ms (1 hour)');
   });
 });
 

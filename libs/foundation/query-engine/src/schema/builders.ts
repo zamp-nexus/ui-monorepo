@@ -15,13 +15,13 @@ import {
   type TimeDimensionDefinition,
   type RelationshipDefinition,
   type JoinDefinition,
-  type JoinRelationshipCardinality,
   type PreAggregationDefinition,
   type MeasureDataType,
   type DimensionType,
   type MemberVisibility,
   DIMENSION_TYPES,
   MEMBER_VISIBILITY,
+  CARDINALITY_TO_JOIN_CARDINALITY,
 } from '../types/schema-definition';
 import { type MeasureFormatType } from '../types/measure';
 import { type TimeGranularity } from '../types/time';
@@ -399,16 +399,10 @@ export class TableBuilder {
     relationship: RelationshipDefinition['relationship'],
     joinType: JoinType = JOIN_TYPES.LEFT
   ): TableBuilder => {
-    const relationshipMap: Record<RelationshipDefinition['relationship'], JoinRelationshipCardinality> = {
-      one_to_one: 'one-to-one',
-      one_to_many: 'one-to-many',
-      many_to_one: 'many-to-one',
-    };
-
     this.joinsMap[name] = {
       table: TableNameUtil.from(targetTable),
       sql,
-      relationship: relationshipMap[relationship],
+      relationship: CARDINALITY_TO_JOIN_CARDINALITY[relationship],
       type: joinType,
     };
     return this;
@@ -551,56 +545,31 @@ export const schema = (name: string, version?: string): SchemaBuilder =>
 // SHORTHAND MEASURE CREATORS
 // =============================================================================
 
+const createMeasureFactory = (aggregation: Aggregation) =>
+  (column: string, title?: string): MeasureDefinition => {
+    const builder = new MeasureBuilder(aggregation, column);
+    if (title) builder.title(title);
+    return builder.build();
+  };
+
 /** Create count measure definition. */
 export const count = (title?: string): MeasureDefinition => {
   const builder = new MeasureBuilder(AGGREGATIONS.COUNT, '*');
-  if (title) {
-    builder.title(title);
-  }
+  if (title) builder.title(title);
   return builder.build();
 };
 
 /** Create count distinct measure definition. */
-export const countDistinct = (column: string, title?: string): MeasureDefinition => {
-  const builder = new MeasureBuilder(AGGREGATIONS.COUNT_DISTINCT, column);
-  if (title) {
-    builder.title(title);
-  }
-  return builder.build();
-};
+export const countDistinct = createMeasureFactory(AGGREGATIONS.COUNT_DISTINCT);
 
 /** Create sum measure definition. */
-export const sum = (column: string, title?: string): MeasureDefinition => {
-  const builder = new MeasureBuilder(AGGREGATIONS.SUM, column);
-  if (title) {
-    builder.title(title);
-  }
-  return builder.build();
-};
+export const sum = createMeasureFactory(AGGREGATIONS.SUM);
 
 /** Create average measure definition. */
-export const avg = (column: string, title?: string): MeasureDefinition => {
-  const builder = new MeasureBuilder(AGGREGATIONS.AVG, column);
-  if (title) {
-    builder.title(title);
-  }
-  return builder.build();
-};
+export const avg = createMeasureFactory(AGGREGATIONS.AVG);
 
 /** Create min measure definition. */
-export const min = (column: string, title?: string): MeasureDefinition => {
-  const builder = new MeasureBuilder(AGGREGATIONS.MIN, column);
-  if (title) {
-    builder.title(title);
-  }
-  return builder.build();
-};
+export const min = createMeasureFactory(AGGREGATIONS.MIN);
 
 /** Create max measure definition. */
-export const max = (column: string, title?: string): MeasureDefinition => {
-  const builder = new MeasureBuilder(AGGREGATIONS.MAX, column);
-  if (title) {
-    builder.title(title);
-  }
-  return builder.build();
-};
+export const max = createMeasureFactory(AGGREGATIONS.MAX);

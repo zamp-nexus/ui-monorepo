@@ -3,14 +3,15 @@
  *
  * Import generic utilities directly from their source packages:
  * - From '@open-insights-web/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
- * - From '@open-insights-web/foundation-data-model': ValidationResult, SimpleValidationResult
+ * - From '@open-insights-web/foundation-data-model': ValidationResult, ValidationResultData
  *
  * @module utils/validation
  */
 
 import {
   Milliseconds,
-  type SimpleValidationResult,
+  ValidationResult,
+  type ValidationResultData,
 } from '@open-insights-web/foundation-data-model';
 import type { DuckDBPoolConfig, ResolvedPoolConfig } from '../types/pool';
 import { BRIDGE_TYPE, DEFAULTS } from '../constants';
@@ -42,7 +43,7 @@ export interface RouterConfigForValidation {
  */
 export const validatePoolConfig = (
   config: DuckDBPoolConfig
-): SimpleValidationResult => {
+): ValidationResultData => {
   const errors: string[] = [];
 
   if (config.workerCount !== undefined) {
@@ -123,7 +124,7 @@ export const validatePoolConfig = (
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return ValidationResult.fromErrors(errors);
 };
 
 /**
@@ -134,7 +135,7 @@ export const validatePoolConfig = (
  */
 export const validateRouterConfig = (
   config: RouterConfigForValidation
-): SimpleValidationResult => {
+): ValidationResultData => {
   const errors: string[] = [];
 
   if (config.forceBridgeType !== undefined) {
@@ -153,7 +154,7 @@ export const validateRouterConfig = (
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return ValidationResult.fromErrors(errors);
 };
 
 // =============================================================================

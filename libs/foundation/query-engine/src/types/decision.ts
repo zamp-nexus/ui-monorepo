@@ -7,13 +7,16 @@
  */
 
 import type { Operation } from './operations';
+import type { Query } from './query';
+import type { AnalyticsFreshness } from './table';
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 
 /**
  * Canonical query-engine execution paths used by DecisionEngine.
  */
 export const DECISION_PATHS = {
-  API: 'api',
-  DUCKDB: 'duckdb',
+  API: QUERY_ENGINE_PATHS.API,
+  DUCKDB: QUERY_ENGINE_PATHS.DUCKDB,
 } as const;
 
 /**
@@ -35,7 +38,6 @@ export const DECISION_REASONS = {
   // API Path reasons
   MUTATION_USES_API: 'Mutation operations always use Convex API',
   SIMPLE_QUERY_WITH_API: 'Simple query on single table with list API available',
-  GET_OPERATION: 'GET operation uses Convex get API',
 
   // DuckDB Path reasons
   HAS_JOINS: 'Query has joins - requires DuckDB',
@@ -51,8 +53,6 @@ export const DECISION_REASONS = {
   NO_API_AVAILABLE: 'No get or list API available for table',
 
   // Fallback reasons
-  OFFLINE_CACHE: 'Offline mode - using cached data',
-  OFFLINE_DUCKDB: 'Offline mode - using local DuckDB',
   NO_DECISION: 'Unable to make routing decision',
 } as const;
 
@@ -176,7 +176,7 @@ export interface DecisionTableConfig {
     readonly delete?: unknown;
   };
   readonly analytics?: {
-    readonly freshness?: string;
+    readonly freshness?: AnalyticsFreshness;
   };
 }
 
@@ -207,6 +207,38 @@ export interface DecisionOptions {
 }
 
 // =============================================================================
+// DECISION RULE (data-driven engine)
+// =============================================================================
+
+/**
+ * A single routing rule evaluated by the DecisionEngine.
+ *
+ * Rules are evaluated in priority order. The first rule whose `match()`
+ * returns `true` wins, and its `decide()` provides the result. Consumers
+ * may register custom rules to extend or override the built-in set.
+ */
+export interface DecisionRule {
+  /** Human-readable rule name (for logging / diagnostics) */
+  readonly name: string;
+
+  /** Return `true` when this rule applies to the given query + context. */
+  match(
+    query: Query,
+    context: DecisionContext,
+    factors: DecisionFactors,
+    options?: DecisionOptions,
+  ): boolean;
+
+  /** Produce the routing result. Only called when `match()` returned `true`. */
+  decide(
+    query: Query,
+    context: DecisionContext,
+    factors: DecisionFactors,
+    options?: DecisionOptions,
+  ): DecisionResult;
+}
+
+// =============================================================================
 // TYPE GUARDS
 // =============================================================================
 
@@ -224,12 +256,12 @@ export const isExecutionPath = (value: unknown): value is ExecutionPath => {
  * Check if decision result indicates API path.
  */
 export const isApiPath = (result: DecisionResult): boolean => {
-  return result.path === 'api';
+  return result.path === DECISION_PATHS.API;
 };
 
 /**
  * Check if decision result indicates DuckDB path.
  */
 export const isDuckDBPath = (result: DecisionResult): boolean => {
-  return result.path === 'duckdb';
+  return result.path === DECISION_PATHS.DUCKDB;
 };

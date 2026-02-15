@@ -8,7 +8,17 @@
  */
 
 import type { QueryKey } from '@tanstack/react-query';
-import type { Query } from '../types/query';
+import {
+  QUERY_DATA_SOURCES,
+  type DataSource as QueryDataSource,
+  type Query,
+} from '../types/query';
+import {
+  isMutationOperation as isCoreMutationOperation,
+  WRITE_OPERATIONS,
+  type WriteOperation,
+} from '../types/operations';
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 
 // =============================================================================
 // EXECUTION PATH & DATA SOURCE
@@ -18,23 +28,43 @@ import type { Query } from '../types/query';
  * Execution path literal union
  */
 export const EXECUTION_PATHS = {
-  ANALYTICS: 'analytics',
-  TRANSACTIONAL: 'transactional',
+  ANALYTICS: QUERY_ENGINE_PATHS.ANALYTICS,
+  TRANSACTIONAL: QUERY_ENGINE_PATHS.TRANSACTIONAL,
 } as const;
 
-export type ExecutionPath = (typeof EXECUTION_PATHS)[keyof typeof EXECUTION_PATHS];
+export type HookExecutionPath =
+  (typeof EXECUTION_PATHS)[keyof typeof EXECUTION_PATHS];
+
+export type ExecutionPath = HookExecutionPath;
 
 /**
  * Data source literal union
  */
 export const DATA_SOURCES = {
-  CONVEX: 'convex',
-  DUCKDB: 'duckdb',
-  CACHE: 'cache',
-  NONE: 'none',
+  ...QUERY_DATA_SOURCES,
 } as const;
 
-export type DataSource = (typeof DATA_SOURCES)[keyof typeof DATA_SOURCES];
+export type HookDataSource = QueryDataSource;
+
+export type DataSource = HookDataSource;
+
+export const ANALYTICS_DATA_SOURCES = {
+  DUCKDB: DATA_SOURCES.DUCKDB,
+  CACHE: DATA_SOURCES.CACHE,
+  NONE: DATA_SOURCES.NONE,
+} as const;
+
+export type AnalyticsDataSource =
+  (typeof ANALYTICS_DATA_SOURCES)[keyof typeof ANALYTICS_DATA_SOURCES];
+
+export const TRANSACTIONAL_DATA_SOURCES = {
+  CONVEX: DATA_SOURCES.CONVEX,
+  CACHE: DATA_SOURCES.CACHE,
+  NONE: DATA_SOURCES.NONE,
+} as const;
+
+export type TransactionalDataSource =
+  (typeof TRANSACTIONAL_DATA_SOURCES)[keyof typeof TRANSACTIONAL_DATA_SOURCES];
 
 // =============================================================================
 // DOWNLOAD PROGRESS
@@ -139,8 +169,8 @@ interface BaseQueryResult<TData> {
  * Analytics result (discriminated)
  */
 interface AnalyticsResult<TData> extends BaseQueryResult<TData> {
-  readonly executionPath: 'analytics';
-  readonly dataSource: 'duckdb' | 'cache' | 'none';
+  readonly executionPath: typeof EXECUTION_PATHS.ANALYTICS;
+  readonly dataSource: AnalyticsDataSource;
   readonly sql: string | null;
   readonly executionTimeMs: number | null;
   readonly isDownloadingFiles: boolean;
@@ -153,8 +183,8 @@ interface AnalyticsResult<TData> extends BaseQueryResult<TData> {
  * Transactional result (discriminated)
  */
 interface TransactionalResult<TData> extends BaseQueryResult<TData> {
-  readonly executionPath: 'transactional';
-  readonly dataSource: 'convex' | 'cache' | 'none';
+  readonly executionPath: typeof EXECUTION_PATHS.TRANSACTIONAL;
+  readonly dataSource: TransactionalDataSource;
   readonly sql: null;
   readonly executionTimeMs: null;
   readonly isDownloadingFiles: false;
@@ -168,7 +198,7 @@ interface TransactionalResult<TData> extends BaseQueryResult<TData> {
  */
 interface PendingResult<TData> extends BaseQueryResult<TData> {
   readonly executionPath: null;
-  readonly dataSource: 'none';
+  readonly dataSource: typeof DATA_SOURCES.NONE;
   readonly sql: null;
   readonly executionTimeMs: null;
   readonly isDownloadingFiles: false;
@@ -202,22 +232,27 @@ export type UseDLQueryEngineResult<TData> =
  * ```
  */
 export const MUTATION_OPERATIONS = {
-  CREATE: 'create',
-  UPDATE: 'update',
-  DELETE: 'delete',
+  ...WRITE_OPERATIONS,
 } as const;
 
 /**
  * Mutation operation type derived from MUTATION_OPERATIONS
  */
-export type MutationOperation = (typeof MUTATION_OPERATIONS)[keyof typeof MUTATION_OPERATIONS];
+export type MutationOperation = WriteOperation;
+
+export const MUTATION_RESULT_OPERATIONS = {
+  ...MUTATION_OPERATIONS,
+  SQL: 'sql',
+} as const;
+
+export type MutationResultOperation =
+  (typeof MUTATION_RESULT_OPERATIONS)[keyof typeof MUTATION_RESULT_OPERATIONS];
 
 /**
  * Type guard for mutation operations
  */
 export const isMutationOperation = (value: unknown): value is MutationOperation =>
-  typeof value === 'string' &&
-  Object.values(MUTATION_OPERATIONS).includes(value as MutationOperation);
+  isCoreMutationOperation(value);
 
 /**
  * Options for useDLMutateQueryEngine
@@ -291,8 +326,8 @@ export interface UseDLMutateQueryEngineResult<TData = unknown, TVariables = unkn
   readonly provisionalId: string | null;
 
   // Execution info
-  readonly executionPath: 'transactional' | 'analytics';
-  readonly operation: MutationOperation | 'sql';
+  readonly executionPath: HookExecutionPath;
+  readonly operation: MutationResultOperation;
   readonly table: string | null;
 
   // Actions
@@ -306,26 +341,23 @@ export interface UseDLMutateQueryEngineResult<TData = unknown, TVariables = unkn
 /**
  * Check if result is analytics path
  */
-export function isAnalyticsResult<TData>(
+export const isAnalyticsResult = <TData,>(
   result: UseDLQueryEngineResult<TData>
-): result is AnalyticsResult<TData> {
-  return result.executionPath === EXECUTION_PATHS.ANALYTICS;
-}
+): result is AnalyticsResult<TData> =>
+  result.executionPath === EXECUTION_PATHS.ANALYTICS;
 
 /**
  * Check if result is transactional path
  */
-export function isTransactionalResult<TData>(
+export const isTransactionalResult = <TData,>(
   result: UseDLQueryEngineResult<TData>
-): result is TransactionalResult<TData> {
-  return result.executionPath === EXECUTION_PATHS.TRANSACTIONAL;
-}
+): result is TransactionalResult<TData> =>
+  result.executionPath === EXECUTION_PATHS.TRANSACTIONAL;
 
 /**
  * Check if result is pending (no decision yet)
  */
-export function isPendingResult<TData>(
+export const isPendingResult = <TData,>(
   result: UseDLQueryEngineResult<TData>
-): result is PendingResult<TData> {
-  return result.executionPath === null;
-}
+): result is PendingResult<TData> =>
+  result.executionPath === null;

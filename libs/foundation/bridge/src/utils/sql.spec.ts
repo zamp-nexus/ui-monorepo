@@ -13,9 +13,10 @@ import {
   escapeString,
   applyLimitOffset,
   buildParameterizedSql,
+  validateViewSql,
 } from './sql';
 import { SqlValidationError } from '../errors/query-errors';
-import { SqlIdentifier } from '@open-insights-web/foundation-data-model';
+import type { SqlIdentifier } from '@open-insights-web/foundation-data-model';
 
 describe('validateIdentifier', () => {
   it('should accept valid identifiers', () => {
@@ -192,5 +193,60 @@ describe('applyLimitOffset', () => {
   it('should floor decimal values', () => {
     const sql = applyLimitOffset('SELECT * FROM users', 10.7, 20.3);
     expect(sql).toBe('SELECT * FROM users LIMIT 10 OFFSET 20');
+  });
+
+  it('should reject negative LIMIT', () => {
+    expect(() => applyLimitOffset('SELECT * FROM users', -1)).toThrow(SqlValidationError);
+  });
+
+  it('should reject negative OFFSET', () => {
+    expect(() => applyLimitOffset('SELECT * FROM users', 10, -5)).toThrow(SqlValidationError);
+  });
+});
+
+describe('validateViewSql', () => {
+  it('should accept valid SELECT statements', () => {
+    expect(() => validateViewSql('SELECT * FROM users')).not.toThrow();
+    expect(() => validateViewSql('SELECT id, name FROM users WHERE active = true')).not.toThrow();
+    expect(() => validateViewSql('SELECT u.id FROM users u JOIN orders o ON u.id = o.user_id')).not.toThrow();
+  });
+
+  it('should accept WITH (CTE) statements', () => {
+    expect(() => validateViewSql('WITH active AS (SELECT * FROM users WHERE active = true) SELECT * FROM active')).not.toThrow();
+  });
+
+  it('should reject empty SQL', () => {
+    expect(() => validateViewSql('')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('   ')).toThrow(SqlValidationError);
+  });
+
+  it('should reject DDL keywords', () => {
+    expect(() => validateViewSql('DROP TABLE users; SELECT 1')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('SELECT 1; DROP TABLE users')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('CREATE TABLE foo (id INT)')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('ALTER TABLE users ADD col INT')).toThrow(SqlValidationError);
+  });
+
+  it('should reject DML keywords', () => {
+    expect(() => validateViewSql('DELETE FROM users')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('INSERT INTO users VALUES (1)')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('UPDATE users SET name = "x"')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('TRUNCATE TABLE users')).toThrow(SqlValidationError);
+  });
+
+  it('should not reject keywords inside quoted strings', () => {
+    expect(() => validateViewSql("SELECT * FROM users WHERE name = 'DROP TABLE'")).not.toThrow();
+    expect(() => validateViewSql('SELECT * FROM users WHERE name = \'DELETE FROM\'')) .not.toThrow();
+  });
+
+  it('should not reject partial keyword matches in identifiers', () => {
+    expect(() => validateViewSql('SELECT updated_at FROM users')).not.toThrow();
+    expect(() => validateViewSql('SELECT created_by FROM users')).not.toThrow();
+    expect(() => validateViewSql('SELECT is_deleted FROM users')).not.toThrow();
+  });
+
+  it('should reject SQL not starting with SELECT or WITH', () => {
+    expect(() => validateViewSql('EXPLAIN SELECT 1')).toThrow(SqlValidationError);
+    expect(() => validateViewSql('PRAGMA table_info(users)')).toThrow(SqlValidationError);
   });
 });

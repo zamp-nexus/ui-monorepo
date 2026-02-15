@@ -5,11 +5,12 @@
 
 // Error codes
 export {
-  FoundationErrorCode,
-  ErrorCategory,
+  FOUNDATION_ERROR_CODE,
+  ERROR_CATEGORY,
   getErrorCategory,
   isRetryableErrorCode,
 } from './error-codes';
+export type { FoundationErrorCode, ErrorCategory } from './error-codes';
 
 // Foundation error base class
 export {

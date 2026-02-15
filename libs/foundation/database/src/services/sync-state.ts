@@ -9,22 +9,25 @@
 
 import type { ZodSchema } from 'zod';
 import { BaseService } from './base';
-import type { NetworkStatus } from '@open-insights-web/foundation-data-model';
+import {
+  SYNC_STATE_KEY,
+  type DuckDBViewsValue,
+  type LastSyncValue,
+  type NetworkStatus,
+  type SyncStateKey,
+} from '@open-insights-web/foundation-data-model';
 import type {
   SyncStateOperations,
   SyncStateEntry,
-  LastSyncValue,
-  DuckDBViewsValue,
-} from '../tables';
+} from '../tables/sync-state';
 import { z } from 'zod';
-import { SYNC_STATE_KEYS, type SyncStateKey } from '../core/config';
 import {
   syncStateEntrySchema,
   lastSyncValueSchema,
   networkStatusSchema,
   duckDBViewsValueSchema,
 } from '../validation/schemas';
-import { createValidationError } from '../errors';
+import { assertValid } from '../validation/assert-valid';
 
 // Simple schemas for primitive values
 const numberSchema = z.number();
@@ -83,21 +86,18 @@ export class SyncStateService extends BaseService implements SyncStateOperations
   /**
    * Set state value with validation
    */
-  set = async <T>(key: SyncStateKey, value: T): Promise<void> => {
-    const entry: SyncStateEntry<T> = {
+  set = async <TValue>(
+    key: SyncStateKey,
+    value: TValue
+  ): Promise<void> => {
+    const entry: SyncStateEntry<TValue> = {
       key,
       value,
       updatedAt: Date.now(),
     };
 
-    // Validate entry structure
-    const validation = syncStateEntrySchema.safeParse(entry);
-    if (!validation.success) {
-      throw createValidationError('SyncStateEntry', validation.error.message);
-    }
-
-    // Cast to base SyncStateEntry for Dexie compatibility
-    await this.db.syncState.put(entry as SyncStateEntry);
+    assertValid(syncStateEntrySchema, entry, 'SyncStateEntry');
+    await this.db.syncState.put(entry);
     this.log('Sync state set:', key);
   };
 
@@ -132,49 +132,49 @@ export class SyncStateService extends BaseService implements SyncStateOperations
    * Get last sync value with Zod schema validation
    */
   getLastSync = async (): Promise<LastSyncValue | undefined> => {
-    return this.get(SYNC_STATE_KEYS.LAST_SYNC, { schema: lastSyncValueSchema });
+    return this.get(SYNC_STATE_KEY.LAST_SYNC, { schema: lastSyncValueSchema });
   };
 
   /**
    * Set last sync value
    */
   setLastSync = async (value: LastSyncValue): Promise<void> => {
-    await this.set(SYNC_STATE_KEYS.LAST_SYNC, value);
+    await this.set(SYNC_STATE_KEY.LAST_SYNC, value);
   };
 
   /**
    * Get network status with Zod schema validation
    */
   getNetworkStatus = async (): Promise<NetworkStatus | undefined> => {
-    return this.get(SYNC_STATE_KEYS.NETWORK_STATUS, { schema: networkStatusSchema });
+    return this.get(SYNC_STATE_KEY.NETWORK_STATUS, { schema: networkStatusSchema });
   };
 
   /**
    * Set network status
    */
   setNetworkStatus = async (value: NetworkStatus): Promise<void> => {
-    await this.set(SYNC_STATE_KEYS.NETWORK_STATUS, value);
+    await this.set(SYNC_STATE_KEY.NETWORK_STATUS, value);
   };
 
   /**
    * Get DuckDB views with Zod schema validation
    */
   getDuckDBViews = async (): Promise<DuckDBViewsValue | undefined> => {
-    return this.get(SYNC_STATE_KEYS.DUCKDB_VIEWS, { schema: duckDBViewsValueSchema });
+    return this.get(SYNC_STATE_KEY.DUCKDB_VIEWS, { schema: duckDBViewsValueSchema });
   };
 
   /**
    * Set DuckDB views
    */
   setDuckDBViews = async (value: DuckDBViewsValue): Promise<void> => {
-    await this.set(SYNC_STATE_KEYS.DUCKDB_VIEWS, value);
+    await this.set(SYNC_STATE_KEY.DUCKDB_VIEWS, value);
   };
 
   /**
    * Get pending count with Zod schema validation
    */
   getPendingCount = async (): Promise<number> => {
-    const value = await this.get(SYNC_STATE_KEYS.PENDING_COUNT, { schema: numberSchema });
+    const value = await this.get(SYNC_STATE_KEY.PENDING_COUNT, { schema: numberSchema });
     return value ?? 0;
   };
 
@@ -182,14 +182,14 @@ export class SyncStateService extends BaseService implements SyncStateOperations
    * Set pending count
    */
   setPendingCount = async (count: number): Promise<void> => {
-    await this.set(SYNC_STATE_KEYS.PENDING_COUNT, count);
+    await this.set(SYNC_STATE_KEY.PENDING_COUNT, count);
   };
 
   /**
    * Get schema version with Zod schema validation
    */
   getSchemaVersion = async (): Promise<number> => {
-    const value = await this.get(SYNC_STATE_KEYS.SCHEMA_VERSION, { schema: numberSchema });
+    const value = await this.get(SYNC_STATE_KEY.SCHEMA_VERSION, { schema: numberSchema });
     return value ?? 1;
   };
 
@@ -197,6 +197,6 @@ export class SyncStateService extends BaseService implements SyncStateOperations
    * Set schema version
    */
   setSchemaVersion = async (version: number): Promise<void> => {
-    await this.set(SYNC_STATE_KEYS.SCHEMA_VERSION, version);
+    await this.set(SYNC_STATE_KEY.SCHEMA_VERSION, version);
   };
 }

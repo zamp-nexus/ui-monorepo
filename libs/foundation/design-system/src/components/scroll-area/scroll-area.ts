@@ -6,7 +6,6 @@
 import type {
   ComponentThemeConfigStructure,
   OIComponentOwnProps,
-  OIDefaultProps,
   PolymorphicProps,
   PolymorphicRef,
 } from '../../types';
@@ -156,3 +155,4 @@ export const scrollAreaDefaultTheme: ComponentThemeConfigStructure = {
     type: 'hover',
   },
 };
+

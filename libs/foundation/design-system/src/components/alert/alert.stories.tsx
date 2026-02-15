@@ -129,7 +129,7 @@ export const AllVariants: Story = {
       <Alert intent="info" title="With Title">
         Alerts can have titles for emphasis.
       </Alert>
-      <Alert intent="success" dismissible onDismiss={() => {}}>
+      <Alert intent="success" dismissible onDismiss={() => undefined}>
         This alert can be dismissed.
       </Alert>
     </div>

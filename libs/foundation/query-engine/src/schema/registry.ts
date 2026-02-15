@@ -38,6 +38,7 @@ import type {
   TableDefinition,
   TimeDimensionDefinition,
 } from '../types/schema-definition';
+import { parseMemberRef } from '../utils/member-ref';
 
 const logger = createLogger('SchemaRegistry');
 
@@ -64,21 +65,33 @@ export type MemberType = (typeof MEMBER_TYPES)[keyof typeof MEMBER_TYPES];
 // MEMBER RESOLUTION
 // =============================================================================
 
-/**
- * Resolved member information
- */
-export interface MemberResolution {
-  /** Member type (measure or dimension) */
-  readonly type: MemberType;
+interface BaseMemberResolution {
   /** Table name */
   readonly table: string;
   /** Member name */
   readonly name: string;
   /** Full member reference */
   readonly ref: MemberRef;
-  /** Member definition */
-  readonly definition: MeasureDefinition | DimensionDefinition | TimeDimensionDefinition;
 }
+
+interface MeasureMemberResolution extends BaseMemberResolution {
+  /** Member type (measure) */
+  readonly type: typeof MEMBER_TYPES.MEASURE;
+  /** Member definition */
+  readonly definition: MeasureDefinition;
+}
+
+interface DimensionMemberResolution extends BaseMemberResolution {
+  /** Member type (dimension) */
+  readonly type: typeof MEMBER_TYPES.DIMENSION;
+  /** Member definition */
+  readonly definition: DimensionDefinition | TimeDimensionDefinition;
+}
+
+/**
+ * Resolved member information
+ */
+export type MemberResolution = MeasureMemberResolution | DimensionMemberResolution;
 
 /**
  * Schema validation status with errors and warnings
@@ -103,14 +116,27 @@ export interface SchemaValidationStatus {
 // =============================================================================
 
 /**
+ * Types of schema elements for error construction.
+ */
+export const SCHEMA_ELEMENT_TYPES = {
+  TABLE: 'table',
+  MEASURE: 'measure',
+  DIMENSION: 'dimension',
+  MEMBER: 'member',
+} as const;
+
+type SchemaElementType =
+  (typeof SCHEMA_ELEMENT_TYPES)[keyof typeof SCHEMA_ELEMENT_TYPES];
+
+/**
  * Error thrown when a schema element is not found
  */
 export class SchemaNotFoundError extends Error {
   readonly code = 'SCHEMA_NOT_FOUND' as const;
-  readonly elementType: 'table' | 'measure' | 'dimension' | 'member';
+  readonly elementType: SchemaElementType;
   readonly elementName: string;
 
-  constructor(elementType: 'table' | 'measure' | 'dimension' | 'member', elementName: string) {
+  constructor(elementType: SchemaElementType, elementName: string) {
     super(`${elementType} '${elementName}' not found in schema`);
     this.name = 'SchemaNotFoundError';
     this.elementType = elementType;
@@ -274,7 +300,7 @@ export class SchemaRegistry implements IDisposable {
   getTableOrThrow = (name: string): TableDefinition => {
     const table = this.getTable(name);
     if (!table) {
-      throw new SchemaNotFoundError('table', name);
+      throw new SchemaNotFoundError(SCHEMA_ELEMENT_TYPES.TABLE, name);
     }
     return table;
   };
@@ -288,46 +314,51 @@ export class SchemaRegistry implements IDisposable {
    */
   resolveMember = (memberRef: MemberRef | string): MemberResolution | null => {
     this.ensureNotDisposed();
-    const refStr = String(memberRef);
+    const rawMemberRef = String(memberRef);
 
     // Check cache first
-    const cached = this.memberCache.get(refStr);
+    const cached = this.memberCache.get(rawMemberRef);
     if (cached) {
       return cached;
     }
 
     // Parse the reference
-    const parsed = MemberRefUtil.parse(memberRef as MemberRef);
+    const parsed = parseMemberRef(rawMemberRef);
+    if (!parsed) {
+      return null;
+    }
+
+    const normalizedRef = MemberRefUtil.create(parsed.table, parsed.column);
     const table = this.getTable(parsed.table);
     if (!table) {
       return null;
     }
 
     // Check measures first
-    const measure = table.measures?.[parsed.member];
+    const measure = table.measures?.[parsed.column];
     if (measure) {
-      const resolution: MemberResolution = {
+      const resolution: MeasureMemberResolution = {
         type: MEMBER_TYPES.MEASURE,
         table: parsed.table,
-        name: parsed.member,
-        ref: memberRef as MemberRef,
+        name: parsed.column,
+        ref: normalizedRef,
         definition: measure,
       };
-      this.memberCache.set(refStr, resolution);
+      this.memberCache.set(rawMemberRef, resolution);
       return resolution;
     }
 
     // Then check dimensions
-    const dimension = table.dimensions?.[parsed.member];
+    const dimension = table.dimensions?.[parsed.column];
     if (dimension) {
-      const resolution: MemberResolution = {
+      const resolution: DimensionMemberResolution = {
         type: MEMBER_TYPES.DIMENSION,
         table: parsed.table,
-        name: parsed.member,
-        ref: memberRef as MemberRef,
+        name: parsed.column,
+        ref: normalizedRef,
         definition: dimension,
       };
-      this.memberCache.set(refStr, resolution);
+      this.memberCache.set(rawMemberRef, resolution);
       return resolution;
     }
 
@@ -340,7 +371,7 @@ export class SchemaRegistry implements IDisposable {
   resolveMemberOrThrow = (memberRef: MemberRef | string): MemberResolution => {
     const resolved = this.resolveMember(memberRef);
     if (!resolved) {
-      throw new SchemaNotFoundError('member', String(memberRef));
+      throw new SchemaNotFoundError(SCHEMA_ELEMENT_TYPES.MEMBER, String(memberRef));
     }
     return resolved;
   };
@@ -351,7 +382,7 @@ export class SchemaRegistry implements IDisposable {
   getMeasure = (memberRef: MemberRef | string): MeasureDefinition | null => {
     const resolved = this.resolveMember(memberRef);
     if (resolved?.type === MEMBER_TYPES.MEASURE) {
-      return resolved.definition as MeasureDefinition;
+      return resolved.definition;
     }
     return null;
   };
@@ -364,7 +395,7 @@ export class SchemaRegistry implements IDisposable {
   ): DimensionDefinition | TimeDimensionDefinition | null => {
     const resolved = this.resolveMember(memberRef);
     if (resolved?.type === MEMBER_TYPES.DIMENSION) {
-      return resolved.definition as DimensionDefinition | TimeDimensionDefinition;
+      return resolved.definition;
     }
     return null;
   };
@@ -383,7 +414,7 @@ export class SchemaRegistry implements IDisposable {
     }
 
     return Object.entries(table.measures).map(([name, def]) => ({
-      type: MEMBER_TYPES.MEASURE as MemberType,
+      type: MEMBER_TYPES.MEASURE,
       table: tableName,
       name,
       ref: MemberRefUtil.create(tableName, name),
@@ -401,7 +432,7 @@ export class SchemaRegistry implements IDisposable {
     }
 
     return Object.entries(table.dimensions).map(([name, def]) => ({
-      type: MEMBER_TYPES.DIMENSION as MemberType,
+      type: MEMBER_TYPES.DIMENSION,
       table: tableName,
       name,
       ref: MemberRefUtil.create(tableName, name),

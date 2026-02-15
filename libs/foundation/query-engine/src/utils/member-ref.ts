@@ -6,7 +6,6 @@
  * @module utils/member-ref
  */
 
-import type { MemberRef } from '@open-insights-web/foundation-data-model';
 import { MemberRef as MemberRefUtil } from '@open-insights-web/foundation-data-model';
 
 /**
@@ -27,7 +26,7 @@ export const parseMemberRef = (
     return null;
   }
 
-  const parsed = MemberRefUtil.parse(member as MemberRef);
+  const parsed = MemberRefUtil.parse(MemberRefUtil.from(member));
   return {
     table: parsed.table,
     column: parsed.member,
@@ -36,6 +35,10 @@ export const parseMemberRef = (
 
 /**
  * Extract table name from member reference.
+ *
+ * NOTE: If you also need the column name, call `parseMemberRef()` once instead
+ * of calling `extractTableName()` + `extractColumnName()` separately, to avoid
+ * parsing the same string twice.
  */
 export const extractTableName = (member: string): string | null => {
   const parsed = parseMemberRef(member);
@@ -44,9 +47,12 @@ export const extractTableName = (member: string): string | null => {
 
 /**
  * Extract column/member name from member reference.
+ *
+ * NOTE: If you also need the table name, call `parseMemberRef()` once instead
+ * of calling `extractTableName()` + `extractColumnName()` separately, to avoid
+ * parsing the same string twice.
  */
 export const extractColumnName = (member: string): string | null => {
   const parsed = parseMemberRef(member);
   return parsed?.column ?? null;
 };
-

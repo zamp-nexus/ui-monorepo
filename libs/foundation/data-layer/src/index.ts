@@ -109,6 +109,7 @@ export {
   QUERY_RETRY_DELAY_MAX_MS,
   OFFLINE_NETWORK_MODE,
   ANALYTICS_QUERY_RETRY_MAX,
+  TABLE_OPERATION,
   CONFLICT_RESOLUTION_TYPE,
   resolveCacheConfig,
   DATA_FRESHNESS,
@@ -116,7 +117,7 @@ export {
   createTableRegistry,
 } from './core';
 export type { DataFreshnessLevel } from './core/table-registry';
-export type { ConflictResolutionType } from './core/constants';
+export type { ConflictResolutionType, TableOperation } from './core/constants';
 
 // Advanced instance composition
 export {

@@ -348,7 +348,7 @@ export function toDate(value: unknown): Date | null {
 /**
  * Arrow type IDs (based on Apache Arrow specification)
  */
-export const ArrowTypeId = {
+export const ARROW_TYPE_ID = {
   NONE: 0,
   NULL: 1,
   INT: 2,
@@ -373,7 +373,7 @@ export const ArrowTypeId = {
   LARGE_LIST: 21,
 } as const;
 
-export type ArrowTypeId = (typeof ArrowTypeId)[keyof typeof ArrowTypeId];
+export type ArrowTypeId = (typeof ARROW_TYPE_ID)[keyof typeof ARROW_TYPE_ID];
 
 /**
  * Safely convert an Arrow value based on field type
@@ -406,31 +406,31 @@ export function convertArrowValueSafe(
 
   // Convert based on type
   switch (typeId) {
-    case ArrowTypeId.INT:
-    case ArrowTypeId.FLOAT:
-    case ArrowTypeId.DECIMAL:
+    case ARROW_TYPE_ID.INT:
+    case ARROW_TYPE_ID.FLOAT:
+    case ARROW_TYPE_ID.DECIMAL:
       return toNumber(value) ?? value;
 
-    case ArrowTypeId.UTF8:
-    case ArrowTypeId.LARGE_UTF8:
+    case ARROW_TYPE_ID.UTF8:
+    case ARROW_TYPE_ID.LARGE_UTF8:
       return toString(value) ?? value;
 
-    case ArrowTypeId.BOOL:
+    case ARROW_TYPE_ID.BOOL:
       return toBoolean(value) ?? value;
 
-    case ArrowTypeId.TIMESTAMP:
-    case ArrowTypeId.DATE:
+    case ARROW_TYPE_ID.TIMESTAMP:
+    case ARROW_TYPE_ID.DATE:
       return toDateIsoString(value) ?? value;
 
-    case ArrowTypeId.LIST:
-    case ArrowTypeId.LARGE_LIST:
-    case ArrowTypeId.FIXED_SIZE_LIST:
+    case ARROW_TYPE_ID.LIST:
+    case ARROW_TYPE_ID.LARGE_LIST:
+    case ARROW_TYPE_ID.FIXED_SIZE_LIST:
       if (Array.isArray(value)) return value;
       if (isArrowVector(value)) return value.toArray();
       return value;
 
-    case ArrowTypeId.STRUCT:
-    case ArrowTypeId.MAP:
+    case ARROW_TYPE_ID.STRUCT:
+    case ARROW_TYPE_ID.MAP:
       // Keep as-is, let caller handle nested structures
       return value;
 

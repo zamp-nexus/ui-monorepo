@@ -126,10 +126,19 @@ export interface FoundationMetricsConfig {
   resourceAttributes?: Record<string, string>;
 }
 
+export const RESOLVED_CONFIG_OPTIONAL_KEY = {
+  TENANT: 'tenant',
+  PLUGINS: 'plugins',
+  RESOURCE_ATTRIBUTES: 'resourceAttributes',
+} as const;
+
+type ResolvedConfigOptionalKey =
+  (typeof RESOLVED_CONFIG_OPTIONAL_KEY)[keyof typeof RESOLVED_CONFIG_OPTIONAL_KEY];
+
 /**
  * Resolved configuration with all defaults applied
  */
-export interface ResolvedConfig extends Required<Omit<FoundationMetricsConfig, 'tenant' | 'plugins' | 'resourceAttributes'>> {
+export interface ResolvedConfig extends Required<Omit<FoundationMetricsConfig, ResolvedConfigOptionalKey>> {
   tenant?: TenantConfig;
   plugins: FoundationMetricsPlugin[];
   resourceAttributes: Record<string, string>;

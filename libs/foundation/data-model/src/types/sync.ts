@@ -8,21 +8,16 @@
  */
 
 import type { IdMapping } from './base';
+import type { ValueOf } from './utility';
 
 // =============================================================================
 // Conflict Resolution Types
 // =============================================================================
 
 /**
- * Conflict resolution strategy constants
- *
- * - `SERVER_WINS`: Server data always takes precedence
- * - `CLIENT_WINS`: Client data always takes precedence
- * - `LAST_WRITE_WINS`: Most recent timestamp wins
- * - `MERGE`: Attempt field-level merge
- * - `MANUAL`: Show UI to user for manual resolution (no auto-resolve)
+ * Conflict resolution strategy values.
  */
-export const ConflictStrategy = {
+export const CONFLICT_STRATEGY = {
   SERVER_WINS: 'server-wins',
   CLIENT_WINS: 'client-wins',
   LAST_WRITE_WINS: 'last-write-wins',
@@ -30,7 +25,18 @@ export const ConflictStrategy = {
   MANUAL: 'manual',
 } as const;
 
-export type ConflictStrategy = (typeof ConflictStrategy)[keyof typeof ConflictStrategy];
+export type ConflictStrategy = ValueOf<typeof CONFLICT_STRATEGY>;
+
+/**
+ * Winner values for conflict resolution.
+ */
+export const CONFLICT_WINNER = {
+  SERVER: 'server',
+  CLIENT: 'client',
+  MERGED: 'merged',
+} as const;
+
+export type ConflictWinner = ValueOf<typeof CONFLICT_WINNER>;
 
 /**
  * Conflict context containing both versions of data
@@ -63,7 +69,7 @@ export interface ConflictResult<T = unknown> {
   /** Resolved data */
   resolvedData: T;
   /** Which version was chosen */
-  winner: 'server' | 'client' | 'merged';
+  winner: ConflictWinner;
   /** Whether manual review is recommended */
   requiresReview: boolean;
   /** Fields that were auto-merged (for merge strategy) */
@@ -147,9 +153,9 @@ export interface SyncState {
 }
 
 /**
- * Sync event type constants
+ * Sync event type values.
  */
-export const SyncEventType = {
+export const SYNC_EVENT_TYPE = {
   ONLINE: 'online',
   OFFLINE: 'offline',
   SYNC_START: 'sync-start',
@@ -160,7 +166,7 @@ export const SyncEventType = {
   LEADER_CHANGED: 'leader-changed',
 } as const;
 
-export type SyncEventType = (typeof SyncEventType)[keyof typeof SyncEventType];
+export type SyncEventType = ValueOf<typeof SYNC_EVENT_TYPE>;
 
 // =============================================================================
 // Network Types
@@ -193,9 +199,9 @@ export type NetworkStatusListener = (status: NetworkStatus) => void;
 // =============================================================================
 
 /**
- * Cross-tab message type constants for inter-tab communication
+ * Cross-tab message type values for inter-tab communication.
  */
-export const CrossTabMessageType = {
+export const CROSS_TAB_MESSAGE_TYPE = {
   INVALIDATE: 'invalidate',
   MUTATION_COMPLETED: 'mutation-completed',
   ONLINE: 'online',
@@ -209,7 +215,7 @@ export const CrossTabMessageType = {
   LEADER_CANDIDATE: 'leader-candidate',
 } as const;
 
-export type CrossTabMessageType = (typeof CrossTabMessageType)[keyof typeof CrossTabMessageType];
+export type CrossTabMessageType = ValueOf<typeof CROSS_TAB_MESSAGE_TYPE>;
 
 /**
  * Cross-tab message payload interface
@@ -287,6 +293,17 @@ export type SyncEventListener = (event: SyncEvent) => void;
 // =============================================================================
 
 /**
+ * Offline query source values.
+ */
+export const OFFLINE_QUERY_SOURCE = {
+  CACHE: 'cache',
+  NETWORK: 'network',
+  OFFLINE_DB: 'offline_db',
+} as const;
+
+export type OfflineQuerySource = ValueOf<typeof OFFLINE_QUERY_SOURCE>;
+
+/**
  * Offline query context with metadata
  */
 export interface OfflineQueryContext {
@@ -295,7 +312,7 @@ export interface OfflineQueryContext {
   /** Whether the cached data is stale */
   isStale: boolean;
   /** Source of the data */
-  source: 'cache' | 'network' | 'offline_db';
+  source: OfflineQuerySource;
   /** When the data was cached */
   cachedAt?: number;
 }

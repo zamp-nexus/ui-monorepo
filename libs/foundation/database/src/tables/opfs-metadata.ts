@@ -4,18 +4,9 @@
  */
 
 import { topologicalSort, hasCircularDependency } from '@open-insights-web/foundation-utils';
+import { OPFS_FILE_TYPE, type OpfsFileType } from '@open-insights-web/foundation-data-model';
 
-/**
- * File type constants for OPFS storage
- */
-export const OpfsFileType = {
-  PARQUET: 'parquet',
-  JSON: 'json',
-  CSV: 'csv',
-  VIEW_DEFINITION: 'view_definition',
-} as const;
-
-export type OpfsFileType = (typeof OpfsFileType)[keyof typeof OpfsFileType];
+export { OPFS_FILE_TYPE };
 
 /**
  * OPFS file metadata entry

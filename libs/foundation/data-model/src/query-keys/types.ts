@@ -3,6 +3,8 @@
  * @module query-keys/types
  */
 
+import type { ValueOf } from '../types/utility';
+
 /**
  * Base query key tuple
  */
@@ -37,7 +39,13 @@ export type AnalyticsQueryKey<
 /**
  * Query scope types
  */
-export type QueryScope = 'list' | 'detail' | 'infinite';
+export const QUERY_SCOPE = {
+  LIST: 'list',
+  DETAIL: 'detail',
+  INFINITE: 'infinite',
+} as const;
+
+export type QueryScope = ValueOf<typeof QUERY_SCOPE>;
 
 /**
  * Entity query key factory interface
@@ -50,13 +58,21 @@ export interface EntityQueryKeyFactory<
   all: readonly [TEntity];
 
   /** List queries - ['entity', 'list'] or ['entity', 'list', filters] */
-  list: (filters?: TFilters) => readonly [TEntity, 'list'] | readonly [TEntity, 'list', TFilters];
+  list: (
+    filters?: TFilters
+  ) =>
+    | readonly [TEntity, typeof QUERY_SCOPE.LIST]
+    | readonly [TEntity, typeof QUERY_SCOPE.LIST, TFilters];
 
   /** Detail query - ['entity', 'detail', id] */
-  detail: (id: string) => readonly [TEntity, 'detail', string];
+  detail: (id: string) => readonly [TEntity, typeof QUERY_SCOPE.DETAIL, string];
 
   /** Infinite query - ['entity', 'infinite'] or ['entity', 'infinite', filters] */
-  infinite: (filters?: TFilters) => readonly [TEntity, 'infinite'] | readonly [TEntity, 'infinite', TFilters];
+  infinite: (
+    filters?: TFilters
+  ) =>
+    | readonly [TEntity, typeof QUERY_SCOPE.INFINITE]
+    | readonly [TEntity, typeof QUERY_SCOPE.INFINITE, TFilters];
 }
 
 /**

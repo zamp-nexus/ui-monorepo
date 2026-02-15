@@ -21,18 +21,18 @@ import {
 /**
  * Mutation type enum
  */
-export const MutationType = {
+export const MUTATION_TYPE = {
   CREATE: 'create',
   UPDATE: 'update',
   DELETE: 'delete',
 } as const;
 
-export type MutationType = (typeof MutationType)[keyof typeof MutationType];
+export type MutationType = (typeof MUTATION_TYPE)[keyof typeof MUTATION_TYPE];
 
 /**
  * Mutation status enum
  */
-export const MutationStatus = {
+export const MUTATION_STATUS = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
@@ -41,7 +41,7 @@ export const MutationStatus = {
 } as const;
 
 export type MutationStatus =
-  (typeof MutationStatus)[keyof typeof MutationStatus];
+  (typeof MUTATION_STATUS)[keyof typeof MUTATION_STATUS];
 
 /**
  * Test mutation object
@@ -88,11 +88,11 @@ export interface MutationMeta {
  */
 export class MutationBuilder<TData = JsonSerializable> {
   private _id: MutationId;
-  private _type: MutationType = MutationType.CREATE;
+  private _type: MutationType = MUTATION_TYPE.CREATE;
   private _tableName = 'test_table';
   private _entityId: EntityId | ProvisionalId;
   private _data: TData = {} as TData;
-  private _status: MutationStatus = MutationStatus.PENDING;
+  private _status: MutationStatus = MUTATION_STATUS.PENDING;
   private _retryCount = 0;
   private _maxRetries = 3;
   private _createdAt: Timestamp;
@@ -134,7 +134,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Set as a create mutation
    */
   asCreate(): this {
-    this._type = MutationType.CREATE;
+    this._type = MUTATION_TYPE.CREATE;
     return this;
   }
 
@@ -142,7 +142,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Set as an update mutation
    */
   asUpdate(): this {
-    this._type = MutationType.UPDATE;
+    this._type = MUTATION_TYPE.UPDATE;
     return this;
   }
 
@@ -150,7 +150,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Set as a delete mutation
    */
   asDelete(): this {
-    this._type = MutationType.DELETE;
+    this._type = MUTATION_TYPE.DELETE;
     return this;
   }
 
@@ -194,7 +194,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Mark as pending
    */
   asPending(): this {
-    this._status = MutationStatus.PENDING;
+    this._status = MUTATION_STATUS.PENDING;
     return this;
   }
 
@@ -202,7 +202,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Mark as in progress
    */
   asInProgress(): this {
-    this._status = MutationStatus.IN_PROGRESS;
+    this._status = MUTATION_STATUS.IN_PROGRESS;
     return this;
   }
 
@@ -210,7 +210,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Mark as completed
    */
   asCompleted(): this {
-    this._status = MutationStatus.COMPLETED;
+    this._status = MUTATION_STATUS.COMPLETED;
     this._completedAt = Timestamp.now();
     return this;
   }
@@ -219,7 +219,7 @@ export class MutationBuilder<TData = JsonSerializable> {
    * Mark as failed
    */
   asFailed(error: string): this {
-    this._status = MutationStatus.FAILED;
+    this._status = MUTATION_STATUS.FAILED;
     this._error = error;
     return this;
   }
@@ -281,11 +281,11 @@ export function quickMutation<TData = JsonSerializable>(
   const now = Timestamp.now();
   return {
     id: overrides.id ?? MutationId.generate(),
-    type: overrides.type ?? MutationType.CREATE,
+    type: overrides.type ?? MUTATION_TYPE.CREATE,
     tableName: overrides.tableName ?? 'test_table',
     entityId: overrides.entityId ?? ProvisionalId.generate(),
     data: overrides.data ?? ({} as TData),
-    status: overrides.status ?? MutationStatus.PENDING,
+    status: overrides.status ?? MUTATION_STATUS.PENDING,
     retryCount: overrides.retryCount ?? 0,
     maxRetries: overrides.maxRetries ?? 3,
     createdAt: overrides.createdAt ?? now,

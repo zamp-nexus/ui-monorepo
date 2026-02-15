@@ -3,19 +3,25 @@
  * @module tables/sync-state
  */
 
-import type { JsonValue, NetworkStatus } from '@open-insights-web/foundation-data-model';
-import type { SyncStateKey } from '../core/config';
+import type { ZodSchema } from 'zod';
+import type {
+  DuckDBViewsValue,
+  LastSyncValue,
+  NetworkStatus,
+  SyncStateKey,
+} from '@open-insights-web/foundation-data-model';
 import {
   lastSyncValueSchema,
   networkStatusSchema,
   duckDBViewsValueSchema,
 } from '../validation/schemas';
+export type { DuckDBViewsValue, LastSyncValue };
 
 /**
  * Sync state entry (key-value store)
  * @template TValue - Type of the state value (defaults to JsonValue)
  */
-export interface SyncStateEntry<TValue = JsonValue> {
+export interface SyncStateEntry<TValue = unknown> {
   /** State key */
   key: string;
   /** State value (serialized) */
@@ -28,30 +34,10 @@ export interface SyncStateEntry<TValue = JsonValue> {
 // Do NOT re-export it here to maintain single source of truth
 
 /**
- * DuckDB view state value
- */
-export interface DuckDBViewsValue {
-  views: Array<{
-    name: string;
-    sql: string;
-    dependencies: string[];
-  }>;
-  lastUpdatedAt: number;
-}
-
-/**
- * Last sync value
- */
-export interface LastSyncValue {
-  timestamp: number;
-  tables: Record<string, number>;
-}
-
-/**
  * Create sync state entry (const arrow function pattern)
  * @template TValue - Type of the state value
  */
-export const createSyncStateEntry = <TValue = JsonValue>(
+export const createSyncStateEntry = <TValue = unknown>(
   key: SyncStateKey,
   value: TValue
 ): SyncStateEntry<TValue> => ({
@@ -65,7 +51,7 @@ export const createSyncStateEntry = <TValue = JsonValue>(
  */
 export interface GetSyncStateOptions<T> {
   /** Zod schema for runtime validation (required for type-safe return) */
-  schema: unknown; // ZodSchema<T> - kept as unknown to avoid circular dependency
+  schema: ZodSchema<T>;
 }
 
 /**
@@ -77,7 +63,7 @@ export interface SyncStateOperations {
   /** Get raw state value by key without type validation */
   getRaw(key: SyncStateKey): Promise<unknown>;
   /** Set state value */
-  set<T>(key: SyncStateKey, value: T): Promise<void>;
+  set<TValue>(key: SyncStateKey, value: TValue): Promise<void>;
   /** Delete state entry */
   delete(key: SyncStateKey): Promise<void>;
   /** Get all state entries */

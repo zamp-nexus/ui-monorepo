@@ -4,16 +4,17 @@
  */
 
 import type { MutationFunction } from '@tanstack/react-query';
-import type { MutationType } from '@open-insights-web/foundation-database';
 import {
+  MUTATION_TYPE,
   generateProvisionalId,
   tryToJsonSerializable,
+  type MutationType,
   type QueryKeyBase,
   type OfflineMutationResult,
 } from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, isNetworkError } from '@open-insights-web/foundation-utils';
-import type { NetworkStatusMonitor } from '../network';
-import { getNetworkMonitor } from '../network';
+import type { NetworkStatusMonitor } from '../network/index';
+import { getNetworkMonitor } from '../network/index';
 import type { OfflineQueueManager } from '../queue/manager';
 import { getQueueManager } from '../queue/manager';
 
@@ -82,7 +83,7 @@ export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
 
   return async (variables: TVariables): Promise<OfflineMutationResult<TData>> => {
     const entityId = getEntityId?.(variables) ??
-      (type === 'create' ? generateProvisionalId() : '');
+      (type === MUTATION_TYPE.CREATE ? generateProvisionalId() : '');
     const mutationId = crypto.randomUUID();
     const optimisticData = getOptimisticData?.(variables);
     const serializedPayload = tryToJsonSerializable(variables);

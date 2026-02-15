@@ -708,11 +708,11 @@ Foundation **Utils** provides **generic** error utilities; Foundation **Bridge**
 | Error handling strategy (retry/report/log) | `categorizeError`, `getErrorStrategy`, `createErrorHandler`, `handleErrorByCategory` | `@open-insights-web/foundation-utils` |
 | Domain error classes (Bridge) | `QueryTimeoutError`, `BridgeNotInitializedError`, etc. | This library |
 | Domain type guards (Bridge) | `isQueryTimeoutError`, `isQueryCancelledError`, etc. | This library |
-| Foundation error base and codes | `FoundationError`, `FoundationErrorCode`, `isFoundationError`, `hasErrorCode(error, FoundationErrorCode)` | `@open-insights-web/foundation-data-model` |
+| Foundation error base and codes | `FoundationError`, `FOUNDATION_ERROR_CODE`, `isFoundationError`, `hasErrorCode(error, FOUNDATION_ERROR_CODE.*)` | `@open-insights-web/foundation-data-model` |
 
 **Why Bridge has its own error “things”:**
 
-- **Utils does not define domain error classes.** It only provides generic helpers (normalize, message extraction, generic guards like `isAbortError`). Bridge needs **typed, domain-specific errors** (e.g. `QueryTimeoutError` with `queryId`, `timeoutMs`) that extend `FoundationError` and use `FoundationErrorCode`.
+- **Utils does not define domain error classes.** It only provides generic helpers (normalize, message extraction, generic guards like `isAbortError`). Bridge needs **typed, domain-specific errors** (e.g. `QueryTimeoutError` with `queryId`, `timeoutMs`) that extend `FoundationError` and use `FOUNDATION_ERROR_CODE`.
 - **Utils cannot implement “is this a Bridge error?”** because it doesn’t depend on Bridge. So Bridge provides **domain type guards** (`isQueryTimeoutError`, etc.) that do `instanceof` checks against its own classes.
 
 **What Bridge already reuses from Utils:**
@@ -868,7 +868,7 @@ import {
   isSqlValidationError,
   isBridgeError,
 } from '@open-insights-web/foundation-bridge';
-import { isFoundationError, hasErrorCode, FoundationErrorCode } from '@open-insights-web/foundation-data-model';
+import { isFoundationError, hasErrorCode, FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
 
 try {
   const result = await router.query(sql);
@@ -890,7 +890,7 @@ try {
   }
   
   // Check error codes
-  if (hasErrorCode(error, FoundationErrorCode.BRIDGE_QUERY_TIMEOUT)) {
+  if (hasErrorCode(error, FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT)) {
     // Handle by error code
   }
   

@@ -38,6 +38,9 @@ export type {
 } from './token';
 
 export {
+  TOKEN_TYPE,
+  WCAG_LEVEL,
+  DIMENSION_UNIT,
   // Type guards
   isDesignToken,
   isColorToken,

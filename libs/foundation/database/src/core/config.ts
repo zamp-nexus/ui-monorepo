@@ -4,6 +4,12 @@
  */
 
 import { TIME_MS } from '@open-insights-web/foundation-utils';
+import {
+  MUTATION_STATUS,
+  QUERY_CACHE_STATUS,
+  SYNC_STATE_KEY,
+} from '@open-insights-web/foundation-data-model';
+import type { SyncStateKey as DataModelSyncStateKey } from '@open-insights-web/foundation-data-model';
 
 /**
  * Database configuration options
@@ -27,6 +33,8 @@ export interface DatabaseConfig {
   cleanupInterval: number;
   /** Maximum number of cache entries before LRU eviction (0 = no limit) */
   maxCacheEntries: number;
+  /** Retention period for completed/failed mutations in milliseconds (default: 1 hour) */
+  mutationRetentionMs: number;
 }
 
 // =============================================================================
@@ -56,6 +64,7 @@ export const DEFAULT_DATABASE_CONFIG: DatabaseConfig = {
   autoCleanup: true,
   cleanupInterval: TIME_MS.MINUTE, // 1 minute
   maxCacheEntries: 1000, // Maximum cache entries before LRU eviction
+  mutationRetentionMs: TIME_MS.HOUR, // 1 hour retention for completed/failed mutations
 };
 
 /**
@@ -68,41 +77,19 @@ export const mergeConfig = (
   ...userConfig,
 });
 
-/**
- * Query cache entry status constants
- */
-export const QueryCacheStatus = {
-  FRESH: 'fresh',
-  STALE: 'stale',
-  EXPIRED: 'expired',
-} as const;
+export { MUTATION_STATUS, QUERY_CACHE_STATUS };
 
-export type QueryCacheStatus = (typeof QueryCacheStatus)[keyof typeof QueryCacheStatus];
-
-/**
- * Mutation queue status constants
- */
-export const MutationStatus = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  OFFLINE_QUEUED: 'offline_queued',
-} as const;
-
-export type MutationStatus = (typeof MutationStatus)[keyof typeof MutationStatus];
+export type SyncStateKey = DataModelSyncStateKey;
 
 /**
  * Sync state keys
  */
 export const SYNC_STATE_KEYS = {
-  LAST_SYNC: 'lastSync',
-  NETWORK_STATUS: 'networkStatus',
-  PENDING_COUNT: 'pendingCount',
-  DUCKDB_VIEWS: 'duckdbViews',
-  SCHEMA_VERSION: 'schemaVersion',
-  CONFLICTS: 'conflicts',
-  ID_MAPPINGS: 'idMappings',
+  LAST_SYNC: SYNC_STATE_KEY.LAST_SYNC,
+  NETWORK_STATUS: SYNC_STATE_KEY.NETWORK_STATUS,
+  PENDING_COUNT: SYNC_STATE_KEY.PENDING_COUNT,
+  DUCKDB_VIEWS: SYNC_STATE_KEY.DUCKDB_VIEWS,
+  SCHEMA_VERSION: SYNC_STATE_KEY.SCHEMA_VERSION,
+  CONFLICTS: SYNC_STATE_KEY.CONFLICTS,
+  ID_MAPPINGS: SYNC_STATE_KEY.ID_MAPPINGS,
 } as const;
-
-export type SyncStateKey = typeof SYNC_STATE_KEYS[keyof typeof SYNC_STATE_KEYS];

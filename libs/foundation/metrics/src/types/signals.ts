@@ -4,6 +4,7 @@
  */
 
 import type { SpanContext } from '@opentelemetry/api';
+import type { HttpMethod } from '@open-insights-web/foundation-data-model';
 import type {
   ErrorType,
   WebVitalName,
@@ -114,7 +115,7 @@ export interface LongTaskEntry {
  */
 export interface NetworkRequest {
   url: string;
-  method: import('@open-insights-web/foundation-data-model').HttpMethod;
+  method: HttpMethod;
   startTime: number;
   duration: number;
   statusCode: number;

@@ -64,6 +64,7 @@ describe('auth constants', () => {
 
     it('should define all error codes', () => {
       expect(AUTH_ERROR_CODE.NOT_INITIALIZED).toBe('AUTH_NOT_INITIALIZED');
+      expect(AUTH_ERROR_CODE.UNAUTHORIZED).toBe('AUTH_UNAUTHORIZED');
       expect(AUTH_ERROR_CODE.SESSION_CHECK_FAILED).toBe('AUTH_SESSION_CHECK_FAILED');
       expect(AUTH_ERROR_CODE.SESSION_REFRESH_FAILED).toBe('AUTH_SESSION_REFRESH_FAILED');
       expect(AUTH_ERROR_CODE.SESSION_EXPIRED).toBe('AUTH_SESSION_EXPIRED');
@@ -81,8 +82,8 @@ describe('auth constants', () => {
       expect(AUTH_ERROR_CODE.NETWORK_ERROR).toBe('AUTH_NETWORK_ERROR');
     });
 
-    it('should have exactly 16 error codes', () => {
-      expect(Object.keys(AUTH_ERROR_CODE)).toHaveLength(16);
+    it('should have exactly 17 error codes', () => {
+      expect(Object.keys(AUTH_ERROR_CODE)).toHaveLength(17);
     });
   });
 

@@ -30,7 +30,7 @@ const createMockSessionService = (): SessionServiceInterface => ({
   logout: vi.fn().mockResolvedValue(undefined),
   getAccessToken: vi.fn().mockResolvedValue(null),
   getState: vi.fn().mockReturnValue(null),
-  subscribe: vi.fn().mockReturnValue(() => {}),
+  subscribe: vi.fn().mockReturnValue(() => undefined),
   dispose: vi.fn().mockResolvedValue(undefined),
 });
 

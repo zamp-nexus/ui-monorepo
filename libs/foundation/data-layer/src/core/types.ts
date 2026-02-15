@@ -18,6 +18,14 @@ import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex
 import type { ConflictStrategy, SyncState } from '@open-insights-web/foundation-data-model';
 import type { UnifiedTableConfig, TableAnalyticsConfig } from './table-registry';
 
+const CONVEX_FUNCTION_VISIBILITY = {
+  PUBLIC: 'public',
+  INTERNAL: 'internal',
+} as const;
+
+type ConvexFunctionVisibility =
+  (typeof CONVEX_FUNCTION_VISIBILITY)[keyof typeof CONVEX_FUNCTION_VISIBILITY];
+
 /**
  * Generic Convex query function reference type.
  * Used for typing datasource API and other query references.
@@ -31,7 +39,12 @@ export type ConvexQueryReference = FunctionReference<'query', 'public', Record<s
  * Generic Convex function reference for any visibility and args.
  * Used when the specific function signature is not known at compile time.
  */
-export type AnyFunctionReference = FunctionReference<'query', 'public' | 'internal', Record<string, unknown>, unknown>;
+export type AnyFunctionReference = FunctionReference<
+  'query',
+  ConvexFunctionVisibility,
+  Record<string, unknown>,
+  unknown
+>;
 
 // Re-export table config types for convenience (these are defined in this library)
 export type { UnifiedTableConfig, TableAnalyticsConfig };
@@ -95,7 +108,7 @@ export interface DataLayerConfig {
    */
   readonly datasourceApi?: ConvexQueryReference;
 
-  /** Conflict resolution strategy (default: ConflictStrategy.LAST_WRITE_WINS) */
+  /** Conflict resolution strategy (default: CONFLICT_STRATEGY.LAST_WRITE_WINS) */
   readonly conflictStrategy?: ConflictStrategy;
 
   /** Enable cross-tab sync coordination (default: true) */
@@ -170,7 +183,7 @@ export interface BaseMutationOptions<
   /** Query keys to invalidate on success */
   readonly invalidateKeys?: QueryKey[];
   /** Called when mutation succeeds */
-  readonly onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
+  readonly onSuccess?: (data: TData | undefined, variables: TVariables) => void | Promise<void>;
   /** Called when mutation fails */
   readonly onError?: (error: Error, variables: TVariables) => void | Promise<void>;
   /** Called when mutation settles */
@@ -206,7 +219,7 @@ export interface DLMutationResult<TData, TVariables> {
   /** Mutate function */
   readonly mutate: (variables: TVariables) => void;
   /** Mutate async function */
-  readonly mutateAsync: (variables: TVariables) => Promise<TData>;
+  readonly mutateAsync: (variables: TVariables) => Promise<TData | undefined>;
   /** Reset mutation state */
   readonly reset: () => void;
 }

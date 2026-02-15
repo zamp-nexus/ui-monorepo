@@ -61,14 +61,14 @@ export {
 // Type-only exports (no runtime value)
 export type {
   IdMapping,
+  UserRole,
+  UserPermissions,
   JsonPrimitive,
   JsonObject,
   JsonArray,
   JsonValue,
   JsonSerializable,
   Brand,
-  // Simple validation result (used by bridge validation)
-  SimpleValidationResult,
   // Validation result data interface (the data type for ValidationResult utilities)
   ValidationResultData,
   // Data source types (used by data-layer, sync-engine)
@@ -76,6 +76,20 @@ export type {
   OfflineDataSource,
   OfflineMetadata,
   WithOfflineMetadata,
+  // Shared database contracts
+  QueryCacheStatus,
+  MutationStatus,
+  MutationType,
+  MutationQueueEntry,
+  CreateMutationOptions,
+  OpfsFileType,
+  SyncStateKey,
+  DatabaseTransactionMode,
+  DatabaseTransactionTable,
+  DuckDBViewDefinition,
+  DuckDBViewsValue,
+  LastSyncValue,
+  TableSyncMetadataEntry,
 } from './types';
 // Value exports (includes their associated types automatically)
 // Result, Milliseconds, Timestamp, and ID constructors are both types and value constructors
@@ -86,6 +100,8 @@ export {
   tryToJsonSerializable,
   assertJsonSerializable,
   JsonSerializationError,
+  DATA_SOURCE,
+  OFFLINE_DATA_SOURCE,
   Result,
   Milliseconds,
   Timestamp,
@@ -107,14 +123,18 @@ export {
 export type {
   ConflictContext,
   ConflictResult,
+  ConflictStrategy,
+  ConflictWinner,
   MergeConfig,
   QueueStats,
   ProcessingResult,
   SyncState,
+  SyncEventType,
   // Network types
   NetworkStatus,
   NetworkStatusListener,
   // Cross-tab types
+  CrossTabMessageType,
   CrossTabMessagePayload,
   CrossTabMessage,
   CrossTabMessageHandler,
@@ -122,17 +142,31 @@ export type {
   SyncEvent,
   SyncEventListener,
   // Query types
+  OfflineQuerySource,
   OfflineQueryContext,
   // Mutation types
   OfflineMutationResult,
   // Type constraints
   ConflictResolvableData,
 } from './types';
-// Sync-related const objects (value + type exports)
+// Sync-related constants (value + type exports)
 export {
-  ConflictStrategy,
-  SyncEventType,
-  CrossTabMessageType,
+  CONFLICT_STRATEGY,
+  CONFLICT_WINNER,
+  SYNC_EVENT_TYPE,
+  CROSS_TAB_MESSAGE_TYPE,
+  OFFLINE_QUERY_SOURCE,
+  // Database constants and helpers
+  QUERY_CACHE_STATUS,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  OPFS_FILE_TYPE,
+  SYNC_STATE_KEY,
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
+  createTableSyncMetadataEntry,
+  needsTableUpdate,
+  getFilesNeedingDownload,
 } from './types';
 
 // Utility types (general-purpose type transformations)
@@ -184,7 +218,31 @@ export {
   createAnalyticsQueryKey,
   extractQueryKeyMeta,
   matchesQueryKey,
+  QUERY_SCOPE,
 } from './query-keys';
+
+// ============================================================================
+// Datasource contracts (used by data-layer and query-engine)
+// ============================================================================
+
+export type {
+  DataSourceFileInfo,
+  DataSourceTableInfo,
+  DataSourceMetadata,
+  DataSourceResponse,
+  DataSourceRequest,
+} from './datasource';
+
+export {
+  isDataSourceFileInfo,
+  isDataSourceTableInfo,
+  isDataSourceResponse,
+  calculateTableSize,
+  calculateTotalRows,
+  calculateTotalSize,
+  getTablesNeedingUpdate,
+  hasExpiredUrls,
+} from './datasource';
 
 // ============================================================================
 // Versioning (used by data-layer, sync-engine)
@@ -200,7 +258,7 @@ export type {
   ValidationSeverity,
   ValidationIssue,
 } from './types';
-export { ValidationResult, BrandedTypeValidationError } from './types';
+export { VALIDATION_SEVERITY, ValidationResult, BrandedTypeValidationError } from './types';
 
 // ============================================================================
 // Type Guards
@@ -226,7 +284,7 @@ export {
   toBoolean,
   toDateIsoString,
   toDate,
-  ArrowTypeId,
+  ARROW_TYPE_ID,
   convertArrowValueSafe,
   convertArrowRow,
 } from './types';
@@ -237,8 +295,8 @@ export {
 
 export {
   // Error codes
-  FoundationErrorCode,
-  ErrorCategory,
+  FOUNDATION_ERROR_CODE,
+  ERROR_CATEGORY,
   getErrorCategory,
   isRetryableErrorCode,
   // Error classes
@@ -265,6 +323,8 @@ export {
 } from './errors';
 
 export type {
+  FoundationErrorCode,
+  ErrorCategory,
   SerializedError,
   ErrorContext,
   ErrorInfo,

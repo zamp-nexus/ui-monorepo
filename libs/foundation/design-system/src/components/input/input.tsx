@@ -7,7 +7,7 @@ import React from 'react';
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
 import { cn } from '../../utils/cn';
-import type { InputComponent, InputProps, InputRef } from './input';
+import type { InputComponent, InputProps } from './input';
 import { inputDefaultTheme } from './input';
 
 /**

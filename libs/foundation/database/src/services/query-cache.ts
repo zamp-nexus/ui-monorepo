@@ -8,22 +8,48 @@
  */
 
 import { BaseService } from './base';
+import { QUERY_CACHE_STATUS } from '@open-insights-web/foundation-data-model';
 import type {
   QueryCacheOperations,
   QueryCacheEntry,
   QueryCacheEntryWithStatus,
   GetCacheOptions,
-} from '../tables';
-import { isCacheExpired, getCacheStatus } from '../tables';
-import { QueryCacheStatus } from '../core/config';
+} from '../tables/query-cache';
+import { isCacheExpired, getCacheStatus } from '../tables/query-cache';
 import { queryCacheEntrySchema } from '../validation/schemas';
-import { createValidationError } from '../errors';
+import { assertValid } from '../validation/assert-valid';
 
 /**
  * Query Cache Service
  * Implements QueryCacheOperations with early returns and const arrow functions
  */
 export class QueryCacheService extends BaseService implements QueryCacheOperations {
+  /**
+   * Apply cache retrieval rules to a raw entry.
+   */
+  private resolveEntry = (
+    entry: QueryCacheEntry | undefined,
+    options?: GetCacheOptions
+  ): QueryCacheEntryWithStatus | null => {
+    if (!entry) {
+      return null;
+    }
+
+    const status = getCacheStatus(entry, this.config.staleThreshold);
+    if (status === QUERY_CACHE_STATUS.EXPIRED && !options?.returnStale) {
+      return null;
+    }
+
+    if (options?.maxAge !== undefined) {
+      const age = Date.now() - entry.dataUpdatedAt;
+      if (age > options.maxAge) {
+        return null;
+      }
+    }
+
+    return { ...entry, status };
+  };
+
   /**
    * Get a cache entry by query hash
    *
@@ -39,22 +65,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
     options?: GetCacheOptions
   ): Promise<QueryCacheEntryWithStatus | null> => {
     const entry = await this.db.queries.get(queryHash);
-
-    // Early return if not found
-    if (!entry) return null;
-
-    const status = getCacheStatus(entry, this.config.staleThreshold);
-
-    // Early return if expired and not returning stale
-    if (status === QueryCacheStatus.EXPIRED && !options?.returnStale) return null;
-
-    // Early return if stale and maxAge exceeded
-    if (options?.maxAge) {
-      const age = Date.now() - entry.dataUpdatedAt;
-      if (age > options.maxAge) return null;
-    }
-
-    return { ...entry, status };
+    return this.resolveEntry(entry, options);
   };
 
   /**
@@ -62,12 +73,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
    * Validates before write
    */
   set = async (entry: QueryCacheEntry): Promise<void> => {
-    // Validate before write
-    const validation = queryCacheEntrySchema.safeParse(entry);
-    if (!validation.success) {
-      throw createValidationError('QueryCacheEntry', validation.error.message);
-    }
-
+    assertValid(queryCacheEntrySchema, entry, 'QueryCacheEntry');
     await this.db.queries.put(entry);
     this.log('Cache entry set:', entry.queryHash);
   };
@@ -157,24 +163,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
 
     // Get all entries in one query
     const entries = await this.db.queries.bulkGet(queryHashes);
-
-    // Process each entry with the same logic as get()
-    return entries.map((entry) => {
-      if (!entry) return null;
-
-      const status = getCacheStatus(entry, this.config.staleThreshold);
-
-      // Return null if expired and not returning stale
-      if (status === QueryCacheStatus.EXPIRED && !options?.returnStale) return null;
-
-      // Return null if stale and maxAge exceeded
-      if (options?.maxAge) {
-        const age = Date.now() - entry.dataUpdatedAt;
-        if (age > options.maxAge) return null;
-      }
-
-      return { ...entry, status };
-    });
+    return entries.map((entry) => this.resolveEntry(entry, options));
   };
 
   /**
@@ -186,10 +175,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
 
     // Validate all entries first
     for (const entry of entries) {
-      const validation = queryCacheEntrySchema.safeParse(entry);
-      if (!validation.success) {
-        throw createValidationError('QueryCacheEntry', validation.error.message);
-      }
+      assertValid(queryCacheEntrySchema, entry, 'QueryCacheEntry');
     }
 
     await this.db.queries.bulkPut(entries);
@@ -202,8 +188,11 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
   bulkDelete = async (queryHashes: string[]): Promise<number> => {
     if (queryHashes.length === 0) return 0;
 
+    const existingEntries = await this.db.queries.bulkGet(queryHashes);
+    const existingCount = existingEntries.filter((entry) => entry !== undefined).length;
+
     await this.db.queries.bulkDelete(queryHashes);
-    this.log(`Bulk deleted ${queryHashes.length} cache entries`);
-    return queryHashes.length;
+    this.log(`Bulk deleted ${existingCount} cache entries`);
+    return existingCount;
   };
 }

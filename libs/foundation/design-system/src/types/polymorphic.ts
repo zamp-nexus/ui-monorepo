@@ -6,6 +6,14 @@
 
 import type { PropsOf } from './utils';
 
+const POLYMORPHIC_RESERVED_PROP = {
+  COMPONENT: 'component',
+  REF: 'ref',
+} as const;
+
+type PolymorphicReservedProp =
+  (typeof POLYMORPHIC_RESERVED_PROP)[keyof typeof POLYMORPHIC_RESERVED_PROP];
+
 /**
  * The ref type for polymorphic components
  */
@@ -32,7 +40,7 @@ export type PolymorphicProps<
   TProps = object,
 > = PolymorphicComponentProp<T> &
   TProps &
-  Omit<PropsOf<T>, keyof TProps | 'component' | 'ref'> & {
+  Omit<PropsOf<T>, keyof TProps | PolymorphicReservedProp> & {
     ref?: PolymorphicRef<T>;
   };
 
@@ -63,4 +71,3 @@ export type OverridableComponentProps<
   T extends React.ElementType,
   TProps = object,
 > = PolymorphicProps<T, TProps>;
-

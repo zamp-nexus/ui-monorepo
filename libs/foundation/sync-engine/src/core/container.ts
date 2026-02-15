@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from '@open-insights-web/foundation-database';
-import { NetworkStatusMonitor } from '../network';
+import { NetworkStatusMonitor } from '../network/index';
 import { OfflineQueueManager } from '../queue/manager';
 import { ConflictResolver } from '../conflicts/resolver';
 import { CrossTabManager } from '../cross-tab/manager';

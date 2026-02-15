@@ -16,6 +16,7 @@ import type { WithId } from '@open-insights-web/foundation-data-model';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import type { OptimisticContext, rollbackOptimisticUpdate } from './optimistic-updates';
 import { invalidateQueries, collectInvalidationKeys } from './mutation-helpers';
+import type { ErrorSeverityValue } from './error-handler';
 
 // =============================================================================
 // MUTATION INTERNALS
@@ -152,21 +153,21 @@ export interface MutationCallbackOptions<TData, TVariables> {
   /** Keys to invalidate on success */
   readonly invalidateKeys: QueryKey[];
   /** Optional list query key */
-  readonly listQueryKey?: QueryKey;
+  readonly listQueryKey?: QueryKey | undefined;
   /** Optional item query key generator */
-  readonly itemQueryKey?: (entityId: string) => QueryKey;
+  readonly itemQueryKey?: ((entityId: string) => QueryKey) | undefined;
   /** Entity ID ref for item invalidation */
   readonly entityIdRef: React.MutableRefObject<string | null>;
   /** User's onSuccess callback */
-  readonly onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
+  readonly onSuccess?: ((data: TData, variables: TVariables) => void | Promise<void>) | undefined;
   /** User's onError callback */
-  readonly onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+  readonly onError?: ((error: Error, variables: TVariables) => void | Promise<void>) | undefined;
   /** User's onSettled callback */
-  readonly onSettled?: (
+  readonly onSettled?: ((
     data: TData | undefined,
     error: Error | null,
     variables: TVariables
-  ) => void | Promise<void>;
+  ) => void | Promise<void>) | undefined;
 }
 
 /**
@@ -210,7 +211,7 @@ type RollbackFn = typeof rollbackOptimisticUpdate;
  */
 type ScopedErrorHandler = (
   error: unknown,
-  options?: { severity?: 'warn' | 'error'; data?: Record<string, unknown> }
+  options?: { severity?: ErrorSeverityValue; data?: Record<string, unknown> }
 ) => Error;
 
 /**
@@ -248,7 +249,11 @@ export const createOnErrorCallback = <TData, TVariables, TListData extends WithI
   return async (error: Error, variables: TVariables) => {
     // Log error with scoped handler if provided
     if (errorHandler) {
-      errorHandler(error, { severity: 'error', data: table ? { table } : undefined });
+      if (table) {
+        errorHandler(error, { severity: 'error', data: { table } });
+      } else {
+        errorHandler(error, { severity: 'error' });
+      }
     }
 
     // Additional error handling (e.g., cache restoration)

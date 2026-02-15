@@ -127,7 +127,7 @@ const BannerRoot = React.forwardRef(function Banner<T extends React.ElementType 
       </Element>
     </BannerContext.Provider>
   );
-}) as BannerComponent;
+}) as unknown as BannerComponent;
 
 // Attach sub-components
 BannerRoot.displayName = 'Banner';

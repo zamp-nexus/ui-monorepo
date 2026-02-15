@@ -26,10 +26,15 @@ import type {
   DecisionFactors,
   DecisionOptions,
   DecisionResult,
+  DecisionRule,
 } from '../types/decision';
-import { DECISION_REASONS } from '../types/decision';
+import { DECISION_PATHS, DECISION_REASONS } from '../types/decision';
 import type { Query } from '../types/query';
-import { OPERATIONS } from '../types/operations';
+import {
+  isMutationOperation,
+  OPERATIONS,
+  WRITE_OPERATIONS,
+} from '../types/operations';
 import { TableExtractor } from './table-extractor';
 
 // =============================================================================
@@ -64,10 +69,12 @@ import { TableExtractor } from './table-extractor';
  */
 export class DecisionEngine implements IDisposable {
   private readonly tableExtractor: TableExtractor;
+  private readonly rules: DecisionRule[];
   private _isDisposed = false;
 
-  constructor(tableExtractor?: TableExtractor) {
+  constructor(tableExtractor?: TableExtractor, customRules?: DecisionRule[]) {
     this.tableExtractor = tableExtractor ?? new TableExtractor();
+    this.rules = customRules ?? [...DEFAULT_DECISION_RULES];
   }
 
   /**
@@ -83,7 +90,6 @@ export class DecisionEngine implements IDisposable {
   dispose(): void {
     if (this._isDisposed) return;
     this._isDisposed = true;
-    // No resources to dispose, but pattern is implemented for consistency
   }
 
   /**
@@ -94,6 +100,34 @@ export class DecisionEngine implements IDisposable {
       throw new DisposedError('DecisionEngine');
     }
   }
+
+  /**
+   * Get the current ordered list of rules (for diagnostics / testing).
+   */
+  getRules = (): readonly DecisionRule[] => [...this.rules];
+
+  /**
+   * Add a custom rule at the given index (0-based). Rules at lower
+   * indices are evaluated first and take precedence.
+   */
+  addRule = (rule: DecisionRule, index?: number): void => {
+    if (index !== undefined && index >= 0 && index <= this.rules.length) {
+      this.rules.splice(index, 0, rule);
+    } else {
+      // Append before the default fallback (last rule)
+      this.rules.splice(this.rules.length - 1, 0, rule);
+    }
+  };
+
+  /**
+   * Remove a rule by name. Returns `true` if found and removed.
+   */
+  removeRule = (name: string): boolean => {
+    const idx = this.rules.findIndex((r) => r.name === name);
+    if (idx === -1) return false;
+    this.rules.splice(idx, 1);
+    return true;
+  };
 
   /**
    * Make a routing decision for a query.
@@ -109,7 +143,6 @@ export class DecisionEngine implements IDisposable {
     options?: DecisionOptions
   ): DecisionResult => {
     this.ensureNotDisposed();
-    const { tables, operation, tableConfigs } = context;
 
     // Allow forced path for testing/override
     if (options?.forcePath) {
@@ -121,155 +154,34 @@ export class DecisionEngine implements IDisposable {
       };
     }
 
-    // Compute decision factors
+    // Compute decision factors once
     const factors = this.computeFactors(query, context);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 1: Mutations → API
-    // Mutations always go through Convex API for data integrity
-    // ─────────────────────────────────────────────────────────────────────────
-    if (factors.isMutation) {
-      const primaryTable = tables[0];
-      const config = tableConfigs.get(primaryTable);
+    // Evaluate rules in priority order — first match wins
+    for (const rule of this.rules) {
+      if (rule.match(query, context, factors, options)) {
+        const result = rule.decide(query, context, factors, options);
 
-      // Check if mutation API exists
-      if (!config?.convex?.[operation as 'create' | 'update' | 'delete']) {
-        return {
-          path: 'api',
-          reason: DECISION_REASONS.NO_MUTATION_API,
-          confidence: 0,
-          warnings: [`Cannot perform '${operation}' - no API defined`],
-          factors: options?.includeFactors ? factors : undefined,
-        };
-      }
-
-      return {
-        path: 'api',
-        reason: DECISION_REASONS.MUTATION_USES_API,
-        confidence: 100,
-        apiFunction: operation,
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 2: Has joins → DuckDB
-    // Joins require SQL execution
-    // ─────────────────────────────────────────────────────────────────────────
-    if (factors.hasJoins) {
-      return {
-        path: 'duckdb',
-        reason: DECISION_REASONS.HAS_JOINS,
-        confidence: 100,
-        tablesToLoad: [...tables],
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 3: Has measures → DuckDB
-    // Aggregations require SQL execution
-    // ─────────────────────────────────────────────────────────────────────────
-    if (factors.hasMeasures) {
-      return {
-        path: 'duckdb',
-        reason: DECISION_REASONS.HAS_MEASURES,
-        confidence: 100,
-        tablesToLoad: [...tables],
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 4: Multiple tables → DuckDB
-    // Multiple tables without explicit joins still need SQL
-    // ─────────────────────────────────────────────────────────────────────────
-    if (factors.tableCount > 1) {
-      return {
-        path: 'duckdb',
-        reason: DECISION_REASONS.MULTIPLE_TABLES,
-        confidence: 100,
-        tablesToLoad: [...tables],
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    // From here, we have a single table
-
-    const primaryTable = tables[0];
-    const config = tableConfigs.get(primaryTable);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 5: Local-only table → DuckDB
-    // Local files can only be queried via DuckDB
-    // ─────────────────────────────────────────────────────────────────────────
-    if (factors.hasLocalTables || config?.source === 'local') {
-      return {
-        path: 'duckdb',
-        reason: DECISION_REASONS.LOCAL_TABLE,
-        confidence: 100,
-        tablesToLoad: [], // Already local
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 6: No API → DuckDB
-    // If table has no list API, use Parquet files
-    // ─────────────────────────────────────────────────────────────────────────
-    const wantsGet = !!query.entityId || operation === 'get';
-    const hasListApi = !!config?.convex?.list;
-    const hasGetApi = !!config?.convex?.get;
-
-    if (!wantsGet && !hasListApi) {
-      return {
-        path: 'duckdb',
-        reason: DECISION_REASONS.NO_LIST_API,
-        confidence: 100,
-        tablesToLoad: [primaryTable],
-        factors: options?.includeFactors ? factors : undefined,
-      };
-    }
-
-    if (wantsGet && !hasGetApi) {
-      // For GET without get API, fall back to list with filter
-      if (!hasListApi) {
-        return {
-          path: 'duckdb',
-          reason: DECISION_REASONS.NO_API_AVAILABLE,
-          confidence: 100,
-          tablesToLoad: [primaryTable],
-          factors: options?.includeFactors ? factors : undefined,
-        };
+        // Optionally strip factors from the result if not requested
+        if (!options?.includeFactors && result.factors) {
+          return {
+            path: result.path,
+            reason: result.reason,
+            confidence: result.confidence,
+            apiFunction: result.apiFunction,
+            tablesToLoad: result.tablesToLoad,
+            warnings: result.warnings,
+          };
+        }
+        return result;
       }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // RULE 7: Analytics preference → DuckDB
-    // If analytics is preferred and freshness allows it
-    // ─────────────────────────────────────────────────────────────────────────
-    if (options?.preferAnalytics) {
-      const freshness = config?.analytics?.freshness;
-      if (freshness === 'eventual') {
-        return {
-          path: 'duckdb',
-          reason: DECISION_REASONS.ANALYTICS_PREFERRED,
-          confidence: 80,
-          tablesToLoad: [primaryTable],
-          factors: options?.includeFactors ? factors : undefined,
-        };
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // DEFAULT: Simple query → API
-    // Use real-time Convex API for simple queries
-    // ─────────────────────────────────────────────────────────────────────────
+    // Unreachable with default rules (last rule is always-match fallback)
     return {
-      path: 'api',
-      reason: DECISION_REASONS.SIMPLE_QUERY_WITH_API,
-      confidence: 100,
-      apiFunction: wantsGet ? OPERATIONS.GET : OPERATIONS.LIST,
+      path: DECISION_PATHS.API,
+      reason: DECISION_REASONS.NO_DECISION,
+      confidence: 0,
       factors: options?.includeFactors ? factors : undefined,
     };
   };
@@ -277,23 +189,16 @@ export class DecisionEngine implements IDisposable {
   /**
    * Compute decision factors from query and context.
    */
-  private computeFactors = (
+  computeFactors = (
     query: Query,
     context: DecisionContext
   ): DecisionFactors => {
     const { tables, operation, tableConfigs, isOnline } = context;
 
-    // Check for mutations
-    const isMutation =
-      operation === 'create' || operation === 'update' || operation === 'delete';
-
-    // Check for joins
+    const isMutation = isMutationOperation(operation);
     const hasJoins = (query.joins?.length ?? 0) > 0;
-
-    // Check for measures
     const hasMeasures = (query.measures?.length ?? 0) > 0;
 
-    // Check table sources
     let allTablesConvex = true;
     let allTablesHaveApi = true;
     let hasLocalTables = false;
@@ -330,10 +235,8 @@ export class DecisionEngine implements IDisposable {
 
   /**
    * Check if a query can use the API path (without full decision).
-   * Useful for quick checks before full decision.
    */
   canUseApi = (query: Query, context: DecisionContext): boolean => {
-    // Quick checks
     if ((query.joins?.length ?? 0) > 0) return false;
     if ((query.measures?.length ?? 0) > 0) return false;
     if (context.tables.length > 1) return false;
@@ -350,22 +253,210 @@ export class DecisionEngine implements IDisposable {
 
   /**
    * Check if a query requires DuckDB (without full decision).
-   * Useful for quick checks before full decision.
    */
   requiresDuckDB = (query: Query): boolean => {
-    // Joins always require DuckDB
     if ((query.joins?.length ?? 0) > 0) return true;
-
-    // Measures always require DuckDB
     if ((query.measures?.length ?? 0) > 0) return true;
-
-    // Check if multiple tables
     const tables = this.tableExtractor.extract(query);
     if (tables.length > 1) return true;
-
     return false;
   };
 }
+
+// =============================================================================
+// BUILT-IN DECISION RULES
+// =============================================================================
+
+/**
+ * Rule 1: Mutations → API
+ */
+const mutationRule: DecisionRule = {
+  name: 'mutation',
+  match: (_query, _context, factors) => factors.isMutation,
+  decide: (_query, context, factors) => {
+    const { tables, operation, tableConfigs } = context;
+    const primaryTable = tables[0];
+    const config = tableConfigs.get(primaryTable);
+    const mutationRef = (() => {
+      switch (operation) {
+        case WRITE_OPERATIONS.CREATE:
+          return config?.convex?.create;
+        case WRITE_OPERATIONS.UPDATE:
+          return config?.convex?.update;
+        case WRITE_OPERATIONS.DELETE:
+          return config?.convex?.delete;
+        default:
+          return undefined;
+      }
+    })();
+
+    if (!mutationRef) {
+      return {
+        path: DECISION_PATHS.API,
+        reason: DECISION_REASONS.NO_MUTATION_API,
+        confidence: 0,
+        warnings: [`Cannot perform '${operation}' - no API defined`],
+        factors,
+      };
+    }
+
+    return {
+      path: DECISION_PATHS.API,
+      reason: DECISION_REASONS.MUTATION_USES_API,
+      confidence: 100,
+      apiFunction: operation,
+      factors,
+    };
+  },
+};
+
+/**
+ * Rule 2: Has joins → DuckDB
+ */
+const joinsRule: DecisionRule = {
+  name: 'has-joins',
+  match: (_query, _context, factors) => factors.hasJoins,
+  decide: (_query, context, factors) => ({
+    path: DECISION_PATHS.DUCKDB,
+    reason: DECISION_REASONS.HAS_JOINS,
+    confidence: 100,
+    tablesToLoad: [...context.tables],
+    factors,
+  }),
+};
+
+/**
+ * Rule 3: Has measures → DuckDB
+ */
+const measuresRule: DecisionRule = {
+  name: 'has-measures',
+  match: (_query, _context, factors) => factors.hasMeasures,
+  decide: (_query, context, factors) => ({
+    path: DECISION_PATHS.DUCKDB,
+    reason: DECISION_REASONS.HAS_MEASURES,
+    confidence: 100,
+    tablesToLoad: [...context.tables],
+    factors,
+  }),
+};
+
+/**
+ * Rule 4: Multiple tables → DuckDB
+ */
+const multipleTablesRule: DecisionRule = {
+  name: 'multiple-tables',
+  match: (_query, _context, factors) => factors.tableCount > 1,
+  decide: (_query, context, factors) => ({
+    path: DECISION_PATHS.DUCKDB,
+    reason: DECISION_REASONS.MULTIPLE_TABLES,
+    confidence: 100,
+    tablesToLoad: [...context.tables],
+    factors,
+  }),
+};
+
+/**
+ * Rule 5: Local-only table → DuckDB
+ */
+const localTableRule: DecisionRule = {
+  name: 'local-table',
+  match: (_query, context, factors) => {
+    if (factors.hasLocalTables) return true;
+    const config = context.tableConfigs.get(context.tables[0]);
+    return config?.source === 'local';
+  },
+  decide: (_query, _context, factors) => ({
+    path: DECISION_PATHS.DUCKDB,
+    reason: DECISION_REASONS.LOCAL_TABLE,
+    confidence: 100,
+    tablesToLoad: [],
+    factors,
+  }),
+};
+
+/**
+ * Rule 6: No API available → DuckDB
+ */
+const noApiRule: DecisionRule = {
+  name: 'no-api',
+  match: (query, context) => {
+    const primaryTable = context.tables[0];
+    const config = context.tableConfigs.get(primaryTable);
+    const wantsGet = !!query.entityId || context.operation === OPERATIONS.GET;
+    const hasListApi = !!config?.convex?.list;
+    const hasGetApi = !!config?.convex?.get;
+
+    if (!wantsGet && !hasListApi) return true;
+    if (wantsGet && !hasGetApi && !hasListApi) return true;
+    return false;
+  },
+  decide: (query, context, factors) => {
+    const primaryTable = context.tables[0];
+    const wantsGet = !!query.entityId || context.operation === OPERATIONS.GET;
+
+    return {
+      path: DECISION_PATHS.DUCKDB,
+      reason: wantsGet ? DECISION_REASONS.NO_API_AVAILABLE : DECISION_REASONS.NO_LIST_API,
+      confidence: 100,
+      tablesToLoad: [primaryTable],
+      factors,
+    };
+  },
+};
+
+/**
+ * Rule 7: Analytics preferred → DuckDB
+ */
+const analyticsPreferredRule: DecisionRule = {
+  name: 'analytics-preferred',
+  match: (_query, context, _factors, options) => {
+    if (!options?.preferAnalytics) return false;
+    const config = context.tableConfigs.get(context.tables[0]);
+    return config?.analytics?.freshness === 'eventual';
+  },
+  decide: (_query, context, factors) => ({
+    path: DECISION_PATHS.DUCKDB,
+    reason: DECISION_REASONS.ANALYTICS_PREFERRED,
+    confidence: 80,
+    tablesToLoad: [context.tables[0]],
+    factors,
+  }),
+};
+
+/**
+ * Default fallback: Simple query → API
+ *
+ * Always matches — must be last in the rules list.
+ */
+const defaultApiRule: DecisionRule = {
+  name: 'default-api',
+  match: () => true,
+  decide: (query, context, factors) => {
+    const wantsGet = !!query.entityId || context.operation === OPERATIONS.GET;
+    return {
+      path: DECISION_PATHS.API,
+      reason: DECISION_REASONS.SIMPLE_QUERY_WITH_API,
+      confidence: 100,
+      apiFunction: wantsGet ? OPERATIONS.GET : OPERATIONS.LIST,
+      factors,
+    };
+  },
+};
+
+/**
+ * Built-in decision rules evaluated in priority order.
+ * Exported so consumers can inspect or fork the defaults.
+ */
+export const DEFAULT_DECISION_RULES: readonly DecisionRule[] = [
+  mutationRule,
+  joinsRule,
+  measuresRule,
+  multipleTablesRule,
+  localTableRule,
+  noApiRule,
+  analyticsPreferredRule,
+  defaultApiRule,
+];
 
 // =============================================================================
 // FACTORY
@@ -374,8 +465,11 @@ export class DecisionEngine implements IDisposable {
 /**
  * Create a new DecisionEngine instance.
  */
-export const createDecisionEngine = (tableExtractor?: TableExtractor): DecisionEngine => {
-  return new DecisionEngine(tableExtractor);
+export const createDecisionEngine = (
+  tableExtractor?: TableExtractor,
+  customRules?: DecisionRule[],
+): DecisionEngine => {
+  return new DecisionEngine(tableExtractor, customRules);
 };
 
 // =============================================================================
@@ -387,6 +481,7 @@ export const createDecisionEngine = (tableExtractor?: TableExtractor): DecisionE
  */
 export interface DecisionEngineConfig {
   readonly tableExtractor?: TableExtractor;
+  readonly customRules?: DecisionRule[];
 }
 
 /**
@@ -408,11 +503,15 @@ export interface DecisionEngineConfig {
  * ```
  */
 const decisionEngineFactory = createSingletonFactory<DecisionEngine, DecisionEngineConfig>(
-  (config) => new DecisionEngine(config?.tableExtractor),
+  (config) => new DecisionEngine(config?.tableExtractor, config?.customRules ? [...config.customRules] : undefined),
   {
     name: 'DecisionEngine',
     warnOnConfigOverride: true,
-    onDispose: (instance) => (instance as DecisionEngine).dispose(),
+    onDispose: (instance) => {
+      if (instance instanceof DecisionEngine) {
+        instance.dispose();
+      }
+    },
     defaultConfig: {},
   }
 );

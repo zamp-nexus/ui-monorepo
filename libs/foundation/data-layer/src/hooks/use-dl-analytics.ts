@@ -11,10 +11,16 @@
  */
 
 import { useCallback } from 'react';
-import { useQuery, type UseQueryResult, type QueryKey } from '@tanstack/react-query';
+import {
+  useQuery,
+  type UseQueryResult,
+  type QueryKey,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import type { DuckDBResult, DuckDBRow } from '@open-insights-web/foundation-bridge';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { ANALYTICS_QUERY_RETRY_MAX, QUERY_RETRY_DELAY_BASE_MS } from '../core/constants';
+import { getAnalyticsRouterOrThrow } from '../utils/analytics-runtime';
 
 // =============================================================================
 // Types
@@ -94,32 +100,35 @@ export const useDLAnalytics = <TData extends DuckDBRow = DuckDBRow>(
 
   // Query function - lazily initialize analytics runtime on first use.
   const queryFn = useCallback(async (): Promise<DuckDBResult<TData>> => {
-    let router = duckdbRouter;
-
-    if (!router) {
-      const analyticsRuntime = await initializeAnalytics();
-      router = analyticsRuntime?.duckdbRouter ?? null;
-    }
-
-    if (!router) {
-      throw new Error('DuckDB is not available in this environment');
-    }
-
+    const router = await getAnalyticsRouterOrThrow({
+      duckdbRouter,
+      initializeAnalytics,
+    });
     return router.query<TData>(sql, params ? { params } : undefined);
   }, [duckdbRouter, initializeAnalytics, sql, params]);
 
   // Execute query
-  const queryResult = useQuery<DuckDBResult<TData>, Error>({
+  const queryOptions: UseQueryOptions<
+    DuckDBResult<TData>,
+    Error,
+    DuckDBResult<TData>,
+    QueryKey
+  > = {
     queryKey,
     queryFn,
     enabled: enabled && isDuckDBAvailable,
     staleTime,
     gcTime,
-    select,
     networkMode: 'always',
     retry: ANALYTICS_QUERY_RETRY_MAX,
     retryDelay: QUERY_RETRY_DELAY_BASE_MS,
-  });
+  };
+
+  if (select !== undefined) {
+    queryOptions.select = select;
+  }
+
+  const queryResult = useQuery(queryOptions);
 
   return {
     ...queryResult,

@@ -21,6 +21,7 @@ import {
 import {
   deleteFromCache,
   buildMutationResult,
+  executeLocalFirstMutation,
 } from '../utils/mutation-helpers';
 import { DEFAULT_CACHE_TTL } from '../core/constants';
 import {
@@ -83,7 +84,7 @@ export const useDLDelete = <
   TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
 >(
   options: UseDLDeleteOptions<TMutation, TData, TVariables>
-): DLMutationResult<TData, TVariables> => {
+): DLMutationResult<TData | undefined, TVariables> => {
   // Use shared mutation internals
   const internals = useMutationInternals();
   const { queryClient, database, queueManager, isOnline } = internals;
@@ -110,7 +111,7 @@ export const useDLDelete = <
 
   // Mutation function
   const mutationFn = useCallback(
-    async (variables: TVariables): Promise<TData> => {
+    async (variables: TVariables): Promise<TData | undefined> => {
       // Get entity ID
       const entityId = getEntityId(variables);
       entityIdRef.current = entityId;
@@ -137,32 +138,24 @@ export const useDLDelete = <
       // Step 2: Remove from DatabaseFacade cache
       await deleteFromCache(database, table, resolvedId);
 
-      // Step 3: If offline, queue mutation via sync-engine
-      if (!isOnline) {
-        setIsQueued(true);
-
-        // Convert payload with validation
-        await queueManager.enqueue({
-          type: 'delete',
-          tableName: table,
-          entityId: resolvedId,
-          payload: toJsonSerializable(variables),
-          invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
-        });
-
-        // Return undefined when offline - mutation is queued for later execution
-        // Consumers should check `isQueued` flag before using mutation data
-        return undefined as unknown as TData;
-      }
-
-      // Step 4: Online - execute Convex mutation
-      setIsQueued(false);
-
-      // Prepare variables with resolved ID
-      const resolvedVariables = prepareResolvedVariables(variables, entityId, resolvedId);
-      const result = await convexMutation(resolvedVariables);
-
-      return result;
+      return executeLocalFirstMutation<TData | undefined>({
+        isOnline,
+        setIsQueued,
+        offlineResult: undefined,
+        queueOffline: async () => {
+          await queueManager.enqueue({
+            type: 'delete',
+            tableName: table,
+            entityId: resolvedId,
+            payload: toJsonSerializable(variables),
+            invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
+          });
+        },
+        executeOnline: async () => {
+          const resolvedVariables = prepareResolvedVariables(variables, entityId, resolvedId);
+          return convexMutation(resolvedVariables);
+        },
+      });
     },
     [
       convexMutation,
@@ -229,7 +222,7 @@ export const useDLDelete = <
   });
 
   // TanStack mutation
-  const mutationResult = useMutation<TData, Error, TVariables>({
+  const mutationResult = useMutation<TData | undefined, Error, TVariables>({
     mutationFn,
 
     onSuccess: handleSuccess,

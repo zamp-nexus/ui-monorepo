@@ -24,6 +24,7 @@ import {
   useDLAnalytics,
   createAnalyticsQueryKey,
   useBackgroundFileSync,
+  DATA_FRESHNESS,
 } from '@open-insights-web/foundation-data-layer';
 import { hashPayloadSync } from '@open-insights-web/foundation-utils';
 
@@ -31,19 +32,51 @@ import { getDecisionEngine } from '../engine/decision-engine';
 import { getSqlCompiler } from '../compiler/sql-compiler';
 import { getTableExtractor } from '../engine/table-extractor';
 import { convertFiltersToArgs } from '../engine/filter-converter';
-import type { DecisionContext, DecisionResult, DecisionTableConfig } from '../types/decision';
+import {
+  DECISION_PATHS,
+  type DecisionContext,
+  type DecisionResult,
+  type DecisionTableConfig,
+} from '../types/decision';
 import type { Query } from '../types/query';
+import type { AnalyticsFreshness } from '../types/table';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '@open-insights-web/foundation-utils';
+import { OPERATIONS } from '../types/operations';
+import { HOOK_PATH_TO_DECISION_PATH } from '../internal/constants';
 import {
   type UseDLQueryEngineOptions,
   type UseDLQueryEngineResult,
   EXECUTION_PATHS,
   DATA_SOURCES,
 } from './types';
+import {
+  getAnyQueryReference,
+  getListQueryReference,
+} from './internal/data-layer-adapters';
 
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
+
+const mapAnalyticsFreshness = (
+  freshness: string | undefined
+): AnalyticsFreshness | undefined => {
+  switch (freshness) {
+    case DATA_FRESHNESS.REALTIME:
+      return 'realtime';
+    case DATA_FRESHNESS.NEAR_REALTIME:
+      return 'near-realtime';
+    case DATA_FRESHNESS.EVENTUAL:
+      return 'eventual';
+    default:
+      return undefined;
+  }
+};
+
+const selectQueryResultData = <TData,>(
+  rawData: unknown,
+  select?: (data: unknown) => TData
+): TData => (select ? select(rawData) : (rawData as TData));
 
 /**
  * useDLQueryEngine
@@ -132,7 +165,13 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
     for (const tableName of tables) {
       const config = tableRegistry.getTable(tableName);
       if (config) {
-        configs.set(tableName, config);
+        const mappedFreshness = mapAnalyticsFreshness(config.analytics?.freshness);
+        configs.set(tableName, {
+          convex: config.convex,
+          ...(mappedFreshness !== undefined
+            ? { analytics: { freshness: mappedFreshness } }
+            : {}),
+        });
       }
     }
     return configs;
@@ -147,14 +186,14 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
 
     const context: DecisionContext = {
       tables: [...tables],
-      operation: query.operation ?? 'list',
+      operation: query.operation ?? OPERATIONS.LIST,
       tableConfigs,
       isOnline,
       isDuckDBAvailable: duckdbRouter !== null,
     };
 
     return decisionEngine.decide(query, context, {
-      forcePath: forcePath === 'analytics' ? 'duckdb' : forcePath === 'transactional' ? 'api' : undefined,
+      forcePath: forcePath ? HOOK_PATH_TO_DECISION_PATH[forcePath] : undefined,
       preferAnalytics,
       includeFactors: false,
     });
@@ -170,8 +209,8 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
     preferAnalytics,
   ]);
 
-  const isAnalyticsPath = decision?.path === 'duckdb';
-  const isTransactionalPath = decision?.path === 'api';
+  const isAnalyticsPath = decision?.path === DECISION_PATHS.DUCKDB;
+  const isTransactionalPath = decision?.path === DECISION_PATHS.API;
 
   // ─────────────────────────────────────────────────────────────────────────
   // BACKGROUND FILE SYNC (analytics path only)
@@ -260,19 +299,32 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   }, [isTransactionalPath, primaryTable, query]);
 
   // Get Convex query function reference from TableRegistry
-  const convexQueryRef = useMemo(() => {
-    if (!primaryTable) return undefined;
-    return tableRegistry.getConvexRef(primaryTable, 'list');
+  const fallbackQueryRef = useMemo(
+    () => getAnyQueryReference(tableRegistry),
+    [tableRegistry]
+  );
+
+  const listQueryRef = useMemo(() => {
+    if (!primaryTable) {
+      return undefined;
+    }
+    return getListQueryReference(tableRegistry, primaryTable);
   }, [primaryTable, tableRegistry]);
 
-  const transactionalEnabled =
-    enabled && isTransactionalPath && !!primaryTable && convexQueryRef !== undefined;
+  const transactionalQueryRef = listQueryRef ?? fallbackQueryRef;
 
-  // The `as never` casts are required because Convex's FunctionReference generic
-  // cannot be statically resolved from the dynamic table registry lookup.
+  const transactionalEnabled =
+    enabled && isTransactionalPath && !!primaryTable && listQueryRef !== undefined;
+
+  if (!transactionalQueryRef) {
+    throw new Error(
+      'useDLQueryEngine requires at least one query API reference in the table registry'
+    );
+  }
+
   const transactionalResult = useDLGetList({
-    query: convexQueryRef as never,
-    args: transactionalArgs as never,
+    query: transactionalQueryRef,
+    args: transactionalArgs,
     table: primaryTable ?? '',
     enabled: transactionalEnabled,
     staleTime: staleTime ?? (primaryTable ? tableRegistry.getStaleTime(primaryTable) : cacheConfig.defaultStaleTime),
@@ -286,12 +338,12 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   const data = useMemo((): TData | undefined => {
     if (isAnalyticsPath) {
       const rawData = analyticsResult.rows;
-      return select ? select(rawData) : (rawData as unknown as TData);
+      return selectQueryResultData(rawData, select);
     }
     if (isTransactionalPath) {
       const rawData = transactionalResult.data;
       if (rawData === undefined) return undefined;
-      return select ? select(rawData) : (rawData as unknown as TData);
+      return selectQueryResultData(rawData, select);
     }
     return undefined;
   }, [

@@ -24,9 +24,7 @@ import { iconButtonDefaultTheme } from './icon-button';
  *   <SearchIcon />
  * </IconButton>
  */
-export const IconButton = React.forwardRef(function IconButton<
-  T extends React.ElementType = 'button',
->(
+const IconButtonImpl = <T extends React.ElementType = 'button'>(
   {
     component,
     className,
@@ -40,7 +38,7 @@ export const IconButton = React.forwardRef(function IconButton<
     ...rest
   }: IconButtonProps<T>,
   ref: React.ForwardedRef<Element>,
-) {
+) => {
   const theme = useTheme('iconButton', iconButtonDefaultTheme);
   const Element = component ?? 'button';
 
@@ -74,6 +72,10 @@ export const IconButton = React.forwardRef(function IconButton<
       )}
     </Element>
   );
-}) as IconButtonComponent;
+};
+
+export const IconButton = React.forwardRef(
+  IconButtonImpl as unknown as React.ForwardRefRenderFunction<Element, Record<string, unknown>>,
+) as unknown as IconButtonComponent;
 
 IconButton.displayName = 'IconButton';

@@ -27,9 +27,29 @@ import type {
 // =============================================================================
 
 /**
- * User role type (compatible with foundation-data-model UserRole)
+ * Single source-of-truth for user roles.
+ *
+ * All role-related types, validation, and permission lookups derive from
+ * this constant so that adding a new role is a single-line change.
  */
-export type UserRole = 'owner' | 'admin' | 'member' | 'viewer' | 'guest';
+export const USER_ROLES = {
+  OWNER: 'owner',
+  ADMIN: 'admin',
+  MEMBER: 'member',
+  VIEWER: 'viewer',
+  GUEST: 'guest',
+} as const;
+
+/**
+ * User role type (derived from USER_ROLES constant)
+ */
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
+/**
+ * Check if a string is a valid UserRole
+ */
+export const isValidRole = (role: string): role is UserRole =>
+  (Object.values(USER_ROLES) as readonly string[]).includes(role);
 
 /**
  * User permissions map (compatible with foundation-data-model UserPermissions)
@@ -43,52 +63,52 @@ export interface UserPermissions {
 }
 
 /**
+ * Role → permissions lookup table.
+ * Derived from USER_ROLES to guarantee exhaustive coverage.
+ */
+const ROLE_PERMISSIONS: Readonly<Record<UserRole, UserPermissions>> = {
+  [USER_ROLES.OWNER]: {
+    canManageUsers: true,
+    canManageTenant: true,
+    canViewAnalytics: true,
+    canExportData: true,
+    canConfigureIntegrations: true,
+  },
+  [USER_ROLES.ADMIN]: {
+    canManageUsers: true,
+    canManageTenant: false,
+    canViewAnalytics: true,
+    canExportData: true,
+    canConfigureIntegrations: true,
+  },
+  [USER_ROLES.MEMBER]: {
+    canManageUsers: false,
+    canManageTenant: false,
+    canViewAnalytics: true,
+    canExportData: true,
+    canConfigureIntegrations: false,
+  },
+  [USER_ROLES.VIEWER]: {
+    canManageUsers: false,
+    canManageTenant: false,
+    canViewAnalytics: true,
+    canExportData: false,
+    canConfigureIntegrations: false,
+  },
+  [USER_ROLES.GUEST]: {
+    canManageUsers: false,
+    canManageTenant: false,
+    canViewAnalytics: false,
+    canExportData: false,
+    canConfigureIntegrations: false,
+  },
+};
+
+/**
  * Get permissions for a user role
  */
-export const getUserPermissions = (role: UserRole): UserPermissions => {
-  switch (role) {
-    case 'owner':
-      return {
-        canManageUsers: true,
-        canManageTenant: true,
-        canViewAnalytics: true,
-        canExportData: true,
-        canConfigureIntegrations: true,
-      };
-    case 'admin':
-      return {
-        canManageUsers: true,
-        canManageTenant: false,
-        canViewAnalytics: true,
-        canExportData: true,
-        canConfigureIntegrations: true,
-      };
-    case 'member':
-      return {
-        canManageUsers: false,
-        canManageTenant: false,
-        canViewAnalytics: true,
-        canExportData: true,
-        canConfigureIntegrations: false,
-      };
-    case 'viewer':
-      return {
-        canManageUsers: false,
-        canManageTenant: false,
-        canViewAnalytics: true,
-        canExportData: false,
-        canConfigureIntegrations: false,
-      };
-    case 'guest':
-      return {
-        canManageUsers: false,
-        canManageTenant: false,
-        canViewAnalytics: false,
-        canExportData: false,
-        canConfigureIntegrations: false,
-      };
-  }
-};
+export const getUserPermissions = (role: UserRole): UserPermissions =>
+  ROLE_PERMISSIONS[role];
 
 // =============================================================================
 // Configuration Types

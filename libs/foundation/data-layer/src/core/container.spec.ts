@@ -4,18 +4,23 @@
  * @module core/container.spec
  */
 
-vi.mock('convex/react', () => ({
-  ConvexReactClient: vi.fn(() => ({ close: vi.fn() })),
-}));
+vi.mock('convex/react', () => {
+  class MockConvexReactClient {
+    readonly close = vi.fn();
+    readonly query = vi.fn();
+  }
+  return { ConvexReactClient: MockConvexReactClient };
+});
 
-vi.mock('@convex-dev/react-query', () => ({
-  ConvexQueryClient: vi.fn(() => ({
-    hashFn: vi.fn(() => vi.fn()),
-    queryFn: vi.fn(() => vi.fn()),
-    connect: vi.fn(),
-    unsubscribe: vi.fn(),
-  })),
-}));
+vi.mock('@convex-dev/react-query', () => {
+  class MockConvexQueryClient {
+    readonly hashFn = vi.fn(() => vi.fn());
+    readonly queryFn = vi.fn(() => vi.fn());
+    readonly connect = vi.fn();
+    readonly unsubscribe = vi.fn();
+  }
+  return { ConvexQueryClient: MockConvexQueryClient };
+});
 
 import { DataLayerContainer, createDataLayerContainer } from './container';
 
@@ -62,8 +67,8 @@ const createConfig = (overrides: Record<string, unknown> = {}) => {
     config: {
       convexUrl: 'https://test.convex.cloud',
       factories: {
-        database: () => mockDatabase as any,
-        syncCoordinator: () => mockSyncCoordinator as any,
+        database: () => mockDatabase as never,
+        syncCoordinator: () => mockSyncCoordinator as never,
       },
       ...overrides,
     },

@@ -3,12 +3,17 @@
  * @module lifecycle/rehydration
  */
 
-import type { InsightsDatabase, DuckDBViewsValue } from '@open-insights-web/foundation-database';
-import { getDatabase, SyncStateService, SYNC_STATE_KEYS } from '@open-insights-web/foundation-database';
+import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+import { getDatabase, SyncStateService } from '@open-insights-web/foundation-database';
 import { createDebugLogger, topologicalSort, type Logger } from '@open-insights-web/foundation-utils';
-import { DuckDBRouter } from '../duckdb/router';
-import { ViewDefinition } from '../types/bridge';
-import { Timestamp } from '@open-insights-web/foundation-data-model';
+import type { DuckDBRouter } from '../duckdb/router';
+import type { ViewDefinition } from '../types/bridge';
+import {
+  SYNC_STATE_KEY,
+  Timestamp,
+  type DuckDBViewsValue,
+} from '@open-insights-web/foundation-data-model';
+import { validateIdentifier, validateViewSql } from '../utils/sql';
 
 /**
  * Rehydration controller configuration
@@ -149,7 +154,8 @@ export class RehydrationController {
 
       // Get registered files from OPFS metadata
       const opfsFiles = await this.db.opfsFiles
-        .filter((f) => f.isRegistered)
+        .where('isRegistered')
+        .equals(1)
         .toArray();
 
       // Sort files by dependencies using shared utility
@@ -179,13 +185,17 @@ export class RehydrationController {
         (v) => v.dependencies
       );
 
-      // Recreate views
+      // Recreate views (re-validate data loaded from DB to prevent stored injection)
       for (const viewDef of sortedViews) {
         try {
+          const safeName = validateIdentifier(viewDef.name);
+          validateViewSql(viewDef.sql);
+          const safeDeps = viewDef.dependencies.map(validateIdentifier);
+
           const view: ViewDefinition = {
-            name: viewDef.name,
+            name: safeName,
             sql: viewDef.sql,
-            dependencies: viewDef.dependencies,
+            dependencies: safeDeps,
             createdAt: Timestamp.now(),
           };
 
@@ -226,7 +236,7 @@ export class RehydrationController {
    * Clear saved state
    */
   async clearState(): Promise<void> {
-    await this.syncStateService.delete(SYNC_STATE_KEYS.DUCKDB_VIEWS);
+    await this.syncStateService.delete(SYNC_STATE_KEY.DUCKDB_VIEWS);
     this.logger.debug('Cleared saved state');
   }
 }

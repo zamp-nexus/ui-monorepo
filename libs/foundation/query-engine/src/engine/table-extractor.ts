@@ -25,17 +25,13 @@ import type {
   FilterCondition,
   FilterExpression,
 } from '../types/filter';
-import {
-  isFilterCondition,
-  isFilterAndGroup,
-  isFilterOrGroup,
-} from '../types/filter';
 import type { JoinSpec } from '../types/join';
 import type { MeasureSpec } from '../types/measure';
 import type { OrderBySpec } from '../types/order';
 import type { Query } from '../types/query';
 import { createSingletonFactory } from '@open-insights-web/foundation-utils';
 import { parseMemberRef } from '../utils/member-ref';
+import { mapFilterExpression } from '../internal/filter-recursion';
 
 // =============================================================================
 // MEMBER PARSING
@@ -66,28 +62,13 @@ const extractTablesFromCondition = (
   return table ? [table] : [];
 };
 
-/**
- * Extract tables from a filter expression (recursive for groups).
- */
-const extractTablesFromFilterExpression = (
-  expression: FilterExpression
-): string[] => {
-  const tables: string[] = [];
-
-  if (isFilterCondition(expression)) {
-    tables.push(...extractTablesFromCondition(expression));
-  } else if (isFilterAndGroup(expression)) {
-    for (const child of expression.and) {
-      tables.push(...extractTablesFromFilterExpression(child));
-    }
-  } else if (isFilterOrGroup(expression)) {
-    for (const child of expression.or) {
-      tables.push(...extractTablesFromFilterExpression(child));
-    }
-  }
-
-  return tables;
-};
+const extractTablesFromFilterExpression = (expression: FilterExpression): string[] =>
+  mapFilterExpression(expression, {
+    onCondition: extractTablesFromCondition,
+    onAndGroup: (children) => children.flat(),
+    onOrGroup: (children) => children.flat(),
+    onDepthExceeded: () => [],
+  });
 
 // =============================================================================
 // TABLE EXTRACTOR CLASS

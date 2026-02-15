@@ -411,7 +411,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
     for (const viewName of viewNames) {
       if (!this.viewDefinitions.has(viewName)) {
         views.push({
-          name: viewName,
+          name: validateIdentifier(viewName),
           sql: '', // Unknown - created externally
           dependencies: [],
           createdAt: Timestamp.now(),

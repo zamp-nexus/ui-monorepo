@@ -106,7 +106,7 @@ export type { RouterConfigForValidation } from './utils/validation';
 
 // NOTE: For generic utilities, import directly from source packages:
 // - From '@open-insights-web/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
-// - From '@open-insights-web/foundation-data-model': ValidationResult, SimpleValidationResult
+// - From '@open-insights-web/foundation-data-model': ValidationResult, ValidationResultData
 
 // ============================================================================
 // All Constants (Internal Access)

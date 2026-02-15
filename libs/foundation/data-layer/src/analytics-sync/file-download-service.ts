@@ -7,14 +7,22 @@
  * @module analytics-sync/file-download-service
  */
 
-import axios, { type AxiosInstance, type AxiosProgressEvent } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type AxiosProgressEvent,
+  type AxiosRequestConfig,
+} from 'axios';
 import {
-  OpfsFileType,
   type OpfsManager,
 } from '@open-insights-web/foundation-database';
-import { FoundationError, FoundationErrorCode } from '@open-insights-web/foundation-data-model';
+import {
+  FoundationError,
+  FOUNDATION_ERROR_CODE,
+  OPFS_FILE_TYPE,
+  type OpfsFileType,
+} from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, Semaphore, type Logger } from '@open-insights-web/foundation-utils';
-import type { DataSourceFileInfo } from './types';
+import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
 
 /**
  * Download progress state
@@ -116,7 +124,7 @@ export interface FileDownloadServiceConfig {
  * for better diagnostics when file downloads fail.
  */
 export class DownloadError extends FoundationError {
-  readonly code = FoundationErrorCode.NETWORK_REQUEST_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly filename: string;
   readonly statusCode: number | undefined;
 
@@ -186,19 +194,24 @@ export class FileDownloadService {
    */
   async downloadFile(
     file: DataSourceFileInfo,
-    onProgress?: (bytesLoaded: number, totalBytes: number) => void
+    onProgress?: (bytesLoaded: number, totalBytes: number) => void,
+    signal?: AbortSignal
   ): Promise<ArrayBuffer> {
     this.logger.debug(`Downloading file: ${file.filename} (${file.size} bytes)`);
 
     try {
-      const response = await this.axiosInstance.get<ArrayBuffer>(file.url, {
+      const requestConfig: AxiosRequestConfig<ArrayBuffer> = {
         responseType: 'arraybuffer',
         onDownloadProgress: (progressEvent: AxiosProgressEvent) => {
           const loaded = progressEvent.loaded ?? 0;
           const total = progressEvent.total ?? file.size;
           onProgress?.(loaded, total);
         },
-      });
+      };
+      if (signal !== undefined) {
+        requestConfig.signal = signal;
+      }
+      const response = await this.axiosInstance.get<ArrayBuffer>(file.url, requestConfig);
 
       const normalizedData = toArrayBuffer(response.data as ArrayBuffer | Uint8Array);
       this.logger.debug(`Downloaded file: ${file.filename} (${normalizedData.byteLength} bytes)`);
@@ -227,14 +240,23 @@ export class FileDownloadService {
    */
   async downloadFileWithRetry(
     file: DataSourceFileInfo,
-    onProgress?: (bytesLoaded: number, totalBytes: number) => void
+    onProgress?: (bytesLoaded: number, totalBytes: number) => void,
+    signal?: AbortSignal
   ): Promise<ArrayBuffer> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
       try {
-        return await this.downloadFile(file, onProgress);
+        return await this.downloadFile(file, onProgress, signal);
       } catch (error) {
+        if (signal?.aborted) {
+          throw new DownloadError(
+            'Download aborted',
+            file.filename,
+            undefined,
+            error instanceof Error ? error : new Error(String(error))
+          );
+        }
         lastError = error instanceof Error ? error : new Error(String(error));
 
         if (error instanceof DownloadError) {
@@ -269,7 +291,8 @@ export class FileDownloadService {
   async downloadAndSaveFiles(
     tableName: string,
     files: ReadonlyArray<DataSourceFileInfo>,
-    onProgress?: (state: DownloadProgressState) => void
+    onProgress?: (state: DownloadProgressState) => void,
+    signal?: AbortSignal
   ): Promise<void> {
     const total = files.length;
     const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -285,8 +308,13 @@ export class FileDownloadService {
     let totalBytesLoaded = 0;
 
     const semaphore = new Semaphore(this.concurrency);
+    const writeSemaphore = new Semaphore(1);
 
     const downloadTasks = files.map((file) => async () => {
+      if (signal?.aborted) {
+        return;
+      }
+
       const release = await semaphore.acquire();
       try {
         onProgress?.({
@@ -309,14 +337,32 @@ export class FileDownloadService {
             bytesLoaded: totalBytesLoaded + bytesLoaded,
             bytesTotal: totalBytes,
           });
-        });
+        }, signal);
 
-        // OPFS writes must be sequential to avoid file handle conflicts
-        await this.opfsManager.writeFile(`${tableName}.parquet`, data, {
-          tableName,
-          fileType: OpfsFileType.PARQUET,
-          rowCount: file.rowCount,
-        });
+        // OPFS writes are serialized to avoid file handle conflicts.
+        const releaseWrite = await writeSemaphore.acquire();
+        try {
+          const writeOptions: {
+            tableName: string;
+            fileType: OpfsFileType;
+            rowCount?: number;
+            contentHash?: string;
+          } = {
+            tableName,
+            fileType: OPFS_FILE_TYPE.PARQUET,
+          };
+          if (file.rowCount !== undefined) {
+            writeOptions.rowCount = file.rowCount;
+          }
+          if (file.hash !== undefined) {
+            writeOptions.contentHash = file.hash;
+          }
+          await this.opfsManager.writeFile(`${tableName}/${file.filename}`, data, {
+            ...writeOptions,
+          });
+        } finally {
+          releaseWrite();
+        }
 
         filesCompleted++;
         totalBytesLoaded += file.size;
@@ -342,4 +388,3 @@ export class FileDownloadService {
     this.logger.debug(`Completed downloading ${total} files for table ${tableName}`);
   }
 }
-

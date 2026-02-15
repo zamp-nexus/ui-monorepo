@@ -9,9 +9,13 @@
 
 import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery, type UseQueryOptions, type UseQueryResult, type QueryKey } from '@tanstack/react-query';
-import { convexQuery } from '@convex-dev/react-query';
 import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
-import { hashQueryKey, SCHEMA_VERSION, toJsonSerializable } from '@open-insights-web/foundation-data-model';
+import {
+  hashQueryKey,
+  SCHEMA_VERSION,
+  toJsonSerializable,
+  type DataSource,
+} from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { buildQueryKey, getDataSource } from '../utils/query-key';
@@ -47,7 +51,7 @@ export interface UseDLGetOptions<
   /** Transform the data */
   readonly select?: (data: FunctionReturnType<TQuery>) => TData;
   /** Placeholder data while loading */
-  readonly placeholderData?: TData | (() => TData);
+  readonly placeholderData?: FunctionReturnType<TQuery> | (() => FunctionReturnType<TQuery>);
 }
 
 /**
@@ -59,28 +63,13 @@ export interface DLGetResult<TData> extends Omit<UseQueryResult<TData, Error>, '
   /** Whether data is from offline cache */
   readonly isOffline: boolean;
   /** Source of the current data */
-  readonly dataSource: 'convex' | 'cache' | 'none';
+  readonly dataSource: DataSource;
   /** Last sync timestamp */
   readonly lastSyncedAt: number | null;
 }
 
 // Create scoped error handler for this hook
 const handleGetError = createScopedErrorHandler('useDLGet');
-
-/**
- * Query options type for online mode (Convex-backed)
- */
-type OnlineQueryOptions<TData, TSelect = TData> = UseQueryOptions<TData, Error, TSelect> & {
-  queryKey: QueryKey;
-};
-
-/**
- * Query options type for offline mode (cache-backed)
- */
-type OfflineQueryOptions<TData, TSelect = TData> = UseQueryOptions<TData, Error, TSelect> & {
-  queryKey: QueryKey;
-  queryFn: () => Promise<TData>;
-};
 
 /**
  * Query hook with Convex real-time subscriptions and offline cache support
@@ -101,7 +90,7 @@ export const useDLGet = <
   TQuery extends FunctionReference<'query'>,
   TData = FunctionReturnType<TQuery>,
 >(options: UseDLGetOptions<TQuery, TData>): DLGetResult<TData> => {
-  const { database, isOnline, cacheConfig } = useDataLayerInternals();
+  const { database, isOnline, cacheConfig, convexClient } = useDataLayerInternals();
 
   const {
     query,
@@ -113,6 +102,7 @@ export const useDLGet = <
     gcTime,
     queryKey: customQueryKey,
     select,
+    placeholderData,
   } = options;
 
   type QueryData = FunctionReturnType<TQuery>;
@@ -134,10 +124,13 @@ export const useDLGet = <
   const cacheConfigRef = useRef(cacheConfig);
   cacheConfigRef.current = cacheConfig;
 
-  // Get Convex query options (provides live WebSocket subscription when online)
-  // Note: Convex functions may have optional or no args, so we need a safe default
+  // Query args can be optional for some Convex queries.
   const convexArgs = (args ?? {}) as FunctionArgs<TQuery>;
-  const convexOptions = convexQuery(query, convexArgs);
+
+  // Online query function (Convex API)
+  const onlineQueryFn = useCallback(async (): Promise<QueryData> => {
+    return convexClient.query(query, convexArgs);
+  }, [convexClient, query, convexArgs]);
 
   // Offline query function - reads from DatabaseFacade cache
   // Uses ref for database to maintain stable callback
@@ -152,26 +145,21 @@ export const useDLGet = <
     throw new Error('No cached data available while offline');
   }, [queryKey]);
 
-  // Build query options based on online/offline status
-  const queryOptions: OnlineQueryOptions<QueryData, TData> | OfflineQueryOptions<QueryData, TData> = isOnline
-    ? {
-        ...convexOptions,
-        queryKey,
-        enabled,
-        staleTime: staleTime ?? cacheConfig.defaultStaleTime,
-        gcTime: gcTime ?? cacheConfig.defaultGcTime,
-        select,
-      } as OnlineQueryOptions<QueryData, TData>
-    : {
-        queryKey,
-        queryFn: offlineQueryFn,
-        enabled,
-        staleTime: staleTime ?? cacheConfig.defaultStaleTime,
-        gcTime: gcTime ?? cacheConfig.defaultGcTime,
-        select,
-      } as OfflineQueryOptions<QueryData, TData>;
+  const queryOptions: UseQueryOptions<QueryData, Error, TData, QueryKey> = {
+    queryKey,
+    queryFn: isOnline ? onlineQueryFn : offlineQueryFn,
+    enabled,
+    staleTime: staleTime ?? cacheConfig.defaultStaleTime,
+    gcTime: gcTime ?? cacheConfig.defaultGcTime,
+  };
+  if (select !== undefined) {
+    queryOptions.select = select;
+  }
+  if (placeholderData !== undefined) {
+    queryOptions.placeholderData = placeholderData;
+  }
 
-  const result = useQuery<QueryData, Error, TData>(queryOptions);
+  const result = useQuery(queryOptions);
 
   // Persist successful results to DatabaseFacade for offline access
   // Optimized: Uses refs for database, table, and cacheConfig to minimize effect re-runs

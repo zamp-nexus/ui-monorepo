@@ -11,8 +11,8 @@ import type { SchemaDefinition, TableDefinition } from '../types/schema-definiti
 import type { MeasureSpec } from '../types/measure';
 import type { TimeDimensionSpec } from '../types/time';
 import type { FilterExpression } from '../types/filter';
-import { isFilterCondition, isFilterAndGroup, isFilterOrGroup } from '../types/filter';
 import type { SchemaRegistry } from './registry';
+import { mapFilterExpression } from '../internal/filter-recursion';
 
 // =============================================================================
 // VALIDATION ERROR TYPES
@@ -371,46 +371,63 @@ const validateFilterExpression = (
   registry: SchemaRegistry,
   path: string
 ): DetailedValidationResult => {
-  const errors: ValidationError[] = [];
-  const warnings: ValidationError[] = [];
+  return mapFilterExpression(filter, {
+    onCondition: (condition) => {
+      const errors: ValidationError[] = [];
+      const warnings: ValidationError[] = [];
 
-  if (isFilterCondition(filter)) {
-    const resolved = registry.resolveMember(filter.member);
-    if (!resolved) {
-      errors.push({
-        path: `${path}.member`,
-        message: `Filter member '${filter.member}' not found in schema`,
-      });
-    }
+      const resolved = registry.resolveMember(condition.member);
+      if (!resolved) {
+        errors.push({
+          path: `${path}.member`,
+          message: `Filter member '${condition.member}' not found in schema`,
+        });
+      }
 
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-    };
-  }
-
-  if (isFilterAndGroup(filter)) {
-    for (let index = 0; index < filter.and.length; index++) {
-      const nested = validateFilterExpression(filter.and[index], registry, `${path}.and[${index}]`);
-      errors.push(...nested.errors);
-      warnings.push(...nested.warnings);
-    }
-  }
-
-  if (isFilterOrGroup(filter)) {
-    for (let index = 0; index < filter.or.length; index++) {
-      const nested = validateFilterExpression(filter.or[index], registry, `${path}.or[${index}]`);
-      errors.push(...nested.errors);
-      warnings.push(...nested.warnings);
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-  };
+      return {
+        valid: errors.length === 0,
+        errors,
+        warnings,
+      };
+    },
+    onAndGroup: (children) => {
+      const errors: ValidationError[] = [];
+      const warnings: ValidationError[] = [];
+      for (const child of children) {
+        errors.push(...child.errors);
+        warnings.push(...child.warnings);
+      }
+      return {
+        valid: errors.length === 0,
+        errors,
+        warnings,
+      };
+    },
+    onOrGroup: (children) => {
+      const errors: ValidationError[] = [];
+      const warnings: ValidationError[] = [];
+      for (const child of children) {
+        errors.push(...child.errors);
+        warnings.push(...child.warnings);
+      }
+      return {
+        valid: errors.length === 0,
+        errors,
+        warnings,
+      };
+    },
+    onDepthExceeded: (_depth, maxDepth) => ({
+      valid: false,
+      errors: [
+        {
+          path,
+          message: `Filter nesting depth exceeds maximum of ${maxDepth}`,
+          suggestion: 'Flatten deeply nested filter groups',
+        },
+      ],
+      warnings: [],
+    }),
+  });
 };
 
 // =============================================================================

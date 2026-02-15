@@ -30,7 +30,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ConvexProvider } from 'convex/react';
 
 import type { SyncEvent } from '@open-insights-web/foundation-data-model';
-import { SyncEventType } from '@open-insights-web/foundation-data-model';
+import { SYNC_EVENT_TYPE } from '@open-insights-web/foundation-data-model';
 import { hashPayloadSync, createLogger, type Logger } from '@open-insights-web/foundation-utils';
 
 import type { DataLayerConfig, DataLayerContextValue } from '../core/types';
@@ -59,6 +59,22 @@ export interface DataLayerProviderProps {
   readonly errorComponent?: (error: Error) => ReactNode;
 }
 
+const getDatasourceApiFingerprint = (
+  datasourceApi: DataLayerConfig['datasourceApi']
+): Record<string, unknown> | null => {
+  if (!datasourceApi || typeof datasourceApi !== 'object') {
+    return null;
+  }
+
+  const value = datasourceApi as Record<string, unknown>;
+  return {
+    type: value['_type'] ?? null,
+    visibility: value['_visibility'] ?? null,
+    name: value['_name'] ?? null,
+    path: value['_path'] ?? null,
+  };
+};
+
 // =============================================================================
 // Provider Component
 // =============================================================================
@@ -77,7 +93,7 @@ export interface DataLayerProviderProps {
  *   <DataLayerProvider
  *     config={{
  *       convexUrl: process.env.CONVEX_URL,
- *       conflictStrategy: ConflictStrategy.LAST_WRITE_WINS,
+ *       conflictStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
  *       enableCrossTab: true,
  *     }}
  *     loadingComponent={<Spinner />}
@@ -120,7 +136,18 @@ export const DataLayerProvider = ({
   // Compute a stable hash of config to detect meaningful changes
   // Excludes function references (callbacks) since they can't be reliably hashed
   const configHash = useMemo(() => {
-    const { onSyncError: _onSyncError, datasourceApi: _datasourceApi, ...hashableConfig } = config;
+    const hashableConfig = {
+      convexUrl: config.convexUrl,
+      tables: config.tables,
+      conflictStrategy: config.conflictStrategy,
+      enableCrossTab: config.enableCrossTab,
+      enableAnalytics: config.enableAnalytics,
+      defaultStaleTime: config.defaultStaleTime,
+      defaultGcTime: config.defaultGcTime,
+      cache: config.cache,
+      debug: config.debug,
+      datasourceApi: getDatasourceApiFingerprint(config.datasourceApi),
+    };
     return hashPayloadSync(hashableConfig);
   }, [config]);
 
@@ -138,16 +165,28 @@ export const DataLayerProvider = ({
     // Create container with current config
     const container = new DataLayerContainer({
       convexUrl: currentConfig.convexUrl,
-      tables: currentConfig.tables, // Unified table registry
-      datasourceApi: currentConfig.datasourceApi, // Global datasource API for background sync
-      conflictStrategy: currentConfig.conflictStrategy,
-      enableCrossTab: currentConfig.enableCrossTab,
-      enableAnalytics: currentConfig.enableAnalytics,
-      defaultStaleTime: currentConfig.defaultStaleTime,
-      defaultGcTime: currentConfig.defaultGcTime,
-      cache: currentConfig.cache,
-      debug: currentConfig.debug,
-      onSyncError: currentConfig.onSyncError,
+      ...(currentConfig.tables !== undefined ? { tables: currentConfig.tables } : {}),
+      ...(currentConfig.datasourceApi !== undefined
+        ? { datasourceApi: currentConfig.datasourceApi }
+        : {}),
+      ...(currentConfig.conflictStrategy !== undefined
+        ? { conflictStrategy: currentConfig.conflictStrategy }
+        : {}),
+      ...(currentConfig.enableCrossTab !== undefined
+        ? { enableCrossTab: currentConfig.enableCrossTab }
+        : {}),
+      ...(currentConfig.enableAnalytics !== undefined
+        ? { enableAnalytics: currentConfig.enableAnalytics }
+        : {}),
+      ...(currentConfig.defaultStaleTime !== undefined
+        ? { defaultStaleTime: currentConfig.defaultStaleTime }
+        : {}),
+      ...(currentConfig.defaultGcTime !== undefined ? { defaultGcTime: currentConfig.defaultGcTime } : {}),
+      ...(currentConfig.cache !== undefined ? { cache: currentConfig.cache } : {}),
+      ...(currentConfig.debug !== undefined ? { debug: currentConfig.debug } : {}),
+      ...(currentConfig.onSyncError !== undefined
+        ? { onSyncError: currentConfig.onSyncError }
+        : {}),
     });
 
     containerRef.current = container;
@@ -162,28 +201,28 @@ export const DataLayerProvider = ({
       if (!isMounted || containerInstance.isDisposed) return;
 
       switch (event.type) {
-        case SyncEventType.ONLINE:
+        case SYNC_EVENT_TYPE.ONLINE:
           setIsOnline(true);
           break;
 
-        case SyncEventType.OFFLINE:
+        case SYNC_EVENT_TYPE.OFFLINE:
           setIsOnline(false);
           break;
 
-        case SyncEventType.SYNC_START:
+        case SYNC_EVENT_TYPE.SYNC_START:
           setIsSyncing(true);
           break;
 
-        case SyncEventType.SYNC_COMPLETE:
+        case SYNC_EVENT_TYPE.SYNC_COMPLETE:
           setIsSyncing(false);
           setLastSyncedAt(event.timestamp);
           break;
 
-        case SyncEventType.SYNC_ERROR:
+        case SYNC_EVENT_TYPE.SYNC_ERROR:
           setIsSyncing(false);
           break;
 
-        case SyncEventType.QUEUE_PROCESSED:
+        case SYNC_EVENT_TYPE.QUEUE_PROCESSED:
           // Update pending count after queue processing
           // Properly handle the promise
           dependencies.syncCoordinator.getState()
@@ -210,7 +249,7 @@ export const DataLayerProvider = ({
             if (!mounted || container.isDisposed) return;
 
             // Handle leader-changed events
-            if (event.type === SyncEventType.LEADER_CHANGED && event.data?.isLeader !== undefined) {
+            if (event.type === SYNC_EVENT_TYPE.LEADER_CHANGED && event.data?.isLeader !== undefined) {
               setIsLeader(event.data.isLeader);
             }
 
@@ -341,6 +380,8 @@ export const DataLayerProvider = ({
       cacheConfig: deps.cacheConfig,
       tableRegistry: deps.tableRegistry,
       datasourceApi: deps.datasourceApi,
+      getTableSyncService: deps.getTableSyncService,
+      getFileDownloadService: deps.getFileDownloadService,
     };
   }, [deps, isOnline]);
 

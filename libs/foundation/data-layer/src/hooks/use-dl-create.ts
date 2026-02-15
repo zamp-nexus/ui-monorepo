@@ -28,7 +28,7 @@ import {
   rollbackOptimisticUpdate,
   replaceProvisionalId,
 } from '../utils/optimistic-updates';
-import { buildMutationResult } from '../utils/mutation-helpers';
+import { buildMutationResult, executeLocalFirstMutation } from '../utils/mutation-helpers';
 import { DEFAULT_CACHE_TTL } from '../core/constants';
 import {
   useMutationInternals,
@@ -173,64 +173,57 @@ export const useDLCreate = <
       });
       await database.queries.set(entry);
 
-      // Step 3: If offline, queue mutation via sync-engine's queue manager
-      if (!isOnline) {
-        setIsQueued(true);
-
-        // Convert payload and optimistic data with validation
-        await queueManager.enqueue({
-          type: 'create',
-          tableName: table,
-          entityId: newProvisionalId,
-          payload: toJsonSerializable(variables),
-          optimisticData: serializedData,
-          invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
-        });
-
-        // Return optimistic data when offline
-        return optimisticWithId as TData;
-      }
-
-      // Step 4: Online - execute Convex mutation
-      setIsQueued(false);
-      const result = await convexMutation(variables);
-
-      // Extract server ID from result
-      const serverId = getResultEntityId(result) ?? newProvisionalId;
-
-      // Step 5: Update cache with server ID
-      if (serverId !== newProvisionalId) {
-        // Update the optimistic data in database to remove sync metadata
-        const finalData = {
-          ...result,
-          _isPendingSync: false,
-          _provisionalId: undefined,
-          _createdLocallyAt: undefined,
-        };
-        const serverCacheKey = hashQueryKey([table, serverId]);
-        const serverEntry = createCacheEntry(
-          serverCacheKey,
-          [table, serverId],
-          toJsonSerializable(finalData),
-          {
+      return executeLocalFirstMutation<TData>({
+        isOnline,
+        setIsQueued,
+        offlineResult: optimisticWithId as TData,
+        queueOffline: async () => {
+          await queueManager.enqueue({
+            type: 'create',
             tableName: table,
-            ttl: DEFAULT_CACHE_TTL,
-            schemaVersion: SCHEMA_VERSION,
-            isOfflineData: false,
+            entityId: newProvisionalId,
+            payload: toJsonSerializable(variables),
+            optimisticData: serializedData,
+            invalidateKeys: invalidateKeys.map((key) => JSON.stringify(key)),
+          });
+        },
+        executeOnline: async () => {
+          const result = await convexMutation(variables);
+
+          // Extract server ID from result
+          const serverId = getResultEntityId(result) ?? newProvisionalId;
+
+          // Update cache with server ID
+          if (serverId !== newProvisionalId) {
+            const finalData = {
+              ...result,
+              _isPendingSync: false,
+              _provisionalId: undefined,
+              _createdLocallyAt: undefined,
+            };
+            const serverCacheKey = hashQueryKey([table, serverId]);
+            const serverEntry = createCacheEntry(
+              serverCacheKey,
+              [table, serverId],
+              toJsonSerializable(finalData),
+              {
+                tableName: table,
+                ttl: DEFAULT_CACHE_TTL,
+                schemaVersion: SCHEMA_VERSION,
+                isOfflineData: false,
+              }
+            );
+            await database.queries.set(serverEntry);
+            await database.queries.delete(cacheKey);
+
+            if (listQueryKey) {
+              replaceProvisionalId(queryClient, listQueryKey, newProvisionalId, serverId);
+            }
           }
-        );
-        await database.queries.set(serverEntry);
 
-        // Remove old provisional entry
-        await database.queries.delete(cacheKey);
-
-        // Update cache with server ID
-        if (listQueryKey) {
-          replaceProvisionalId(queryClient, listQueryKey, newProvisionalId, serverId);
-        }
-      }
-
-      return result;
+          return result;
+        },
+      });
     },
     [
       convexMutation,

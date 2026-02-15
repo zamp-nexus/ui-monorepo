@@ -3,20 +3,35 @@
  * @module queue/processor
  */
 
-import type { MutationQueueEntry } from '@open-insights-web/foundation-database';
-import { canProcessMutation, MutationStatus } from '@open-insights-web/foundation-database';
-import type { IdMapping, ProcessingResult, ConflictContext, ConflictResult } from '@open-insights-web/foundation-data-model';
-import { isProvisionalId, isPlainObject, Timestamp, tryToJsonSerializable } from '@open-insights-web/foundation-data-model';
+import {
+  canProcessMutation,
+} from '@open-insights-web/foundation-database';
+import type {
+  IdMapping,
+  ProcessingResult,
+  ConflictContext,
+  ConflictResult,
+  MutationQueueEntry,
+} from '@open-insights-web/foundation-data-model';
+import {
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  isProvisionalId,
+  isPlainObject,
+  Timestamp,
+  tryToJsonSerializable,
+} from '@open-insights-web/foundation-data-model';
 import type { OfflineQueueManager } from './manager';
-import type { ConflictResolver } from '../conflicts';
+import type { ConflictResolver } from '../conflicts/resolver';
 import {
   Disposable,
-  CompositeDisposable,
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   sleep,
   Mutex,
+  hasCircularDependency,
+  topologicalSort,
   isNetworkError as isNetworkErrorUtil,
 } from '@open-insights-web/foundation-utils';
 import {
@@ -149,7 +164,6 @@ export class QueueProcessor extends Disposable {
   private isProcessing = false;
   private shouldStop = false;
   private processingMutex = new Mutex();
-  private disposables = new CompositeDisposable();
   private logger;
 
   constructor(config: QueueProcessorConfig) {
@@ -212,6 +226,8 @@ export class QueueProcessor extends Disposable {
     };
 
     try {
+      await this.queueManager.ensureInitialized();
+
       // Get all pending mutations
       let pending = await this.queueManager.getPendingMutations();
       this.logger.debug('Processing', pending.length, 'pending mutations');
@@ -219,8 +235,13 @@ export class QueueProcessor extends Disposable {
       const completedIds = new Set<string>();
 
       while (pending.length > 0 && !this.shouldStop) {
-        // Take a batch
-        const batch = pending.slice(0, this.config.batchSize);
+        const orderedPending = topologicalSort(
+          pending,
+          (mutation) => mutation.id,
+          (mutation) => mutation.dependsOn ?? []
+        );
+        const batch = orderedPending.slice(0, this.config.batchSize);
+        let processableCount = 0;
 
         for (const mutation of batch) {
           if (this.shouldStop) break;
@@ -231,6 +252,7 @@ export class QueueProcessor extends Disposable {
             result.skipped++;
             continue;
           }
+          processableCount++;
 
           // Process the mutation with retry logic
           const success = await this.processMutationWithRetry(mutation, result);
@@ -250,6 +272,10 @@ export class QueueProcessor extends Disposable {
 
         // Get remaining pending mutations
         pending = await this.queueManager.getPendingMutations();
+        if (!this.shouldStop && pending.length > 0 && processableCount === 0) {
+          await this.failUnprocessableMutations(pending, result);
+          break;
+        }
       }
 
       this.logger.debug('Processing complete:', result);
@@ -268,6 +294,38 @@ export class QueueProcessor extends Disposable {
       this.isProcessing = false;
       release();
     }
+  }
+
+  /**
+   * Mark mutations as failed when dependency graph cannot make progress.
+   */
+  private async failUnprocessableMutations(
+    pending: MutationQueueEntry[],
+    result: ProcessingResult
+  ): Promise<void> {
+    const cyclic = hasCircularDependency(
+      pending,
+      (mutation) => mutation.id,
+      (mutation) => mutation.dependsOn ?? []
+    );
+
+    const reason = cyclic
+      ? 'Cyclic mutation dependencies detected'
+      : 'Unresolvable mutation dependencies detected';
+
+    for (const mutation of pending) {
+      await this.queueManager.updateStatus(mutation.id, MUTATION_STATUS.FAILED, {
+        lastError: reason,
+      });
+      result.failed++;
+      result.processed++;
+      this.callbacks.onFailure?.(mutation, reason);
+    }
+
+    this.logger.warn(
+      'Marked pending mutations as failed due to dependency deadlock',
+      { count: pending.length, cyclic }
+    );
   }
 
   /**
@@ -362,7 +420,7 @@ export class QueueProcessor extends Disposable {
       if (execResult.success) {
         // Handle ID mapping for creates
         if (
-          mutation.type === 'create' &&
+          mutation.type === MUTATION_TYPE.CREATE &&
           isProvisionalId(mutation.entityId) &&
           execResult.serverId
         ) {
@@ -372,7 +430,7 @@ export class QueueProcessor extends Disposable {
             tableName: mutation.tableName,
             mappedAt: new Date().toISOString(),
           };
-          this.queueManager.registerIdMapping(mapping);
+          await this.queueManager.registerIdMapping(mapping);
           result.idMappings.push(mapping);
         }
 
@@ -385,7 +443,7 @@ export class QueueProcessor extends Disposable {
         return true;
       } else {
         // Check for conflict
-        if (execResult.serverData && mutation.type === 'update') {
+        if (execResult.serverData && mutation.type === MUTATION_TYPE.UPDATE) {
           const conflictResolution = this.detectAndResolveConflict(
             mutation,
             execResult.serverData,
@@ -414,7 +472,7 @@ export class QueueProcessor extends Disposable {
               result.failed++;
               return false;
             }
-            await this.queueManager.updateStatus(mutation.id, MutationStatus.PENDING, {
+            await this.queueManager.updateStatus(mutation.id, MUTATION_STATUS.PENDING, {
               payload: serializableResolvedPayload,
               retryCount: mutation.retryCount + 1,
               lastError: `Conflict resolved (winner: ${conflictResolution.winner})`,
@@ -526,7 +584,6 @@ export class QueueProcessor extends Disposable {
    */
   protected onDispose(): void {
     this.stop();
-    this.disposables.dispose();
     this.logger.debug('Disposed');
   }
 }

@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { ConflictContext } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  CONFLICT_WINNER,
+  type ConflictContext,
+} from '@open-insights-web/foundation-data-model';
 import { ConflictResolver } from './resolver';
 
 describe('ConflictResolver', () => {
@@ -11,28 +15,28 @@ describe('ConflictResolver', () => {
 
   beforeEach(() => {
     resolver = new ConflictResolver({
-      defaultStrategy: 'last-write-wins',
+      defaultStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
       debug: false,
     });
   });
 
   describe('getStrategy', () => {
     it('should return default strategy when no table override', () => {
-      expect(resolver.getStrategy('users')).toBe('last-write-wins');
+      expect(resolver.getStrategy('users')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
     });
 
     it('should return table-specific strategy when set', () => {
-      resolver.setTableStrategy('users', 'server-wins');
+      resolver.setTableStrategy('users', CONFLICT_STRATEGY.SERVER_WINS);
 
-      expect(resolver.getStrategy('users')).toBe('server-wins');
-      expect(resolver.getStrategy('posts')).toBe('last-write-wins');
+      expect(resolver.getStrategy('users')).toBe(CONFLICT_STRATEGY.SERVER_WINS);
+      expect(resolver.getStrategy('posts')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
     });
   });
 
   describe('resolve with server-wins strategy', () => {
     beforeEach(() => {
       resolver = new ConflictResolver({
-        defaultStrategy: 'server-wins',
+        defaultStrategy: CONFLICT_STRATEGY.SERVER_WINS,
       });
     });
 
@@ -49,7 +53,7 @@ describe('ConflictResolver', () => {
       const result = resolver.resolve(context);
 
       expect(result.resolvedData).toEqual({ name: 'Server Name' });
-      expect(result.winner).toBe('server');
+      expect(result.winner).toBe(CONFLICT_WINNER.SERVER);
       expect(result.requiresReview).toBe(false);
     });
   });
@@ -57,7 +61,7 @@ describe('ConflictResolver', () => {
   describe('resolve with client-wins strategy', () => {
     beforeEach(() => {
       resolver = new ConflictResolver({
-        defaultStrategy: 'client-wins',
+        defaultStrategy: CONFLICT_STRATEGY.CLIENT_WINS,
       });
     });
 
@@ -74,7 +78,7 @@ describe('ConflictResolver', () => {
       const result = resolver.resolve(context);
 
       expect(result.resolvedData).toEqual({ name: 'Client Name' });
-      expect(result.winner).toBe('client');
+      expect(result.winner).toBe(CONFLICT_WINNER.CLIENT);
       expect(result.requiresReview).toBe(false);
     });
   });
@@ -93,7 +97,7 @@ describe('ConflictResolver', () => {
       const result = resolver.resolve(context);
 
       expect(result.resolvedData).toEqual({ name: 'Client Name' });
-      expect(result.winner).toBe('client');
+      expect(result.winner).toBe(CONFLICT_WINNER.CLIENT);
     });
 
     it('should return server data when server timestamp is newer', () => {
@@ -109,14 +113,14 @@ describe('ConflictResolver', () => {
       const result = resolver.resolve(context);
 
       expect(result.resolvedData).toEqual({ name: 'Server Name' });
-      expect(result.winner).toBe('server');
+      expect(result.winner).toBe(CONFLICT_WINNER.SERVER);
     });
   });
 
   describe('resolve with merge strategy', () => {
     beforeEach(() => {
       resolver = new ConflictResolver({
-        defaultStrategy: 'merge',
+        defaultStrategy: CONFLICT_STRATEGY.MERGE,
       });
     });
 
@@ -206,17 +210,17 @@ describe('ConflictResolver', () => {
 
   describe('setTableStrategy', () => {
     it('should override strategy for specific table', () => {
-      resolver.setTableStrategy('important_data', 'server-wins');
+      resolver.setTableStrategy('important_data', CONFLICT_STRATEGY.SERVER_WINS);
 
-      expect(resolver.getStrategy('important_data')).toBe('server-wins');
-      expect(resolver.getStrategy('other_table')).toBe('last-write-wins');
+      expect(resolver.getStrategy('important_data')).toBe(CONFLICT_STRATEGY.SERVER_WINS);
+      expect(resolver.getStrategy('other_table')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
     });
   });
 
   describe('setTableMergeConfig', () => {
     it('should apply custom merge config for specific table', () => {
       resolver = new ConflictResolver({
-        defaultStrategy: 'merge',
+        defaultStrategy: CONFLICT_STRATEGY.MERGE,
       });
 
       resolver.setTableMergeConfig('users', {

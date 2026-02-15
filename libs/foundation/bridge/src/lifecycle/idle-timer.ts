@@ -9,7 +9,8 @@ import {
   Disposable,
   SafeTimer,
 } from '@open-insights-web/foundation-utils';
-import { Timestamp, Milliseconds } from '@open-insights-web/foundation-data-model';
+import type { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { Timestamp } from '@open-insights-web/foundation-data-model';
 
 /**
  * Idle timer configuration

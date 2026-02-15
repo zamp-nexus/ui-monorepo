@@ -7,7 +7,7 @@
  * @module errors/bridge-errors
  */
 
-import { FoundationErrorCode } from '@open-insights-web/foundation-data-model';
+import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
 import { BridgeError } from './base-error';
 
 // =============================================================================
@@ -18,7 +18,7 @@ import { BridgeError } from './base-error';
  * Error thrown when trying to use an uninitialized bridge
  */
 export class BridgeNotInitializedError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_NOT_INITIALIZED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_NOT_INITIALIZED;
 
   constructor(readonly bridgeType: string) {
     super(`${bridgeType} is not initialized. Call initialize() first.`, {
@@ -35,7 +35,7 @@ export class BridgeNotInitializedError extends BridgeError {
  * Error thrown when bridge initialization fails
  */
 export class BridgeInitializationError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_INIT_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_INIT_FAILED;
 
   constructor(
     readonly bridgeType: string,
@@ -55,7 +55,7 @@ export class BridgeInitializationError extends BridgeError {
  * Error thrown when an OPFS file is not found
  */
 export class OpfsNotFoundError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_OPFS_NOT_FOUND;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_OPFS_NOT_FOUND;
 
   constructor(readonly fileName: string) {
     super(`OPFS file not found: ${fileName}`, { fileName });
@@ -70,7 +70,7 @@ export class OpfsNotFoundError extends BridgeError {
  * Error thrown when OPFS permission is denied
  */
 export class OpfsPermissionError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_OPFS_PERMISSION_DENIED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_OPFS_PERMISSION_DENIED;
 
   constructor(
     readonly fileName: string,
@@ -88,7 +88,7 @@ export class OpfsPermissionError extends BridgeError {
  * Error thrown when writing to OPFS fails
  */
 export class OpfsWriteError extends BridgeError {
-  readonly code = FoundationErrorCode.BRIDGE_OPFS_WRITE_FAILED;
+  readonly code = FOUNDATION_ERROR_CODE.BRIDGE_OPFS_WRITE_FAILED;
 
   constructor(
     readonly fileName: string,
@@ -106,7 +106,7 @@ export class OpfsWriteError extends BridgeError {
  * Error thrown when configuration is invalid
  */
 export class ConfigurationError extends BridgeError {
-  readonly code = FoundationErrorCode.CONFIG_INVALID;
+  readonly code = FOUNDATION_ERROR_CODE.CONFIG_INVALID;
 
   constructor(
     readonly configName: string,

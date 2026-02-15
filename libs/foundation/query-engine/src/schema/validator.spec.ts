@@ -318,6 +318,23 @@ describe('validateQuery', () => {
     const result = validateQuery(query, registry);
     expect(result.warnings.some((w) => w.path === 'query.ungrouped')).toBe(true);
   });
+
+  it('fails for deeply nested filters exceeding MAX_FILTER_DEPTH', () => {
+    // Build a filter nested 21 levels deep
+    let filter: { member: string; operator: string; values: string[] } | { and: unknown[] } = {
+      member: 'orders.status',
+      operator: 'equals',
+      values: ['active'],
+    };
+    for (let i = 0; i < 21; i++) {
+      filter = { and: [filter] };
+    }
+
+    const query: Query = { filters: [filter as never] };
+    const result = validateQuery(query, registry);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes('nesting depth'))).toBe(true);
+  });
 });
 
 // =============================================================================

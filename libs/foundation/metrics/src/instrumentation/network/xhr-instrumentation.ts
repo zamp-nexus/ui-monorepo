@@ -216,7 +216,7 @@ export const installXHRInstrumentation = (
   XMLHttpRequest.prototype.open = function (
     method: string,
     url: string | URL,
-    async: boolean = true,
+    async = true,
     username?: string | null,
     password?: string | null,
   ) {
@@ -245,7 +245,7 @@ export const installXHRInstrumentation = (
       });
     }
 
-    return state!.originalOpen!.call(this, method, url, async, username, password);
+    return state!.originalOpen!.call(this, method, url, Boolean(async), username, password);
   };
 
   // Patch send - regular function required for `this` binding

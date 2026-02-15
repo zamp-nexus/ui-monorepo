@@ -8,7 +8,6 @@
 
 import {
   QueryId,
-  MutationId,
   Timestamp,
 } from '@open-insights-web/foundation-data-model';
 

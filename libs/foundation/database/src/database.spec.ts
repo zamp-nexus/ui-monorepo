@@ -7,8 +7,14 @@
  * @module database.spec
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hasErrorCode } from '@open-insights-web/foundation-data-model';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  FOUNDATION_ERROR_CODE,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  hasErrorCode,
+} from '@open-insights-web/foundation-data-model';
+import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
 import {
   // Errors
   DatabaseError,
@@ -20,8 +26,6 @@ import {
 } from './errors';
 import {
   // Utils
-  hashPayloadAsync,
-  hashPayloadSync,
   generateIdempotencyKey,
 } from './utils';
 import {
@@ -31,6 +35,13 @@ import {
   createValidator,
   validateQueryCacheEntry,
 } from './validation';
+import {
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
+  getDatabaseFacade,
+  resetDatabaseFacade,
+} from './facade/database-facade';
+import { getDatabase, hasDatabase, resetDatabase } from './core/database';
 
 // =============================================================================
 // Error Tests
@@ -39,16 +50,19 @@ import {
 describe('Database Errors', () => {
   describe('DatabaseError', () => {
     it('should create error with code and message', () => {
-      const error = new DatabaseError('QUOTA_EXCEEDED', 'Storage full');
+      const error = new DatabaseError(
+        FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED,
+        'Storage full'
+      );
 
-      expect(error.code).toBe('QUOTA_EXCEEDED');
+      expect(error.code).toBe(FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED);
       expect(error.message).toBe('Storage full');
       expect(error.name).toBe('DatabaseError');
       expect(error.timestamp).toBeGreaterThan(0);
     });
 
     it('should be instanceof Error', () => {
-      const error = new DatabaseError('VALIDATION_FAILED', 'Invalid data');
+      const error = new DatabaseError(FOUNDATION_ERROR_CODE.VALIDATION_FAILED, 'Invalid data');
 
       expect(error instanceof Error).toBe(true);
       expect(error instanceof DatabaseError).toBe(true);
@@ -59,21 +73,21 @@ describe('Database Errors', () => {
     it('createQuotaExceededError should create proper error', () => {
       const error = createQuotaExceededError(1024);
 
-      expect(error.code).toBe('QUOTA_EXCEEDED');
+      expect(error.code).toBe(FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED);
       expect(error.message).toContain('1024');
     });
 
     it('createOpfsNotSupportedError should create proper error', () => {
       const error = createOpfsNotSupportedError();
 
-      expect(error.code).toBe('OPFS_NOT_SUPPORTED');
+      expect(error.code).toBe(FOUNDATION_ERROR_CODE.DATABASE_OPFS_NOT_SUPPORTED);
       expect(error.message).toContain('not supported');
     });
 
     it('createValidationError should include field name', () => {
       const error = createValidationError('queryHash', 'must be non-empty');
 
-      expect(error.code).toBe('VALIDATION_FAILED');
+      expect(error.code).toBe(FOUNDATION_ERROR_CODE.VALIDATION_FAILED);
       expect(error.message).toContain('queryHash');
       expect(error.message).toContain('must be non-empty');
     });
@@ -81,7 +95,7 @@ describe('Database Errors', () => {
 
   describe('Type Guards', () => {
     it('isDatabaseError should return true for DatabaseError', () => {
-      const dbError = new DatabaseError('CONFIG_INVALID', 'Bad config');
+      const dbError = new DatabaseError(FOUNDATION_ERROR_CODE.CONFIG_INVALID, 'Bad config');
       const regularError = new Error('Regular error');
 
       expect(isDatabaseError(dbError)).toBe(true);
@@ -93,8 +107,8 @@ describe('Database Errors', () => {
     it('hasErrorCode should check specific code', () => {
       const error = createQuotaExceededError(512);
 
-      expect(hasErrorCode(error, 'QUOTA_EXCEEDED')).toBe(true);
-      expect(hasErrorCode(error, 'VALIDATION_FAILED')).toBe(false);
+      expect(hasErrorCode(error, FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED)).toBe(true);
+      expect(hasErrorCode(error, FOUNDATION_ERROR_CODE.VALIDATION_FAILED)).toBe(false);
     });
 
     it('isQuotaExceededError should detect quota errors', () => {
@@ -268,8 +282,8 @@ describe('Validation Schemas', () => {
       id: 'mut-123',
       idempotencyKey: 'users:123:abc',
       timestamp: Date.now(),
-      status: 'pending' as const,
-      type: 'create' as const,
+      status: MUTATION_STATUS.PENDING,
+      type: MUTATION_TYPE.CREATE,
       tableName: 'users',
       entityId: '123',
       payload: { name: 'Test' },
@@ -319,7 +333,7 @@ describe('Validation Schemas', () => {
         isOfflineData: false,
       });
 
-      expect(validResult.success).toBe(true);
+      expect(validResult.ok).toBe(true);
     });
 
     it('should return error message on failure', () => {
@@ -327,8 +341,8 @@ describe('Validation Schemas', () => {
 
       const invalidResult = validator({ invalid: 'data' });
 
-      expect(invalidResult.success).toBe(false);
-      if (!invalidResult.success) {
+      expect(invalidResult.ok).toBe(false);
+      if (!invalidResult.ok) {
         expect(invalidResult.error).toBeTruthy();
       }
     });
@@ -347,7 +361,7 @@ describe('Validation Schemas', () => {
         isOfflineData: false,
       });
 
-      expect(result.success).toBe(true);
+      expect(result.ok).toBe(true);
     });
   });
 });
@@ -412,5 +426,78 @@ describe('Sync State Type Guards', () => {
     expect(isDuckDBViewsValue({ views: [], lastUpdatedAt: 0 })).toBe(true);
     expect(isDuckDBViewsValue({ views: 'not array' })).toBe(false);
     expect(isDuckDBViewsValue({})).toBe(false);
+  });
+});
+
+// =============================================================================
+// Facade Lifecycle Regression Tests
+// =============================================================================
+
+describe('DatabaseFacade lifecycle', () => {
+  beforeEach(async () => {
+    await resetDatabaseFacade();
+    await resetDatabase();
+  });
+
+  it('should resolve the same database instance across facade and core accessors', async () => {
+    const dbFromCoreFirst = getDatabase({ name: 'test-db-shared-instance' });
+    const facade = getDatabaseFacade();
+    const dbFromFacade = facade.getDatabase();
+    const dbFromCoreSecond = getDatabase();
+
+    expect(dbFromFacade).toBe(dbFromCoreFirst);
+    expect(dbFromCoreSecond).toBe(dbFromCoreFirst);
+  });
+
+  it('should reset deterministically regardless of accessor creation order', async () => {
+    getDatabase({ name: 'test-db-reset-order' });
+    getDatabaseFacade();
+    expect(hasDatabase()).toBe(true);
+
+    await resetDatabaseFacade();
+    expect(hasDatabase()).toBe(false);
+
+    const recreatedCore = getDatabase({ name: 'test-db-reset-order-recreated' });
+    const recreatedFacade = getDatabaseFacade();
+    expect(recreatedFacade.getDatabase()).toBe(recreatedCore);
+  });
+
+  it('should execute transactions using constant-based mode and table identifiers', async () => {
+    expect(DATABASE_TRANSACTION_MODE.READ).toBe('read');
+    expect(DATABASE_TRANSACTION_MODE.READ_WRITE).toBe('read_write');
+    expect(DATABASE_TRANSACTION_TABLE.QUERIES).toBe('queries');
+    expect(DATABASE_TRANSACTION_TABLE.SYNC_STATE).toBe('sync_state');
+  });
+});
+
+// =============================================================================
+// Shared Contract Re-Export Tests
+// =============================================================================
+
+describe('Shared table sync helpers', () => {
+  it('should re-export table sync helpers from foundation-data-model', async () => {
+    const dataModel = await import('@open-insights-web/foundation-data-model');
+    const databaseTableHelpers = await import('./tables/table-sync-metadata');
+
+    const localMetadata = dataModel.createTableSyncMetadataEntry(
+      'sessions',
+      100,
+      { 'sessions.parquet': 'hash-1' }
+    );
+    const remoteFiles = [
+      { filename: 'sessions.parquet', hash: 'hash-1' },
+      { filename: 'events.parquet', hash: 'hash-2' },
+    ];
+
+    expect(
+      databaseTableHelpers.needsTableUpdate(localMetadata, 101)
+    ).toBe(
+      dataModel.needsTableUpdate(localMetadata, 101)
+    );
+    expect(
+      databaseTableHelpers.getFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)
+    ).toEqual(
+      dataModel.getFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)
+    );
   });
 });

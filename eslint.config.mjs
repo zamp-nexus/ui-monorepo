@@ -68,6 +68,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
               ],
             },
             // scope:product → Can import features, shared, and foundation
@@ -88,6 +92,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
               ],
             },
             // scope:feature → Can import shared and foundation only
@@ -106,6 +114,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
               ],
             },
             // scope:shared → Can import other shared libraries and foundation
@@ -124,6 +136,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
               ],
             },
             // ============================================
@@ -201,6 +217,7 @@ export default [
                 'foundation:utils',
                 'foundation:data-model',
                 'foundation:trackers',
+                'foundation:hooks',
               ],
             },
             // foundation:design-system → Can import components, utils, data-model, and trackers
@@ -211,6 +228,7 @@ export default [
                 'foundation:utils',
                 'foundation:data-model',
                 'foundation:trackers',
+                'foundation:icons',
               ],
             },
             // foundation:hooks → Can import hooks, utils, data-model, and trackers
@@ -242,6 +260,44 @@ export default [
                 'foundation:data-model',
               ],
             },
+            // foundation:http → Can import http, utils, and data-model
+            {
+              sourceTag: 'foundation:http',
+              onlyDependOnLibsWithTags: [
+                'foundation:http',
+                'foundation:utils',
+                'foundation:data-model',
+              ],
+            },
+            // foundation:query-engine → Can import query-engine, data-layer, bridge, data-model, and utils
+            //
+            // ARCHITECTURE NOTE (C-2): The data-layer import is intentional and restricted.
+            // The core engine (engine/, compiler/, schema/, builder/) is Tier 2 with zero
+            // data-layer dependency. Only the hooks/ directory (Tier 4) imports from
+            // data-layer — it is a thin "bridge module" composing data-layer execution
+            // hooks with query-engine routing logic. This is enforced by the
+            // no-restricted-imports rule below targeting non-hooks files.
+            {
+              sourceTag: 'foundation:query-engine',
+              onlyDependOnLibsWithTags: [
+                'foundation:query-engine',
+                'foundation:data-layer',
+                'foundation:bridge',
+                'foundation:data-model',
+                'foundation:utils',
+              ],
+            },
+            // foundation:metrics → Can import metrics, utils, data-model, trackers, and http
+            {
+              sourceTag: 'foundation:metrics',
+              onlyDependOnLibsWithTags: [
+                'foundation:metrics',
+                'foundation:utils',
+                'foundation:data-model',
+                'foundation:trackers',
+                'foundation:http',
+              ],
+            },
             // foundation:mocks → Can import all foundation libraries
             {
               sourceTag: 'foundation:mocks',
@@ -257,6 +313,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
                 'foundation:mocks',
               ],
             },
@@ -439,7 +499,7 @@ export default [
       '@nx/enforce-module-boundaries': [
         'error',
         {
-          enforceBuildableLibDependency: true,
+          enforceBuildableLibDependency: false,
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             // In test files, allow importing mocks from any library
@@ -463,6 +523,10 @@ export default [
                 'foundation:adapters',
                 'foundation:design-system',
                 'foundation:icons',
+                'foundation:auth',
+                'foundation:http',
+                'foundation:metrics',
+                'foundation:query-engine',
                 'foundation:mocks',
                 // All type tags
                 'type:data-model',
@@ -477,6 +541,36 @@ export default [
                 'type:core',
                 'type:mocks',
               ],
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ============================================
+  // QUERY-ENGINE BOUNDARY: Restrict data-layer imports to hooks/ only (C-2)
+  // The core engine modules must remain Tier 2 (no data-layer dependency).
+  // Only the hooks/ directory may import from data-layer as a "bridge module".
+  // ============================================
+  {
+    files: [
+      'libs/foundation/query-engine/src/**/*.ts',
+      'libs/foundation/query-engine/src/**/*.tsx',
+    ],
+    ignores: [
+      'libs/foundation/query-engine/src/hooks/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@open-insights-web/foundation-data-layer',
+              message:
+                'data-layer imports are restricted to query-engine/src/hooks/ only. ' +
+                'Core engine modules (engine/, compiler/, schema/, builder/) must remain ' +
+                'Tier 2 with zero data-layer dependency. See architecture review C-2.',
             },
           ],
         },

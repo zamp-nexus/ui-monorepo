@@ -8,30 +8,37 @@
  */
 
 import isEqual from 'fast-deep-equal';
-import type { LegacyErrorCallback } from '@open-insights-web/foundation-data-model';
+import {
+  type LegacyErrorCallback,
+  type OpfsFileType,
+} from '@open-insights-web/foundation-data-model';
 import type { InsightsDatabase } from '../core/database';
 import { getDatabase } from '../core/database';
 import {
   createOpfsMetadata,
-  sortByDependencies,
-  OpfsFileType,
   type OpfsMetadataEntry,
   type OpfsFileSchema,
 } from '../tables/opfs-metadata';
+import { OpfsMetadataService } from '../services/opfs-metadata';
 import {
   createOpfsNotSupportedError,
   createOpfsInitFailedError,
   createQuotaExceededError,
   createValidationError,
   isQuotaExceededError,
-} from '../errors';
+} from '../errors/database-errors';
 import {
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   createSingletonFactory,
   createDeepEqualComparison,
+  createDirectoryPath,
+  getDirectoryAtPath,
+  fileExistsInOpfs,
   isOpfsSupported,
+  listDirectoryEntries,
+  clearDirectory,
   getOpfsRootDirectory,
   type Logger,
 } from '@open-insights-web/foundation-utils';
@@ -90,6 +97,7 @@ export class OpfsManager {
   private initialized = false;
   private onError: LegacyErrorCallback;
   private logger: Logger;
+  private metadataService: OpfsMetadataService;
 
   constructor(config: OpfsManagerConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -98,6 +106,7 @@ export class OpfsManager {
     this.onError = config.onError ?? defaultErrorHandler;
     // Use foundation/utils logger
     this.logger = createDebugLogger('OpfsManager', this.config.debug);
+    this.metadataService = new OpfsMetadataService(this.db, this.db.config);
   }
 
   /**
@@ -174,17 +183,26 @@ export class OpfsManager {
    * Get or create a subdirectory
    */
   private getDirectory = async (
-    path: string
+    path: string,
+    options: { create?: boolean } = {}
   ): Promise<FileSystemDirectoryHandle> => {
     const root = await this.ensureInitialized();
-    const parts = path.split('/').filter(Boolean);
+    const shouldCreate = options.create ?? true;
 
-    let current = root;
-    for (const part of parts) {
-      current = await current.getDirectoryHandle(part, { create: true });
+    if (!path) {
+      return root;
     }
 
-    return current;
+    if (shouldCreate) {
+      return createDirectoryPath(root, path);
+    }
+
+    const existingDirectory = await getDirectoryAtPath(root, path, { create: false });
+    if (!existingDirectory) {
+      throw new DOMException(`Directory not found: ${path}`, 'NotFoundError');
+    }
+
+    return existingDirectory;
   };
 
   /**
@@ -201,7 +219,10 @@ export class OpfsManager {
       throw createValidationError('path', 'Path must contain a filename');
     }
 
-    const fileName = pathParts.pop() as string; // Safe after length check
+    const fileName = pathParts.pop();
+    if (!fileName) {
+      throw createValidationError('path', 'Path must contain a filename');
+    }
     const dirPath = pathParts.join('/');
 
     return { dirPath, fileName };
@@ -222,7 +243,7 @@ export class OpfsManager {
     const { dirPath, fileName } = this.parsePath(path);
 
     // Get directory handle
-    const dirHandle = dirPath ? await this.getDirectory(dirPath) : root;
+    const dirHandle = dirPath ? await this.getDirectory(dirPath, { create: true }) : root;
 
     // Create file
     const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
@@ -269,7 +290,7 @@ export class OpfsManager {
       sizeBytes: buffer.byteLength,
     });
 
-    await this.db.opfsFiles.put(metadata);
+    await this.metadataService.set(metadata);
     this.log('Wrote file:', path, metadata);
 
     return metadata;
@@ -284,7 +305,7 @@ export class OpfsManager {
     // Parse and validate path
     const { dirPath, fileName } = this.parsePath(path);
 
-    const dirHandle = dirPath ? await this.getDirectory(dirPath) : root;
+    const dirHandle = dirPath ? await this.getDirectory(dirPath, { create: false }) : root;
 
     const fileHandle = await dirHandle.getFileHandle(fileName);
     const file = await fileHandle.getFile();
@@ -309,10 +330,14 @@ export class OpfsManager {
       // Parse and validate path
       const { dirPath, fileName } = this.parsePath(path);
 
-      const dirHandle = dirPath ? await this.getDirectory(dirPath) : root;
+      const dirHandle = dirPath
+        ? await getDirectoryAtPath(root, dirPath, { create: false })
+        : root;
+      if (!dirHandle) {
+        return false;
+      }
 
-      await dirHandle.getFileHandle(fileName);
-      return true;
+      return fileExistsInOpfs(dirHandle, fileName);
     } catch (error) {
       // NotFoundError is expected when file doesn't exist
       if (error instanceof DOMException && error.name === 'NotFoundError') {
@@ -333,10 +358,10 @@ export class OpfsManager {
     // Parse and validate path
     const { dirPath, fileName } = this.parsePath(path);
 
-    const dirHandle = dirPath ? await this.getDirectory(dirPath) : root;
+    const dirHandle = dirPath ? await this.getDirectory(dirPath, { create: false }) : root;
 
     await dirHandle.removeEntry(fileName);
-    await this.db.opfsFiles.delete(path);
+    await this.metadataService.delete(path);
 
     this.log('Deleted file:', path);
   };
@@ -345,41 +370,35 @@ export class OpfsManager {
    * Get file metadata from database
    */
   getMetadata = async (path: string): Promise<OpfsMetadataEntry | undefined> => {
-    return this.db.opfsFiles.get(path);
+    return this.metadataService.get(path);
   };
 
   /**
    * Get all files for a table
    */
   getFilesByTable = async (tableName: string): Promise<OpfsMetadataEntry[]> => {
-    return this.db.opfsFiles.where('tableName').equals(tableName).toArray();
+    return this.metadataService.getByTable(tableName);
   };
 
   /**
    * Get all registered files in dependency order
    */
   getRegisteredFilesInOrder = async (): Promise<OpfsMetadataEntry[]> => {
-    const files = await this.db.opfsFiles
-      .filter((f) => f.isRegistered)
-      .toArray();
-
-    return sortByDependencies(files);
+    return this.metadataService.getInDependencyOrder();
   };
 
   /**
    * Get all view definitions
    */
   getViewDefinitions = async (): Promise<OpfsMetadataEntry[]> => {
-    return this.db.opfsFiles
-      .filter((f) => f.fileType === OpfsFileType.VIEW_DEFINITION)
-      .toArray();
+    return this.metadataService.getViews();
   };
 
   /**
    * Mark file as registered in DuckDB
    */
   markRegistered = async (path: string): Promise<void> => {
-    await this.db.opfsFiles.update(path, { isRegistered: true });
+    await this.metadataService.markRegistered(path);
     this.log('Marked registered:', path);
   };
 
@@ -387,7 +406,7 @@ export class OpfsManager {
    * Mark file as unregistered from DuckDB
    */
   markUnregistered = async (path: string): Promise<void> => {
-    await this.db.opfsFiles.update(path, { isRegistered: false });
+    await this.metadataService.markUnregistered(path);
     this.log('Marked unregistered:', path);
   };
 
@@ -395,7 +414,7 @@ export class OpfsManager {
    * Mark all files as unregistered (e.g., after DuckDB restart)
    */
   markAllUnregistered = async (): Promise<void> => {
-    await this.db.opfsFiles.toCollection().modify({ isRegistered: false });
+    await this.metadataService.markAllUnregistered();
     this.log('Marked all files unregistered');
   };
 
@@ -404,11 +423,7 @@ export class OpfsManager {
    * Optimized: uses each() to avoid loading all records into memory
    */
   getTotalSize = async (): Promise<number> => {
-    let total = 0;
-    await this.db.opfsFiles.each((file) => {
-      total += file.sizeBytes;
-    });
-    return total;
+    return this.metadataService.getTotalSize();
   };
 
   /**
@@ -416,15 +431,10 @@ export class OpfsManager {
    */
   listDirectory = async (dirPath?: string): Promise<string[]> => {
     const root = await this.ensureInitialized();
-    const dirHandle = dirPath ? await this.getDirectory(dirPath) : root;
+    const dirHandle = dirPath ? await this.getDirectory(dirPath, { create: false }) : root;
 
-    const entries: string[] = [];
-    // Use entries() method for proper type safety
-    for await (const [name] of dirHandle.entries()) {
-      entries.push(dirPath ? `${dirPath}/${name}` : name);
-    }
-
-    return entries;
+    const entries = await listDirectoryEntries(dirHandle);
+    return entries.map(([name]) => (dirPath ? `${dirPath}/${name}` : name));
   };
 
   /**
@@ -432,14 +442,10 @@ export class OpfsManager {
    */
   clear = async (): Promise<void> => {
     const root = await this.ensureInitialized();
-
-    // Remove all entries in root using entries() method for proper type safety
-    for await (const [name] of root.entries()) {
-      await root.removeEntry(name, { recursive: true });
-    }
+    await clearDirectory(root);
 
     // Clear metadata
-    await this.db.opfsFiles.clear();
+    await this.metadataService.clear();
 
     this.log('Cleared all files');
   };
@@ -467,7 +473,9 @@ const opfsManagerFactory = createSingletonFactory(
     name: 'OpfsManager',
     compareConfig: createDeepEqualComparison(isEqual, 'OpfsManager'),
     onDispose: async (instance) => {
-      await (instance as OpfsManager).dispose();
+      if (instance instanceof OpfsManager) {
+        await instance.dispose();
+      }
     },
   }
 );

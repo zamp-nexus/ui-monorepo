@@ -134,3 +134,17 @@ export {
   getDefaultAxiosInstance,
   getAxiosInstance,
 } from './instance/instance-manager';
+
+// =============================================================================
+// Circuit Breaker
+// =============================================================================
+
+export {
+  CircuitBreaker,
+  createCircuitBreakerInterceptor,
+  createCircuitBreakerRequestInterceptor,
+  setupCircuitBreakerInterceptor,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+  type CircuitBreakerConfig,
+  type CircuitBreakerInterceptorOptions,
+} from './interceptors/response/circuit-breaker-interceptor';

@@ -47,16 +47,34 @@ import {
 import { resolveConfig, validateConfig } from './config-resolver';
 import { isBrowser } from '@open-insights-web/foundation-utils';
 
+// =============================================================================
+// Lifecycle State
+// =============================================================================
+
 /**
- * Breadcrumb storage
+ * Lifecycle states for the metrics SDK.
+ * Transitions: uninitialized → initializing → ready → shutting_down → shutdown
+ * Re-initialization requires explicit reinitialize() call from shutdown state.
  */
+type MetricsLifecycleState =
+  | 'uninitialized'
+  | 'initializing'
+  | 'ready'
+  | 'shutting_down'
+  | 'shutdown';
+
+// =============================================================================
+// Module-level State
+// =============================================================================
+
 const breadcrumbs: Breadcrumb[] = [];
 const MAX_BREADCRUMBS = 100;
 
-/**
- * Foundation Metrics SDK singleton instance
- */
+/** Singleton instance */
 let instance: FoundationMetrics | null = null;
+
+/** Current lifecycle state */
+let lifecycleState: MetricsLifecycleState = 'uninitialized';
 
 /**
  * Foundation Metrics SDK
@@ -132,49 +150,113 @@ export class FoundationMetrics {
   }
 
   /**
-   * Initialize the Foundation Metrics SDK
+   * Initialize the Foundation Metrics SDK.
+   *
+   * Uses a mutex to prevent race conditions during concurrent initialization.
+   * If the SDK was previously shut down, call `reinitialize()` instead.
    */
   static init(config: FoundationMetricsConfig): FoundationMetrics {
     // Validate we're in a browser environment
     if (!isBrowser()) {
       console.warn('[FoundationMetrics] Not in browser environment, skipping initialization');
-      // Return a no-op instance for SSR
       return FoundationMetrics.createNoOpInstance(config);
     }
 
-    // Return existing instance if already initialized
-    if (instance && !instance.isShutdown) {
+    // Return existing instance if already ready
+    if (lifecycleState === 'ready' && instance && !instance.isShutdown) {
       console.warn('[FoundationMetrics] Already initialized, returning existing instance');
       return instance;
     }
 
+    // Prevent re-init after shutdown — use reinitialize() instead
+    if (lifecycleState === 'shutdown') {
+      throw new Error(
+        'FoundationMetrics was shut down. Call FoundationMetrics.reinitialize() to re-initialize, ' +
+        'which properly cleans up previous OTel exporters before creating new ones.'
+      );
+    }
+
+    // Prevent double init during initialization
+    if (lifecycleState === 'initializing') {
+      console.warn('[FoundationMetrics] Initialization already in progress');
+      // Return a no-op instance as a safe fallback for the concurrent caller
+      return FoundationMetrics.createNoOpInstance(config);
+    }
+
+    return FoundationMetrics.initializeInternal(config);
+  }
+
+  /**
+   * Re-initialize the SDK after a shutdown.
+   *
+   * Unlike `init()`, this method is safe to call after `shutdown()` because it
+   * properly transitions from the shutdown state to avoid duplicate OTel exporters.
+   */
+  static reinitialize(config: FoundationMetricsConfig): FoundationMetrics {
+    if (!isBrowser()) {
+      console.warn('[FoundationMetrics] Not in browser environment, skipping initialization');
+      return FoundationMetrics.createNoOpInstance(config);
+    }
+
+    if (lifecycleState === 'ready' && instance && !instance.isShutdown) {
+      console.warn('[FoundationMetrics] Already initialized, returning existing instance');
+      return instance;
+    }
+
+    if (lifecycleState !== 'shutdown' && lifecycleState !== 'uninitialized') {
+      throw new Error(
+        `FoundationMetrics.reinitialize() can only be called in 'shutdown' or 'uninitialized' state ` +
+        `(current: '${lifecycleState}')`
+      );
+    }
+
+    // Reset state to allow initialization
+    lifecycleState = 'uninitialized';
+    return FoundationMetrics.initializeInternal(config);
+  }
+
+  /**
+   * Internal initialization logic shared by init() and reinitialize()
+   */
+  private static initializeInternal(config: FoundationMetricsConfig): FoundationMetrics {
     // Validate configuration
     const validationErrors = validateConfig(config);
     if (validationErrors.length > 0) {
       throw new Error(`FoundationMetrics configuration errors:\n${validationErrors.join('\n')}`);
     }
 
-    // Resolve configuration with defaults
-    const resolvedConfig = resolveConfig(config);
+    lifecycleState = 'initializing';
 
-    // Initialize OpenTelemetry providers
-    initializeOTelProviders(resolvedConfig);
+    try {
+      // Resolve configuration with defaults
+      const resolvedConfig = resolveConfig(config);
 
-    // Initialize context manager
-    initializeContextManager(resolvedConfig);
+      // Initialize OpenTelemetry providers
+      initializeOTelProviders(resolvedConfig);
 
-    // Create instance
-    breadcrumbs.length = 0;
-    instance = new FoundationMetrics(resolvedConfig);
+      // Initialize context manager
+      initializeContextManager(resolvedConfig);
 
-    // Set up page unload handler
-    instance.setupUnloadHandler();
+      // Create instance
+      breadcrumbs.length = 0;
+      instance = new FoundationMetrics(resolvedConfig);
 
-    if (resolvedConfig.debug) {
-      console.log('[FoundationMetrics] Initialized with config:', resolvedConfig);
+      // Set up page unload handler
+      instance.setupUnloadHandler();
+
+      lifecycleState = 'ready';
+
+      if (resolvedConfig.debug) {
+        console.log('[FoundationMetrics] Initialized with config:', resolvedConfig);
+      }
+
+      return instance;
+    } catch (error) {
+      // Revert to uninitialized on failure so init() can be retried
+      lifecycleState = 'uninitialized';
+      instance = null;
+      throw error;
     }
-
-    return instance;
   }
 
   /**
@@ -188,10 +270,17 @@ export class FoundationMetrics {
   }
 
   /**
-   * Check if SDK is initialized
+   * Check if SDK is initialized and ready
    */
   static isInitialized(): boolean {
-    return instance !== null && !instance.isShutdown && isOTelInitialized();
+    return lifecycleState === 'ready' && instance !== null && !instance.isShutdown && isOTelInitialized();
+  }
+
+  /**
+   * Get the current lifecycle state (for diagnostics)
+   */
+  static getLifecycleState(): MetricsLifecycleState {
+    return lifecycleState;
   }
 
   /**
@@ -525,13 +614,18 @@ export class FoundationMetrics {
   }
 
   /**
-   * Shutdown the SDK
+   * Shutdown the SDK.
+   *
+   * After shutdown, call `FoundationMetrics.reinitialize()` to start a new session.
+   * Calling `init()` after shutdown will throw — this prevents accidental duplicate
+   * OTel exporters from being registered.
    */
   async shutdown(): Promise<void> {
-    if (this.isShutdown) {
+    if (this.isShutdown || lifecycleState === 'shutdown' || lifecycleState === 'shutting_down') {
       return;
     }
 
+    lifecycleState = 'shutting_down';
     this.isShutdown = true;
 
     // Remove event listeners to prevent memory leaks
@@ -546,11 +640,12 @@ export class FoundationMetrics {
     // Shutdown context manager
     shutdownContextManager();
 
-    // Clear in-memory breadcrumbs to avoid stale state across reinitialization
+    // Clear in-memory state
     breadcrumbs.length = 0;
-
-    // Clear instance
+    this.instrumentCache.clear();
     instance = null;
+
+    lifecycleState = 'shutdown';
 
     if (this.config.debug) {
       console.log('[FoundationMetrics] Shutdown complete');
@@ -704,7 +799,19 @@ export class FoundationMetrics {
   }
 }
 
+/**
+ * Reset all module-level state. Intended for test teardown only.
+ * In production, use shutdown() + reinitialize() for proper cleanup.
+ */
+export const resetMetricsStateForTesting = (): void => {
+  instance = null;
+  breadcrumbs.length = 0;
+  lifecycleState = 'uninitialized';
+};
+
 // Export convenience functions
 export const init = FoundationMetrics.init.bind(FoundationMetrics);
+export const reinitialize = FoundationMetrics.reinitialize.bind(FoundationMetrics);
 export const getInstance = FoundationMetrics.getInstance.bind(FoundationMetrics);
 export const isInitialized = FoundationMetrics.isInitialized.bind(FoundationMetrics);
+export const getLifecycleState = FoundationMetrics.getLifecycleState.bind(FoundationMetrics);

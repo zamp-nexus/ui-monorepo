@@ -30,7 +30,7 @@ import {
  * @example
  * ```typescript
  * class CustomBridgeError extends BridgeError {
- *   readonly code = FoundationErrorCode.BRIDGE_WORKER_ERROR;
+ *   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_ERROR;
  *
  *   constructor(workerId: string, cause?: Error) {
  *     super(`Worker ${workerId} failed`, { workerId }, cause);

@@ -23,7 +23,7 @@
  * - VALIDATION_* : Data validation errors
  * - CONFIG_* : Configuration errors
  */
-export const FoundationErrorCode = {
+export const FOUNDATION_ERROR_CODE = {
   // ===========================================================================
   // Bridge Errors (DuckDB Bridge Layer)
   // ===========================================================================
@@ -210,7 +210,7 @@ export const FoundationErrorCode = {
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
 } as const;
 
-export type FoundationErrorCode = (typeof FoundationErrorCode)[keyof typeof FoundationErrorCode];
+export type FoundationErrorCode = (typeof FOUNDATION_ERROR_CODE)[keyof typeof FOUNDATION_ERROR_CODE];
 
 // =============================================================================
 // Error Categories
@@ -219,7 +219,7 @@ export type FoundationErrorCode = (typeof FoundationErrorCode)[keyof typeof Foun
 /**
  * Categories for grouping error types
  */
-export const ErrorCategory = {
+export const ERROR_CATEGORY = {
   /** Transient errors that may resolve on retry */
   TRANSIENT: 'transient',
   /** Permanent errors that will not resolve on retry */
@@ -234,7 +234,7 @@ export const ErrorCategory = {
   UNKNOWN: 'unknown',
 } as const;
 
-export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory];
+export type ErrorCategory = (typeof ERROR_CATEGORY)[keyof typeof ERROR_CATEGORY];
 
 // =============================================================================
 // Error Code to Category Mapping
@@ -249,81 +249,81 @@ export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory];
 export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
   switch (code) {
     // Transient errors (may resolve on retry)
-    case FoundationErrorCode.BRIDGE_QUERY_TIMEOUT:
-    case FoundationErrorCode.BRIDGE_WORKER_POOL_EXHAUSTED:
-    case FoundationErrorCode.BRIDGE_WORKER_ERROR:
-    case FoundationErrorCode.BRIDGE_WORKER_INIT_FAILED:
-    case FoundationErrorCode.BRIDGE_POOL_AT_CAPACITY:
-    case FoundationErrorCode.NETWORK_REQUEST_FAILED:
-    case FoundationErrorCode.NETWORK_TIMEOUT:
-    case FoundationErrorCode.NETWORK_OFFLINE:
-    case FoundationErrorCode.NETWORK_HEALTH_CHECK_FAILED:
-    case FoundationErrorCode.SYNC_FAILED:
-    case FoundationErrorCode.SYNC_QUEUE_PROCESSING_FAILED:
-    case FoundationErrorCode.SYNC_CROSS_TAB_ERROR:
-    case FoundationErrorCode.SYNC_NETWORK_MONITOR_ERROR:
-    case FoundationErrorCode.SYNC_REHYDRATION_FAILED:
-    case FoundationErrorCode.DATABASE_CONNECTION_FAILED:
-    case FoundationErrorCode.RESOURCE_BUSY:
-    case FoundationErrorCode.RESOURCE_LOCKED:
-      return ErrorCategory.TRANSIENT;
+    case FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT:
+    case FOUNDATION_ERROR_CODE.BRIDGE_WORKER_POOL_EXHAUSTED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_WORKER_ERROR:
+    case FOUNDATION_ERROR_CODE.BRIDGE_WORKER_INIT_FAILED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_POOL_AT_CAPACITY:
+    case FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED:
+    case FOUNDATION_ERROR_CODE.NETWORK_TIMEOUT:
+    case FOUNDATION_ERROR_CODE.NETWORK_OFFLINE:
+    case FOUNDATION_ERROR_CODE.NETWORK_HEALTH_CHECK_FAILED:
+    case FOUNDATION_ERROR_CODE.SYNC_FAILED:
+    case FOUNDATION_ERROR_CODE.SYNC_QUEUE_PROCESSING_FAILED:
+    case FOUNDATION_ERROR_CODE.SYNC_CROSS_TAB_ERROR:
+    case FOUNDATION_ERROR_CODE.SYNC_NETWORK_MONITOR_ERROR:
+    case FOUNDATION_ERROR_CODE.SYNC_REHYDRATION_FAILED:
+    case FOUNDATION_ERROR_CODE.DATABASE_CONNECTION_FAILED:
+    case FOUNDATION_ERROR_CODE.RESOURCE_BUSY:
+    case FOUNDATION_ERROR_CODE.RESOURCE_LOCKED:
+      return ERROR_CATEGORY.TRANSIENT;
 
     // User input errors
-    case FoundationErrorCode.VALIDATION_FAILED:
-    case FoundationErrorCode.VALIDATION_REQUIRED:
-    case FoundationErrorCode.VALIDATION_TYPE:
-    case FoundationErrorCode.VALIDATION_RANGE:
-    case FoundationErrorCode.VALIDATION_FORMAT:
-    case FoundationErrorCode.VALIDATION_SCHEMA:
-    case FoundationErrorCode.QUERY_SYNTAX_ERROR:
-    case FoundationErrorCode.QUERY_INVALID_PARAMS:
-    case FoundationErrorCode.SYNC_INVALID_MUTATION:
-    case FoundationErrorCode.BRIDGE_SQL_VALIDATION_FAILED:
-      return ErrorCategory.USER_INPUT;
+    case FOUNDATION_ERROR_CODE.VALIDATION_FAILED:
+    case FOUNDATION_ERROR_CODE.VALIDATION_REQUIRED:
+    case FOUNDATION_ERROR_CODE.VALIDATION_TYPE:
+    case FOUNDATION_ERROR_CODE.VALIDATION_RANGE:
+    case FOUNDATION_ERROR_CODE.VALIDATION_FORMAT:
+    case FOUNDATION_ERROR_CODE.VALIDATION_SCHEMA:
+    case FOUNDATION_ERROR_CODE.QUERY_SYNTAX_ERROR:
+    case FOUNDATION_ERROR_CODE.QUERY_INVALID_PARAMS:
+    case FOUNDATION_ERROR_CODE.SYNC_INVALID_MUTATION:
+    case FOUNDATION_ERROR_CODE.BRIDGE_SQL_VALIDATION_FAILED:
+      return ERROR_CATEGORY.USER_INPUT;
 
     // Configuration errors
-    case FoundationErrorCode.CONFIG_INVALID:
-    case FoundationErrorCode.CONFIG_MISSING:
-    case FoundationErrorCode.CONFIG_CONFLICT:
-    case FoundationErrorCode.BRIDGE_NOT_INITIALIZED:
-    case FoundationErrorCode.BRIDGE_ALREADY_INITIALIZED:
-    case FoundationErrorCode.DATABASE_NOT_INITIALIZED:
-      return ErrorCategory.CONFIGURATION;
+    case FOUNDATION_ERROR_CODE.CONFIG_INVALID:
+    case FOUNDATION_ERROR_CODE.CONFIG_MISSING:
+    case FOUNDATION_ERROR_CODE.CONFIG_CONFLICT:
+    case FOUNDATION_ERROR_CODE.BRIDGE_NOT_INITIALIZED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_ALREADY_INITIALIZED:
+    case FOUNDATION_ERROR_CODE.DATABASE_NOT_INITIALIZED:
+      return ERROR_CATEGORY.CONFIGURATION;
 
     // Infrastructure errors
-    case FoundationErrorCode.BRIDGE_INIT_FAILED:
-    case FoundationErrorCode.BRIDGE_SHUTDOWN_FAILED:
-    case FoundationErrorCode.BRIDGE_WASM_LOAD_FAILED:
-    case FoundationErrorCode.BRIDGE_IPC_ERROR:
-    case FoundationErrorCode.BRIDGE_OPFS_NOT_FOUND:
-    case FoundationErrorCode.BRIDGE_OPFS_PERMISSION_DENIED:
-    case FoundationErrorCode.BRIDGE_OPFS_WRITE_FAILED:
-    case FoundationErrorCode.DATABASE_OPFS_NOT_SUPPORTED:
-    case FoundationErrorCode.DATABASE_OPFS_INIT_FAILED:
-    case FoundationErrorCode.DATABASE_OPFS_ERROR:
-    case FoundationErrorCode.DATABASE_INDEXEDDB_ERROR:
-    case FoundationErrorCode.DATABASE_QUOTA_EXCEEDED:
-    case FoundationErrorCode.DATABASE_OPERATION_FAILED:
-    case FoundationErrorCode.DATABASE_DUPLICATE_ENTRY:
-      return ErrorCategory.INFRASTRUCTURE;
+    case FOUNDATION_ERROR_CODE.BRIDGE_INIT_FAILED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_SHUTDOWN_FAILED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_WASM_LOAD_FAILED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_IPC_ERROR:
+    case FOUNDATION_ERROR_CODE.BRIDGE_OPFS_NOT_FOUND:
+    case FOUNDATION_ERROR_CODE.BRIDGE_OPFS_PERMISSION_DENIED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_OPFS_WRITE_FAILED:
+    case FOUNDATION_ERROR_CODE.DATABASE_OPFS_NOT_SUPPORTED:
+    case FOUNDATION_ERROR_CODE.DATABASE_OPFS_INIT_FAILED:
+    case FOUNDATION_ERROR_CODE.DATABASE_OPFS_ERROR:
+    case FOUNDATION_ERROR_CODE.DATABASE_INDEXEDDB_ERROR:
+    case FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED:
+    case FOUNDATION_ERROR_CODE.DATABASE_OPERATION_FAILED:
+    case FOUNDATION_ERROR_CODE.DATABASE_DUPLICATE_ENTRY:
+      return ERROR_CATEGORY.INFRASTRUCTURE;
 
     // Permanent/unrecoverable errors
-    case FoundationErrorCode.BRIDGE_QUERY_CANCELLED:
-    case FoundationErrorCode.NETWORK_REQUEST_CANCELLED:
-    case FoundationErrorCode.BRIDGE_POOL_SHUTDOWN:
-    case FoundationErrorCode.QUERY_TABLE_NOT_FOUND:
-    case FoundationErrorCode.QUERY_COLUMN_NOT_FOUND:
-    case FoundationErrorCode.SYNC_MUTATION_NOT_FOUND:
-    case FoundationErrorCode.SYNC_OFFLINE_QUEUE_FULL:
-    case FoundationErrorCode.SYNC_ID_MAPPING_FAILED:
-    case FoundationErrorCode.RESOURCE_DISPOSED:
-    case FoundationErrorCode.RESOURCE_NOT_FOUND:
-    case FoundationErrorCode.NOT_IMPLEMENTED:
-      return ErrorCategory.PERMANENT;
+    case FOUNDATION_ERROR_CODE.BRIDGE_QUERY_CANCELLED:
+    case FOUNDATION_ERROR_CODE.NETWORK_REQUEST_CANCELLED:
+    case FOUNDATION_ERROR_CODE.BRIDGE_POOL_SHUTDOWN:
+    case FOUNDATION_ERROR_CODE.QUERY_TABLE_NOT_FOUND:
+    case FOUNDATION_ERROR_CODE.QUERY_COLUMN_NOT_FOUND:
+    case FOUNDATION_ERROR_CODE.SYNC_MUTATION_NOT_FOUND:
+    case FOUNDATION_ERROR_CODE.SYNC_OFFLINE_QUEUE_FULL:
+    case FOUNDATION_ERROR_CODE.SYNC_ID_MAPPING_FAILED:
+    case FOUNDATION_ERROR_CODE.RESOURCE_DISPOSED:
+    case FOUNDATION_ERROR_CODE.RESOURCE_NOT_FOUND:
+    case FOUNDATION_ERROR_CODE.NOT_IMPLEMENTED:
+      return ERROR_CATEGORY.PERMANENT;
 
     // Unknown/internal
     default:
-      return ErrorCategory.UNKNOWN;
+      return ERROR_CATEGORY.UNKNOWN;
   }
 }
 
@@ -334,5 +334,5 @@ export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
  * @returns True if the error may resolve on retry
  */
 export function isRetryableErrorCode(code: FoundationErrorCode): boolean {
-  return getErrorCategory(code) === ErrorCategory.TRANSIENT;
+  return getErrorCategory(code) === ERROR_CATEGORY.TRANSIENT;
 }

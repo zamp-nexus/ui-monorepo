@@ -3,75 +3,20 @@
  * @module tables/mutation-queue
  */
 
-import { ConflictStrategy, type JsonValue } from '@open-insights-web/foundation-data-model';
-import { MutationStatus } from '../core/config';
+import {
+  CONFLICT_STRATEGY,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  type CreateMutationOptions,
+  type JsonValue,
+  type MutationQueueEntry,
+  type MutationStatus,
+} from '@open-insights-web/foundation-data-model';
 import { generateIdempotencyKey } from '../utils/hash';
 
-/**
- * Mutation type constants for CRUD operations
- */
-export const MutationType = {
-  CREATE: 'create',
-  UPDATE: 'update',
-  DELETE: 'delete',
-} as const;
 
-export type MutationType = (typeof MutationType)[keyof typeof MutationType];
-
-/**
- * Mutation queue entry stored in Dexie
- * @template TPayload - Type of the mutation payload (defaults to JsonValue)
- */
-export interface MutationQueueEntry<TPayload = JsonValue> {
-  /** Unique mutation ID */
-  id: string;
-  /** Idempotency key to prevent duplicate processing */
-  idempotencyKey: string;
-  /** Timestamp when mutation was created */
-  timestamp: number;
-  /** Current status */
-  status: MutationStatus;
-  /** Type of mutation */
-  type: MutationType;
-  /** Target table/entity name */
-  tableName: string;
-  /** Entity ID (may be provisional for offline creates) */
-  entityId: string;
-  /** Mutation payload */
-  payload: TPayload;
-  /** Optimistic data applied to cache */
-  optimisticData?: TPayload;
-  /** Previous data for rollback */
-  previousData?: TPayload;
-  /** Number of retry attempts */
-  retryCount: number;
-  /** Last error message if failed */
-  lastError?: string;
-  /** Server-assigned ID after successful sync */
-  serverId?: string;
-  /** Related query keys to invalidate on success */
-  invalidateKeys?: string[];
-  /** Dependencies on other mutations (must complete first) */
-  dependsOn?: string[];
-  /** Conflict resolution strategy */
-  conflictStrategy?: ConflictStrategy;
-}
-
-/**
- * Create mutation entry options
- * @template TPayload - Type of the mutation payload (defaults to JsonValue)
- */
-export interface CreateMutationOptions<TPayload = JsonValue> {
-  type: MutationType;
-  tableName: string;
-  entityId: string;
-  payload: TPayload;
-  optimisticData?: TPayload;
-  previousData?: TPayload;
-  invalidateKeys?: string[];
-  dependsOn?: string[];
-  conflictStrategy?: ConflictStrategy;
-}
+export { MUTATION_TYPE };
+export type { CreateMutationOptions, MutationQueueEntry };
 
 /**
  * Create a new mutation queue entry
@@ -98,7 +43,7 @@ export const createMutationEntry = <TPayload = JsonValue>(
     id,
     idempotencyKey,
     timestamp: Date.now(),
-    status: MutationStatus.PENDING,
+    status: MUTATION_STATUS.PENDING,
     type: options.type,
     tableName: options.tableName,
     entityId: options.entityId,
@@ -108,7 +53,7 @@ export const createMutationEntry = <TPayload = JsonValue>(
     retryCount: 0,
     invalidateKeys: options.invalidateKeys,
     dependsOn: options.dependsOn,
-    conflictStrategy: options.conflictStrategy ?? ConflictStrategy.LAST_WRITE_WINS,
+    conflictStrategy: options.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
   };
 };
 
@@ -133,7 +78,7 @@ export const shouldRetry = <TPayload = JsonValue>(
   maxRetries: number
 ): boolean => {
   return (
-    mutation.status === MutationStatus.FAILED &&
+    mutation.status === MUTATION_STATUS.FAILED &&
     mutation.retryCount < maxRetries
   );
 };
@@ -147,7 +92,7 @@ export const prepareForRetry = <TPayload = JsonValue>(
 ): MutationQueueEntry<TPayload> => {
   return {
     ...mutation,
-    status: MutationStatus.PENDING,
+    status: MUTATION_STATUS.PENDING,
     retryCount: mutation.retryCount + 1,
     lastError: error,
   };
@@ -164,7 +109,11 @@ export interface MutationQueueOperations {
   /** Get mutation by ID */
   get(id: string): Promise<MutationQueueEntry | undefined>;
   /** Update mutation status */
-  updateStatus(id: string, status: MutationStatus, updates?: Partial<MutationQueueEntry>): Promise<void>;
+  updateStatus(
+    id: string,
+    status: MutationStatus,
+    updates?: Partial<MutationQueueEntry>
+  ): Promise<void>;
   /** Get all pending mutations in order */
   getPending(): Promise<MutationQueueEntry[]>;
   /** Get mutations by status */

@@ -3,8 +3,12 @@
  * @module tables/query-cache
  */
 
-import type { QueryKeyBase, JsonValue } from '@open-insights-web/foundation-data-model';
-import { QueryCacheStatus } from '../core/config';
+import {
+  QUERY_CACHE_STATUS,
+  type JsonValue,
+  type QueryCacheStatus,
+  type QueryKeyBase,
+} from '@open-insights-web/foundation-data-model';
 
 /**
  * Query cache entry stored in Dexie
@@ -76,12 +80,12 @@ export const getCacheStatus = (
   staleThreshold: number
 ): QueryCacheStatus => {
   if (isCacheExpired(entry)) {
-    return QueryCacheStatus.EXPIRED;
+    return QUERY_CACHE_STATUS.EXPIRED;
   }
   if (isCacheStale(entry, staleThreshold)) {
-    return QueryCacheStatus.STALE;
+    return QUERY_CACHE_STATUS.STALE;
   }
-  return QueryCacheStatus.FRESH;
+  return QUERY_CACHE_STATUS.FRESH;
 };
 
 /**

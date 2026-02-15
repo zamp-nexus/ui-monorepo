@@ -7,7 +7,12 @@
  * @module types/query
  */
 
-import type { Operation } from './operations';
+import {
+  type Operation,
+  OPERATIONS,
+  isMutationOperation,
+  isReadOperation,
+} from './operations';
 import type { DimensionSpec } from './dimension';
 import type { MeasureSpec } from './measure';
 import type { FilterExpression } from './filter';
@@ -55,7 +60,14 @@ export type DataSource = (typeof QUERY_DATA_SOURCES)[keyof typeof QUERY_DATA_SOU
 // =============================================================================
 
 /**
- * Data freshness requirements for query execution
+ * Data freshness requirements for **per-query** execution.
+ *
+ * Specifies how fresh the data must be when executing a query.
+ * Includes `HISTORICAL` for queries that explicitly accept stale data.
+ *
+ * @see ANALYTICS_FRESHNESS_LEVELS in `./table` for per-table analytics configuration
+ *      (does not include `historical` because table-level config describes capability,
+ *      not a per-query staleness tolerance).
  */
 export const FRESHNESS_REQUIREMENTS = {
   /** Real-time data required - always fetch from source */
@@ -384,18 +396,14 @@ export const queryRequiresDuckDB = (query: Query): boolean => {
  * Check if query is a mutation (create/update/delete).
  */
 export const isMutationQuery = (query: Query): boolean => {
-  return (
-    query.operation === 'create' ||
-    query.operation === 'update' ||
-    query.operation === 'delete'
-  );
+  return query.operation !== undefined && isMutationOperation(query.operation);
 };
 
 /**
  * Check if query is a read operation (get/list).
  */
 export const isReadQuery = (query: Query): boolean => {
-  return query.operation === 'get' || query.operation === 'list' || query.operation === undefined;
+  return query.operation === undefined || isReadOperation(query.operation);
 };
 
 /**
@@ -420,7 +428,7 @@ export const isFreshnessRequirement = (value: unknown): value is FreshnessRequir
  * Returns 'list' if operation is not specified.
  */
 export const getQueryOperation = (query: Query): Operation => {
-  return query.operation ?? 'list';
+  return query.operation ?? OPERATIONS.LIST;
 };
 
 /**
@@ -451,7 +459,7 @@ export const createListQuery = (
  * createGetQuery('users', '123')
  */
 export const createGetQuery = (table: string, entityId: string): Query => ({
-  operation: 'get',
+  operation: OPERATIONS.GET,
   dimensions: [{ member: `${table}.id` }],
   entityId,
 });

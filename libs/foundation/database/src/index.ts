@@ -19,8 +19,16 @@
 
 export {
   DatabaseFacade,
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
   getDatabaseFacade,
   resetDatabaseFacade,
+  hasDatabaseFacade,
+} from './facade';
+
+export type {
+  DatabaseTransactionMode,
+  DatabaseTransactionTable,
 } from './facade';
 
 // ============================================================================
@@ -29,9 +37,9 @@ export {
 
 export {
   SYNC_STATE_KEYS,
-  MutationStatus,
-  QueryCacheStatus,
-} from './core';
+  MUTATION_STATUS,
+  QUERY_CACHE_STATUS,
+} from './core/config';
 
 // ============================================================================
 // Tables (used by data-layer, sync-engine, bridge)
@@ -44,25 +52,30 @@ export {
   type QueryCacheEntry,
 
   // Mutation queue (used by sync-engine, data-layer)
-  MutationType,
+  MUTATION_TYPE,
   createMutationEntry,
   canProcessMutation,
   type MutationQueueEntry,
   type CreateMutationOptions,
 
   // OPFS metadata (used by bridge)
-  OpfsFileType,
+  OPFS_FILE_TYPE,
   createOpfsMetadata,
   type OpfsMetadataEntry,
   type OpfsFileSchema,
 
   // Sync state (used by bridge, sync-engine)
   // NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
+  createTableSyncMetadataEntry,
+  needsTableUpdate,
+  getFilesNeedingDownload,
   isDuckDBViewsValue,
   isNetworkStatus,
   DEFAULT_NETWORK_STATUS,
   type DuckDBViewsValue,
   type SyncStateEntry,
+  type LastSyncValue,
+  type TableSyncMetadataEntry,
 } from './tables';
 
 // ============================================================================
@@ -78,11 +91,8 @@ export {
 // 2. InsightsDatabase (internal) - Raw Dexie database access
 //    Use getDatabase() only in other foundation libraries (sync-engine, bridge)
 //
-// Both patterns use a shared registry (database-registry.ts) to ensure
-// the same underlying database instance is used. If DatabaseFacade creates
-// a database, getDatabase() returns that same instance.
-//
-// The registry pattern ensures the singletons stay synchronized.
+// Both patterns share the same singleton source of truth in core/database.ts.
+// If DatabaseFacade creates a database, getDatabase() returns that same instance.
 //
 
 export {
@@ -91,7 +101,7 @@ export {
 } from './core/database';
 
 // Services (used by bridge for type-safe state operations)
-export { SyncStateService } from './services';
+export { SyncStateService } from './services/sync-state';
 
 // OPFS Manager (used by bridge for analytics file management)
 // NOTE: Error callbacks use LegacyErrorCallback from @foundation/data-model
@@ -118,4 +128,4 @@ export {
   DatabaseError,
   isDatabaseError,
   isQuotaExceededError,
-} from './errors';
+} from './errors/database-errors';

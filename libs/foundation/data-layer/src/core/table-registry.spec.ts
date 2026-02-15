@@ -1,4 +1,4 @@
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
 import { TIME_MS } from '@open-insights-web/foundation-utils';
 
 import {
@@ -22,7 +22,7 @@ const mockTableWithCache: UnifiedTableConfig = {
 
 const mockTableWithConflict: UnifiedTableConfig = {
   name: 'comments',
-  conflictStrategy: ConflictStrategy.SERVER_WINS,
+  conflictStrategy: CONFLICT_STRATEGY.SERVER_WINS,
   mergeConfig: {
     serverFields: ['updatedAt', 'version'],
     clientFields: ['draft'],
@@ -379,36 +379,36 @@ describe('TableRegistry', () => {
       it('should return the global default when table has no override', () => {
         const registry = new TableRegistry([mockTable]);
 
-        expect(registry.getConflictStrategy('users')).toBe(ConflictStrategy.LAST_WRITE_WINS);
+        expect(registry.getConflictStrategy('users')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
       });
 
       it('should return per-table conflict strategy override', () => {
         const registry = new TableRegistry([mockTableWithConflict]);
 
-        expect(registry.getConflictStrategy('comments')).toBe(ConflictStrategy.SERVER_WINS);
+        expect(registry.getConflictStrategy('comments')).toBe(CONFLICT_STRATEGY.SERVER_WINS);
       });
 
       it('should return custom default when provided in constructor', () => {
         const registry = new TableRegistry([mockTable], {
-          conflictStrategy: ConflictStrategy.CLIENT_WINS,
+          conflictStrategy: CONFLICT_STRATEGY.CLIENT_WINS,
         });
 
-        expect(registry.getConflictStrategy('users')).toBe(ConflictStrategy.CLIENT_WINS);
+        expect(registry.getConflictStrategy('users')).toBe(CONFLICT_STRATEGY.CLIENT_WINS);
       });
 
       it('should prefer per-table override over custom default', () => {
         const registry = new TableRegistry([mockTableWithConflict], {
-          conflictStrategy: ConflictStrategy.CLIENT_WINS,
+          conflictStrategy: CONFLICT_STRATEGY.CLIENT_WINS,
         });
 
-        expect(registry.getConflictStrategy('comments')).toBe(ConflictStrategy.SERVER_WINS);
+        expect(registry.getConflictStrategy('comments')).toBe(CONFLICT_STRATEGY.SERVER_WINS);
       });
 
       it('should return default for non-existent table', () => {
         const registry = new TableRegistry();
 
         expect(registry.getConflictStrategy('nonexistent')).toBe(
-          ConflictStrategy.LAST_WRITE_WINS
+          CONFLICT_STRATEGY.LAST_WRITE_WINS
         );
       });
     });
@@ -446,7 +446,7 @@ describe('TableRegistry', () => {
 
         // Only mockTableWithConflict has an explicit conflictStrategy
         expect(strategies).toEqual({
-          comments: ConflictStrategy.SERVER_WINS,
+          comments: CONFLICT_STRATEGY.SERVER_WINS,
         });
       });
 
@@ -618,19 +618,19 @@ describe('TableRegistry', () => {
     it('should apply default conflictStrategy of LAST_WRITE_WINS', () => {
       const registry = new TableRegistry([mockTable]);
 
-      expect(registry.getConflictStrategy('users')).toBe(ConflictStrategy.LAST_WRITE_WINS);
+      expect(registry.getConflictStrategy('users')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
     });
 
     it('should allow overriding all defaults', () => {
       const registry = new TableRegistry([mockTable], {
         staleTime: 1000,
         gcTime: 2000,
-        conflictStrategy: ConflictStrategy.MERGE,
+        conflictStrategy: CONFLICT_STRATEGY.MERGE,
       });
 
       expect(registry.getStaleTime('users')).toBe(1000);
       expect(registry.getGcTime('users')).toBe(2000);
-      expect(registry.getConflictStrategy('users')).toBe(ConflictStrategy.MERGE);
+      expect(registry.getConflictStrategy('users')).toBe(CONFLICT_STRATEGY.MERGE);
     });
   });
 });
@@ -658,12 +658,12 @@ describe('createTableRegistry', () => {
     const registry = createTableRegistry([mockTable], {
       staleTime: 7000,
       gcTime: 14_000,
-      conflictStrategy: ConflictStrategy.SERVER_WINS,
+      conflictStrategy: CONFLICT_STRATEGY.SERVER_WINS,
     });
 
     expect(registry.getStaleTime('users')).toBe(7000);
     expect(registry.getGcTime('users')).toBe(14_000);
-    expect(registry.getConflictStrategy('users')).toBe(ConflictStrategy.SERVER_WINS);
+    expect(registry.getConflictStrategy('users')).toBe(CONFLICT_STRATEGY.SERVER_WINS);
   });
 
   it('should create an empty registry when called with no arguments', () => {

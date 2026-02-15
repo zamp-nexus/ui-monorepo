@@ -26,10 +26,12 @@ export {
 export {
   MutationBuilder,
   quickMutation,
-  MutationType,
-  MutationStatus,
+  MUTATION_TYPE,
+  MUTATION_STATUS,
   type TestMutation,
   type MutationMeta,
+  type MutationType,
+  type MutationStatus,
 } from './mutation-builder';
 
 // Test Data

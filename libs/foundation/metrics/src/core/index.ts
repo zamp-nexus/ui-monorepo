@@ -6,8 +6,10 @@
 export {
   FoundationMetrics,
   init,
+  reinitialize,
   getInstance,
   isInitialized,
+  getLifecycleState,
 } from './foundation-metrics';
 
 export {

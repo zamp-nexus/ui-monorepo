@@ -9,8 +9,10 @@
 
 import isEqual from 'react-fast-compare';
 import {
-  ConflictStrategy,
+  CONFLICT_STRATEGY,
+  CONFLICT_WINNER,
   type ConflictContext,
+  type ConflictStrategy,
   type ConflictResult,
   type MergeConfig,
 } from '@open-insights-web/foundation-data-model';
@@ -31,7 +33,7 @@ export const DEFAULT_MERGE_CONFIG: MergeConfig = {
  */
 export const serverWins = <T>(context: ConflictContext<T>): ConflictResult<T> => ({
   resolvedData: context.serverData,
-  winner: 'server',
+  winner: CONFLICT_WINNER.SERVER,
   requiresReview: false,
 });
 
@@ -40,7 +42,7 @@ export const serverWins = <T>(context: ConflictContext<T>): ConflictResult<T> =>
  */
 export const clientWins = <T>(context: ConflictContext<T>): ConflictResult<T> => ({
   resolvedData: context.clientData,
-  winner: 'client',
+  winner: CONFLICT_WINNER.CLIENT,
   requiresReview: false,
 });
 
@@ -51,14 +53,14 @@ export const lastWriteWins = <T>(context: ConflictContext<T>): ConflictResult<T>
   if (context.clientTimestamp > context.serverTimestamp) {
     return {
       resolvedData: context.clientData,
-      winner: 'client',
+      winner: CONFLICT_WINNER.CLIENT,
       requiresReview: false,
     };
   }
 
   return {
     resolvedData: context.serverData,
-    winner: 'server',
+    winner: CONFLICT_WINNER.SERVER,
     requiresReview: false,
   };
 };
@@ -70,9 +72,9 @@ export const merge = <T extends Record<string, unknown>>(
   context: ConflictContext<T>,
   config: MergeConfig = DEFAULT_MERGE_CONFIG
 ): ConflictResult<T> => {
-  const serverData = context.serverData;
-  const clientData = context.clientData;
-  const baseData = context.baseData ?? ({} as T);
+  const serverData: Record<string, unknown> = context.serverData;
+  const clientData: Record<string, unknown> = context.clientData;
+  const baseData: Record<string, unknown> = context.baseData ?? {};
 
   const resolvedData: Record<string, unknown> = {};
   const mergedFields: string[] = [];
@@ -160,7 +162,9 @@ export const merge = <T extends Record<string, unknown>>(
 
   return {
     resolvedData: resolvedData as T,
-    winner: conflictedFields.length > 0 ? 'merged' : mergedFields.length > 0 ? 'merged' : 'server',
+    winner: conflictedFields.length > 0 || mergedFields.length > 0
+      ? CONFLICT_WINNER.MERGED
+      : CONFLICT_WINNER.SERVER,
     requiresReview: conflictedFields.length > 0,
     mergedFields,
     conflictedFields,
@@ -176,7 +180,7 @@ export const merge = <T extends Record<string, unknown>>(
  */
 export const manual = <T>(context: ConflictContext<T>): ConflictResult<T> => ({
   resolvedData: context.serverData,
-  winner: 'server',
+  winner: CONFLICT_WINNER.SERVER,
   requiresReview: true,
 });
 
@@ -187,9 +191,9 @@ export const strategyResolvers: Record<
   ConflictStrategy,
   <T>(context: ConflictContext<T>, config?: MergeConfig) => ConflictResult<T>
 > = {
-  [ConflictStrategy.SERVER_WINS]: serverWins,
-  [ConflictStrategy.CLIENT_WINS]: clientWins,
-  [ConflictStrategy.LAST_WRITE_WINS]: lastWriteWins,
-  [ConflictStrategy.MERGE]: merge as <T>(context: ConflictContext<T>, config?: MergeConfig) => ConflictResult<T>,
-  [ConflictStrategy.MANUAL]: manual,
+  [CONFLICT_STRATEGY.SERVER_WINS]: serverWins,
+  [CONFLICT_STRATEGY.CLIENT_WINS]: clientWins,
+  [CONFLICT_STRATEGY.LAST_WRITE_WINS]: lastWriteWins,
+  [CONFLICT_STRATEGY.MERGE]: merge as <T>(context: ConflictContext<T>, config?: MergeConfig) => ConflictResult<T>,
+  [CONFLICT_STRATEGY.MANUAL]: manual,
 };

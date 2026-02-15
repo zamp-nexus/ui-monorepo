@@ -11,16 +11,27 @@
  */
 
 import { WorkerId } from '@open-insights-web/foundation-data-model';
-import { WorkerInfo, ResolvedPoolConfig } from '../../types';
+import type { WorkerInfo, ResolvedPoolConfig } from '../../types';
 import { WorkerInstance } from './worker-instance';
+import type {
+  Logger} from '@open-insights-web/foundation-utils';
 import {
-  Logger,
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   withTimeout,
 } from '@open-insights-web/foundation-utils';
 import { WorkerInitializationError } from '../../errors/pool-errors';
+
+// =============================================================================
+// Circuit Breaker Constants
+// =============================================================================
+
+/** Maximum restart attempts per worker within the restart window */
+const MAX_WORKER_RESTARTS = 3;
+
+/** Time window (ms) in which MAX_WORKER_RESTARTS applies */
+const RESTART_WINDOW_MS = 60_000;
 
 // =============================================================================
 // Worker Pool Manager Class
@@ -30,12 +41,16 @@ import { WorkerInitializationError } from '../../errors/pool-errors';
  * Worker Pool Manager
  *
  * Manages multiple DuckDB worker instances and routes queries
- * to the least busy worker.
+ * to the least busy worker. Includes a per-worker restart circuit
+ * breaker that prevents unbounded restart loops.
  */
 export class WorkerPoolManager {
   private readonly workers = new Map<string, WorkerInstance>();
   private readonly config: ResolvedPoolConfig;
   private readonly logger: Logger;
+
+  /** Per-worker restart timestamps for circuit breaker logic */
+  private readonly restartHistory = new Map<string, number[]>();
 
   private workerIdCounter = 0;
   private initializing = false;
@@ -169,7 +184,35 @@ export class WorkerPoolManager {
   }
 
   /**
-   * Restart a failed worker
+   * Check whether a worker is allowed to restart based on the circuit
+   * breaker policy (MAX_WORKER_RESTARTS within RESTART_WINDOW_MS).
+   */
+  private isRestartAllowed(workerId: string): boolean {
+    const now = Date.now();
+    const history = this.restartHistory.get(workerId) ?? [];
+
+    // Prune timestamps outside the window
+    const recent = history.filter((t) => now - t < RESTART_WINDOW_MS);
+    this.restartHistory.set(workerId, recent);
+
+    return recent.length < MAX_WORKER_RESTARTS;
+  }
+
+  /**
+   * Record a restart attempt for the circuit breaker.
+   */
+  private recordRestart(workerId: string): void {
+    const history = this.restartHistory.get(workerId) ?? [];
+    history.push(Date.now());
+    this.restartHistory.set(workerId, history);
+  }
+
+  /**
+   * Restart a failed worker.
+   *
+   * A per-worker circuit breaker limits restarts to MAX_WORKER_RESTARTS
+   * within a RESTART_WINDOW_MS sliding window. When the limit is
+   * exceeded the worker is left in error state and `null` is returned.
    */
   async restartWorker(workerId: WorkerId | string): Promise<WorkerInstance | null> {
     if (!this.config.restartFailedWorkers) {
@@ -182,10 +225,23 @@ export class WorkerPoolManager {
       return null;
     }
 
+    const workerIdStr = String(workerId);
+
+    // Circuit breaker check
+    if (!this.isRestartAllowed(workerIdStr)) {
+      this.logger.warn('Worker restart circuit breaker open — too many restarts within window', {
+        workerId,
+        maxRestarts: MAX_WORKER_RESTARTS,
+        windowMs: RESTART_WINDOW_MS,
+      });
+      return null;
+    }
+
     this.logger.info('Restarting failed worker', { workerId });
+    this.recordRestart(workerIdStr);
 
     // Remove the old worker
-    await this.removeWorker(WorkerId.from(String(workerId)));
+    await this.removeWorker(WorkerId.from(workerIdStr));
 
     // Add a new worker
     try {

@@ -8,18 +8,39 @@
  */
 
 import isEqual from 'fast-deep-equal';
+import type { TransactionMode } from 'dexie';
 import {
+  assertNever,
   createSingletonFactory,
   createDeepEqualComparison,
 } from '@open-insights-web/foundation-utils';
-import { InsightsDatabase } from '../core/database';
-import type { DatabaseConfig, DatabaseStats } from '../core';
+import {
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
+  type DatabaseTransactionMode,
+  type DatabaseTransactionTable,
+} from '@open-insights-web/foundation-data-model';
+import { getDatabase, resetDatabase, type DatabaseStats } from '../core/database';
+import type { InsightsDatabase } from '../core/database';
+import type { DatabaseConfig } from '../core/config';
 import { QueryCacheService } from '../services/query-cache';
 import { MutationQueueService } from '../services/mutation-queue';
 import { SyncStateService } from '../services/sync-state';
 import { OpfsMetadataService } from '../services/opfs-metadata';
 import { TableSyncMetadataService } from '../services/table-sync-metadata';
-import { setDatabaseInstance, onDatabaseReset } from '../core/database-registry';
+export {
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
+};
+export type {
+  DatabaseTransactionMode,
+  DatabaseTransactionTable,
+};
+
+const DEXIE_TRANSACTION_MODE_MAP: Record<DatabaseTransactionMode, TransactionMode> = {
+  [DATABASE_TRANSACTION_MODE.READ]: 'r',
+  [DATABASE_TRANSACTION_MODE.READ_WRITE]: 'rw',
+};
 
 /**
  * Database Facade
@@ -60,15 +81,9 @@ export class DatabaseFacade {
 
   /**
    * Create a new DatabaseFacade instance
-   *
-   * The facade owns the database lifecycle. The database instance is registered
-   * in the shared registry so that getDatabase() returns the same instance.
    */
   static create = (config?: Partial<DatabaseConfig>): DatabaseFacade => {
-    const db = new InsightsDatabase(config);
-    // Register in shared registry so getDatabase() returns this instance
-    setDatabaseInstance(db);
-    return new DatabaseFacade(db);
+    return new DatabaseFacade(getDatabase(config));
   };
 
   /**
@@ -114,6 +129,13 @@ export class DatabaseFacade {
   };
 
   /**
+   * Dispose facade resources.
+   */
+  dispose = (): void => {
+    // Database singleton lifecycle is managed by core/database.ts.
+  };
+
+  /**
    * Get the underlying InsightsDatabase instance
    * Use this when you need to pass the database to other components
    * that require the raw database (e.g., SyncCoordinator)
@@ -128,42 +150,48 @@ export class DatabaseFacade {
    * All operations in the callback function will be executed atomically.
    * If any operation fails, all changes will be rolled back.
    *
-   * @param mode - Transaction mode ('r' for read, 'rw' for read-write)
-   * @param tables - Table names to include in the transaction
+   * @param mode - Transaction mode constant value
+   * @param tables - Transaction table constant values to include
    * @param fn - Async function containing the operations to execute
    * @returns The return value of the callback function
    *
    * @example
    * ```typescript
    * // Atomic update of cache and mutation queue
-   * await facade.transaction('rw', ['queries', 'mutations'], async () => {
+   * await facade.transaction(
+   *   DATABASE_TRANSACTION_MODE.READ_WRITE,
+   *   [DATABASE_TRANSACTION_TABLE.QUERIES, DATABASE_TRANSACTION_TABLE.MUTATIONS],
+   *   async () => {
    *   await facade.queries.set(cacheEntry);
    *   await facade.mutations.add(mutationEntry);
-   * });
+   *   }
+   * );
    * ```
    */
+  private getTableReference = (table: DatabaseTransactionTable) => {
+    switch (table) {
+      case DATABASE_TRANSACTION_TABLE.QUERIES:
+        return this.db.queries;
+      case DATABASE_TRANSACTION_TABLE.MUTATIONS:
+        return this.db.mutations;
+      case DATABASE_TRANSACTION_TABLE.SYNC_STATE:
+        return this.db.syncState;
+      case DATABASE_TRANSACTION_TABLE.OPFS_FILES:
+        return this.db.opfsFiles;
+      case DATABASE_TRANSACTION_TABLE.TABLE_SYNC_METADATA:
+        return this.db.tableSyncMetadata;
+      default:
+        return assertNever(table, 'Unknown transaction table');
+    }
+  };
+
   transaction = async <T>(
-    mode: 'r' | 'rw',
-    tables: ('queries' | 'mutations' | 'syncState' | 'opfsFiles' | 'tableSyncMetadata')[],
+    mode: DatabaseTransactionMode,
+    tables: DatabaseTransactionTable[],
     fn: () => Promise<T>
   ): Promise<T> => {
-    // Map table names to actual Dexie tables
-    const tableRefs = tables.map((name) => {
-      switch (name) {
-        case 'queries':
-          return this.db.queries;
-        case 'mutations':
-          return this.db.mutations;
-        case 'syncState':
-          return this.db.syncState;
-        case 'opfsFiles':
-          return this.db.opfsFiles;
-        case 'tableSyncMetadata':
-          return this.db.tableSyncMetadata;
-      }
-    });
-
-    return this.db.transaction(mode, tableRefs, fn);
+    const tableRefs = tables.map((name) => this.getTableReference(name));
+    return this.db.transaction(DEXIE_TRANSACTION_MODE_MAP[mode], tableRefs, fn);
   };
 }
 
@@ -176,26 +204,15 @@ export class DatabaseFacade {
  */
 const facadeFactory = createSingletonFactory(
   (config: Partial<DatabaseConfig> | undefined) => {
-    const facade = DatabaseFacade.create(config);
-
-    // Register to be notified if the database is reset externally
-    // This ensures facade and database singletons stay in sync
-    onDatabaseReset(async () => {
-      // Database was reset externally - reset the facade too
-      // Awaiting ensures no race condition where a new instance is
-      // created before the reset completes
-      await facadeFactory.reset();
-    });
-
-    return facade;
+    return DatabaseFacade.create(config);
   },
   {
     name: 'DatabaseFacade',
     compareConfig: createDeepEqualComparison(isEqual, 'DatabaseFacade'),
     onDispose: (instance) => {
-      // Clear the database from registry when facade is disposed
-      setDatabaseInstance(null);
-      (instance as DatabaseFacade).close();
+      if (instance instanceof DatabaseFacade) {
+        instance.dispose();
+      }
     },
   }
 );
@@ -215,16 +232,17 @@ export const getDatabaseFacade = (
 /**
  * Reset the singleton DatabaseFacade instance
  *
- * Closes the current instance and clears the singleton.
- * Next call to getDatabaseFacade() will create a new instance.
+ * Clears the current instance and resets shared database state.
+ * Next call to getDatabaseFacade() creates a new facade + database pair.
  *
- * Note: The facade owns the database lifecycle, so resetting the facade
- * automatically closes the database. No need to call resetDatabase() separately.
+ * Note: This also resets the shared database singleton so facade/core accessors
+ * stay synchronized across lifecycle transitions.
  * 
  * @returns Promise that resolves when reset is complete
  */
 export const resetDatabaseFacade = async (): Promise<void> => {
   await facadeFactory.reset();
+  await resetDatabase();
 };
 
 /**

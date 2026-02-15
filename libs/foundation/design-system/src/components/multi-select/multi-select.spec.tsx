@@ -2,7 +2,7 @@ import { describeComponent } from '../../test/describe-component';
 import { MultiSelect, MultiSelectModifiers, MultiSelectVariants } from './index';
 
 describeComponent(
-  <MultiSelect options={[]} value={[]} onChange={() => {}}>
+  <MultiSelect options={[]} value={[]} onChange={() => undefined}>
     <div>MultiSelect</div>
   </MultiSelect>,
   {

@@ -103,16 +103,16 @@ export const Removable: Story = {
 export const RemovableVariants: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Chip variant="default" removable onRemove={() => {}}>
+      <Chip variant="default" removable onRemove={() => undefined}>
         Default
       </Chip>
-      <Chip variant="primary" removable onRemove={() => {}}>
+      <Chip variant="primary" removable onRemove={() => undefined}>
         Primary
       </Chip>
-      <Chip variant="success" removable onRemove={() => {}}>
+      <Chip variant="success" removable onRemove={() => undefined}>
         Success
       </Chip>
-      <Chip variant="error" removable onRemove={() => {}}>
+      <Chip variant="error" removable onRemove={() => undefined}>
         Error
       </Chip>
     </div>
@@ -129,7 +129,7 @@ export const NotRounded: Story = {
       <Chip rounded={false} variant="primary">
         Primary
       </Chip>
-      <Chip rounded={false} variant="success" removable onRemove={() => {}}>
+      <Chip rounded={false} variant="success" removable onRemove={() => undefined}>
         Removable
       </Chip>
     </div>

@@ -9,7 +9,10 @@
  * NOTE: For retry configuration, use DEFAULT_RETRY_CONFIG from @foundation/utils
  */
 
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+} from '@open-insights-web/foundation-data-model';
 
 // ============================================================================
 // Network Monitor Defaults
@@ -60,9 +63,9 @@ export const DEFAULT_ID_MAPPING_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Default conflict resolution strategy
- * @default ConflictStrategy.LAST_WRITE_WINS
+ * @default CONFLICT_STRATEGY.LAST_WRITE_WINS
  */
-export const DEFAULT_CONFLICT_STRATEGY: ConflictStrategy = ConflictStrategy.LAST_WRITE_WINS;
+export const DEFAULT_CONFLICT_STRATEGY: ConflictStrategy = CONFLICT_STRATEGY.LAST_WRITE_WINS;
 
 /**
  * Default auto-start behavior for coordinator

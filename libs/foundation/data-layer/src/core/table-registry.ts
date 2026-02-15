@@ -12,8 +12,12 @@
  */
 
 import type { FunctionReference } from 'convex/server';
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+} from '@open-insights-web/foundation-data-model';
 import { TIME_MS, createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+import type { TableOperation } from './constants';
 
 // =============================================================================
 // DATA FRESHNESS CONSTANTS
@@ -97,7 +101,7 @@ export interface TableAnalyticsConfig {
  *     delete: api.users.delete,
  *   },
  *   staleTime: 5 * 60 * 1000,
- *   conflictStrategy: ConflictStrategy.LAST_WRITE_WINS,
+ *   conflictStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
  *   analytics: {
  *     enabled: true,
  *     freshness: DATA_FRESHNESS.NEAR_REALTIME,
@@ -218,7 +222,7 @@ export class TableRegistry {
     this.defaults = {
       staleTime: defaults.staleTime ?? TIME_MS.MINUTE * 5,
       gcTime: defaults.gcTime ?? TIME_MS.DAY,
-      conflictStrategy: defaults.conflictStrategy ?? ConflictStrategy.LAST_WRITE_WINS,
+      conflictStrategy: defaults.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
     };
 
     // Check for duplicate table names in initialization
@@ -320,7 +324,7 @@ export class TableRegistry {
    */
   getConvexRef = (
     tableName: string,
-    operation: 'list' | 'get' | 'create' | 'update' | 'delete'
+    operation: TableOperation
   ): FunctionReference<'query'> | FunctionReference<'mutation'> | undefined => {
     const table = this.tables.get(tableName);
     return table?.convex?.[operation];
@@ -336,11 +340,21 @@ export class TableRegistry {
     delete?: FunctionReference<'mutation'>;
   } => {
     const table = this.tables.get(tableName);
-    return {
-      create: table?.convex?.create,
-      update: table?.convex?.update,
-      delete: table?.convex?.delete,
-    };
+    const refs: {
+      create?: FunctionReference<'mutation'>;
+      update?: FunctionReference<'mutation'>;
+      delete?: FunctionReference<'mutation'>;
+    } = {};
+    if (table?.convex?.create) {
+      refs.create = table.convex.create;
+    }
+    if (table?.convex?.update) {
+      refs.update = table.convex.update;
+    }
+    if (table?.convex?.delete) {
+      refs.delete = table.convex.delete;
+    }
+    return refs;
   };
 
   /**
@@ -348,7 +362,7 @@ export class TableRegistry {
    */
   hasConvexRef = (
     tableName: string,
-    operation: 'list' | 'get' | 'create' | 'update' | 'delete'
+    operation: TableOperation
   ): boolean => this.getConvexRef(tableName, operation) !== undefined;
 
   // ─── CACHE ACCESSORS (DataLayer, QueryEngine) ───────────────────────────────

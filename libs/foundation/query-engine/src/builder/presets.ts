@@ -97,7 +97,6 @@ const addFilterExpression = (builder: QueryBuilder, expression: FilterExpression
  * Create a simple count query
  */
 export const countQuery = (
-  _table: string,
   countAlias = 'total_count',
   options?: PresetOptions
 ): Query => {
@@ -137,15 +136,11 @@ export const sumByDimension = (
 // TIME SERIES PRESETS
 // =============================================================================
 
-/**
- * Create a time series count query
- */
-export const timeSeriesCount = (
+const createTimeSeriesBuilder = (
   timeDimension: string,
   options?: TimeSeriesPresetOptions
-): Query => {
-  const builder = new QueryBuilder()
-    .count('count')
+): QueryBuilder =>
+  new QueryBuilder()
     .timeDimension(
       timeDimension,
       options?.granularity ?? TIME_GRANULARITIES.DAY,
@@ -153,6 +148,14 @@ export const timeSeriesCount = (
     )
     .asc(timeDimension);
 
+/**
+ * Create a time series count query
+ */
+export const timeSeriesCount = (
+  timeDimension: string,
+  options?: TimeSeriesPresetOptions
+): Query => {
+  const builder = createTimeSeriesBuilder(timeDimension, options).count('count');
   applyCommonOptions(builder, options);
   return builder.build();
 };
@@ -166,15 +169,7 @@ export const timeSeriesSum = (
   sumAlias = 'total',
   options?: TimeSeriesPresetOptions
 ): Query => {
-  const builder = new QueryBuilder()
-    .sum(sumColumn, sumAlias)
-    .timeDimension(
-      timeDimension,
-      options?.granularity ?? TIME_GRANULARITIES.DAY,
-      options?.dateRange ?? PRESET_DATE_RANGES.LAST_30_DAYS
-    )
-    .asc(timeDimension);
-
+  const builder = createTimeSeriesBuilder(timeDimension, options).sum(sumColumn, sumAlias);
   applyCommonOptions(builder, options);
   return builder.build();
 };

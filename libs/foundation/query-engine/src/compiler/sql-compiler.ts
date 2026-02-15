@@ -9,7 +9,7 @@
 
 import type { DimensionSpec } from '../types/dimension';
 import type { FilterCondition, FilterExpression, FilterPrimitive } from '../types/filter';
-import { isFilterAndGroup, isFilterCondition, isFilterOrGroup, operatorRequiresValues } from '../types/filter';
+import { operatorRequiresValues } from '../types/filter';
 import { getAggregationSqlFunction, isDistinctAggregation } from '../types/aggregation';
 import type { JoinSpec } from '../types/join';
 import { getJoinSqlKeyword } from '../types/join';
@@ -31,6 +31,7 @@ import {
   formatSql,
 } from './sql-utils';
 import { parseMemberRef } from '../utils/member-ref';
+import { mapFilterExpression } from '../internal/filter-recursion';
 import {
   hashPayloadSync,
   createSingletonFactory,
@@ -59,13 +60,35 @@ export class QueryCompilationError extends Error {
 // =============================================================================
 
 /**
+ * Supported identifier quoting styles.
+ */
+export const QUOTE_STYLES = {
+  DOUBLE: 'double',
+  BACKTICK: 'backtick',
+  BRACKET: 'bracket',
+} as const;
+
+export type QuoteStyle = (typeof QUOTE_STYLES)[keyof typeof QUOTE_STYLES];
+
+/**
+ * Supported SQL dialects.
+ */
+export const SQL_DIALECTS = {
+  DUCKDB: 'duckdb',
+  POSTGRES: 'postgres',
+  SQLITE: 'sqlite',
+} as const;
+
+export type SqlDialect = (typeof SQL_DIALECTS)[keyof typeof SQL_DIALECTS];
+
+/**
  * Configuration options for the SQL compiler.
  */
 export interface SqlCompilerConfig {
   /** Quote style for identifiers ('double' for DuckDB) */
-  readonly quoteStyle?: 'double' | 'backtick' | 'bracket';
+  readonly quoteStyle?: QuoteStyle;
   /** SQL dialect */
-  readonly dialect?: 'duckdb' | 'postgres' | 'sqlite';
+  readonly dialect?: SqlDialect;
   /** Include SQL comments */
   readonly includeComments?: boolean;
   /** Pretty print the SQL */
@@ -78,16 +101,16 @@ export interface SqlCompilerConfig {
  * Resolved configuration with defaults.
  */
 interface ResolvedConfig {
-  readonly quoteStyle: 'double' | 'backtick' | 'bracket';
-  readonly dialect: 'duckdb' | 'postgres' | 'sqlite';
+  readonly quoteStyle: QuoteStyle;
+  readonly dialect: SqlDialect;
   readonly includeComments: boolean;
   readonly prettyPrint: boolean;
   readonly defaultSchema: string;
 }
 
 const DEFAULT_COMPILER_CONFIG: ResolvedConfig = {
-  quoteStyle: 'double',
-  dialect: 'duckdb',
+  quoteStyle: QUOTE_STYLES.DOUBLE,
+  dialect: SQL_DIALECTS.DUCKDB,
   includeComments: false,
   prettyPrint: false,
   defaultSchema: '',
@@ -129,12 +152,15 @@ const formatValueList = (values: ReadonlyArray<FilterPrimitive>): string => {
   return `(${values.map(formatValue).join(', ')})`;
 };
 
+const getStringFilterValue = (value: FilterPrimitive): string =>
+  typeof value === 'string' ? value : String(value);
+
 /**
  * Build LIKE pattern for string operators.
  */
 const buildLikePattern = (
   value: string,
-  operator: 'contains' | 'startsWith' | 'endsWith'
+  operator: LikePatternOperator
 ): string => {
   // Escape special LIKE characters and single quotes
   const escaped = value.replace(/[%_\\]/g, '\\$&').replace(/'/g, "''");
@@ -148,6 +174,15 @@ const buildLikePattern = (
       return `'%${escaped}'`;
   }
 };
+
+const LIKE_PATTERN_OPERATORS = {
+  CONTAINS: 'contains',
+  STARTS_WITH: 'startsWith',
+  ENDS_WITH: 'endsWith',
+} as const;
+
+type LikePatternOperator =
+  (typeof LIKE_PATTERN_OPERATORS)[keyof typeof LIKE_PATTERN_OPERATORS];
 
 // =============================================================================
 // COMPILATION RESULT
@@ -213,11 +248,13 @@ const validateFilterValues = (
 };
 
 /**
- * Compile a filter condition to SQL WHERE clause part.
+ * Compile a single filter condition to a SQL WHERE clause fragment.
  *
- * Throws QueryCompilationError for:
- * - Unknown/invalid filter operators
- * - Missing values for operators that require them
+ * Maps each FilterOperator to its SQL equivalent (e.g. `equals` → `=`, `in` → `IN`).
+ *
+ * @param condition - The filter condition with member, operator, and optional values
+ * @returns SQL string for the condition
+ * @throws QueryCompilationError for unknown operators or missing required values
  */
 const compileFilterCondition = (condition: FilterCondition): string => {
   const memberRef = quoteMemberRef(condition.member);
@@ -261,16 +298,16 @@ const compileFilterCondition = (condition: FilterCondition): string => {
 
     // String operators
     case 'contains':
-      return `${memberRef} LIKE ${buildLikePattern(values[0] as string, 'contains')} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.CONTAINS)} ESCAPE '\\'`;
 
     case 'notContains':
-      return `${memberRef} NOT LIKE ${buildLikePattern(values[0] as string, 'contains')} ESCAPE '\\'`;
+      return `${memberRef} NOT LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.CONTAINS)} ESCAPE '\\'`;
 
     case 'startsWith':
-      return `${memberRef} LIKE ${buildLikePattern(values[0] as string, 'startsWith')} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.STARTS_WITH)} ESCAPE '\\'`;
 
     case 'endsWith':
-      return `${memberRef} LIKE ${buildLikePattern(values[0] as string, 'endsWith')} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.ENDS_WITH)} ESCAPE '\\'`;
 
     case 'matches':
       return `${memberRef} ~ ${formatValue(values[0])}`;
@@ -308,25 +345,25 @@ const compileFilterCondition = (condition: FilterCondition): string => {
 };
 
 /**
- * Compile a filter expression to SQL.
+ * Compile a filter expression (condition, AND group, or OR group) to a SQL WHERE clause fragment.
+ *
+ * Recursively handles nested AND/OR groups up to FILTER_RECURSION_MAX_DEPTH.
+ *
+ * @param expression - The filter expression to compile
+ * @returns SQL string for the expression
+ * @throws QueryCompilationError if nesting exceeds FILTER_RECURSION_MAX_DEPTH
  */
-const compileFilterExpression = (expression: FilterExpression): string => {
-  if (isFilterCondition(expression)) {
-    return compileFilterCondition(expression);
-  }
-
-  if (isFilterAndGroup(expression)) {
-    const parts = expression.and.map((e) => compileFilterExpression(e));
-    return parts.length > 1 ? `(${parts.join(' AND ')})` : parts[0] ?? 'TRUE';
-  }
-
-  if (isFilterOrGroup(expression)) {
-    const parts = expression.or.map((e) => compileFilterExpression(e));
-    return parts.length > 1 ? `(${parts.join(' OR ')})` : parts[0] ?? 'TRUE';
-  }
-
-  return 'TRUE';
-};
+const compileFilterExpression = (expression: FilterExpression): string =>
+  mapFilterExpression(expression, {
+    onCondition: compileFilterCondition,
+    onAndGroup: (children) => (children.length > 1 ? `(${children.join(' AND ')})` : children[0] ?? 'TRUE'),
+    onOrGroup: (children) => (children.length > 1 ? `(${children.join(' OR ')})` : children[0] ?? 'TRUE'),
+    onDepthExceeded: (_depth, maxDepth) => {
+      throw new QueryCompilationError(
+        `Filter nesting depth exceeds maximum of ${maxDepth}. Flatten deeply nested filter groups.`
+      );
+    },
+  });
 
 // =============================================================================
 // SELECT COMPILATION
@@ -375,7 +412,14 @@ const compileMeasureSelect = (measure: MeasureSpec): string => {
 // =============================================================================
 
 /**
- * Compile joins to JOIN clauses.
+ * Compile an array of JoinSpec into SQL JOIN clauses.
+ *
+ * Tracks already-joined tables to determine which side of each join
+ * introduces a new table. Supports additional join conditions.
+ *
+ * @param joins - Array of join specifications
+ * @param primaryTable - The primary (FROM) table name
+ * @returns Newline-separated SQL JOIN clauses, or empty string if no joins
  */
 const compileJoinClauses = (
   joins: ReadonlyArray<JoinSpec>,
@@ -424,7 +468,10 @@ const compileJoinClauses = (
 // =============================================================================
 
 /**
- * Compile ORDER BY clause.
+ * Compile an array of OrderBySpec into a SQL ORDER BY clause.
+ *
+ * @param orderBy - Array of order-by specifications with member, direction, and optional nulls handling
+ * @returns SQL ORDER BY clause string, or empty string if no order specs
  */
 const compileOrderByClause = (orderBy: ReadonlyArray<OrderBySpec>): string => {
   if (orderBy.length === 0) return '';
@@ -953,7 +1000,11 @@ const sqlCompilerFactory = createSingletonFactory<SqlCompiler, SqlCompilerConfig
   {
     name: 'SqlCompiler',
     warnOnConfigOverride: true,
-    onDispose: (instance) => (instance as SqlCompiler).dispose(),
+    onDispose: (instance) => {
+      if (instance instanceof SqlCompiler) {
+        instance.dispose();
+      }
+    },
     defaultConfig: {},
   }
 );

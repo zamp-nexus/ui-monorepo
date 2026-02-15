@@ -3,8 +3,9 @@ import type { Query } from '../types/query';
 import type { DecisionContext, DecisionTableConfig } from '../types/decision';
 import { DECISION_REASONS } from '../types/decision';
 import { OPERATIONS } from '../types/operations';
+import type {
+  DecisionEngine} from './decision-engine';
 import {
-  DecisionEngine,
   createDecisionEngine,
   getDecisionEngine,
   resetDecisionEngine,

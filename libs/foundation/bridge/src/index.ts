@@ -37,6 +37,7 @@ export {
   isValidIdentifier,
   quoteIdentifier,
   escapeString,
+  validateViewSql,
   buildCreateViewSql,
   buildDropViewSql,
   buildParameterizedSql,

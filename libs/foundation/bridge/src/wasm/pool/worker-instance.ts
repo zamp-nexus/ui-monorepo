@@ -7,15 +7,17 @@
  * @module wasm/pool/worker-instance
  */
 
-import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
+import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { Timestamp, QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
-import { QueryResult, WORKER_STATUS, WorkerInfo } from '../../types';
-import type { WorkerStatus } from '../../types';
+import type { QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
+import { Timestamp } from '@open-insights-web/foundation-data-model';
+import { WORKER_STATUS } from '../../types';
+import type { WorkerStatus , QueryResult, WorkerInfo } from '../../types';
 import { convertArrowToQueryResult } from '../../duckdb/arrow-converter';
 import { createDuckDBInstance } from '../duckdb-init';
+import type {
+  Logger} from '@open-insights-web/foundation-utils';
 import {
-  Logger,
   createDebugLogger,
   getErrorMessage,
   normalizeError,

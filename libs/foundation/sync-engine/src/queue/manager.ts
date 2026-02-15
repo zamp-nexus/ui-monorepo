@@ -7,20 +7,27 @@ import type { InsightsDatabase } from '@open-insights-web/foundation-database';
 import {
   getDatabase,
   createMutationEntry,
-  SYNC_STATE_KEYS,
-  MutationStatus,
+} from '@open-insights-web/foundation-database';
+import {
+  SYNC_STATE_KEY,
+  MUTATION_TYPE,
+  MUTATION_STATUS,
   type MutationQueueEntry,
   type CreateMutationOptions,
-} from '@open-insights-web/foundation-database';
-import { generateProvisionalId, isProvisionalId, type IdMapping, type QueueStats } from '@open-insights-web/foundation-data-model';
+  generateProvisionalId,
+  isProvisionalId,
+  type IdMapping,
+  type MutationStatus,
+  type QueueStats,
+} from '@open-insights-web/foundation-data-model';
 import {
   createSingletonFactory,
   normalizeError,
   Disposable,
-  CompositeDisposable,
   createDebugLogger,
 } from '@open-insights-web/foundation-utils';
 import type { IQueueManager } from '../core/interfaces';
+import { resolvePayloadProvisionalIds } from '../core/payload-id-resolution';
 import {
   DEFAULT_ID_MAPPING_TTL_MS,
   DEFAULT_MAX_ID_MAPPINGS,
@@ -63,9 +70,9 @@ const DEFAULT_CONFIG: Required<Omit<QueueManagerConfig, 'database' | 'onError'>>
 };
 
 /**
- * ID Mapping store key in syncState (uses SYNC_STATE_KEYS.ID_MAPPINGS)
+ * ID Mapping store key in syncState.
  */
-const ID_MAPPINGS_KEY = SYNC_STATE_KEYS.ID_MAPPINGS;
+const ID_MAPPINGS_KEY = SYNC_STATE_KEY.ID_MAPPINGS;
 
 /**
  * Type guard to validate IdMapping structure
@@ -96,7 +103,6 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
   private config: Required<Omit<QueueManagerConfig, 'database' | 'onError'>>;
   private onError?: (error: Error, context?: string) => void;
   private idMappings: Map<string, IdMapping> = new Map();
-  private disposables = new CompositeDisposable();
   private logger;
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
@@ -117,6 +123,13 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     this.logger.error(`Error in ${context ?? 'unknown'}:`, err);
     this.onError?.(err, context);
   }
+
+  /**
+   * Ensure persisted ID mappings are loaded.
+   */
+  ensureInitialized = async (): Promise<void> => {
+    await this.initialize();
+  };
 
   /**
    * Initialize - load persisted ID mappings with type validation
@@ -203,7 +216,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    */
   async enqueue(options: CreateMutationOptions | ExtendedCreateMutationOptions): Promise<MutationQueueEntry> {
     this.ensureNotDisposed();
-    await this.initialize();
+    await this.ensureInitialized();
 
     // Type-safe access to idempotency key
     if ('idempotencyKey' in options && typeof options.idempotencyKey === 'string') {
@@ -216,7 +229,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
 
     // For creates, generate provisional ID if not provided
     let entityId = options.entityId;
-    if (options.type === 'create' && !entityId) {
+    if (options.type === MUTATION_TYPE.CREATE && !entityId) {
       entityId = generateProvisionalId();
     }
 
@@ -246,7 +259,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     this.ensureNotDisposed();
     return this.db.mutations
       .where('status')
-      .anyOf([MutationStatus.PENDING, MutationStatus.OFFLINE_QUEUED])
+      .anyOf([MUTATION_STATUS.PENDING, MUTATION_STATUS.OFFLINE_QUEUED])
       .sortBy('timestamp');
   }
 
@@ -278,14 +291,14 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    * Mark mutation as in progress
    */
   async markInProgress(id: string): Promise<void> {
-    await this.updateStatus(id, MutationStatus.IN_PROGRESS);
+    await this.updateStatus(id, MUTATION_STATUS.IN_PROGRESS);
   }
 
   /**
    * Mark mutation as completed
    */
   async markCompleted(id: string, serverId?: string): Promise<void> {
-    await this.updateStatus(id, MutationStatus.COMPLETED, { serverId });
+    await this.updateStatus(id, MUTATION_STATUS.COMPLETED, { serverId });
   }
 
   /**
@@ -298,8 +311,8 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     const newRetryCount = mutation.retryCount + 1;
     const newStatus: MutationStatus =
       newRetryCount >= this.config.maxRetries
-        ? MutationStatus.FAILED
-        : MutationStatus.PENDING;
+        ? MUTATION_STATUS.FAILED
+        : MUTATION_STATUS.PENDING;
 
     await this.updateStatus(id, newStatus, {
       retryCount: newRetryCount,
@@ -319,8 +332,8 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     // Dexie's modify() returns the count of modified records directly
     const count = await this.db.mutations
       .where('status')
-      .equals(MutationStatus.PENDING)
-      .modify({ status: MutationStatus.OFFLINE_QUEUED });
+      .equals(MUTATION_STATUS.PENDING)
+      .modify({ status: MUTATION_STATUS.OFFLINE_QUEUED });
 
     if (count > 0) {
       this.logger.debug('Marked', count, 'mutations as offline_queued');
@@ -340,8 +353,8 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     // Dexie's modify() returns the count of modified records directly
     const count = await this.db.mutations
       .where('status')
-      .equals(MutationStatus.OFFLINE_QUEUED)
-      .modify({ status: MutationStatus.PENDING });
+      .equals(MUTATION_STATUS.OFFLINE_QUEUED)
+      .modify({ status: MUTATION_STATUS.PENDING });
 
     if (count > 0) {
       this.logger.debug('Marked', count, 'mutations as pending');
@@ -365,7 +378,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     this.ensureNotDisposed();
     const count = await this.db.mutations
       .where('status')
-      .equals(MutationStatus.COMPLETED)
+      .equals(MUTATION_STATUS.COMPLETED)
       .delete();
     this.logger.debug('Deleted', count, 'completed mutations');
     return count;
@@ -393,10 +406,10 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     
     // Run count queries in parallel for better performance
     const [pending, inProgress, failed, offlineQueued, total] = await Promise.all([
-      this.db.mutations.where('status').equals(MutationStatus.PENDING).count(),
-      this.db.mutations.where('status').equals(MutationStatus.IN_PROGRESS).count(),
-      this.db.mutations.where('status').equals(MutationStatus.FAILED).count(),
-      this.db.mutations.where('status').equals(MutationStatus.OFFLINE_QUEUED).count(),
+      this.db.mutations.where('status').equals(MUTATION_STATUS.PENDING).count(),
+      this.db.mutations.where('status').equals(MUTATION_STATUS.IN_PROGRESS).count(),
+      this.db.mutations.where('status').equals(MUTATION_STATUS.FAILED).count(),
+      this.db.mutations.where('status').equals(MUTATION_STATUS.OFFLINE_QUEUED).count(),
       this.db.mutations.count(),
     ]);
 
@@ -416,7 +429,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     this.ensureNotDisposed();
     const count = await this.db.mutations
       .where('status')
-      .anyOf([MutationStatus.PENDING, MutationStatus.OFFLINE_QUEUED])
+      .anyOf([MUTATION_STATUS.PENDING, MUTATION_STATUS.OFFLINE_QUEUED])
       .count();
     return count > 0;
   }
@@ -441,6 +454,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    */
   async registerIdMapping(mapping: IdMapping): Promise<void> {
     this.ensureNotDisposed();
+    await this.ensureInitialized();
 
     // Validate the mapping before storing
     if (!isValidIdMapping(mapping)) {
@@ -571,31 +585,16 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    * Update references to provisional IDs in a mutation payload
    */
   resolvePayloadIds<T extends Record<string, unknown>>(payload: T): T {
-    const resolved: Record<string, unknown> = { ...payload };
-
-    for (const [key, value] of Object.entries(resolved)) {
-      if (typeof value === 'string' && isProvisionalId(value)) {
-        const serverId = this.getServerId(value);
-        if (serverId) {
-          resolved[key] = serverId;
-        }
-      } else if (Array.isArray(value)) {
-        resolved[key] = value.map((item) =>
-          typeof item === 'string' && isProvisionalId(item)
-            ? (this.getServerId(item) ?? item)
-            : item
-        );
-      }
-    }
-
-    return resolved as T;
+    return resolvePayloadProvisionalIds(
+      payload,
+      (provisionalId) => this.getServerId(provisionalId)
+    );
   }
 
   /**
    * Dispose implementation
    */
   protected onDispose(): void {
-    this.disposables.dispose();
     this.idMappings.clear();
     this.logger.debug('Disposed');
   }

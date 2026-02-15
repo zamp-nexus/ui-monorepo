@@ -54,7 +54,9 @@ export {
 
   // Result building
   buildMutationResult,
+  executeLocalFirstMutation,
   type BuildMutationResultOptions,
+  type LocalFirstMutationExecutionOptions,
 } from './mutation-helpers';
 
 // =============================================================================
@@ -63,8 +65,8 @@ export {
 
 export {
   // Const patterns (use these instead of raw strings)
-  ErrorSeverity,
-  HookContext,
+  ERROR_SEVERITY,
+  HOOK_CONTEXT,
 
   // Core error handling
   handleError,

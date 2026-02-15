@@ -371,6 +371,24 @@ describe('QueryBuilder', () => {
       expect(query.limit).toBe(20);
       expect(query.offset).toBe(40); // (3-1) * 20
     });
+
+    it('should set page 1 with offset 0', () => {
+      const query = builder.page(1, 10).build();
+      expect(query.limit).toBe(10);
+      expect(query.offset).toBe(0);
+    });
+
+    it('should throw for page(0, 10)', () => {
+      expect(() => builder.page(0, 10)).toThrow('pageNumber must be >= 1, got 0');
+    });
+
+    it('should throw for negative pageNumber', () => {
+      expect(() => builder.page(-1, 10)).toThrow('pageNumber must be >= 1, got -1');
+    });
+
+    it('should throw for pageSize < 1', () => {
+      expect(() => builder.page(1, 0)).toThrow('pageSize must be >= 1, got 0');
+    });
   });
 
   describe('options', () => {
@@ -523,18 +541,18 @@ describe('filterCondition helper', () => {
 describe('Query Presets', () => {
   describe('countQuery', () => {
     it('should create count query', () => {
-      const query = countQuery('orders');
+      const query = countQuery();
       expect(query.measures).toHaveLength(1);
     });
 
     it('should accept custom alias', () => {
-      const query = countQuery('orders', 'total_orders');
+      const query = countQuery('total_orders');
       const measure = query.measures![0] as any;
       expect(measure.alias).toBe('total_orders');
     });
 
     it('should accept options', () => {
-      const query = countQuery('orders', 'count', { limit: 10, withTotal: true });
+      const query = countQuery('count', { limit: 10, withTotal: true });
       expect(query.limit).toBe(10);
       expect((query as any).withTotal).toBe(true);
     });
@@ -688,7 +706,7 @@ describe('Query Presets', () => {
 
   describe('extendPreset', () => {
     it('should extend preset with additional configuration', () => {
-      const base = countQuery('orders');
+      const base = countQuery();
       const extended = extendPreset(base, (builder) => {
         builder.dimension('orders.status').limit(50);
       });

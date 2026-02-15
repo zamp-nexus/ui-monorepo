@@ -12,10 +12,12 @@
  * @module wasm/pool/pool.spec
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { Milliseconds, QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
 import { PriorityQueue } from './priority-queue';
 import { TableLockManager } from './table-lock-manager';
-import type { PriorityLevel } from '../../constants';
+import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
+import { PoolShutdownError, WorkerError } from '../../errors/pool-errors';
 
 // =============================================================================
 // Priority Queue Tests
@@ -331,10 +333,7 @@ describe('TableLockManager', () => {
 // =============================================================================
 
 describe('Error Types', () => {
-  it('should create QueryTimeoutError with correct properties', async () => {
-    const { QueryTimeoutError } = await import('../../errors/query-errors');
-    const { QueryId, Milliseconds } = await import('@open-insights-web/foundation-data-model');
-    
+  it('should create QueryTimeoutError with correct properties', () => {
     const queryId = QueryId.from('query-123');
     const timeoutMs = Milliseconds.from(5000);
     const error = new QueryTimeoutError(queryId, timeoutMs);
@@ -346,10 +345,7 @@ describe('Error Types', () => {
     expect(error.message).toContain('5000');
   });
 
-  it('should create QueryCancelledError with correct properties', async () => {
-    const { QueryCancelledError } = await import('../../errors/query-errors');
-    const { QueryId } = await import('@open-insights-web/foundation-data-model');
-    
+  it('should create QueryCancelledError with correct properties', () => {
     const queryId = QueryId.from('query-456');
     const error = new QueryCancelledError(queryId);
     
@@ -358,10 +354,7 @@ describe('Error Types', () => {
     expect(error.message).toContain('cancelled');
   });
 
-  it('should create WorkerError with correct properties', async () => {
-    const { WorkerError } = await import('../../errors/pool-errors');
-    const { WorkerId } = await import('@open-insights-web/foundation-data-model');
-
+  it('should create WorkerError with correct properties', () => {
     const cause = new Error('Original error');
     const workerId = WorkerId.from('worker-1');
     const error = new WorkerError(workerId, 'Something went wrong', cause);
@@ -372,9 +365,7 @@ describe('Error Types', () => {
     expect(error.message).toContain('worker-1');
   });
 
-  it('should create PoolShutdownError with correct properties', async () => {
-    const { PoolShutdownError } = await import('../../errors/pool-errors');
-    
+  it('should create PoolShutdownError with correct properties', () => {
     const error = new PoolShutdownError();
     
     expect(error.name).toBe('PoolShutdownError');

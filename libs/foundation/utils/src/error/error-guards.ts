@@ -2,9 +2,29 @@
  * Error type guard utilities
  *
  * Provides type guards for identifying specific error types.
+ * Uses structural (duck-type) checks as the primary guard so that errors
+ * originating from Web Workers or other realms are detected correctly.
+ * `instanceof` is used as a secondary check where available.
  *
  * @module error/error-guards
  */
+
+/**
+ * Structural check for error-like objects.
+ *
+ * Works across JavaScript realms (Web Workers, iframes) where
+ * `instanceof Error` returns false because each realm has its own
+ * `Error` constructor.
+ */
+export const isErrorLike = (
+  value: unknown,
+): value is { message: string; name: string; stack?: string } =>
+  typeof value === 'object' &&
+  value !== null &&
+  'message' in value &&
+  typeof (value as Record<string, unknown>).message === 'string' &&
+  'name' in value &&
+  typeof (value as Record<string, unknown>).name === 'string';
 
 /**
  * Check if an error is of a specific type by name
@@ -25,7 +45,7 @@
  * ```
  */
 export const isErrorType = (error: unknown, name: string): boolean => {
-  return error instanceof Error && error.name === name;
+  return isErrorLike(error) && error.name === name;
 };
 
 /**
@@ -94,7 +114,7 @@ const NETWORK_ERROR_PATTERNS: readonly string[] = [
  * ```
  */
 export const isNetworkError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) return false;
+  if (!isErrorLike(error)) return false;
 
   const message = error.message.toLowerCase();
   return NETWORK_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
@@ -107,11 +127,11 @@ export const isNetworkError = (error: unknown): boolean => {
  * @returns True if error is a timeout error
  */
 export const isTimeoutError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) return false;
+  if (!isErrorLike(error)) return false;
 
   const message = error.message.toLowerCase();
   return (
-    isErrorType(error, 'TimeoutError') ||
+    error.name === 'TimeoutError' ||
     message.includes('timeout') ||
     message.includes('timed out')
   );
@@ -124,7 +144,7 @@ export const isTimeoutError = (error: unknown): boolean => {
  * @returns True if error is a TypeError
  */
 export const isTypeError = (error: unknown): error is TypeError => {
-  return error instanceof TypeError;
+  return error instanceof TypeError || (isErrorLike(error) && error.name === 'TypeError');
 };
 
 /**
@@ -134,7 +154,7 @@ export const isTypeError = (error: unknown): error is TypeError => {
  * @returns True if error is a SyntaxError
  */
 export const isSyntaxError = (error: unknown): error is SyntaxError => {
-  return error instanceof SyntaxError;
+  return error instanceof SyntaxError || (isErrorLike(error) && error.name === 'SyntaxError');
 };
 
 /**
@@ -144,7 +164,7 @@ export const isSyntaxError = (error: unknown): error is SyntaxError => {
  * @returns True if error is a RangeError
  */
 export const isRangeError = (error: unknown): error is RangeError => {
-  return error instanceof RangeError;
+  return error instanceof RangeError || (isErrorLike(error) && error.name === 'RangeError');
 };
 
 /**
@@ -155,7 +175,7 @@ export const isRangeError = (error: unknown): error is RangeError => {
  * @returns True if error has matching code
  */
 export const hasErrorCode = (error: unknown, code: string | number): boolean => {
-  if (!(error instanceof Error)) return false;
+  if (!isErrorLike(error)) return false;
 
   return 'code' in error && (error as Record<string, unknown>).code === code;
 };

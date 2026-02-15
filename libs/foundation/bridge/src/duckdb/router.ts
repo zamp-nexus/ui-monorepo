@@ -5,13 +5,15 @@
 
 import isEqual from 'react-fast-compare';
 
-import { Timestamp, Milliseconds } from '@open-insights-web/foundation-data-model';
-import { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo, DuckDBBridgeStatus } from '../types/bridge';
+import type { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { Timestamp } from '@open-insights-web/foundation-data-model';
+import type { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo, DuckDBBridgeStatus } from '../types/bridge';
 import { EnvironmentDetector } from '../detection';
 import { ElectronDuckDBBridge } from '../native/electron-bridge';
 import { WasmDuckDBBridge } from '../wasm/wasm-bridge';
+import type {
+  Logger} from '@open-insights-web/foundation-utils';
 import {
-  Logger,
   createDebugLogger,
   createSingletonFactory,
   createDeepEqualComparison,
@@ -20,6 +22,7 @@ import {
   SafeTimer,
 } from '@open-insights-web/foundation-utils';
 import { BridgeNotInitializedError } from '../errors/bridge-errors';
+import { validateIdentifier, validateViewSql } from '../utils/sql';
 import { DEFAULTS, BRIDGE_TYPE } from '../constants';
 import type { BridgeType } from '../constants';
 
@@ -405,6 +408,10 @@ export class DuckDBRouter implements DuckDBBridge {
   }
 
   async createView(view: ViewDefinition): Promise<void> {
+    // Validate view name and SQL before delegating to bridge
+    validateIdentifier(view.name);
+    validateViewSql(view.sql);
+
     const bridge = await this.ensureBridge();
     this.logger.debug('Create view', { name: view.name });
 

@@ -7,7 +7,7 @@ import { Home, Search } from 'lucide-react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Icon } from './icon';
-import { clearRegistry, registerIcon } from './icons/registry';
+import { clearRegistry, registerIcon } from './registry/registry';
 
 // Helper to safely query container (container is HTMLElement with querySelector in jsdom)
 const queryContainer = (container: RenderResult['container'], selector: string) => {
@@ -132,13 +132,18 @@ describe('Icon', () => {
     expect(wrapper?.hasAttribute('aria-hidden')).toBe(false);
   });
 
-  it('should return null for unregistered icon', () => {
+  it('should render fallback placeholder for unregistered icon', () => {
     const { container } = render(<Icon name="non-existent" />);
-    // When icon is not found, component returns null, so container should be empty
-    expect(container.firstChild).toBeNull();
-    // Also verify no icon element is rendered
+    // When icon is not found, component renders a fallback placeholder
     const wrapper = queryContainer(container, 'i');
-    expect(wrapper).toBeNull();
+    expect(wrapper).toBeTruthy();
+    // Placeholder contains an SVG with a rect and two crossing lines
+    const svg = queryContainer(container, 'svg');
+    expect(svg).toBeTruthy();
+    const rect = queryContainer(container, 'rect');
+    expect(rect).toBeTruthy();
+    const lines = container.querySelectorAll('line');
+    expect(lines).toHaveLength(2);
   });
 
   it('should support all size variants', () => {

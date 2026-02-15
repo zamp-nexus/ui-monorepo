@@ -41,7 +41,7 @@ export const ScrollArea = React.forwardRef(function ScrollArea<
   T extends React.ElementType = 'div',
 >(
   {
-    component,
+    component: _component,
     className,
     oiid,
     orientation = 'vertical',
@@ -55,7 +55,6 @@ export const ScrollArea = React.forwardRef(function ScrollArea<
   ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('scrollArea', scrollAreaDefaultTheme);
-  const Element = component ?? 'div';
 
   const style: React.CSSProperties = {
     height: typeof height === 'number' ? `${height}px` : height,

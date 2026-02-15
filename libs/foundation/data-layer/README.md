@@ -1,556 +1,323 @@
 # Foundation Data Layer
 
-Enterprise-grade React data layer for Open Insights combining real-time Convex subscriptions, offline-first persistence, mutation orchestration, and in-browser DuckDB analytics.
+`@open-insights-web/foundation-data-layer` is the enterprise React data runtime for Open Insights.
+It unifies Convex reads/writes, offline-first persistence, optimistic mutation orchestration, analytics SQL execution, and background parquet synchronization.
 
-## Table of Contents
+## Table Of Contents
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
+- [What This Library Owns](#what-this-library-owns)
+- [Installation And Setup](#installation-and-setup)
 - [Configuration Reference](#configuration-reference)
-- [Public API](#public-api)
+- [Public API Reference](#public-api-reference)
+- [Architecture](#architecture)
 - [Advanced Usage](#advanced-usage)
-- [Performance](#performance)
-- [Troubleshooting](#troubleshooting)
-- [Development](#development)
-- [Contributing](#contributing)
+- [Performance And Caching Guidance](#performance-and-caching-guidance)
+- [Failure Modes And Recovery](#failure-modes-and-recovery)
+- [Migration Guide (Breaking Release)](#migration-guide-breaking-release)
+- [Contributing And Extending](#contributing-and-extending)
+- [Validation Commands](#validation-commands)
 
----
+## What This Library Owns
 
-## Overview
+This library is the composition layer on top of foundation core packages:
 
-The Foundation Data Layer library orchestrates data flow across four foundation libraries into a single, cohesive provider:
+- `@open-insights-web/foundation-data-model`: shared contracts, constants, branded primitives, query-key hashing
+- `@open-insights-web/foundation-database`: IndexedDB/OPFS persistence facade
+- `@open-insights-web/foundation-sync-engine`: offline queue, sync orchestration, conflict handling
+- `@open-insights-web/foundation-bridge`: DuckDB router and SQL helpers
+- `@open-insights-web/foundation-utils`: logging, synchronization primitives, platform utilities
 
-| Dependency | Role |
-|---|---|
-| `foundation-database` | IndexedDB persistence via `DatabaseFacade` |
-| `foundation-sync-engine` | Offline mutation queue, conflict resolution, cross-tab sync |
-| `foundation-bridge` | In-browser DuckDB for analytics SQL queries |
-| `foundation-data-model` | Shared types, branded IDs, error hierarchy, query keys |
+Primary responsibilities:
 
-**Key Capabilities:**
+- Online Convex query/mutation execution
+- Offline query fallback from IndexedDB cache
+- Optimistic create/update/delete with rollback and queueing
+- Analytics SQL query/mutation execution through DuckDB
+- Background parquet download + persistence + sync status
+- Conflict surface and resolution hooks
 
-- **Real-time subscriptions** via Convex WebSocket queries
-- **Offline-first** with automatic cache fallback and mutation queueing
-- **Optimistic updates** with automatic rollback on failure
-- **Conflict resolution** with local/remote/merge strategies
-- **In-browser analytics** via DuckDB (lazy-initialized)
-- **Background file sync** for Parquet data files
-- **Cross-tab coordination** with leader election
-- **Unified table registry** as single source of truth
-
----
-
-## Architecture
-
-### Component Composition
-
-```
-DataLayerProvider
-├── DataLayerContainer (composition root)
-│   ├── ConvexReactClient (WebSocket connection)
-│   ├── ConvexQueryClient (TanStack Query bridge)
-│   ├── QueryClient (TanStack Query cache)
-│   ├── DatabaseFacade (IndexedDB persistence)
-│   ├── SyncCoordinator (offline sync orchestration)
-│   ├── TableRegistry (unified table metadata)
-│   └── Analytics Runtime (lazy)
-│       ├── DuckDBRouter (SQL query routing)
-│       └── OpfsManager (OPFS file management)
-├── DataLayerContext (public state)
-│   └── isOnline, isSyncing, pendingSyncCount, syncNow, clearCache
-└── DataLayerInternalsContext (hook infrastructure)
-    └── database, syncCoordinator, duckdbRouter, tableRegistry, ...
-```
-
-### Data Flow
-
-**Online Path:**
-1. Hook calls Convex query via TanStack Query
-2. Convex WebSocket delivers live updates
-3. Data persisted to IndexedDB for offline access
-
-**Offline Path:**
-1. Hook reads from IndexedDB cache
-2. Mutations queued in SyncCoordinator
-3. On reconnect, queue is processed with conflict resolution
-
-**Analytics Path:**
-1. Hook calls DuckDB router (lazy-initialized)
-2. DuckDB executes SQL on in-memory/Parquet data
-3. Results cached in TanStack Query
-
-### Lifecycle
-
-- `DataLayerContainer.initialize()` is idempotent — multiple calls return the same dependencies.
-- `DataLayerContainer.dispose()` is async, mutex-protected, and idempotent — safe to call from React cleanup effects.
-- The analytics runtime (DuckDB + OPFS) is **lazily initialized** only when the first analytics hook executes.
-
----
-
-## Installation
+## Installation And Setup
 
 ```bash
-npm install @open-insights-web/foundation-data-layer
+npm install @open-insights-web/foundation-data-layer @tanstack/react-query convex
 ```
 
-### Peer Dependencies
+Required runtime assumptions:
 
-```bash
-npm install @tanstack/react-query convex
-```
+- React 18+
+- Browser runtime with IndexedDB support
+- For analytics features: WASM support, workers, and OPFS availability in target environment
 
-### Foundation Dependencies
+Typical environment variables:
 
-These are workspace dependencies resolved automatically:
+- `VITE_CONVEX_URL`: Convex deployment URL
 
-- `@open-insights-web/foundation-database`
-- `@open-insights-web/foundation-sync-engine`
-- `@open-insights-web/foundation-bridge`
-- `@open-insights-web/foundation-data-model`
-- `@open-insights-web/foundation-utils`
-
----
-
-## Quick Start
+Minimal provider setup:
 
 ```tsx
-import {
-  DataLayerProvider,
-  useDLGet,
-  useDLCreate,
-} from '@open-insights-web/foundation-data-layer';
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
+import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
 import { api } from '../convex/_generated/api';
 
-const AppProviders = ({ children }: { children: React.ReactNode }) => (
+export const AppProviders = ({ children }: { children: React.ReactNode }) => (
   <DataLayerProvider
     config={{
-      convexUrl: process.env['VITE_CONVEX_URL'] ?? '',
-      conflictStrategy: ConflictStrategy.LAST_WRITE_WINS,
+      convexUrl: import.meta.env.VITE_CONVEX_URL,
+      conflictStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
       enableCrossTab: true,
       enableAnalytics: true,
+      datasourceApi: api.datasource.list,
       tables: [
         {
-          name: 'users',
+          name: 'events',
           convex: {
-            list: api.users.list,
-            get: api.users.get,
-            create: api.users.create,
-            update: api.users.update,
-            delete: api.users.delete,
+            list: api.events.list,
+            get: api.events.get,
+            create: api.events.create,
+            update: api.events.update,
+            delete: api.events.remove,
           },
-          staleTime: 5 * 60 * 1000,
           analytics: { enabled: true },
         },
       ],
     }}
-    loadingComponent={<div>Loading...</div>}
-    errorComponent={(error) => <div>Error: {error.message}</div>}
   >
     {children}
   </DataLayerProvider>
 );
-
-const UsersScreen = () => {
-  // Query with real-time Convex subscription + offline fallback
-  const { data: users, isLoading, isOffline, dataSource } = useDLGet({
-    query: api.users.list,
-    args: {},
-    table: 'users',
-  });
-
-  // Create with optimistic updates + offline queueing
-  const createUser = useDLCreate({
-    mutation: api.users.create,
-    table: 'users',
-    listQueryKey: ['users'],
-    onOptimistic: (vars) => ({
-      ...vars,
-      id: 'provisional',
-      createdAt: new Date().toISOString(),
-    }),
-  });
-
-  if (isLoading) return <div>Loading...</div>;
-
-  return (
-    <div>
-      {isOffline && <span>Offline mode (data from {dataSource})</span>}
-      <button onClick={() => createUser.mutate({ name: 'Ada' })}>
-        Create user ({users?.length ?? 0})
-      </button>
-    </div>
-  );
-};
 ```
-
----
 
 ## Configuration Reference
 
-### `DataLayerConfig`
+`DataLayerConfig`:
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `convexUrl` | `string` | **required** | Convex deployment URL |
-| `tables` | `UnifiedTableConfig[]` | `[]` | Table configurations (single source of truth) |
-| `datasourceApi` | `AnyFunctionReference` | — | Convex query for background file sync |
-| `conflictStrategy` | `ConflictStrategy` | `LAST_WRITE_WINS` | Global conflict resolution strategy |
-| `enableCrossTab` | `boolean` | `true` | Enable cross-tab sync coordination |
-| `enableAnalytics` | `boolean` | `true` | Enable DuckDB analytics runtime |
-| `defaultStaleTime` | `number` | `300000` (5 min) | Default query stale time in ms |
-| `defaultGcTime` | `number` | `86400000` (24 hr) | Default query GC time in ms |
-| `cache` | `CacheConfig` | — | Cache configuration overrides |
-| `debug` | `boolean` | `false` | Enable debug logging |
-| `onSyncError` | `(error, context?) => void` | — | Sync error callback |
+- `convexUrl` (`string`, required): Convex deployment URL
+- `tables` (`ReadonlyArray<UnifiedTableConfig>`, optional): unified table registry configuration
+- `datasourceApi` (`ConvexQueryReference`, optional): datasource metadata query for background parquet sync
+- `conflictStrategy` (`ConflictStrategy`, optional): default global strategy value from `CONFLICT_STRATEGY`
+- `enableCrossTab` (`boolean`, optional, default `true`)
+- `enableAnalytics` (`boolean`, optional, default `true`)
+- `defaultStaleTime` (`number`, optional)
+- `defaultGcTime` (`number`, optional)
+- `cache` (`CacheConfig`, optional)
+- `debug` (`boolean`, optional)
+- `onSyncError` (`(error, context?) => void`, optional)
 
-### `UnifiedTableConfig`
+`UnifiedTableConfig`:
 
-| Property | Type | Description |
-|---|---|---|
-| `name` | `string` | Table name (unique identifier) |
-| `convex` | `object` | Convex function references (`list`, `get`, `create`, `update`, `delete`) |
-| `staleTime` | `number` | Per-table stale time override (ms) |
-| `gcTime` | `number` | Per-table GC time override (ms) |
-| `conflictStrategy` | `ConflictStrategy` | Per-table conflict resolution |
-| `mergeConfig` | `object` | Field-level merge rules for `MERGE` strategy |
-| `analytics` | `TableAnalyticsConfig` | DuckDB configuration (`enabled`, `freshness`, `staleTime`) |
+- `name`
+- `convex` (`list` / `get` / `create` / `update` / `delete`)
+- `staleTime`
+- `gcTime`
+- `conflictStrategy`
+- `mergeConfig`
+- `analytics` (`enabled`, `freshness`, `staleTime`)
 
-### `CacheConfig`
+Data-layer constants for operations/freshness:
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `defaultStaleTime` | `number` | `300000` | Default stale time |
-| `defaultGcTime` | `number` | `86400000` | Default GC time |
-| `analyticsStaleTime` | `number` | `600000` | Analytics stale time |
-| `analyticsGcTime` | `number` | `3600000` | Analytics GC time |
+- `TABLE_OPERATION`
+- `DATA_FRESHNESS`
+- `CONFLICT_RESOLUTION_TYPE`
 
----
+## Public API Reference
 
-## Public API
+Provider and context:
 
-Use `src/index.ts` exports as the canonical API.
+- `DataLayerProvider`
+- `useDataLayer`
 
-### Provider
+Core query hooks:
 
-| Export | Description |
-|---|---|
-| `DataLayerProvider` | Root provider component |
-| `useDataLayer` | Public context hook (isOnline, isSyncing, syncNow, clearCache) |
-| `DataLayerContext` | React context for public state |
+- `useDLGet`
+- `useDLGetList`
+- `useDLGetOne`
 
-### Query Hooks
+Core mutation hooks:
 
-| Hook | Description |
-|---|---|
-| `useDLGet` | Query with Convex real-time + offline cache fallback |
-| `useDLGetList` | Simplified list query (no entityId) |
-| `useDLGetOne` | Simplified single-item query (entityId required) |
+- `useDLCreate`
+- `useDLUpdate`
+- `useDLDelete`
 
-### Mutation Hooks
+Analytics hooks:
 
-| Hook | Description |
-|---|---|
-| `useDLCreate` | Create with optimistic add + offline queue |
-| `useDLUpdate` | Update with optimistic modify + offline queue |
-| `useDLDelete` | Delete with optimistic remove + offline queue |
+- `useDLAnalytics`
+- `useDLAnalyticsMutation`
+- `useCreateAnalyticsView`
+- `useDropAnalyticsView`
+- `useExecuteAnalyticsSql`
+- `useLoadParquetFile`
+- `useCopyToParquet`
 
-### Analytics Hooks
+Sync/conflict hooks:
 
-| Hook | Description |
-|---|---|
-| `useDLAnalytics` | DuckDB SQL query hook |
-| `useDLAnalyticsMutation` | DuckDB write operations |
-| `useCreateAnalyticsView` | Create/replace DuckDB views |
-| `useDropAnalyticsView` | Drop DuckDB views |
-| `useExecuteAnalyticsSql` | Execute raw DuckDB SQL |
-| `useLoadParquetFile` | Load Parquet files into DuckDB |
-| `useCopyToParquet` | Export query results to Parquet |
+- `useSyncStatus`
+- `useSyncTrigger`
+- `useSyncEventListener`
+- `useConflictResolution`
+- `useEntityConflict`
+- `useConflicts`
+- `useBackgroundFileSync`
 
-### Sync and Conflict Hooks
+Advanced composition:
 
-| Hook | Description |
-|---|---|
-| `useSyncStatus` | Monitor sync state (online, syncing, pending count, leader) |
-| `useSyncTrigger` | Trigger manual sync |
-| `useSyncEventListener` | Listen for specific sync events |
-| `useConflictResolution` | Manage and resolve sync conflicts |
-| `useEntityConflict` | Check if a specific entity has conflicts |
-| `useConflicts` | Read-only conflicts list |
+- `DataLayerContainer`
+- `createDataLayerContainer`
+- `TableRegistry`
+- `createTableRegistry`
 
-### Convenience Hooks
+## Architecture
 
-| Hook | Description |
-|---|---|
-| `useIsOnline` | Network online status |
-| `useIsDuckDBAvailable` | DuckDB availability |
-| `usePendingMutationCount` | Pending offline mutation count |
-| `useBackgroundFileSync` | Background Parquet file synchronization |
+High-level composition:
 
-### Core Exports
+```mermaid
+flowchart TD
+  A["DataLayerProvider"] --> B["DataLayerContainer"]
+  B --> C["QueryClient + ConvexQueryClient"]
+  B --> D["DatabaseFacade"]
+  B --> E["SyncCoordinator"]
+  B --> F["TableRegistry"]
+  B --> G["Lazy Analytics Runtime"]
+  G --> H["DuckDBRouter"]
+  G --> I["OpfsManager"]
+  A --> J["DataLayerContext"]
+  A --> K["DataLayerInternalsContext"]
+  K --> L["Hooks (query/mutation/analytics/sync)"]
+```
 
-| Export | Description |
-|---|---|
-| `TableRegistry` / `createTableRegistry` | Unified table metadata registry |
-| `DataLayerContainer` / `createDataLayerContainer` | Dependency injection container |
-| `DATA_FRESHNESS` | Analytics freshness level constants |
-| `DEFAULT_CACHE_CONFIG` / `DEFAULT_RETRY_CONFIG` | Default configurations |
-| `CONFLICT_RESOLUTION_TYPE` | Conflict resolution discriminants |
+Module map:
 
----
+- `src/core`: container, registry, constants, shared types
+- `src/provider`: provider and internal/public contexts
+- `src/hooks`: public hook surface
+- `src/analytics-sync`: table sync + file download services and background sync hook
+- `src/utils`: shared mutation/query/analytics helpers and error handling
+
+Architectural constraints in this release:
+
+- Internal implementation imports concrete modules directly (no internal barrel-import fan-out)
+- Shared datasource contracts live in `foundation-data-model`
+- Table sync and file download services are container-scoped lazy singletons
+- No `fetch` usage in data-layer runtime; Axios-based download path is used
 
 ## Advanced Usage
 
-### Offline-First Mutations
-
-All mutation hooks automatically handle offline scenarios:
+Offline-first create/update/delete:
 
 ```tsx
-const updateUser = useDLUpdate({
-  mutation: api.users.update,
-  table: 'users',
-  getEntityId: (vars) => vars.id,
-  onOptimistic: (vars, prev) => ({ ...prev, ...vars, updatedAt: new Date().toISOString() }),
-  listQueryKey: ['users'],
-  itemQueryKey: (id) => ['users', id],
-  invalidateKeys: [['users']],
+const createEvent = useDLCreate({
+  mutation: api.events.create,
+  table: 'events',
+  listQueryKey: ['events'],
+  onOptimistic: (vars) => ({
+    ...vars,
+    createdAt: new Date().toISOString(),
+  }),
 });
 
-// Works online AND offline
-updateUser.mutate({ id: '123', name: 'Jane' });
-
-// Check if mutation was queued (offline)
-if (updateUser.isQueued) {
-  showToast('Change saved locally. Will sync when online.');
+await createEvent.mutateAsync({ name: 'offline-safe' });
+if (createEvent.isQueued) {
+  // queued locally; sync-engine will flush on reconnect
 }
 ```
 
-### Conflict Resolution UI
+Analytics sync with progress:
 
 ```tsx
-const ConflictManager = () => {
-  const {
-    conflicts,
-    hasConflicts,
-    resolveConflict,
-    resolveAll,
-    dismissAll,
-  } = useConflictResolution();
-
-  if (!hasConflicts) return null;
-
-  return (
-    <div>
-      <h3>{conflicts.length} conflict(s) detected</h3>
-      {conflicts.map((conflict) => (
-        <div key={conflict.id}>
-          <p>Table: {conflict.tableName}, Entity: {conflict.entityId}</p>
-          <button onClick={() => resolveConflict(conflict.id, { type: 'accept-local' })}>
-            Keep Local
-          </button>
-          <button onClick={() => resolveConflict(conflict.id, { type: 'accept-remote' })}>
-            Use Server
-          </button>
-        </div>
-      ))}
-      <button onClick={() => resolveAll({ type: 'accept-remote' })}>
-        Accept All Server Changes
-      </button>
-    </div>
-  );
-};
-```
-
-### DuckDB Analytics Pipeline
-
-```tsx
-const AnalyticsDashboard = () => {
-  // Load Parquet data into DuckDB
-  const loadEvents = useLoadParquetFile();
-
-  // Query aggregated data
-  const { rows, isLoading } = useDLAnalytics({
-    sql: `SELECT DATE_TRUNC('day', timestamp) as date, COUNT(*) as count
-          FROM events
-          GROUP BY date
-          ORDER BY date DESC
-          LIMIT 30`,
-    queryKey: ['analytics', 'dailyEvents'],
-  });
-
-  // Background sync for Parquet files
-  const { isDownloading, downloadProgress, triggerSync } = useBackgroundFileSync({
-    tables: ['events', 'sessions'],
-    enabled: true,
-    onComplete: (tables) => console.log('Synced:', tables),
-  });
-
-  return (
-    <div>
-      {isDownloading && <ProgressBar value={downloadProgress.progress} />}
-      <Chart data={rows} />
-    </div>
-  );
-};
-```
-
-### Background File Sync
-
-```tsx
-const { triggerSync, isDownloading, downloadProgress, isConfigured } = useBackgroundFileSync({
-  tables: ['events', 'sessions', 'users'],
+const sync = useBackgroundFileSync({
+  tables: ['events', 'sessions'],
   enabled: true,
-  onProgress: (progress) => {
-    console.log(`${progress.filesCompleted}/${progress.filesTotal} files`);
-  },
-  onComplete: (updatedTables) => {
-    // Tables are now available in DuckDB
-    toast.success(`Updated: ${updatedTables.join(', ')}`);
-  },
-  onError: (error) => {
-    toast.error(`Sync failed: ${error.message}`);
+  onProgress: (state) => {
+    console.log(state.progress, state.filesCompleted, state.filesTotal);
   },
 });
 ```
 
-### Custom Container (Advanced)
+Conflict resolution:
 
-For testing or advanced composition:
+```tsx
+const { conflicts, resolveConflict } = useConflictResolution();
 
-```typescript
-import {
-  DataLayerContainer,
-  createDataLayerContainer,
-} from '@open-insights-web/foundation-data-layer';
-
-const container = createDataLayerContainer({
-  convexUrl: 'https://my-app.convex.cloud',
-  tables: [...],
-  factories: {
-    // Override for testing
-    database: () => mockDatabaseFacade,
-    syncCoordinator: (config) => mockSyncCoordinator,
-  },
-});
-
-const deps = await container.initialize();
-// Use deps.queryClient, deps.database, etc.
-
-// Cleanup
-await container.dispose();
+for (const conflict of conflicts) {
+  await resolveConflict(conflict.id, {
+    type: CONFLICT_RESOLUTION_TYPE.ACCEPT_REMOTE,
+  });
+}
 ```
 
----
+## Performance And Caching Guidance
 
-## Performance
+- Analytics runtime is lazy-initialized; no DuckDB startup cost until analytics hooks run.
+- Use table-level `staleTime` and `gcTime` overrides for high-volume tables.
+- Background sync downloads files concurrently, but file writes are serialized to avoid OPFS handle contention.
+- Mutation hooks centralize local-first execution and query invalidation logic through shared helpers.
+- Keep `enableAnalytics` false in deployments that do not require SQL analytics.
 
-### Lazy Analytics Initialization
+## Failure Modes And Recovery
 
-The DuckDB runtime (WebAssembly + workers) is only loaded when the first analytics hook executes. This keeps the initial provider mount fast.
+- `No datasource API configured`: configure `datasourceApi` for background file sync.
+- `DuckDB is not available`: verify browser/runtime support and analytics runtime initialization.
+- Offline query misses cache: `useDLGet` throws when neither network nor cache can satisfy a request.
+- Sync pipeline errors: subscribe via `useSyncStatus` and handle `onSyncError` in provider config.
+- Conflict accumulation: resolve through `useConflictResolution` or apply a bulk strategy (`resolveAll`).
 
-### Concurrent File Downloads
+## Migration Guide (Breaking Release)
 
-`FileDownloadService` downloads Parquet files with configurable concurrency (default: 3 concurrent downloads). This significantly reduces sync time for tables with many files.
+This release includes intentional breaking changes for strict typing and naming consistency.
 
-### Optimistic Update Strategy
+### Constant renames
 
-Mutations use a fire-and-forget pattern for cache persistence. The IndexedDB write happens asynchronously after the optimistic update, avoiding blocking the UI thread.
+- `ErrorSeverity` -> `ERROR_SEVERITY`
+- `HookContext` -> `HOOK_CONTEXT`
 
-### Memory Management
+No legacy aliases are retained.
 
-- **TanStack Query GC**: Unused cache entries are garbage collected after `gcTime` (default: 24 hours).
-- **Database cleanup**: `DatabaseFacade.startCleanup()` runs periodic cleanup of expired entries.
-- **Sync event subscriptions**: All subscriptions are properly unsubscribed in cleanup effects.
-- **Container disposal**: Mutex-protected async disposal ensures all resources are released in order.
+### Mutation return typing
 
-### Tips
+- `DLMutationResult.mutateAsync` now returns `Promise<TData | undefined>`.
+- `useDLDelete` offline path returns `undefined` as a typed result.
 
-- Set per-table `staleTime` and `gcTime` based on data volatility.
-- Use `DATA_FRESHNESS.EVENTUAL` for tables where DuckDB analytics are preferred over API calls.
-- Keep `enableAnalytics: false` if you don't use DuckDB to avoid loading the WASM runtime.
-- Use `useBackgroundFileSync` for large datasets rather than loading Parquet files on-demand.
+### Data source type consolidation
 
----
+Datasource contracts are centralized in `foundation-data-model` and consumed by data-layer/query-engine:
 
-## Troubleshooting
+- `DataSourceFileInfo`
+- `DataSourceTableInfo`
+- `DataSourceMetadata`
+- `DataSourceResponse`
+- `DataSourceRequest`
 
-### "DataLayerProvider not initialized"
+### Const-backed option types
 
-The `useDataLayer()` or `useDataLayerInternals()` hook was called outside of a `<DataLayerProvider>`. Ensure your component tree includes the provider.
+String-literal options were replaced or normalized to const-backed values where applicable.
+Use exported constants instead of handwritten string unions.
 
-### "Container is disposed"
+### Internal import policy
 
-The container was disposed (typically during React unmount) before an async operation completed. This is usually harmless and can be ignored.
+Implementation code should import concrete modules directly.
+Only package-root API exports should be consumed by downstream libraries/apps.
 
-### "DuckDB is not available in this environment"
+## Contributing And Extending
 
-DuckDB requires WebAssembly support and SharedArrayBuffer. Check:
-- Browser supports WASM and SAB
-- `enableAnalytics` is not set to `false`
-- The analytics runtime initialized successfully (check debug logs with `debug: true`)
+Engineering rules for this library:
 
-### "No datasource API configured"
+- Keep strict TypeScript compatibility (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
+- Avoid explicit `undefined` assignment to optional props unless the type allows it.
+- Use `UPPER_SNAKE_CASE` for constants and `PascalCase` for types/interfaces/enums.
+- Prefer shared utilities over duplicated hook logic.
+- Keep public hook behavior documented with concise JSDoc.
+- Use Axios (or configured Axios instances) for HTTP operations.
 
-The `useBackgroundFileSync` hook requires `datasourceApi` in the `DataLayerConfig`. This is a Convex query function that returns Parquet file metadata.
+When adding new hook features:
 
-### Stale offline data
+1. Add or reuse utility logic in `src/utils` first.
+2. Keep hook files thin and strategy-driven.
+3. Add tests in `src/hooks/*.spec.tsx` for online/offline and error behavior.
+4. Update root exports in `src/index.ts` only for intended public surface.
 
-If cached data seems outdated:
-1. Check `staleTime` and `gcTime` settings
-2. Call `clearCache()` from `useDataLayer()` to reset
-3. Verify sync is working via `useSyncStatus()`
-
----
-
-## Development
-
-### Compile
+## Validation Commands
 
 ```bash
-npx tsc -p libs/foundation/data-layer/tsconfig.lib.json --pretty false
-npx tsc -p libs/foundation/data-layer/tsconfig.spec.json --pretty false
-```
-
-### Run Tests
-
-```bash
+npx eslint libs/foundation/data-layer/src --ext .ts,.tsx --max-warnings=0
 npx vitest run libs/foundation/data-layer/src
+npx tsc -b libs/foundation/bridge/tsconfig.lib.json libs/foundation/data-model/tsconfig.lib.json libs/foundation/data-layer/tsconfig.lib.json libs/foundation/query-engine/tsconfig.lib.json
 ```
-
-### Run Tests in Watch Mode
-
-```bash
-npx vitest libs/foundation/data-layer/src
-```
-
----
-
-## Contributing
-
-### Code Conventions
-
-- **Strict typing**: No `any`, no unchecked casts. Use `unknown` + type guards.
-- **Readonly interfaces**: All exported interface properties must be `readonly`.
-- **Constants**: Use `UPPER_SNAKE_CASE` with `as const` objects and derived types.
-- **Arrow functions**: Prefer arrow functions for all callbacks and function definitions.
-- **Direct imports**: Import from specific modules, not barrel re-exports, in internal code.
-- **Centralized defaults**: All default values go in `src/core/constants.ts`.
-- **Structured logging**: Use `createDebugLogger` / `createLogger` from `foundation-utils`. No raw `console.*` calls.
-- **Error hierarchy**: Custom errors must extend `FoundationError` from `foundation-data-model`.
-
-### Architecture Rules
-
-- `core/` contains types, constants, container, and table registry. No React dependencies.
-- `provider/` contains React contexts and the provider component.
-- `hooks/` contains React hooks. Each hook file is self-contained with its types.
-- `utils/` contains shared utilities used by multiple hooks.
-- `analytics-sync/` contains the background file sync pipeline.
-
-### Testing
-
-- Use Vitest with globals enabled.
-- Mock external dependencies (Convex, database) via the `factories` config.
-- Test files are colocated with source files (`.spec.ts` suffix).
-- Focus on behavioral tests over implementation details.

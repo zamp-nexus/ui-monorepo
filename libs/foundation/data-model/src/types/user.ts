@@ -67,10 +67,19 @@ export interface UserWithRelations extends User {
 /**
  * User profile (subset for display)
  */
-export type UserProfile = Pick<
-  User,
-  'id' | 'name' | 'email' | 'avatarUrl' | 'role' | 'status' | 'preferences'
->;
+export const USER_PROFILE_FIELD = {
+  ID: 'id',
+  NAME: 'name',
+  EMAIL: 'email',
+  AVATAR_URL: 'avatarUrl',
+  ROLE: 'role',
+  STATUS: 'status',
+  PREFERENCES: 'preferences',
+} as const;
+
+type UserProfileField = (typeof USER_PROFILE_FIELD)[keyof typeof USER_PROFILE_FIELD];
+
+export type UserProfile = Pick<User, UserProfileField>;
 
 /**
  * User permissions map

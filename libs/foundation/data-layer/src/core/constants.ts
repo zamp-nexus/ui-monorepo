@@ -84,6 +84,19 @@ export const OFFLINE_NETWORK_MODE = 'offlineFirst' as const;
 export const ANALYTICS_QUERY_RETRY_MAX = 2;
 
 /**
+ * Supported table operations.
+ */
+export const TABLE_OPERATION = {
+  LIST: 'list',
+  GET: 'get',
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+} as const;
+
+export type TableOperation = (typeof TABLE_OPERATION)[keyof typeof TABLE_OPERATION];
+
+/**
  * Conflict resolution discriminant values.
  */
 export const CONFLICT_RESOLUTION_TYPE = {

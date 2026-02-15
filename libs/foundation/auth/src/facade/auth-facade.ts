@@ -9,6 +9,7 @@
 import type { Identity } from '@ory/client-fetch';
 import {
   getUserPermissions,
+  isValidRole,
   type AuthConfig,
   type SessionServiceInterface,
   type FlowServiceInterface,
@@ -256,20 +257,11 @@ export class AuthFacade implements AuthFacadeInterface {
   private extractRole = (traits: IdentityTraits): UserRole => {
     const role = traits[IDENTITY_TRAIT.ROLE];
 
-    // Validate role is a valid UserRole
-    if (typeof role === 'string' && this.isValidRole(role)) {
-      return role as UserRole;
+    if (typeof role === 'string' && isValidRole(role)) {
+      return role;
     }
 
     return DEFAULT_USER_ROLE;
-  };
-
-  /**
-   * Check if a string is a valid UserRole
-   */
-  private isValidRole = (role: string): boolean => {
-    const validRoles: UserRole[] = ['owner', 'admin', 'member', 'viewer', 'guest'];
-    return validRoles.includes(role as UserRole);
   };
 
   /**

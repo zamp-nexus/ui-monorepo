@@ -15,6 +15,7 @@ export {
   SchemaRegistry,
   // Types
   MEMBER_TYPES,
+  SCHEMA_ELEMENT_TYPES,
   type MemberType,
   type MemberResolution,
   type SchemaValidationStatus,

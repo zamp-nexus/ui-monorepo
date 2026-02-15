@@ -36,6 +36,7 @@ export {
   getDecisionEngine,
   resetDecisionEngine,
   hasDecisionEngineInstance,
+  DEFAULT_DECISION_RULES,
   type DecisionEngineConfig,
 } from './decision-engine';
 

@@ -17,7 +17,7 @@ export type {
   QueryFunctionRef,
 } from './types';
 
-export { TABLE_NAMES } from './types';
+export { TABLE_NAMES, QUERY_SCOPE } from './types';
 
 // Factory functions
 export {

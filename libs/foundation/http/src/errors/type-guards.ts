@@ -8,8 +8,7 @@
  */
 
 import { HTTP_ERROR_CODE, type HttpErrorCode } from '../core/constants';
-import {
-  HttpError,
+import type {
   HttpNotInitializedError,
   HttpRequestError,
   HttpTimeoutError,
@@ -20,16 +19,30 @@ import {
   HttpNotFoundError,
   HttpServerError,
   HttpConfigError,
-  HttpSerializationError,
+  HttpSerializationError} from './http-errors';
+import {
+  HttpError
 } from './http-errors';
 
 // =============================================================================
 // Core Type Guards
 // =============================================================================
 
-/** Check if an error is any HttpError */
+/**
+ * Check if an error is any HttpError.
+ *
+ * Uses `instanceof` as the fast path; falls back to structural duck-type
+ * checking for `httpCode` so that errors crossing realm boundaries (e.g.
+ * from Web Workers) are still detected.
+ */
 export const isHttpError = (error: unknown): error is HttpError =>
-  error instanceof HttpError;
+  error instanceof HttpError ||
+  (typeof error === 'object' &&
+    error !== null &&
+    'httpCode' in error &&
+    'code' in error &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string');
 
 /** Check if an error has a specific HTTP error code */
 export const hasHttpErrorCode = (

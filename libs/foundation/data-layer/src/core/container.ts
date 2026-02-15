@@ -25,13 +25,22 @@ import {
   createSyncCoordinator,
   type SyncCoordinator,
 } from '@open-insights-web/foundation-sync-engine';
-import { ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+} from '@open-insights-web/foundation-data-model';
 import { Mutex, createLogger, type Logger } from '@open-insights-web/foundation-utils';
 import {
   DuckDBRouter,
 } from '@open-insights-web/foundation-bridge';
+import {
+  FileDownloadService,
+} from '../analytics-sync/file-download-service';
+import {
+  TableSyncService,
+} from '../analytics-sync/table-sync-service';
 
-import type { CacheConfig, ResolvedCacheConfig, UnifiedTableConfig, AnyFunctionReference } from './types';
+import type { CacheConfig, ConvexQueryReference, ResolvedCacheConfig, UnifiedTableConfig } from './types';
 import {
   DEFAULT_CACHE_CONFIG,
   OFFLINE_NETWORK_MODE,
@@ -75,7 +84,11 @@ export interface DataLayerDependencies {
   /** Unified table registry - single source of truth for table metadata */
   readonly tableRegistry: TableRegistry;
   /** Global datasource API reference for background file sync (null if not configured) */
-  readonly datasourceApi: AnyFunctionReference | null;
+  readonly datasourceApi: ConvexQueryReference | null;
+  /** Container-scoped singleton accessor for table sync service */
+  readonly getTableSyncService: () => TableSyncService;
+  /** Container-scoped singleton accessor for file download service */
+  readonly getFileDownloadService: () => Promise<FileDownloadService | null>;
 }
 
 /**
@@ -116,7 +129,7 @@ export interface ContainerConfig {
    * Global datasource API reference for background file sync.
    * Used by useBackgroundFileSync to fetch parquet file metadata.
    */
-  readonly datasourceApi?: AnyFunctionReference;
+  readonly datasourceApi?: ConvexQueryReference;
   /** Conflict resolution strategy */
   readonly conflictStrategy?: ConflictStrategy;
   /** Enable cross-tab sync */
@@ -158,6 +171,9 @@ export class DataLayerContainer {
         readonly opfsManager: OpfsManager | null;
       }
     | null = null;
+  private tableSyncService: TableSyncService | null = null;
+  private fileDownloadService: FileDownloadService | null = null;
+  private fileDownloadServiceOpfsManager: OpfsManager | null = null;
   private readonly config: ContainerConfig;
   private readonly logger: Logger;
 
@@ -222,12 +238,21 @@ export class DataLayerContainer {
     };
 
     // Create TableRegistry from unified table config
-    const tableRegistry = createTableRegistry(this.config.tables ?? [], {
+    const tableRegistryDefaults: {
+      staleTime: number;
+      gcTime: number;
+      conflictStrategy: ConflictStrategy;
+      debug?: boolean;
+    } = {
       staleTime: cacheConfig.defaultStaleTime,
       gcTime: cacheConfig.defaultGcTime,
-      conflictStrategy: this.config.conflictStrategy ?? ConflictStrategy.LAST_WRITE_WINS,
-      debug: this.config.debug,
-    });
+      conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
+    };
+    if (this.config.debug !== undefined) {
+      tableRegistryDefaults.debug = this.config.debug;
+    }
+
+    const tableRegistry = createTableRegistry(this.config.tables ?? [], tableRegistryDefaults);
     this.log('Table registry created with', tableRegistry.getTableNames().length, 'tables');
 
     // Create Convex clients
@@ -238,32 +263,61 @@ export class DataLayerContainer {
     const queryClient = this.createQueryClient(convexQueryClient, cacheConfig);
 
     // Create database facade - instance scoped (no shared singleton reset hazards)
+    const databaseConfig = this.config.debug === undefined ? undefined : { debug: this.config.debug };
     const database =
-      this.config.factories?.database?.() ?? DatabaseFacade.create({ debug: this.config.debug });
+      this.config.factories?.database?.() ?? DatabaseFacade.create(databaseConfig);
 
     // Create sync coordinator using SAME database instance
     // Pass the underlying InsightsDatabase from facade to prevent duplicate instances
-    const syncCoordinator = this.config.factories?.syncCoordinator?.({
+    const syncCoordinatorFactoryConfig: {
+      queryClient: QueryClient;
+      convexClient: ConvexReactClient;
+      database: DatabaseFacade;
+      conflictStrategy: ConflictStrategy;
+      enableCrossTab: boolean;
+      autoStart: boolean;
+      debug: boolean;
+      onError?: (error: Error, context?: string) => void;
+    } = {
       queryClient,
       convexClient,
       database,
-      conflictStrategy: this.config.conflictStrategy ?? ConflictStrategy.LAST_WRITE_WINS,
+      conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
       enableCrossTab: this.config.enableCrossTab ?? true,
       autoStart: true,
       debug: this.config.debug ?? false,
-      onError: this.config.onSyncError,
-    }) ?? createSyncCoordinator({
+    };
+    if (this.config.onSyncError) {
+      syncCoordinatorFactoryConfig.onError = this.config.onSyncError;
+    }
+
+    const syncCoordinatorConfig: {
+      queryClient: QueryClient;
+      convexClient: ConvexReactClient;
+      database: ReturnType<DatabaseFacade['getDatabase']>;
+      conflictStrategy: ConflictStrategy;
+      enableCrossTab: boolean;
+      autoStart: boolean;
+      debug?: boolean;
+      onError?: (error: Error, context?: string) => void;
+    } = {
       queryClient,
       convexClient,
-      // Pass the underlying InsightsDatabase from facade
-      // This ensures a single database instance is shared across all components
       database: database.getDatabase(),
-      conflictStrategy: this.config.conflictStrategy ?? ConflictStrategy.LAST_WRITE_WINS,
+      conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
       enableCrossTab: this.config.enableCrossTab ?? true,
       autoStart: true,
-      debug: this.config.debug,
-      onError: this.config.onSyncError,
-    });
+    };
+    if (this.config.debug !== undefined) {
+      syncCoordinatorConfig.debug = this.config.debug;
+    }
+    if (this.config.onSyncError) {
+      syncCoordinatorConfig.onError = this.config.onSyncError;
+    }
+
+    const syncCoordinator =
+      this.config.factories?.syncCoordinator?.(syncCoordinatorFactoryConfig) ??
+      createSyncCoordinator(syncCoordinatorConfig);
 
     // Start auto-cleanup for expired cache entries
     database.startCleanup();
@@ -283,7 +337,61 @@ export class DataLayerContainer {
       cacheConfig,
       tableRegistry,
       datasourceApi: this.config.datasourceApi ?? null,
+      getTableSyncService: () => this.getOrCreateTableSyncService(database, convexClient),
+      getFileDownloadService: () => this.getOrCreateFileDownloadService(database),
     };
+  };
+
+  private getOrCreateTableSyncService = (
+    database: DatabaseFacade,
+    convexClient: ConvexReactClient
+  ): TableSyncService => {
+    if (!this.tableSyncService) {
+      const tableSyncConfig: {
+        convexClient: ConvexReactClient;
+        datasourceApi: ConvexQueryReference | null;
+        database: DatabaseFacade['tableSyncMetadata'];
+        debug?: boolean;
+      } = {
+        convexClient,
+        datasourceApi: this.config.datasourceApi ?? null,
+        database: database.tableSyncMetadata,
+      };
+      if (this.config.debug !== undefined) {
+        tableSyncConfig.debug = this.config.debug;
+      }
+      this.tableSyncService = new TableSyncService(tableSyncConfig);
+    }
+    return this.tableSyncService;
+  };
+
+  private getOrCreateFileDownloadService = async (
+    database: DatabaseFacade
+  ): Promise<FileDownloadService | null> => {
+    const runtime = await this.ensureAnalyticsRuntime(database);
+    const runtimeOpfsManager = runtime?.opfsManager ?? null;
+    if (!runtimeOpfsManager) {
+      return null;
+    }
+
+    if (
+      !this.fileDownloadService ||
+      this.fileDownloadServiceOpfsManager !== runtimeOpfsManager
+    ) {
+      const fileDownloadConfig: {
+        opfsManager: OpfsManager;
+        debug?: boolean;
+      } = {
+        opfsManager: runtimeOpfsManager,
+      };
+      if (this.config.debug !== undefined) {
+        fileDownloadConfig.debug = this.config.debug;
+      }
+      this.fileDownloadService = new FileDownloadService(fileDownloadConfig);
+      this.fileDownloadServiceOpfsManager = runtimeOpfsManager;
+    }
+
+    return this.fileDownloadService;
   };
 
   /**
@@ -312,14 +420,24 @@ export class DataLayerContainer {
       }
 
       try {
+        const duckdbRouterConfig: { debug?: boolean } = {};
+        if (this.config.debug !== undefined) {
+          duckdbRouterConfig.debug = this.config.debug;
+        }
         const duckdbRouter =
-          this.config.factories?.duckdbRouter?.() ?? new DuckDBRouter({ debug: this.config.debug });
+          this.config.factories?.duckdbRouter?.() ?? new DuckDBRouter(duckdbRouterConfig);
+        const opfsManagerConfig: {
+          database: ReturnType<DatabaseFacade['getDatabase']>;
+          debug?: boolean;
+        } = {
+          database: database.getDatabase(),
+        };
+        if (this.config.debug !== undefined) {
+          opfsManagerConfig.debug = this.config.debug;
+        }
         const opfsManager =
           this.config.factories?.opfsManager?.(database) ??
-          new OpfsManager({
-            debug: this.config.debug,
-            database: database.getDatabase(),
-          });
+          new OpfsManager(opfsManagerConfig);
 
         this.analyticsRuntime = { duckdbRouter, opfsManager };
         this.log('Analytics runtime initialized lazily');
@@ -451,6 +569,9 @@ export class DataLayerContainer {
       }
 
       this.analyticsRuntime = null;
+      this.tableSyncService = null;
+      this.fileDownloadService = null;
+      this.fileDownloadServiceOpfsManager = null;
       this.deps = null;
       this.disposed = true;
 

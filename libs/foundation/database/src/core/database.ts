@@ -20,20 +20,14 @@ import {
   ManagedInterval,
   type Logger,
 } from '@open-insights-web/foundation-utils';
+import { MUTATION_STATUS } from '@open-insights-web/foundation-data-model';
 import type { DatabaseConfig } from './config';
-import { mergeConfig, MutationStatus } from './config';
-import type {
-  QueryCacheEntry,
-  MutationQueueEntry,
-  OpfsMetadataEntry,
-  SyncStateEntry,
-  TableSyncMetadataEntry,
-} from '../tables';
-import {
-  setDatabaseInstance,
-  getDatabaseInstance,
-  notifyDatabaseReset,
-} from './database-registry';
+import { mergeConfig } from './config';
+import type { QueryCacheEntry } from '../tables/query-cache';
+import type { MutationQueueEntry } from '../tables/mutation-queue';
+import type { OpfsMetadataEntry } from '../tables/opfs-metadata';
+import type { SyncStateEntry } from '../tables/sync-state';
+import type { TableSyncMetadataEntry } from '../tables/table-sync-metadata';
 
 /**
  * Main database class extending Dexie
@@ -116,19 +110,17 @@ export class InsightsDatabase extends Dexie {
       tableSyncMetadata: 'name, loadedAt',
     });
 
-    // Version 3: Future migration placeholder
-    // Uncomment and modify when adding new indexes or columns:
-    //
-    // this.version(3).stores({
-    //   queries: 'queryHash, tableName, dataUpdatedAt, expiresAt',
-    //   mutations: 'id, timestamp, status, idempotencyKey, *dependsOn',
-    //   opfsFiles: 'path, tableName, lastModified',
-    //   syncState: 'key',
-    //   tableSyncMetadata: 'name, loadedAt',
-    // }).upgrade(async (tx) => {
-    //   // Migration logic for existing data
-    //   this.log('Running migration to version 3');
-    // });
+    // Version 3: Add indexes for hot query paths
+    // - mutations: composite index for status+timestamp scans
+    // - opfsFiles: indexes for registration and file-type lookups
+    // - tableSyncMetadata: index for loadedAt timestamp comparisons
+    this.version(3).stores({
+      queries: 'queryHash, tableName, dataUpdatedAt, expiresAt',
+      mutations: 'id, timestamp, status, [status+timestamp], idempotencyKey, *dependsOn',
+      opfsFiles: 'path, tableName, lastModified, isRegistered, fileType',
+      syncState: 'key',
+      tableSyncMetadata: 'name, loadedAt, lastIngestedAt',
+    });
 
     // Start cleanup if enabled
     if (mergedConfig.autoCleanup) {
@@ -153,8 +145,29 @@ export class InsightsDatabase extends Dexie {
    * Always logs errors, not just in debug mode (fix for silent swallowing)
    */
   private handleCleanupError = (error: unknown): void => {
-    // Always log cleanup errors, not just in debug mode
-    console.error('[InsightsDatabase] Cleanup error:', error);
+    this.logger.error('Cleanup error:', error);
+  };
+
+  /**
+   * Get mutation IDs in terminal state before a timestamp cutoff.
+   *
+   * Uses the [status+timestamp] compound index to avoid collection scans.
+   */
+  private getTerminalMutationIdsBefore = async (
+    status: typeof MUTATION_STATUS.COMPLETED | typeof MUTATION_STATUS.FAILED,
+    cutoffTimestamp: number
+  ): Promise<string[]> => {
+    const primaryKeys = await this.mutations
+      .where('[status+timestamp]')
+      .between(
+        [status, Dexie.minKey],
+        [status, cutoffTimestamp],
+        true,
+        true
+      )
+      .primaryKeys();
+
+    return primaryKeys.map((key) => String(key));
   };
 
   /**
@@ -226,11 +239,13 @@ export class InsightsDatabase extends Dexie {
   };
 
   /**
-   * Cleanup expired query cache entries and apply LRU eviction if over limit
+   * Cleanup expired query cache entries, apply LRU eviction, and purge
+   * completed/failed mutations past their retention period.
    *
-   * Two-stage cleanup:
-   * 1. Delete all expired entries (TTL-based)
-   * 2. If still over maxCacheEntries, delete oldest entries (LRU-based)
+   * Three-stage cleanup:
+   * 1. Delete all expired query entries (TTL-based)
+   * 2. If still over maxCacheEntries, delete oldest queries (LRU-based)
+   * 3. Delete completed/failed mutations older than mutationRetentionMs
    *
    * @returns Total number of entries deleted
    */
@@ -267,6 +282,22 @@ export class InsightsDatabase extends Dexie {
           totalDeleted += oldestEntries.length;
           this.log(`LRU evicted ${oldestEntries.length} oldest cache entries`);
         }
+      }
+    }
+
+    // Stage 3: Purge completed/failed mutations past retention period
+    if (this.config.mutationRetentionMs > 0) {
+      const retentionCutoff = now - this.config.mutationRetentionMs;
+      const [completedIds, failedIds] = await Promise.all([
+        this.getTerminalMutationIdsBefore(MUTATION_STATUS.COMPLETED, retentionCutoff),
+        this.getTerminalMutationIdsBefore(MUTATION_STATUS.FAILED, retentionCutoff),
+      ]);
+      const staleMutations = [...completedIds, ...failedIds];
+
+      if (staleMutations.length > 0) {
+        await this.mutations.bulkDelete(staleMutations);
+        totalDeleted += staleMutations.length;
+        this.log(`Cleaned up ${staleMutations.length} completed/failed mutations`);
       }
     }
 
@@ -307,10 +338,17 @@ export class InsightsDatabase extends Dexie {
       this.opfsFiles.count(),
     ]);
 
-    const pendingMutations = await this.mutations
-      .where('status')
-      .anyOf([MutationStatus.PENDING, MutationStatus.OFFLINE_QUEUED])
-      .count();
+    const [pendingCount, offlineQueuedCount] = await Promise.all([
+      this.mutations
+        .where('[status+timestamp]')
+        .between([MUTATION_STATUS.PENDING, Dexie.minKey], [MUTATION_STATUS.PENDING, Dexie.maxKey], true, true)
+        .count(),
+      this.mutations
+        .where('[status+timestamp]')
+        .between([MUTATION_STATUS.OFFLINE_QUEUED, Dexie.minKey], [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.maxKey], true, true)
+        .count(),
+    ]);
+    const pendingMutations = pendingCount + offlineQueuedCount;
 
     return {
       queriesCount,
@@ -353,18 +391,15 @@ export interface DatabaseStats {
  */
 const databaseFactory = createSingletonFactory(
   (config: Partial<DatabaseConfig> | undefined) => {
-    const db = new InsightsDatabase(config);
-    setDatabaseInstance(db);
-    return db;
+    return new InsightsDatabase(config);
   },
   {
     name: 'InsightsDatabase',
     compareConfig: createDeepEqualComparison(isEqual, 'InsightsDatabase'),
     onDispose: (instance) => {
-      setDatabaseInstance(null);
-      (instance as InsightsDatabase).close();
-      // Notify any registered callbacks (e.g., DatabaseFacade)
-      notifyDatabaseReset();
+      if (instance instanceof InsightsDatabase) {
+        instance.close();
+      }
     },
   }
 );
@@ -372,8 +407,7 @@ const databaseFactory = createSingletonFactory(
 /**
  * Get or create database instance
  *
- * If called from DatabaseFacade, returns the facade's database instance.
- * Otherwise creates a new singleton instance.
+ * Shared singleton source of truth for both getDatabase() and getDatabaseFacade().
  *
  * Note: If an instance already exists, the config parameter is ignored.
  * Call resetDatabase() first to change configuration.
@@ -381,12 +415,6 @@ const databaseFactory = createSingletonFactory(
 export const getDatabase = (
   config?: Partial<DatabaseConfig>
 ): InsightsDatabase => {
-  // Check if a database instance already exists in the registry
-  // (e.g., created by DatabaseFacade)
-  const existingDb = getDatabaseInstance();
-  if (existingDb) {
-    return existingDb;
-  }
   return databaseFactory.getInstance(config);
 };
 
@@ -394,7 +422,6 @@ export const getDatabase = (
  * Reset database instance
  *
  * Closes the current instance and clears the singleton.
- * Also notifies any dependent components (e.g., DatabaseFacade) to reset.
  * 
  * @returns Promise that resolves when reset is complete
  */
@@ -406,5 +433,5 @@ export const resetDatabase = async (): Promise<void> => {
  * Check if database instance exists
  */
 export const hasDatabase = (): boolean => {
-  return databaseFactory.hasInstance() || getDatabaseInstance() !== null;
+  return databaseFactory.hasInstance();
 };

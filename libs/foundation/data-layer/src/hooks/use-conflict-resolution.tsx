@@ -10,8 +10,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { SyncEventType, toJsonSerializable } from '@open-insights-web/foundation-data-model';
-import { SYNC_STATE_KEYS } from '@open-insights-web/foundation-database';
+import {
+  SYNC_EVENT_TYPE,
+  SYNC_STATE_KEY,
+  toJsonSerializable,
+} from '@open-insights-web/foundation-data-model';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';
 import { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType } from '../core/constants';
@@ -175,7 +178,7 @@ export const useConflictResolution = (): {
 
       try {
         // Use getRaw() for untyped access - conflicts are validated by array check
-        const storedConflicts = await database.syncState.getRaw(SYNC_STATE_KEYS.CONFLICTS);
+        const storedConflicts = await database.syncState.getRaw(SYNC_STATE_KEY.CONFLICTS);
 
         // Only update state if component is still mounted
         if (!mounted) return;
@@ -209,7 +212,7 @@ export const useConflictResolution = (): {
     const persistConflicts = async () => {
       try {
         // syncState.set() takes key and value directly
-        await database.syncState.set(SYNC_STATE_KEYS.CONFLICTS, conflicts);
+        await database.syncState.set(SYNC_STATE_KEY.CONFLICTS, conflicts);
       } catch (error) {
         if (!mounted) return;
         handleConflictError(error, { severity: 'error' });
@@ -226,7 +229,7 @@ export const useConflictResolution = (): {
   // Subscribe to conflict events
   useEffect(() => {
     const unsubscribe = syncCoordinator.subscribe((event) => {
-      if (event.type === SyncEventType.CONFLICT_DETECTED && isConflictEventData(event.data)) {
+      if (event.type === SYNC_EVENT_TYPE.CONFLICT_DETECTED && isConflictEventData(event.data)) {
         const eventData = event.data;
         const conflictCount = eventData.conflictCount;
 
