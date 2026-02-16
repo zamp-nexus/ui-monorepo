@@ -7,13 +7,11 @@
  */
 
 /**
- * Sanitize a stack trace by limiting depth
+ * Sanitize a stack trace
  */
-export const sanitizeStackTrace = (stack?: string, maxDepth = 50): string => {
+export const sanitizeStackTrace = (stack?: string): string => {
   if (!stack) {
     return '';
   }
-
-  const lines = stack.split('\n');
-  return lines.slice(0, maxDepth + 1).join('\n');
+  return stack;
 };

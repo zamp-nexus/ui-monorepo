@@ -16,7 +16,6 @@ export interface ErrorSignalConfig {
   enabled: boolean;
   captureUnhandledRejections: boolean;
   captureGlobalErrors: boolean;
-  maxStackTraceDepth: number;
   enableSourceMaps: boolean;
 }
 

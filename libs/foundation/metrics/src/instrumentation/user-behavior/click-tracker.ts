@@ -103,9 +103,8 @@ function findMeaningfulTarget(element: HTMLElement): HTMLElement {
   const interactiveRoles = ['button', 'link', 'checkbox', 'radio', 'tab', 'menuitem'];
 
   let current: HTMLElement | null = element;
-  let maxDepth = 5;
 
-  while (current && maxDepth > 0) {
+  while (current) {
     // Check if it's an interactive element
     if (interactiveTags.includes(current.tagName)) {
       return current;
@@ -128,7 +127,6 @@ function findMeaningfulTarget(element: HTMLElement): HTMLElement {
     }
 
     current = current.parentElement;
-    maxDepth--;
   }
 
   return element;

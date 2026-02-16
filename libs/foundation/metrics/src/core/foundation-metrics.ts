@@ -711,11 +711,7 @@ export class FoundationMetrics {
     if (!stack) {
       return '';
     }
-
-    const maxDepth = this.config.signals.errors.maxStackTraceDepth;
-    const lines = stack.split('\n');
-
-    return lines.slice(0, maxDepth + 1).join('\n');
+    return stack;
   }
 
   /**

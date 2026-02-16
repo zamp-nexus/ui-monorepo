@@ -356,11 +356,10 @@ const compileFilterCondition = (condition: FilterCondition): string => {
 /**
  * Compile a filter expression (condition, AND group, or OR group) to a SQL WHERE clause fragment.
  *
- * Recursively handles nested AND/OR groups up to FILTER_RECURSION_MAX_DEPTH.
+ * Recursively handles nested AND/OR groups.
  *
  * @param expression - The filter expression to compile
  * @returns SQL string for the expression
- * @throws QueryCompilationError if nesting exceeds FILTER_RECURSION_MAX_DEPTH
  */
 const compileFilterExpression = (expression: FilterExpression): string =>
   mapFilterExpression(expression, {
@@ -369,11 +368,6 @@ const compileFilterExpression = (expression: FilterExpression): string =>
       children.length > 1 ? `(${children.join(' AND ')})` : children[0] ?? 'TRUE',
     onOrGroup: (children) =>
       children.length > 1 ? `(${children.join(' OR ')})` : children[0] ?? 'TRUE',
-    onDepthExceeded: (_depth, maxDepth) => {
-      throw new QueryCompilationError(
-        `Filter nesting depth exceeds maximum of ${maxDepth}. Flatten deeply nested filter groups.`,
-      );
-    },
   });
 
 // =============================================================================

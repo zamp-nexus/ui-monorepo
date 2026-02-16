@@ -168,7 +168,7 @@ function handleGlobalError(
   const capturedError: CapturedError = {
     message: errorMessage,
     name: error?.name || 'Error',
-    stack: sanitizeStack(error?.stack, state.config.maxStackTraceDepth),
+    stack: sanitizeStack(error?.stack),
     type: 'runtime',
     timestamp: Date.now(),
     filename,
@@ -248,7 +248,7 @@ function handleUnhandledRejection(event: PromiseRejectionEvent): void {
   const capturedError: CapturedError = {
     message,
     name,
-    stack: sanitizeStack(stack, state.config.maxStackTraceDepth),
+    stack: sanitizeStack(stack),
     type: 'unhandled_rejection',
     timestamp: Date.now(),
     context: {},
@@ -296,7 +296,7 @@ export function captureError(error: Error, context?: ErrorContext): CapturedErro
   const capturedError: CapturedError = {
     message: error.message,
     name: error.name,
-    stack: sanitizeStack(error.stack, state?.config.maxStackTraceDepth || 50),
+    stack: sanitizeStack(error.stack),
     type: context?.type || 'custom',
     timestamp: Date.now(),
     context: context || {},
@@ -316,7 +316,7 @@ export function createErrorBoundaryHandler(componentName: string) {
     const capturedError: CapturedError = {
       message: error.message,
       name: error.name,
-      stack: sanitizeStack(error.stack, state?.config.maxStackTraceDepth || 50),
+      stack: sanitizeStack(error.stack),
       type: 'react_error_boundary',
       timestamp: Date.now(),
       context: {
@@ -336,13 +336,11 @@ export function createErrorBoundaryHandler(componentName: string) {
 /**
  * Sanitize stack trace
  */
-function sanitizeStack(stack?: string, maxDepth = 50): string {
+function sanitizeStack(stack?: string): string {
   if (!stack) {
     return '';
   }
-
-  const lines = stack.split('\n');
-  return lines.slice(0, maxDepth + 1).join('\n');
+  return stack;
 }
 
 /**

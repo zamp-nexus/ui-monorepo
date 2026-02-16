@@ -22,7 +22,6 @@ const DEFAULT_ERROR_CONFIG: ErrorSignalConfig = {
   enabled: true,
   captureUnhandledRejections: true,
   captureGlobalErrors: true,
-  maxStackTraceDepth: 50,
   enableSourceMaps: false,
 };
 

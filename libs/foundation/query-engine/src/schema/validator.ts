@@ -409,17 +409,6 @@ const validateFilterExpression = (
         warnings,
       };
     },
-    onDepthExceeded: (_depth, maxDepth) => ({
-      valid: false,
-      errors: [
-        {
-          path,
-          message: `Filter nesting depth exceeds maximum of ${maxDepth}`,
-          suggestion: 'Flatten deeply nested filter groups',
-        },
-      ],
-      warnings: [],
-    }),
   });
 };
 

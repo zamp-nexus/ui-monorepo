@@ -61,7 +61,6 @@ const extractTablesFromFilterExpression = (expression: FilterExpression): string
     onCondition: extractTablesFromCondition,
     onAndGroup: (children) => children.flat(),
     onOrGroup: (children) => children.flat(),
-    onDepthExceeded: () => [],
   });
 
 // =============================================================================

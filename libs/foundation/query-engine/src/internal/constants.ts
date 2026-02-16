@@ -5,12 +5,6 @@
  */
 
 /**
- * Maximum allowed depth for recursive filter trees.
- * Shared by compiler, extractor, and validator to keep behavior consistent.
- */
-export const FILTER_RECURSION_MAX_DEPTH = 20;
-
-/**
  * Internal execution path values used across decision engine and hooks.
  */
 export const QUERY_ENGINE_PATHS = {

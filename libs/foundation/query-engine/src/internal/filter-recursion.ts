@@ -6,7 +6,6 @@
 
 import type { FilterCondition, FilterExpression } from '../types/filter';
 import { isFilterAndGroup, isFilterCondition, isFilterOrGroup } from '../types/filter';
-import { FILTER_RECURSION_MAX_DEPTH } from './constants';
 
 /**
  * Group operator kind for logical filter groups.
@@ -25,7 +24,6 @@ export interface FilterExpressionMapper<TResult> {
   readonly onCondition: (condition: FilterCondition, depth: number) => TResult;
   readonly onAndGroup: (children: ReadonlyArray<TResult>, depth: number) => TResult;
   readonly onOrGroup: (children: ReadonlyArray<TResult>, depth: number) => TResult;
-  readonly onDepthExceeded: (depth: number, maxDepth: number) => TResult;
 }
 
 /**
@@ -35,27 +33,18 @@ export const mapFilterExpression = <TResult>(
   expression: FilterExpression,
   mapper: FilterExpressionMapper<TResult>,
   depth = 0,
-  maxDepth = FILTER_RECURSION_MAX_DEPTH,
 ): TResult => {
-  if (depth > maxDepth) {
-    return mapper.onDepthExceeded(depth, maxDepth);
-  }
-
   if (isFilterCondition(expression)) {
     return mapper.onCondition(expression, depth);
   }
 
   if (isFilterAndGroup(expression)) {
-    const children = expression.and.map((child) =>
-      mapFilterExpression(child, mapper, depth + 1, maxDepth),
-    );
+    const children = expression.and.map((child) => mapFilterExpression(child, mapper, depth + 1));
     return mapper.onAndGroup(children, depth);
   }
 
   if (isFilterOrGroup(expression)) {
-    const children = expression.or.map((child) =>
-      mapFilterExpression(child, mapper, depth + 1, maxDepth),
-    );
+    const children = expression.or.map((child) => mapFilterExpression(child, mapper, depth + 1));
     return mapper.onOrGroup(children, depth);
   }
 
