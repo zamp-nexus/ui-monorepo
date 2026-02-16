@@ -12,6 +12,7 @@ import axios, { type AxiosInstance, type CreateAxiosDefaults } from 'axios';
 import {
   CONTENT_TYPES,
   DEFAULT_AUTH_CONFIG,
+  DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG,
   DEFAULT_HTTP_RETRY_CONFIG,
   DEFAULT_TIMEOUT_MS,
   HTTP_HEADERS,
@@ -41,6 +42,10 @@ export const resolveHttpConfig = (config: HttpClientConfig): ResolvedHttpConfig 
   auth: {
     ...DEFAULT_AUTH_CONFIG,
     ...config.auth,
+  },
+  circuitBreaker: {
+    ...DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG,
+    ...config.circuitBreaker,
   },
   debug: config.debug ?? false,
 });

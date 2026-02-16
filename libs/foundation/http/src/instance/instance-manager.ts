@@ -9,6 +9,7 @@
 
 import type { AxiosInstance } from 'axios';
 
+import { createConfigSignature } from '../core/config-signature';
 import type { HttpClientConfig, ResolvedHttpConfig } from '../core/types';
 import { HttpConfigError, HttpNotInitializedError } from '../errors/http-errors';
 import { removeInterceptors, setupInterceptors, type InterceptorIds } from '../interceptors/setup';
@@ -21,6 +22,7 @@ import { createConfiguredAxiosInstance } from './axios-factory';
 interface ManagedInstance {
   readonly instance: AxiosInstance;
   readonly config: ResolvedHttpConfig;
+  readonly signature: string;
   readonly interceptorIds: InterceptorIds;
   readonly getAccessToken: () => Promise<string | null>;
 }
@@ -53,9 +55,18 @@ class HttpInstanceManager {
     },
   ): ManagedInstance {
     const instanceKey = key ?? config.baseUrl;
+    const signature = createConfigSignature({
+      config,
+      getAccessToken: options?.getAccessToken,
+    });
 
     const existing = this.instances.get(instanceKey);
     if (existing) {
+      if (existing.signature !== signature) {
+        throw new HttpConfigError(
+          `Instance "${instanceKey}" already exists with a different configuration`,
+        );
+      }
       return existing;
     }
 
@@ -69,11 +80,13 @@ class HttpInstanceManager {
 
     const interceptorIds = setupInterceptors(instance, resolvedConfig, {
       getAccessToken,
+      clientHeaders: config.clientHeaders,
     });
 
     const managed: ManagedInstance = {
       instance,
       config: resolvedConfig,
+      signature,
       interceptorIds,
       getAccessToken,
     };
@@ -122,8 +135,8 @@ class HttpInstanceManager {
       this.defaultKey = null;
 
       const firstKey = this.instances.keys().next().value;
-      if (firstKey) {
-        this.defaultKey = firstKey as string;
+      if (typeof firstKey === 'string') {
+        this.defaultKey = firstKey;
       }
     }
 

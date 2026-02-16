@@ -7,7 +7,7 @@
  * @module core/constants
  */
 
-import type { AuthConfig, HttpRetryConfig } from './types';
+import type { AuthConfig, HttpCircuitBreakerConfig, HttpRetryConfig } from './types';
 
 // =============================================================================
 // Timeout Defaults
@@ -41,6 +41,25 @@ export const DEFAULT_HTTP_RETRY_CONFIG: Readonly<HttpRetryConfig> = Object.freez
   retryableStatusCodes: [408, 429, 500, 502, 503, 504],
   retryOnNetworkError: true,
 });
+
+// =============================================================================
+// Circuit Breaker Defaults
+// =============================================================================
+
+/** Default circuit-breaker configuration */
+export const DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG: Readonly<HttpCircuitBreakerConfig> = Object.freeze(
+  {
+    enabled: false,
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+    halfOpenMaxRequests: 1,
+    failureStatusCodes: [500, 502, 503, 504],
+    countNetworkErrors: true,
+    maxHosts: 250,
+    hostTtlMs: 10 * 60_000,
+    debug: false,
+  },
+);
 
 // =============================================================================
 // Auth Defaults

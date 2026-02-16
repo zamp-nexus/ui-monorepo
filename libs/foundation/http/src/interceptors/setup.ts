@@ -12,6 +12,7 @@ import type { ClientHeadersConfig, ResolvedHttpConfig } from '../core/types';
 import { setupAuthInterceptor } from './request/auth-interceptor';
 import { setupHeadersInterceptor } from './request/headers-interceptor';
 import { setupParamsInterceptor } from './request/params-interceptor';
+import { setupCircuitBreakerInterceptor } from './response/circuit-breaker-interceptor';
 import { setupErrorNormalizerInterceptor } from './response/error-normalizer';
 import { setupRetryInterceptor } from './response/retry-interceptor';
 import { setupUnauthorizedHandlerInterceptor } from './response/unauthorized-handler';
@@ -26,8 +27,10 @@ export interface InterceptorIds {
     readonly headers: number;
     readonly params: number;
     readonly auth: number;
+    readonly circuitBreaker?: number;
   };
   readonly response: {
+    readonly circuitBreaker?: number;
     readonly errorNormalizer: number;
     readonly unauthorizedHandler: number;
     readonly retry: number;
@@ -54,9 +57,10 @@ export interface SetupInterceptorsOptions {
  *  3. Headers
  *
  * Response interceptors (FIFO — first registered runs first):
- *  1. Retry               → retries before errors are normalised
- *  2. Unauthorized handler → triggers auth callback before normalisation
- *  3. Error normalizer     → converts raw responses/AxiosErrors to HttpErrors
+ *  1. Circuit breaker      → tracks host failures / short-circuits unhealthy hosts
+ *  2. Retry                → retries before errors are normalised
+ *  3. Unauthorized handler → triggers auth callback before normalisation
+ *  4. Error normalizer     → converts raw responses/AxiosErrors to HttpErrors
  */
 export const setupInterceptors = (
   instance: AxiosInstance,
@@ -85,6 +89,13 @@ export const setupInterceptors = (
   });
 
   // -- Response interceptors (FIFO) ------------------------------------------
+  let circuitBreakerRequestId: number | undefined;
+  let circuitBreakerResponseId: number | undefined;
+  if (config.circuitBreaker.enabled) {
+    const circuitBreakerSetup = setupCircuitBreakerInterceptor(instance, config.circuitBreaker);
+    circuitBreakerRequestId = circuitBreakerSetup.requestInterceptorId;
+    circuitBreakerResponseId = circuitBreakerSetup.responseInterceptorId;
+  }
 
   const retryId = setupRetryInterceptor(instance, {
     retry,
@@ -105,8 +116,10 @@ export const setupInterceptors = (
       headers: headersId,
       params: paramsId,
       auth: authId,
+      circuitBreaker: circuitBreakerRequestId,
     },
     response: {
+      circuitBreaker: circuitBreakerResponseId,
       errorNormalizer: errorNormalizerId,
       unauthorizedHandler: unauthorizedHandlerId,
       retry: retryId,
@@ -121,7 +134,13 @@ export const removeInterceptors = (instance: AxiosInstance, ids: InterceptorIds)
   instance.interceptors.request.eject(ids.request.headers);
   instance.interceptors.request.eject(ids.request.params);
   instance.interceptors.request.eject(ids.request.auth);
+  if (ids.request.circuitBreaker !== undefined) {
+    instance.interceptors.request.eject(ids.request.circuitBreaker);
+  }
 
+  if (ids.response.circuitBreaker !== undefined) {
+    instance.interceptors.response.eject(ids.response.circuitBreaker);
+  }
   instance.interceptors.response.eject(ids.response.errorNormalizer);
   instance.interceptors.response.eject(ids.response.unauthorizedHandler);
   instance.interceptors.response.eject(ids.response.retry);

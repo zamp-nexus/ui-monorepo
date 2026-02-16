@@ -1,3 +1,4 @@
+import convexPlugin from '@convex-dev/eslint-plugin';
 import nx from '@nx/eslint-plugin';
 import unusedImports from 'eslint-plugin-unused-imports';
 
@@ -13,6 +14,7 @@ export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
+  ...convexPlugin.configs.recommended,
   {
     ignores: [
       '**/dist',

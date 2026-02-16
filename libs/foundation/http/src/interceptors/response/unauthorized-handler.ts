@@ -9,6 +9,8 @@
 
 import type { AxiosInstance, AxiosResponse } from 'axios';
 
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
+
 import { HTTP_STATUS } from '../../core/constants';
 import type { AuthConfig } from '../../core/types';
 import { isHttpForbiddenError, isHttpUnauthorizedError } from '../../errors/type-guards';
@@ -39,6 +41,7 @@ export interface UnauthorizedHandlerOptions {
  */
 export const createUnauthorizedHandlerInterceptor = (options: UnauthorizedHandlerOptions) => {
   const { auth, debug } = options;
+  const logger = createDebugLogger('HttpClient:UnauthorizedHandlerInterceptor', debug ?? false);
 
   const onFulfilled = (response: AxiosResponse): AxiosResponse => {
     if (
@@ -46,12 +49,10 @@ export const createUnauthorizedHandlerInterceptor = (options: UnauthorizedHandle
       auth.onUnauthorized &&
       (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN)
     ) {
-      if (debug) {
-        console.log('[HttpClient] Unauthorized response detected:', {
-          status: response.status,
-          url: response.config?.url,
-        });
-      }
+      logger.debug('Unauthorized response detected', {
+        status: response.status,
+        url: response.config?.url,
+      });
       auth.onUnauthorized(response.status, response.config?.url);
     }
     return response;
@@ -60,14 +61,10 @@ export const createUnauthorizedHandlerInterceptor = (options: UnauthorizedHandle
   const onRejected = (error: unknown): never => {
     if (auth.enabled && auth.onUnauthorized) {
       if (isHttpUnauthorizedError(error)) {
-        if (debug) {
-          console.log('[HttpClient] Unauthorized error detected');
-        }
+        logger.debug('Unauthorized error detected');
         auth.onUnauthorized(error.statusCode ?? 401, error.url);
       } else if (isHttpForbiddenError(error)) {
-        if (debug) {
-          console.log('[HttpClient] Forbidden error detected');
-        }
+        logger.debug('Forbidden error detected');
         auth.onUnauthorized(error.statusCode ?? 403, error.url);
       }
     }

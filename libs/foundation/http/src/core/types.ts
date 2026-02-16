@@ -34,6 +34,30 @@ export interface HttpRetryConfig {
 }
 
 /**
+ * Circuit-breaker configuration
+ */
+export interface HttpCircuitBreakerConfig {
+  /** Enable circuit breaker protection */
+  readonly enabled: boolean;
+  /** Number of consecutive failures before the circuit opens */
+  readonly failureThreshold: number;
+  /** Cooldown before allowing half-open probe requests */
+  readonly resetTimeoutMs: number;
+  /** Maximum probe requests allowed while half-open */
+  readonly halfOpenMaxRequests: number;
+  /** HTTP status codes considered as failures */
+  readonly failureStatusCodes: readonly number[];
+  /** Whether network/timeout errors count as failures */
+  readonly countNetworkErrors: boolean;
+  /** Maximum tracked hosts before pruning oldest entries */
+  readonly maxHosts: number;
+  /** Host entry time-to-live in ms before pruning */
+  readonly hostTtlMs: number;
+  /** Enable circuit-breaker debug logs */
+  readonly debug: boolean;
+}
+
+/**
  * Authentication configuration for HTTP client
  */
 export interface AuthConfig {
@@ -79,6 +103,8 @@ export interface HttpClientConfig {
   readonly retry?: Partial<HttpRetryConfig>;
   /** Auth configuration */
   readonly auth?: Partial<AuthConfig>;
+  /** Circuit-breaker configuration */
+  readonly circuitBreaker?: Partial<HttpCircuitBreakerConfig>;
   /** Enable debug logging */
   readonly debug?: boolean;
 }
@@ -93,6 +119,7 @@ export interface ResolvedHttpConfig {
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly retry: Readonly<HttpRetryConfig>;
   readonly auth: Readonly<AuthConfig>;
+  readonly circuitBreaker: Readonly<HttpCircuitBreakerConfig>;
   readonly debug: boolean;
 }
 

@@ -12,8 +12,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AxiosInstance } from 'axios';
 
-import { hashPayloadSync } from '@open-insights-web/foundation-utils';
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
 
+import { createConfigSignature } from '../core/config-signature';
 import type {
   HttpClientConfig,
   HttpContextValue,
@@ -46,9 +47,19 @@ export const HttpProvider = ({
   const authInternalsRef = useRef(authInternals);
   authInternalsRef.current = authInternals;
 
-  // Deterministic hash of the full config to detect any config property change
-  // (baseUrl, timeout, retry, auth, headers, etc.)
-  const configHash = useMemo(() => hashPayloadSync(config), [config]);
+  const logger = useMemo(
+    () => createDebugLogger('HttpProvider', config.debug ?? false),
+    [config.debug],
+  );
+
+  const configSignature = useMemo(
+    () =>
+      createConfigSignature({
+        config,
+        authInternalsGetAccessToken: authInternals?.getAccessToken,
+      }),
+    [config, authInternals?.getAccessToken],
+  );
 
   useEffect(() => {
     const currentConfig = configRef.current;
@@ -70,14 +81,13 @@ export const HttpProvider = ({
     setResolvedConfig(resolved);
     setIsInitialized(true);
 
-    if (resolved.debug) {
-      console.log('[HttpProvider] Initialized with config:', {
-        baseUrl: resolved.baseUrl,
-        timeout: resolved.timeout,
-        authEnabled: resolved.auth.enabled,
-        retryEnabled: resolved.retry.enabled,
-      });
-    }
+    logger.debug('Initialized with config:', {
+      baseUrl: resolved.baseUrl,
+      timeout: resolved.timeout,
+      authEnabled: resolved.auth.enabled,
+      retryEnabled: resolved.retry.enabled,
+      circuitBreakerEnabled: resolved.circuitBreaker.enabled,
+    });
 
     return () => {
       if (interceptorIdsRef.current) {
@@ -85,11 +95,9 @@ export const HttpProvider = ({
         interceptorIdsRef.current = null;
       }
 
-      if (resolved.debug) {
-        console.log('[HttpProvider] Disposed');
-      }
+      logger.debug('Disposed');
     };
-  }, [configHash]); // Re-initialize when ANY config property changes
+  }, [configSignature, logger]); // Re-initialize when config values/functions change
 
   const getAccessToken = useMemo(
     () =>

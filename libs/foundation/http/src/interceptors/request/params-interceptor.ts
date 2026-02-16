@@ -8,7 +8,9 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-import type { ParamsArrayFormat } from '../../core/constants';
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
+
+import { PARAMS_ARRAY_FORMAT, type ParamsArrayFormat } from '../../core/constants';
 
 // =============================================================================
 // Types
@@ -55,17 +57,20 @@ const serializeArrayParam = (
   const encodedKey = encodeURIComponent(key);
 
   switch (format) {
-    case 'brackets':
+    case PARAMS_ARRAY_FORMAT.BRACKETS:
       return values.map((v) => `${encodedKey}[]=${encodeURIComponent(String(v))}`).join('&');
-    case 'indices':
+    case PARAMS_ARRAY_FORMAT.INDICES:
       return values.map((v, i) => `${encodedKey}[${i}]=${encodeURIComponent(String(v))}`).join('&');
-    case 'comma':
+    case PARAMS_ARRAY_FORMAT.COMMA:
       return `${encodedKey}=${values.map((v) => encodeURIComponent(String(v))).join(',')}`;
-    case 'repeat':
+    case PARAMS_ARRAY_FORMAT.REPEAT:
     default:
       return values.map((v) => `${encodedKey}=${encodeURIComponent(String(v))}`).join('&');
   }
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
  * Creates a params serializer function for axios.
@@ -114,18 +119,14 @@ export const createParamsSerializer = (
  */
 export const createParamsInterceptor = (options: ParamsInterceptorOptions = {}) => {
   const { removeNullish = true, debug } = options;
+  const logger = createDebugLogger('HttpClient:ParamsInterceptor', debug ?? false);
 
   return (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    if (removeNullish && config.params) {
-      const originalParams = config.params as Record<string, unknown>;
+    if (removeNullish && isRecord(config.params)) {
+      const originalParams = config.params;
       config.params = cleanParams(originalParams);
 
-      if (debug) {
-        console.log('[HttpClient] Params cleaned:', {
-          original: originalParams,
-          cleaned: config.params,
-        });
-      }
+      logger.debug('Params cleaned', { original: originalParams, cleaned: config.params });
     }
 
     return config;

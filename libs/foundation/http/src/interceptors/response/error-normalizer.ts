@@ -11,7 +11,11 @@
 import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { isAxiosError } from 'axios';
 
+import type { HttpMethod } from '@open-insights-web/foundation-data-model';
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
+
 import { AXIOS_ERROR_CODE, HTTP_STATUS } from '../../core/constants';
+import { getRequestMetadata } from '../../core/request-metadata';
 import {
   HttpCancelledError,
   HttpForbiddenError,
@@ -31,6 +35,9 @@ export interface ErrorNormalizerOptions {
   readonly debug?: boolean;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // =============================================================================
 // Shared Status-to-Error Mapping
 // =============================================================================
@@ -41,20 +48,22 @@ export interface ErrorNormalizerOptions {
  * `{ errorMessage }`, `{ errors: [{ message }] }`.
  */
 const extractErrorMessage = (response: AxiosResponse): string | undefined => {
-  const data = response.data as unknown;
+  const data = response.data;
 
   if (typeof data === 'string') {
     return data;
   }
 
-  if (data && typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
+  if (isRecord(data)) {
+    const obj = data;
     if (typeof obj.message === 'string') return obj.message;
     if (typeof obj.error === 'string') return obj.error;
     if (typeof obj.errorMessage === 'string') return obj.errorMessage;
     if (Array.isArray(obj.errors)) {
-      const first = obj.errors[0] as Record<string, unknown> | undefined;
-      if (first && typeof first.message === 'string') return first.message;
+      const firstError = obj.errors[0];
+      if (isRecord(firstError) && typeof firstError.message === 'string') {
+        return firstError.message;
+      }
     }
   }
 
@@ -70,7 +79,7 @@ const mapStatusToError = (
   status: number,
   message: string,
   url: string | undefined,
-  method: string | undefined,
+  method: HttpMethod | undefined,
   cause?: Error,
 ): Error => {
   switch (status) {
@@ -97,25 +106,39 @@ const mapStatusToError = (
  * If the AxiosError contains a response, delegates to `mapStatusToError`.
  */
 export const convertAxiosError = (error: AxiosError): Error => {
-  const url = error.config?.url;
-  const method = error.config?.method?.toUpperCase();
+  const requestMetadata = getRequestMetadata({
+    url: error.config?.url,
+    baseURL: error.config?.baseURL,
+    method: error.config?.method,
+  });
 
   if (error.code === AXIOS_ERROR_CODE.CANCELLED) {
-    return new HttpCancelledError(url, method, error);
+    return new HttpCancelledError(requestMetadata.requestUrl, requestMetadata.method, error);
   }
 
   if (error.code === AXIOS_ERROR_CODE.TIMEOUT || error.code === AXIOS_ERROR_CODE.TIMEOUT_ALT) {
     const timeout = error.config?.timeout ?? 0;
-    return new HttpTimeoutError(timeout, url, method, error);
+    return new HttpTimeoutError(timeout, requestMetadata.requestUrl, requestMetadata.method, error);
   }
 
   if (error.code === AXIOS_ERROR_CODE.NETWORK || !error.response) {
-    return new HttpNetworkError(error.message, url, method, error);
+    return new HttpNetworkError(
+      error.message,
+      requestMetadata.requestUrl,
+      requestMetadata.method,
+      error,
+    );
   }
 
   const { status } = error.response;
-  const message = extractErrorMessage(error.response as AxiosResponse) ?? error.message;
-  return mapStatusToError(status, message, url, method, error);
+  const message = extractErrorMessage(error.response) ?? error.message;
+  return mapStatusToError(
+    status,
+    message,
+    requestMetadata.requestUrl,
+    requestMetadata.method,
+    error,
+  );
 };
 
 /**
@@ -123,11 +146,14 @@ export const convertAxiosError = (error: AxiosError): Error => {
  * Only called when `validateStatus: () => true` lets all statuses through.
  */
 export const convertResponseError = (response: AxiosResponse): Error => {
-  const url = response.config?.url;
-  const method = response.config?.method?.toUpperCase();
+  const requestMetadata = getRequestMetadata({
+    url: response.config?.url,
+    baseURL: response.config?.baseURL,
+    method: response.config?.method,
+  });
   const { status } = response;
   const message = extractErrorMessage(response) ?? `HTTP ${status}`;
-  return mapStatusToError(status, message, url, method);
+  return mapStatusToError(status, message, requestMetadata.requestUrl, requestMetadata.method);
 };
 
 // =============================================================================
@@ -141,16 +167,12 @@ export const convertResponseError = (response: AxiosResponse): Error => {
  * - `onRejected`: converts raw AxiosError into a typed HttpError
  */
 export const createErrorNormalizerInterceptor = (options: ErrorNormalizerOptions = {}) => {
-  const { debug } = options;
+  const { debug = false } = options;
+  const logger = createDebugLogger('HttpClient:ErrorNormalizerInterceptor', debug);
 
   const onFulfilled = (response: AxiosResponse): AxiosResponse => {
     if (response.status >= 400) {
-      if (debug) {
-        console.log('[HttpClient] Response error:', {
-          status: response.status,
-          url: response.config?.url,
-        });
-      }
+      logger.debug('Response error', { status: response.status, url: response.config?.url });
       throw convertResponseError(response);
     }
     return response;
@@ -158,13 +180,11 @@ export const createErrorNormalizerInterceptor = (options: ErrorNormalizerOptions
 
   const onRejected = (error: unknown): never => {
     if (isAxiosError(error)) {
-      if (debug) {
-        console.log('[HttpClient] Axios error:', {
-          code: error.code,
-          message: error.message,
-          status: error.response?.status,
-        });
-      }
+      logger.debug('Axios error', {
+        code: error.code,
+        message: error.message,
+        status: error.response?.status,
+      });
       throw convertAxiosError(error);
     }
 

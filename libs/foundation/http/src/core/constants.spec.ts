@@ -11,6 +11,7 @@ import {
   CLIENT_HEADERS,
   CONTENT_TYPES,
   DEFAULT_AUTH_CONFIG,
+  DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG,
   DEFAULT_HTTP_RETRY_CONFIG,
   DEFAULT_TIMEOUT_MS,
   DOWNLOAD_TIMEOUT_MS,
@@ -60,6 +61,28 @@ describe('HTTP constants', () => {
 
     it('should be frozen', () => {
       expect(Object.isFrozen(DEFAULT_HTTP_RETRY_CONFIG)).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Circuit breaker config
+  // ---------------------------------------------------------------------------
+
+  describe('DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG', () => {
+    it('should have expected defaults', () => {
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.enabled).toBe(false);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.failureThreshold).toBe(5);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.resetTimeoutMs).toBe(30_000);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.halfOpenMaxRequests).toBe(1);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.failureStatusCodes).toEqual([500, 502, 503, 504]);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.countNetworkErrors).toBe(true);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.maxHosts).toBe(250);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.hostTtlMs).toBe(600_000);
+      expect(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG.debug).toBe(false);
+    });
+
+    it('should be frozen', () => {
+      expect(Object.isFrozen(DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG)).toBe(true);
     });
   });
 

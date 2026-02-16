@@ -15,23 +15,19 @@
  * @module interceptors/response/retry-interceptor
  */
 
-import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
 
-import { sleep } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, sleep } from '@open-insights-web/foundation-utils';
 
 import { AXIOS_ERROR_CODE } from '../../core/constants';
+import { getRequestMetadata } from '../../core/request-metadata';
+import { calculateRetryDelayMs, isRetryableStatusCode } from '../../core/retry-utils';
 import type { HttpRetryConfig } from '../../core/types';
 
 // =============================================================================
 // Types
 // =============================================================================
-
-/** Internal request config extended with retry bookkeeping metadata */
-interface RetryRequestConfig extends InternalAxiosRequestConfig {
-  __retryCount?: number;
-  __retryStartTime?: number;
-}
 
 export interface RetryInterceptorOptions {
   readonly retry: HttpRetryConfig;
@@ -46,15 +42,10 @@ export interface RetryInterceptorOptions {
  * Determines whether a fulfilled response status is retryable based on the
  * configured retryable status code list.
  */
-const isRetryableStatus = (status: number, retryableStatusCodes: readonly number[]): boolean =>
-  retryableStatusCodes.includes(status);
-
-/**
- * Determines whether a raw AxiosError represents a retryable transport failure.
- * Only network errors and timeouts are retryable at this level — cancelled
- * requests are explicitly excluded.
- */
-const isRetryableAxiosError = (error: unknown, retryOnNetworkError: boolean): boolean => {
+const isRetryableAxiosError = (
+  error: unknown,
+  retryOnNetworkError: boolean,
+): error is AxiosError => {
   if (!isAxiosError(error)) return false;
 
   if (error.code === AXIOS_ERROR_CODE.CANCELLED) return false;
@@ -76,36 +67,32 @@ const isRetryableAxiosError = (error: unknown, retryOnNetworkError: boolean): bo
  */
 const executeRetry = async (
   instance: AxiosInstance,
-  config: RetryRequestConfig,
+  config: InternalAxiosRequestConfig,
   retry: HttpRetryConfig,
-  debug: boolean,
+  logger: ReturnType<typeof createDebugLogger>,
 ): Promise<AxiosResponse> => {
-  const retryCount = config.__retryCount ?? 0;
+  const retryCount = config.__oiHttpRetryCount ?? 0;
+  const metadata = getRequestMetadata(config);
 
   if (retryCount >= retry.maxRetries) {
-    if (debug) {
-      console.log(`[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`);
-    }
+    logger.debug(`Max retries (${retry.maxRetries}) exceeded for`, metadata.requestUrl ?? config.url);
     return Promise.reject(new Error(`Max retries (${retry.maxRetries}) exceeded`));
   }
 
-  // Exponential backoff with jitter
-  const exponentialDelay = retry.initialDelayMs * Math.pow(retry.backoffMultiplier, retryCount);
-  const cappedDelay = Math.min(exponentialDelay, retry.maxDelayMs);
-  const delay = Math.floor(cappedDelay + cappedDelay * 0.5 * Math.random());
-
-  if (debug) {
-    console.log(
-      `[HttpClient] Retrying request to ${config.url} ` +
-        `(attempt ${retryCount + 1}/${retry.maxRetries}) after ${Math.round(delay)}ms`,
-    );
-  }
+  const delay = calculateRetryDelayMs(retryCount, retry, true);
+  logger.debug(
+    `Retrying request (attempt ${retryCount + 1}/${retry.maxRetries}) after ${Math.round(delay)}ms`,
+    {
+      url: metadata.requestUrl ?? config.url,
+      method: metadata.method,
+    },
+  );
 
   await sleep(delay);
 
-  config.__retryCount = retryCount + 1;
-  if (!config.__retryStartTime) {
-    config.__retryStartTime = Date.now();
+  config.__oiHttpRetryCount = retryCount + 1;
+  if (!config.__oiHttpRetryStartTime) {
+    config.__oiHttpRetryStartTime = Date.now();
   }
 
   return instance.request(config);
@@ -127,19 +114,20 @@ export const createRetryInterceptor = (
   options: RetryInterceptorOptions,
 ) => {
   const { retry, debug = false } = options;
+  const logger = createDebugLogger('HttpClient:RetryInterceptor', debug);
 
   const onFulfilled = (response: AxiosResponse): AxiosResponse | Promise<AxiosResponse> => {
     if (!retry.enabled) return response;
 
-    if (isRetryableStatus(response.status, retry.retryableStatusCodes)) {
-      const config = response.config as RetryRequestConfig;
-      const retryCount = config.__retryCount ?? 0;
+    if (isRetryableStatusCode(response.status, retry.retryableStatusCodes)) {
+      const config = response.config;
+      const retryCount = config.__oiHttpRetryCount ?? 0;
 
       if (retryCount >= retry.maxRetries) {
         return response;
       }
 
-      return executeRetry(instance, config, retry, debug);
+      return executeRetry(instance, config, retry, logger);
     }
 
     return response;
@@ -152,18 +140,16 @@ export const createRetryInterceptor = (
       throw error;
     }
 
-    const config = (error as { config?: RetryRequestConfig }).config;
+    const config = error.config;
     if (!config) throw error;
 
-    const retryCount = config.__retryCount ?? 0;
+    const retryCount = config.__oiHttpRetryCount ?? 0;
     if (retryCount >= retry.maxRetries) {
-      if (debug) {
-        console.log(`[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`);
-      }
+      logger.debug(`Max retries (${retry.maxRetries}) exceeded for`, config.url);
       throw error;
     }
 
-    return executeRetry(instance, config, retry, debug);
+    return executeRetry(instance, config, retry, logger);
   };
 
   return { onFulfilled, onRejected };
@@ -186,13 +172,13 @@ export const setupRetryInterceptor = (
  * Reads the retry attempt count from a request config.
  */
 export const getRetryCount = (config: InternalAxiosRequestConfig): number =>
-  (config as RetryRequestConfig).__retryCount ?? 0;
+  config.__oiHttpRetryCount ?? 0;
 
 /**
  * Reads the total retry duration (ms) from a request config.
  * Returns 0 when no retries have been attempted.
  */
 export const getRetryDuration = (config: InternalAxiosRequestConfig): number => {
-  const startTime = (config as RetryRequestConfig).__retryStartTime;
+  const startTime = config.__oiHttpRetryStartTime;
   return startTime ? Date.now() - startTime : 0;
 };

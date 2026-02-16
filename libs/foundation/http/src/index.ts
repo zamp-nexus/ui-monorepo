@@ -34,6 +34,7 @@
 export type {
   HttpClientConfig,
   HttpRetryConfig,
+  HttpCircuitBreakerConfig,
   AuthConfig,
   ClientHeadersConfig,
   ResolvedHttpConfig,
@@ -53,6 +54,7 @@ export {
   UPLOAD_TIMEOUT_MS,
   DOWNLOAD_TIMEOUT_MS,
   DEFAULT_HTTP_RETRY_CONFIG,
+  DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG,
   DEFAULT_AUTH_CONFIG,
   HTTP_HEADERS,
   CLIENT_HEADERS,

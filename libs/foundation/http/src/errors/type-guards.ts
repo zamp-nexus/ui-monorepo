@@ -23,6 +23,12 @@ import type {
 } from './http-errors';
 import { HttpError } from './http-errors';
 
+const isErrorLike = (value: unknown): value is { message: string; name?: string } =>
+  typeof value === 'object' &&
+  value !== null &&
+  'message' in value &&
+  typeof (value as { message: unknown }).message === 'string';
+
 // =============================================================================
 // Core Type Guards
 // =============================================================================
@@ -36,12 +42,7 @@ import { HttpError } from './http-errors';
  */
 export const isHttpError = (error: unknown): error is HttpError =>
   error instanceof HttpError ||
-  (typeof error === 'object' &&
-    error !== null &&
-    'httpCode' in error &&
-    'code' in error &&
-    'message' in error &&
-    typeof (error as Record<string, unknown>).message === 'string');
+  (isErrorLike(error) && 'httpCode' in error && 'code' in error);
 
 /** Check if an error has a specific HTTP error code */
 export const hasHttpErrorCode = (error: unknown, httpCode: HttpErrorCode): error is HttpError =>

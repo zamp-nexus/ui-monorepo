@@ -8,7 +8,7 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-import { generateId } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, generateId } from '@open-insights-web/foundation-utils';
 
 import { CLIENT_HEADERS, HTTP_HEADERS } from '../../core/constants';
 import type { ClientHeadersConfig } from '../../core/types';
@@ -36,6 +36,7 @@ export interface HeadersInterceptorOptions {
  */
 export const createHeadersInterceptor = (options: HeadersInterceptorOptions) => {
   const { clientHeaders, debug } = options;
+  const logger = createDebugLogger('HttpClient:HeadersInterceptor', debug ?? false);
 
   return (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     config.headers = config.headers ?? {};
@@ -66,12 +67,10 @@ export const createHeadersInterceptor = (options: HeadersInterceptorOptions) => 
       }
     }
 
-    if (debug) {
-      console.log('[HttpClient] Request headers added:', {
-        requestId: config.headers[HTTP_HEADERS.X_REQUEST_ID],
-        clientId: config.headers[CLIENT_HEADERS.X_CLIENT_ID],
-      });
-    }
+    logger.debug('Request headers added', {
+      requestId: config.headers[HTTP_HEADERS.X_REQUEST_ID],
+      clientId: config.headers[CLIENT_HEADERS.X_CLIENT_ID],
+    });
 
     return config;
   };

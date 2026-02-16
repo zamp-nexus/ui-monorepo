@@ -8,6 +8,8 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
+
 import { HTTP_HEADERS } from '../../core/constants';
 import type { AuthConfig } from '../../core/types';
 
@@ -34,6 +36,7 @@ export interface AuthInterceptorOptions {
  */
 export const createAuthInterceptor = (options: AuthInterceptorOptions) => {
   const { auth, getAccessToken, debug } = options;
+  const logger = createDebugLogger('HttpClient:AuthInterceptor', debug ?? false);
 
   return async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
     if (!auth.enabled) {
@@ -52,16 +55,12 @@ export const createAuthInterceptor = (options: AuthInterceptorOptions) => {
         config.headers = config.headers ?? {};
         config.headers[HTTP_HEADERS.AUTHORIZATION] = `${tokenType} ${token}`;
 
-        if (debug) {
-          console.log('[HttpClient] Auth token injected');
-        }
-      } else if (debug) {
-        console.log('[HttpClient] No auth token available');
+        logger.debug('Auth token injected');
+      } else {
+        logger.debug('No auth token available');
       }
     } catch (error) {
-      if (debug) {
-        console.warn('[HttpClient] Failed to get auth token:', error);
-      }
+      logger.warn('Failed to get auth token', error);
     }
 
     return config;

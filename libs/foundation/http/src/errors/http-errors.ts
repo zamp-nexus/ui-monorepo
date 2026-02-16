@@ -11,6 +11,7 @@
 import {
   FOUNDATION_ERROR_CODE,
   FoundationError,
+  type HttpMethod,
   type ErrorContext,
 } from '@open-insights-web/foundation-data-model';
 
@@ -27,7 +28,7 @@ import {
 interface HttpErrorOptions {
   readonly statusCode?: number;
   readonly url?: string;
-  readonly method?: string;
+  readonly method?: HttpMethod;
   readonly context?: ErrorContext;
   readonly cause?: Error;
 }
@@ -54,7 +55,7 @@ export abstract class HttpError extends FoundationError {
   readonly url?: string;
 
   /** HTTP method */
-  readonly method?: string;
+  readonly method?: HttpMethod;
 
   constructor(message: string, options: HttpErrorOptions = {}) {
     super(
@@ -122,7 +123,13 @@ export class HttpRequestError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.REQUEST_FAILED;
 
-  constructor(message: string, statusCode?: number, url?: string, method?: string, cause?: Error) {
+  constructor(
+    message: string,
+    statusCode?: number,
+    url?: string,
+    method?: HttpMethod,
+    cause?: Error,
+  ) {
     super(message, { statusCode, url, method, cause });
   }
 }
@@ -139,7 +146,7 @@ export class HttpTimeoutError extends HttpError {
   /** Timeout duration in milliseconds */
   readonly timeoutMs: number;
 
-  constructor(timeoutMs: number, url?: string, method?: string, cause?: Error) {
+  constructor(timeoutMs: number, url?: string, method?: HttpMethod, cause?: Error) {
     super(`Request timed out after ${timeoutMs}ms`, {
       url,
       method,
@@ -159,7 +166,7 @@ export class HttpNetworkError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.NETWORK_ERROR;
 
-  constructor(message?: string, url?: string, method?: string, cause?: Error) {
+  constructor(message?: string, url?: string, method?: HttpMethod, cause?: Error) {
     super(message ?? 'Network error occurred', { url, method, cause });
   }
 }
@@ -173,7 +180,7 @@ export class HttpCancelledError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_CANCELLED;
   readonly httpCode = HTTP_ERROR_CODE.CANCELLED;
 
-  constructor(url?: string, method?: string, cause?: Error) {
+  constructor(url?: string, method?: HttpMethod, cause?: Error) {
     super('Request was cancelled', { url, method, cause });
   }
 }
@@ -191,7 +198,7 @@ export class HttpUnauthorizedError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.UNAUTHORIZED;
 
-  constructor(url?: string, method?: string, cause?: Error) {
+  constructor(url?: string, method?: HttpMethod, cause?: Error) {
     super('Unauthorized - authentication required', {
       statusCode: 401,
       url,
@@ -210,7 +217,7 @@ export class HttpForbiddenError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.FORBIDDEN;
 
-  constructor(url?: string, method?: string, cause?: Error) {
+  constructor(url?: string, method?: HttpMethod, cause?: Error) {
     super('Forbidden - insufficient permissions', {
       statusCode: 403,
       url,
@@ -233,7 +240,7 @@ export class HttpNotFoundError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.RESOURCE_NOT_FOUND;
   readonly httpCode = HTTP_ERROR_CODE.NOT_FOUND;
 
-  constructor(url?: string, method?: string, cause?: Error) {
+  constructor(url?: string, method?: HttpMethod, cause?: Error) {
     super('Resource not found', {
       statusCode: 404,
       url,
@@ -256,7 +263,13 @@ export class HttpServerError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.SERVER_ERROR;
 
-  constructor(statusCode: number, message?: string, url?: string, method?: string, cause?: Error) {
+  constructor(
+    statusCode: number,
+    message?: string,
+    url?: string,
+    method?: HttpMethod,
+    cause?: Error,
+  ) {
     super(message ?? `Server error: ${statusCode}`, {
       statusCode,
       url,
