@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ModalBodyProps } from './modal';
-import { modalDefaultTheme } from './modal';
+import type { ModalBodyProps } from './types';
+import { modalDefaultTheme } from './types';
 
 /**
  * Modal.Body component

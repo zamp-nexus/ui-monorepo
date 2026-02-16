@@ -7,8 +7,8 @@ import React from 'react';
 import { Switch as SwitchPrimitive } from '@base-ui/react/switch';
 
 import { useTheme } from '../../theme';
-import type { SwitchComponent, SwitchProps } from './switch';
-import { switchDefaultTheme } from './switch';
+import type { SwitchComponent, SwitchProps } from './types';
+import { switchDefaultTheme } from './types';
 
 /**
  * Switch component

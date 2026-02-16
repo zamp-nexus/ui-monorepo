@@ -4,11 +4,11 @@
  */
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 
-import type { SelectProps } from './select';
 import { SelectContent } from './select-content';
 import { SelectItem } from './select-item';
 import { SelectTrigger } from './select-trigger';
 import { SelectProvider } from './select.context';
+import type { SelectProps } from './types';
 
 /**
  * Select component

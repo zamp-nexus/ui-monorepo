@@ -17,8 +17,8 @@ import { cn } from '../../utils/cn';
 import { Checkbox } from '../checkbox';
 import { CheckboxGroupContext } from '../checkbox-group/checkbox-group.context';
 import { ScrollArea } from '../scroll-area';
-import type { MultiSelectComponent } from './multi-select';
-import { multiSelectDefaultTheme } from './multi-select';
+import type { MultiSelectComponent } from './types';
+import { multiSelectDefaultTheme } from './types';
 
 /**
  * MultiSelect component

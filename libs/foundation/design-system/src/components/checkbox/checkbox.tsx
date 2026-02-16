@@ -9,8 +9,8 @@ import { Checkbox as CheckboxPrimitive } from '@base-ui/react/checkbox';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import type { CheckboxComponent, CheckboxProps } from './checkbox';
-import { checkboxDefaultTheme } from './checkbox';
+import type { CheckboxComponent, CheckboxProps } from './types';
+import { checkboxDefaultTheme } from './types';
 
 /**
  * Check icon for checked state

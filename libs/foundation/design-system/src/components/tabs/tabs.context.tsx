@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { TabsContextValue } from './tabs';
+import type { TabsContextValue } from './types';
 
 /**
  * Tabs context

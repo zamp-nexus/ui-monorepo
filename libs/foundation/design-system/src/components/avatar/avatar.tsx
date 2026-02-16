@@ -6,9 +6,9 @@ import React, { useState } from 'react';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { AvatarComponent, AvatarProps } from './avatar';
-import { avatarDefaultTheme } from './avatar';
 import { getInitials } from './avatar-utils';
+import type { AvatarComponent, AvatarProps } from './types';
+import { avatarDefaultTheme } from './types';
 
 /**
  * Avatar component

@@ -4,10 +4,10 @@
  */
 
 export { ScrollArea } from './scroll-area';
-export type { ScrollAreaProps, ScrollAreaComponent, ScrollAreaOwnProps } from './scroll-area';
+export type { ScrollAreaProps, ScrollAreaComponent, ScrollAreaOwnProps } from './types';
 export {
   ScrollAreaVariants,
   ScrollAreaModifiers,
   ScrollAreaSlots,
   scrollAreaDefaultTheme,
-} from './scroll-area';
+} from './types';

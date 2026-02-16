@@ -9,8 +9,8 @@ import { Icon } from '@open-insights-web/foundation-icons';
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
 import { Tooltip } from '../tooltip';
-import type { LabelComponent, LabelProps } from './label';
-import { labelDefaultTheme } from './label';
+import type { LabelComponent, LabelProps } from './types';
+import { labelDefaultTheme } from './types';
 
 /**
  * Default tooltip icon

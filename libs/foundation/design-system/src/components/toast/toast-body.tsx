@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ToastBodyProps } from './toast';
-import { toastDefaultTheme } from './toast';
+import type { ToastBodyProps } from './types';
+import { toastDefaultTheme } from './types';
 
 /**
  * Toast.Body component

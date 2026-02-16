@@ -8,8 +8,8 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { AlertComponent, AlertProps } from './alert';
-import { alertDefaultTheme } from './alert';
+import type { AlertComponent, AlertProps } from './types';
+import { alertDefaultTheme } from './types';
 
 /**
  * Default dismiss icon

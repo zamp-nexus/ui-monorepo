@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { BadgeComponent, BadgeProps } from './badge';
-import { badgeDefaultTheme } from './badge';
+import type { BadgeComponent, BadgeProps } from './types';
+import { badgeDefaultTheme } from './types';
 
 /**
  * Badge component

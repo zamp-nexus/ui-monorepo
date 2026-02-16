@@ -4,5 +4,5 @@
  */
 
 export { Loader } from './loader';
-export type { LoaderProps, LoaderComponent, LoaderOwnProps } from './loader';
-export { LoaderVariants, LoaderModifiers, LoaderSlots, loaderDefaultTheme } from './loader';
+export type { LoaderProps, LoaderComponent, LoaderOwnProps } from './types';
+export { LoaderVariants, LoaderModifiers, LoaderSlots, loaderDefaultTheme } from './types';

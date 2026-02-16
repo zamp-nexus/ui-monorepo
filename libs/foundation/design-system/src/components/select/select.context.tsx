@@ -4,7 +4,7 @@
  */
 import React, { createContext, useContext } from 'react';
 
-import type { SelectVariants } from './select';
+import type { SelectVariants } from './types';
 
 interface SelectContextValue {
   size: (typeof SelectVariants.size)[number];

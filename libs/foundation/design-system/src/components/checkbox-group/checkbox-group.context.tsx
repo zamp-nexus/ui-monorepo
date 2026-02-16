@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { CheckboxGroupContextValue } from './checkbox-group';
+import type { CheckboxGroupContextValue } from './types';
 
 /**
  * CheckboxGroup context

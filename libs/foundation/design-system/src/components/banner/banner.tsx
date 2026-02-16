@@ -8,14 +8,14 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { BannerComponent, BannerContextValue, BannerProps } from './banner';
-import { bannerDefaultTheme } from './banner';
 import { BannerActions } from './banner-actions';
 import { BannerBody } from './banner-body';
 import { BannerClose } from './banner-close';
 import { BannerDescription } from './banner-description';
 import { BannerTitle } from './banner-title';
 import { BannerContext } from './banner.context';
+import type { BannerComponent, BannerContextValue, BannerProps } from './types';
+import { bannerDefaultTheme } from './types';
 
 /**
  * Default variant icons

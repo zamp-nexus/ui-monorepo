@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { MenuContextValue } from './menu';
+import type { MenuContextValue } from './types';
 
 /**
  * Menu context

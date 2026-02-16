@@ -4,7 +4,7 @@
  */
 import React, { createContext, useContext } from 'react';
 
-import type { RadioGroupVariants } from './radio-group';
+import type { RadioGroupVariants } from './types';
 
 interface RadioGroupContextValue {
   size: (typeof RadioGroupVariants.size)[number];

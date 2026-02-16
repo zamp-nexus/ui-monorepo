@@ -8,11 +8,11 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useTheme } from '../../theme';
-import type { CheckboxGroupComponent, CheckboxGroupContextValue } from './checkbox-group';
-import { checkboxGroupDefaultTheme } from './checkbox-group';
 import { CheckboxGroupItem } from './checkbox-group-item';
 import { CheckboxGroupLabel } from './checkbox-group-label';
 import { CheckboxGroupContext } from './checkbox-group.context';
+import type { CheckboxGroupComponent, CheckboxGroupContextValue } from './types';
+import { checkboxGroupDefaultTheme } from './types';
 
 /**
  * CheckboxGroup component

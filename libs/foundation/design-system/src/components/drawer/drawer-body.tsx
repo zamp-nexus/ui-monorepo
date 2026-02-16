@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { DrawerBodyProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
+import type { DrawerBodyProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Drawer.Body component

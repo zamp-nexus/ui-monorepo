@@ -4,5 +4,5 @@
  */
 
 export { Spinner } from './spinner';
-export type { SpinnerProps, SpinnerComponent, SpinnerOwnProps } from './spinner';
-export { SpinnerVariants, SpinnerModifiers, SpinnerSlots, spinnerDefaultTheme } from './spinner';
+export type { SpinnerProps, SpinnerComponent, SpinnerOwnProps } from './types';
+export { SpinnerVariants, SpinnerModifiers, SpinnerSlots, spinnerDefaultTheme } from './types';

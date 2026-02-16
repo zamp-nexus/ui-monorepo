@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import type { DrawerTriggerProps } from './drawer';
+import type { DrawerTriggerProps } from './types';
 
 /**
  * Drawer.Trigger component

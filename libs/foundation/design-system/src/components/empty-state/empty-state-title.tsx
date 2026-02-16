@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { EmptyStateTitleProps } from './empty-state';
-import { emptyStateDefaultTheme } from './empty-state';
+import type { EmptyStateTitleProps } from './types';
+import { emptyStateDefaultTheme } from './types';
 
 /**
  * EmptyState.Title component

@@ -5,7 +5,7 @@ import type { Meta, StoryFn } from '@storybook/react';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { MultiSelect } from './multi-select';
-import type { MultiSelectProps } from './multi-select';
+import type { MultiSelectProps } from './types';
 
 const meta: Meta<typeof MultiSelect> = {
   title: 'Components/MultiSelect',

@@ -5,9 +5,9 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { BannerTitleProps } from './banner';
-import { bannerDefaultTheme } from './banner';
 import { useBannerContext } from './banner.context';
+import type { BannerTitleProps } from './types';
+import { bannerDefaultTheme } from './types';
 
 /**
  * Banner.Title component

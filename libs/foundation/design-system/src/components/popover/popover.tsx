@@ -6,11 +6,11 @@ import { useMemo } from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
-import type { PopoverComponent, PopoverContextValue } from './popover';
 import { PopoverClose } from './popover-close';
 import { PopoverContent } from './popover-content';
 import { PopoverTrigger } from './popover-trigger';
 import { PopoverContext } from './popover.context';
+import type { PopoverComponent, PopoverContextValue } from './types';
 
 /**
  * Popover component

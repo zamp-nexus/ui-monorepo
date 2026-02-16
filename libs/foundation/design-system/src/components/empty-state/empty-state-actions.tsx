@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { EmptyStateActionsProps } from './empty-state';
-import { emptyStateDefaultTheme } from './empty-state';
+import type { EmptyStateActionsProps } from './types';
+import { emptyStateDefaultTheme } from './types';
 
 /**
  * EmptyState.Actions component

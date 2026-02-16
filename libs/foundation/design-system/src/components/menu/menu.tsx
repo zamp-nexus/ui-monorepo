@@ -12,6 +12,7 @@ import { Icon } from '@open-insights-web/foundation-icons';
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
 import { Checkbox } from '../checkbox';
+import { MenuContext } from './menu.context';
 import type {
   MenuCheckboxItemProps,
   MenuComponent,
@@ -27,9 +28,8 @@ import type {
   MenuSubProps,
   MenuSubTriggerProps,
   MenuTriggerProps,
-} from './menu';
-import { menuDefaultTheme } from './menu';
-import { MenuContext } from './menu.context';
+} from './types';
+import { menuDefaultTheme } from './types';
 
 // ============================================================================
 // Menu Root

@@ -9,10 +9,10 @@ export type {
   MultiSelectComponent,
   MultiSelectOwnProps,
   MultiSelectOption,
-} from './multi-select';
+} from './types';
 export {
   MultiSelectVariants,
   MultiSelectModifiers,
   MultiSelectSlots,
   multiSelectDefaultTheme,
-} from './multi-select';
+} from './types';

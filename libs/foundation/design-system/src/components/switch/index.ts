@@ -4,5 +4,5 @@
  */
 
 export { Switch } from './switch';
-export type { SwitchProps, SwitchComponent, SwitchOwnProps } from './switch';
-export { SwitchVariants, SwitchModifiers, SwitchSlots, switchDefaultTheme } from './switch';
+export type { SwitchProps, SwitchComponent, SwitchOwnProps } from './types';
+export { SwitchVariants, SwitchModifiers, SwitchSlots, switchDefaultTheme } from './types';

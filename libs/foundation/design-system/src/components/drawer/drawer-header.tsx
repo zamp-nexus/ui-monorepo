@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { DrawerHeaderProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
+import type { DrawerHeaderProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Drawer.Header component

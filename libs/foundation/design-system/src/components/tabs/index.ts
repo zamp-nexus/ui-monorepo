@@ -16,5 +16,5 @@ export type {
   TabTriggerProps,
   TabContentProps,
   TabsContextValue,
-} from './tabs';
-export { TabsVariants, TabsModifiers, TabsSlots, tabsDefaultTheme } from './tabs';
+} from './types';
+export { TabsVariants, TabsModifiers, TabsSlots, tabsDefaultTheme } from './types';

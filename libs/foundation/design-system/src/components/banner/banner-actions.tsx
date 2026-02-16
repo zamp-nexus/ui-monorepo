@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { BannerActionsProps } from './banner';
-import { bannerDefaultTheme } from './banner';
+import type { BannerActionsProps } from './types';
+import { bannerDefaultTheme } from './types';
 
 /**
  * Banner.Actions component

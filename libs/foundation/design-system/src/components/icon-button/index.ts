@@ -4,10 +4,10 @@
  */
 
 export { IconButton } from './icon-button';
-export type { IconButtonProps, IconButtonComponent, IconButtonOwnProps } from './icon-button';
+export type { IconButtonProps, IconButtonComponent, IconButtonOwnProps } from './types';
 export {
   IconButtonVariants,
   IconButtonModifiers,
   IconButtonSlots,
   iconButtonDefaultTheme,
-} from './icon-button';
+} from './types';

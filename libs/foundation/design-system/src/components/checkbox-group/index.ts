@@ -22,10 +22,10 @@ export type {
   CheckboxGroupItemOwnProps,
   CheckboxGroupLabelProps,
   CheckboxGroupContextValue,
-} from './checkbox-group';
+} from './types';
 export {
   CheckboxGroupVariants,
   CheckboxGroupModifiers,
   CheckboxGroupSlots,
   checkboxGroupDefaultTheme,
-} from './checkbox-group';
+} from './types';

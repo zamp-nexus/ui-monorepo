@@ -8,8 +8,8 @@ import { Slot } from '../../primitives/slot';
 import { VisuallyHidden } from '../../primitives/visually-hidden';
 import { useTheme } from '../../theme';
 import { Spinner } from '../spinner';
-import type { ButtonComponent, ButtonProps } from './button';
-import { buttonDefaultTheme } from './button';
+import type { ButtonComponent, ButtonProps } from './types';
+import { buttonDefaultTheme } from './types';
 
 /**
  * Button component

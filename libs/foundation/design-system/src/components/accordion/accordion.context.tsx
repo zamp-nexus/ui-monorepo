@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { AccordionContextValue } from './accordion';
+import type { AccordionContextValue } from './types';
 
 /**
  * Accordion context

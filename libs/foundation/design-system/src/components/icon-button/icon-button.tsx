@@ -6,8 +6,8 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import { Spinner } from '../spinner';
-import type { IconButtonComponent, IconButtonProps } from './icon-button';
-import { iconButtonDefaultTheme } from './icon-button';
+import type { IconButtonComponent, IconButtonProps } from './types';
+import { iconButtonDefaultTheme } from './types';
 
 /**
  * IconButton component

@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ModalHeaderProps } from './modal';
-import { modalDefaultTheme } from './modal';
+import type { ModalHeaderProps } from './types';
+import { modalDefaultTheme } from './types';
 
 /**
  * Modal.Header component

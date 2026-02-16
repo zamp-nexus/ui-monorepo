@@ -8,9 +8,9 @@ import { Dialog } from '@base-ui/react/dialog';
 
 import { useTheme } from '../../theme';
 import { cn } from '../../utils/cn';
-import type { DrawerContentProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
 import { useDrawerContext } from './drawer.context';
+import type { DrawerContentProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Get size class based on direction and size

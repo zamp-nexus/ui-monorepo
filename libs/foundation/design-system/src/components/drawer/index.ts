@@ -26,5 +26,5 @@ export type {
   DrawerFooterProps,
   DrawerCloseProps,
   DrawerContextValue,
-} from './drawer';
-export { DrawerVariants, DrawerModifiers, DrawerSlots, drawerDefaultTheme } from './drawer';
+} from './types';
+export { DrawerVariants, DrawerModifiers, DrawerSlots, drawerDefaultTheme } from './types';

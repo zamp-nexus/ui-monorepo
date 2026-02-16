@@ -8,8 +8,8 @@ import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
 import { Skeleton } from '../skeleton';
 import { Spinner } from '../spinner';
-import type { LoaderComponent, LoaderProps } from './loader';
-import { loaderDefaultTheme } from './loader';
+import type { LoaderComponent, LoaderProps } from './types';
+import { loaderDefaultTheme } from './types';
 
 /**
  * Dots loading animation component

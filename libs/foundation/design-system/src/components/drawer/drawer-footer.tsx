@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { DrawerFooterProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
+import type { DrawerFooterProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Drawer.Footer component

@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { DrawerContextValue } from './drawer';
+import type { DrawerContextValue } from './types';
 
 /**
  * Drawer context - provides direction, size, and ARIA IDs to sub-components

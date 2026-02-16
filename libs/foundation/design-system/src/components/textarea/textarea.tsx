@@ -7,8 +7,8 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import type { OIComponentRef } from '../../types';
-import type { TextareaComponent, TextareaProps } from './textarea';
-import { textareaDefaultTheme } from './textarea';
+import type { TextareaComponent, TextareaProps } from './types';
+import { textareaDefaultTheme } from './types';
 
 /**
  * Textarea component

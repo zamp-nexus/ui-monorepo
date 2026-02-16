@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { EmptyStateDescriptionProps } from './empty-state';
-import { emptyStateDefaultTheme } from './empty-state';
+import type { EmptyStateDescriptionProps } from './types';
+import { emptyStateDefaultTheme } from './types';
 
 /**
  * EmptyState.Description component

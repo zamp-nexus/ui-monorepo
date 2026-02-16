@@ -7,9 +7,9 @@ import React from 'react';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import type { BannerCloseProps } from './banner';
-import { bannerDefaultTheme } from './banner';
 import { useBannerContext } from './banner.context';
+import type { BannerCloseProps } from './types';
+import { bannerDefaultTheme } from './types';
 
 /**
  * Banner.Close component

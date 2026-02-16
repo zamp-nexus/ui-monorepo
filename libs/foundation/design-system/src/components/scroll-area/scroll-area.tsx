@@ -8,8 +8,8 @@ import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 
 import { useTheme } from '../../theme';
 import { cn } from '../../utils/cn';
-import type { ScrollAreaComponent, ScrollAreaProps } from './scroll-area';
-import { scrollAreaDefaultTheme } from './scroll-area';
+import type { ScrollAreaComponent, ScrollAreaProps } from './types';
+import { scrollAreaDefaultTheme } from './types';
 
 /**
  * ScrollArea component

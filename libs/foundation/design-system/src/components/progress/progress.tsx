@@ -6,8 +6,8 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import type { OIComponentRef } from '../../types';
-import type { ProgressComponent, ProgressProps } from './progress';
-import { progressDefaultTheme } from './progress';
+import type { ProgressComponent, ProgressProps } from './types';
+import { progressDefaultTheme } from './types';
 
 /**
  * Progress component

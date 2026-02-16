@@ -6,7 +6,6 @@ import { useId, useMemo } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import type { ModalComponent, ModalContextValue } from './modal';
 import { ModalBody } from './modal-body';
 import { ModalClose } from './modal-close';
 import { ModalContent } from './modal-content';
@@ -16,6 +15,7 @@ import { ModalHeader } from './modal-header';
 import { ModalTitle } from './modal-title';
 import { ModalTrigger } from './modal-trigger';
 import { ModalContext } from './modal.context';
+import type { ModalComponent, ModalContextValue } from './types';
 
 /**
  * Modal component

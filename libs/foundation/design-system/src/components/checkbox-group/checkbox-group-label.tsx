@@ -6,9 +6,9 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import { Checkbox } from '../checkbox';
-import type { CheckboxGroupLabelProps } from './checkbox-group';
-import { checkboxGroupDefaultTheme } from './checkbox-group';
 import { useCheckboxGroupContext } from './checkbox-group.context';
+import type { CheckboxGroupLabelProps } from './types';
+import { checkboxGroupDefaultTheme } from './types';
 
 /**
  * CheckboxGroup.Label component

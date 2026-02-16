@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ToastTitleProps } from './toast';
-import { toastDefaultTheme } from './toast';
+import type { ToastTitleProps } from './types';
+import { toastDefaultTheme } from './types';
 
 /**
  * Toast.Title component

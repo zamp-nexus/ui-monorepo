@@ -22,5 +22,5 @@ export type {
   MenuSubTriggerProps,
   MenuSubContentProps,
   MenuContextValue,
-} from './menu';
-export { MenuVariants, MenuModifiers, MenuSlots, menuDefaultTheme } from './menu';
+} from './types';
+export { MenuVariants, MenuModifiers, MenuSlots, menuDefaultTheme } from './types';

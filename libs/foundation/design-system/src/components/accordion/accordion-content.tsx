@@ -7,8 +7,8 @@ import React from 'react';
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 
 import { useTheme } from '../../theme';
-import type { AccordionContentProps } from './accordion';
-import { accordionDefaultTheme } from './accordion';
+import type { AccordionContentProps } from './types';
+import { accordionDefaultTheme } from './types';
 
 /**
  * Accordion.Content component

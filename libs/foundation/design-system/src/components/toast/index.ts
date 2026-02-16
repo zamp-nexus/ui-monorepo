@@ -16,5 +16,5 @@ export type {
   ToastDescriptionProps,
   ToastBodyProps,
   ToastActionsProps,
-} from './toast';
-export { ToastVariants, ToastModifiers, ToastSlots, toastDefaultTheme } from './toast';
+} from './types';
+export { ToastVariants, ToastModifiers, ToastSlots, toastDefaultTheme } from './types';

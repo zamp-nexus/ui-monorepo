@@ -14,10 +14,10 @@ export type {
   EmptyStateTitleProps,
   EmptyStateDescriptionProps,
   EmptyStateActionsProps,
-} from './empty-state';
+} from './types';
 export {
   EmptyStateVariants,
   EmptyStateModifiers,
   EmptyStateSlots,
   emptyStateDefaultTheme,
-} from './empty-state';
+} from './types';

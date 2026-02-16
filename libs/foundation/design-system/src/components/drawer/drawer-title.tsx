@@ -7,9 +7,9 @@ import React from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 
 import { useTheme } from '../../theme';
-import type { DrawerTitleProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
 import { useDrawerContext } from './drawer.context';
+import type { DrawerTitleProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Drawer.Title component

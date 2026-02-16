@@ -20,5 +20,5 @@ export type {
   BannerActionsProps,
   BannerCloseProps,
   BannerContextValue,
-} from './banner';
-export { BannerVariants, BannerModifiers, BannerSlots, bannerDefaultTheme } from './banner';
+} from './types';
+export { BannerVariants, BannerModifiers, BannerSlots, bannerDefaultTheme } from './types';

@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ToastActionsProps } from './toast';
-import { toastDefaultTheme } from './toast';
+import type { ToastActionsProps } from './types';
+import { toastDefaultTheme } from './types';
 
 /**
  * Toast.Actions component

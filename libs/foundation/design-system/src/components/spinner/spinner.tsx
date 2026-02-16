@@ -6,8 +6,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { SpinnerComponent, SpinnerProps } from './spinner';
-import { spinnerDefaultTheme } from './spinner';
+import type { SpinnerComponent, SpinnerProps } from './types';
+import { spinnerDefaultTheme } from './types';
 
 /**
  * Spinner component

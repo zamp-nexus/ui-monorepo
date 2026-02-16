@@ -4,10 +4,10 @@
  */
 
 export { Separator } from './separator';
-export type { SeparatorProps, SeparatorComponent, SeparatorOwnProps } from './separator';
+export type { SeparatorProps, SeparatorComponent, SeparatorOwnProps } from './types';
 export {
   SeparatorVariants,
   SeparatorModifiers,
   SeparatorSlots,
   separatorDefaultTheme,
-} from './separator';
+} from './types';

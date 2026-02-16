@@ -19,5 +19,5 @@ export type {
   SelectItemProps,
   SelectItemComponent,
   SelectItemOwnProps,
-} from './select';
-export { SelectVariants, SelectModifiers, SelectSlots, selectDefaultTheme } from './select';
+} from './types';
+export { SelectVariants, SelectModifiers, SelectSlots, selectDefaultTheme } from './types';

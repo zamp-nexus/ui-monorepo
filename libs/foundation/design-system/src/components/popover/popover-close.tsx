@@ -9,8 +9,8 @@ import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import type { PopoverCloseProps } from './popover';
-import { popoverDefaultTheme } from './popover';
+import type { PopoverCloseProps } from './types';
+import { popoverDefaultTheme } from './types';
 
 /**
  * Popover.Close component

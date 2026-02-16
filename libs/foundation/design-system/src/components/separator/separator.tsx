@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { SeparatorComponent, SeparatorProps } from './separator';
-import { separatorDefaultTheme } from './separator';
+import type { SeparatorComponent, SeparatorProps } from './types';
+import { separatorDefaultTheme } from './types';
 
 /**
  * Separator component

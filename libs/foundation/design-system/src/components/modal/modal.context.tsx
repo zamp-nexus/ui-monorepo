@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { ModalContextValue } from './modal';
+import type { ModalContextValue } from './types';
 
 /**
  * Modal context - provides size, fill settings, and ARIA IDs to sub-components

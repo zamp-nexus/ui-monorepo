@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ModalFooterProps } from './modal';
-import { modalDefaultTheme } from './modal';
+import type { ModalFooterProps } from './types';
+import { modalDefaultTheme } from './types';
 
 /**
  * Modal.Footer component

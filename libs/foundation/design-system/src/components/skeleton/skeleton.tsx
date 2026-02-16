@@ -6,8 +6,8 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import { cn } from '../../utils/cn';
-import type { SkeletonComponent, SkeletonProps } from './skeleton';
-import { skeletonDefaultTheme } from './skeleton';
+import type { SkeletonComponent, SkeletonProps } from './types';
+import { skeletonDefaultTheme } from './types';
 
 const RADIUS_MAP = {
   none: 'rounded-none',

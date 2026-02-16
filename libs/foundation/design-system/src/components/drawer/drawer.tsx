@@ -6,7 +6,6 @@ import { useId, useMemo } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import type { DrawerComponent, DrawerContextValue } from './drawer';
 import { DrawerBody } from './drawer-body';
 import { DrawerClose } from './drawer-close';
 import { DrawerContent } from './drawer-content';
@@ -16,6 +15,7 @@ import { DrawerHeader } from './drawer-header';
 import { DrawerTitle } from './drawer-title';
 import { DrawerTrigger } from './drawer-trigger';
 import { DrawerContext } from './drawer.context';
+import type { DrawerComponent, DrawerContextValue } from './types';
 
 /**
  * Drawer component

@@ -7,9 +7,9 @@ import React from 'react';
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
 import { useTheme } from '../../theme';
-import type { PopoverContentProps } from './popover';
-import { popoverDefaultTheme } from './popover';
 import { usePopoverContext } from './popover.context';
+import type { PopoverContentProps } from './types';
+import { popoverDefaultTheme } from './types';
 
 /**
  * Arrow SVG component

@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import type { ModalTriggerProps } from './modal';
+import type { ModalTriggerProps } from './types';
 
 /**
  * Modal.Trigger component

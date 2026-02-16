@@ -7,9 +7,9 @@ import React from 'react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { useTheme } from '../../theme';
-import type { TabsListProps } from './tabs';
-import { tabsDefaultTheme } from './tabs';
 import { useTabsContext } from './tabs.context';
+import type { TabsListProps } from './types';
+import { tabsDefaultTheme } from './types';
 
 /**
  * Tabs.List component

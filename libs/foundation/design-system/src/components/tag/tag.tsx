@@ -8,8 +8,8 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { TagComponent, TagProps } from './tag';
-import { tagDefaultTheme } from './tag';
+import type { TagComponent, TagProps } from './types';
+import { tagDefaultTheme } from './types';
 
 /**
  * Default dismiss icon

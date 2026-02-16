@@ -4,7 +4,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { BannerContextValue } from './banner';
+import type { BannerContextValue } from './types';
 
 /**
  * Banner context - provides ARIA IDs and dismiss handler to sub-components

@@ -7,10 +7,10 @@ import React from 'react';
 import { RadioGroup as RadioGroupPrimitive } from '@base-ui/react/radio-group';
 
 import { useTheme } from '../../theme';
-import type { RadioGroupComponent, RadioGroupProps } from './radio-group';
-import { radioGroupDefaultTheme } from './radio-group';
 import { RadioGroupItem } from './radio-group-item';
 import { RadioGroupProvider } from './radio-group.context';
+import type { RadioGroupComponent, RadioGroupProps } from './types';
+import { radioGroupDefaultTheme } from './types';
 
 /**
  * RadioGroup component

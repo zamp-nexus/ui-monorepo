@@ -26,5 +26,5 @@ export type {
   ModalFooterProps,
   ModalCloseProps,
   ModalContextValue,
-} from './modal';
-export { ModalVariants, ModalModifiers, ModalSlots, modalDefaultTheme } from './modal';
+} from './types';
+export { ModalVariants, ModalModifiers, ModalSlots, modalDefaultTheme } from './types';

@@ -16,10 +16,10 @@ export type {
   AccordionTriggerProps,
   AccordionContentProps,
   AccordionContextValue,
-} from './accordion';
+} from './types';
 export {
   AccordionVariants,
   AccordionModifiers,
   AccordionSlots,
   accordionDefaultTheme,
-} from './accordion';
+} from './types';

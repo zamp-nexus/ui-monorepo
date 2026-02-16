@@ -12,10 +12,10 @@ export type {
   RadioGroupItemProps,
   RadioGroupItemComponent,
   RadioGroupItemOwnProps,
-} from './radio-group';
+} from './types';
 export {
   RadioGroupVariants,
   RadioGroupModifiers,
   RadioGroupSlots,
   radioGroupDefaultTheme,
-} from './radio-group';
+} from './types';

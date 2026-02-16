@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
-import type { PopoverTriggerProps } from './popover';
+import type { PopoverTriggerProps } from './types';
 
 /**
  * Popover.Trigger component

@@ -8,8 +8,8 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { ChipComponent, ChipProps } from './chip';
-import { chipDefaultTheme } from './chip';
+import type { ChipComponent, ChipProps } from './types';
+import { chipDefaultTheme } from './types';
 
 /**
  * Default close icon

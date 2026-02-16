@@ -8,12 +8,12 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { ToastComponent, ToastProps } from './toast';
-import { toastDefaultTheme } from './toast';
 import { ToastActions } from './toast-actions';
 import { ToastBody } from './toast-body';
 import { ToastDescription } from './toast-description';
 import { ToastTitle } from './toast-title';
+import type { ToastComponent, ToastProps } from './types';
+import { toastDefaultTheme } from './types';
 
 /**
  * Default feedback icons

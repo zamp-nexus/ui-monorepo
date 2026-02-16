@@ -4,10 +4,5 @@
  */
 
 export { Textarea } from './textarea';
-export type { TextareaProps, TextareaComponent, TextareaOwnProps } from './textarea';
-export {
-  TextareaVariants,
-  TextareaModifiers,
-  TextareaSlots,
-  textareaDefaultTheme,
-} from './textarea';
+export type { TextareaProps, TextareaComponent, TextareaOwnProps } from './types';
+export { TextareaVariants, TextareaModifiers, TextareaSlots, textareaDefaultTheme } from './types';

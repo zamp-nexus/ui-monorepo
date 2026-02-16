@@ -9,8 +9,8 @@ import { Dialog } from '@base-ui/react/dialog';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import type { DrawerCloseProps } from './drawer';
-import { drawerDefaultTheme } from './drawer';
+import type { DrawerCloseProps } from './types';
+import { drawerDefaultTheme } from './types';
 
 /**
  * Drawer.Close component

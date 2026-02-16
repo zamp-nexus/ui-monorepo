@@ -5,8 +5,8 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import type { ToastDescriptionProps } from './toast';
-import { toastDefaultTheme } from './toast';
+import type { ToastDescriptionProps } from './types';
+import { toastDefaultTheme } from './types';
 
 /**
  * Toast.Description component

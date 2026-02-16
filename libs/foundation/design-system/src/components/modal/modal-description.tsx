@@ -7,9 +7,9 @@ import React from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 
 import { useTheme } from '../../theme';
-import type { ModalDescriptionProps } from './modal';
-import { modalDefaultTheme } from './modal';
 import { useModalContext } from './modal.context';
+import type { ModalDescriptionProps } from './types';
+import { modalDefaultTheme } from './types';
 
 /**
  * Modal.Description component

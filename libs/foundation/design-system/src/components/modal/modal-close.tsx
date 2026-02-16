@@ -9,8 +9,8 @@ import { Dialog } from '@base-ui/react/dialog';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import type { ModalCloseProps } from './modal';
-import { modalDefaultTheme } from './modal';
+import type { ModalCloseProps } from './types';
+import { modalDefaultTheme } from './types';
 
 /**
  * Modal.Close component

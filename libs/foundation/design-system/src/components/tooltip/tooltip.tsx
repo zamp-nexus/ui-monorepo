@@ -6,8 +6,8 @@ import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { TooltipComponent, TooltipProps } from './tooltip';
-import { tooltipDefaultTheme } from './tooltip';
+import type { TooltipComponent, TooltipProps } from './types';
+import { tooltipDefaultTheme } from './types';
 
 /**
  * Tooltip arrow - a triangular pointer shape for floating UI positioning.
