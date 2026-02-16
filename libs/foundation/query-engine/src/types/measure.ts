@@ -7,9 +7,9 @@
  * @module types/measure
  */
 
+import { extractColumnName, extractTableName } from '../utils/member-ref';
 import { AGGREGATIONS, type Aggregation } from './aggregation';
 import type { FilterCondition } from './filter';
-import { extractColumnName, extractTableName } from '../utils/member-ref';
 
 // =============================================================================
 // MEASURE FORMAT TYPES
@@ -242,7 +242,7 @@ export const measureUsesDistinct = (measure: MeasureSpec): boolean => {
 export const createMeasure = (
   member: string,
   aggregation: Aggregation,
-  alias?: string
+  alias?: string,
 ): MeasureSpec => {
   const spec: MeasureSpec = { member, aggregation };
   if (alias) {

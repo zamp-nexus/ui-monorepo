@@ -5,22 +5,24 @@
  * status codes, and FoundationError integration.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+
 import { HTTP_ERROR_CODE } from '../core/constants';
 import {
-  HttpNotInitializedError,
-  HttpConfigError,
-  HttpRequestError,
-  HttpTimeoutError,
-  HttpNetworkError,
   HttpCancelledError,
-  HttpUnauthorizedError,
-  HttpForbiddenError,
-  HttpNotFoundError,
-  HttpServerError,
-  HttpSerializationError,
+  HttpConfigError,
   HttpError,
+  HttpForbiddenError,
+  HttpNetworkError,
+  HttpNotFoundError,
+  HttpNotInitializedError,
+  HttpRequestError,
+  HttpSerializationError,
+  HttpServerError,
+  HttpTimeoutError,
+  HttpUnauthorizedError,
 } from './http-errors';
 
 // =============================================================================
@@ -91,7 +93,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpRequestError', () => {
     it('should set code and httpCode', () => {
       const error = new HttpRequestError('Bad request', 400, '/api', 'POST');
-      expectHttpError(error, HTTP_ERROR_CODE.REQUEST_FAILED, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.REQUEST_FAILED,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+      );
     });
 
     it('should store statusCode, url, and method', () => {
@@ -128,7 +134,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpNetworkError', () => {
     it('should set code and httpCode', () => {
       const error = new HttpNetworkError();
-      expectHttpError(error, HTTP_ERROR_CODE.NETWORK_ERROR, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.NETWORK_ERROR,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+      );
     });
 
     it('should use default message when none provided', () => {
@@ -149,7 +159,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpCancelledError', () => {
     it('should set code and httpCode', () => {
       const error = new HttpCancelledError();
-      expectHttpError(error, HTTP_ERROR_CODE.CANCELLED, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_CANCELLED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.CANCELLED,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_CANCELLED,
+      );
     });
 
     it('should store url and method', () => {
@@ -166,7 +180,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpUnauthorizedError', () => {
     it('should set code, httpCode, and statusCode 401', () => {
       const error = new HttpUnauthorizedError('/protected', 'GET');
-      expectHttpError(error, HTTP_ERROR_CODE.UNAUTHORIZED, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.UNAUTHORIZED,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+      );
       expect(error.statusCode).toBe(401);
     });
   });
@@ -178,7 +196,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpForbiddenError', () => {
     it('should set code, httpCode, and statusCode 403', () => {
       const error = new HttpForbiddenError('/admin', 'DELETE');
-      expectHttpError(error, HTTP_ERROR_CODE.FORBIDDEN, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.FORBIDDEN,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+      );
       expect(error.statusCode).toBe(403);
     });
   });
@@ -202,7 +224,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpServerError', () => {
     it('should set code and httpCode', () => {
       const error = new HttpServerError(500);
-      expectHttpError(error, HTTP_ERROR_CODE.SERVER_ERROR, FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.SERVER_ERROR,
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+      );
     });
 
     it('should store custom status code', () => {
@@ -224,7 +250,11 @@ describe('HttpError hierarchy', () => {
   describe('HttpSerializationError', () => {
     it('should set code and httpCode for request serialization', () => {
       const error = new HttpSerializationError('request');
-      expectHttpError(error, HTTP_ERROR_CODE.SERIALIZATION_ERROR, FOUNDATION_ERROR_CODE.VALIDATION_FAILED);
+      expectHttpError(
+        error,
+        HTTP_ERROR_CODE.SERIALIZATION_ERROR,
+        FOUNDATION_ERROR_CODE.VALIDATION_FAILED,
+      );
       expect(error.message).toContain('request');
     });
 

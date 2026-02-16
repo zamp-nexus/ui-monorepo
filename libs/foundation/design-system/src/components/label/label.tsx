@@ -98,9 +98,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
         )}
 
         {/* Label text */}
-        <span className={theme.text?.({ size, disabled, error }) ?? ''}>
-          {children}
-        </span>
+        <span className={theme.text?.({ size, disabled, error }) ?? ''}>{children}</span>
 
         {/* Required indicator */}
         {required && (

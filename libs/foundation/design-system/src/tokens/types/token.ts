@@ -236,12 +236,7 @@ export interface TokenGroup<T extends DesignToken = DesignToken> {
  * Type guard to check if value is a DesignToken
  */
 export function isDesignToken(value: unknown): value is DesignToken {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '$value' in value &&
-    '$type' in value
-  );
+  return typeof value === 'object' && value !== null && '$value' in value && '$type' in value;
 }
 
 /**

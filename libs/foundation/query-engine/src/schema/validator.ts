@@ -6,13 +6,13 @@
  * @module schema/validator
  */
 
+import { mapFilterExpression } from '../internal/filter-recursion';
+import type { FilterExpression } from '../types/filter';
+import type { MeasureSpec } from '../types/measure';
 import type { Query } from '../types/query';
 import type { SchemaDefinition, TableDefinition } from '../types/schema-definition';
-import type { MeasureSpec } from '../types/measure';
 import type { TimeDimensionSpec } from '../types/time';
-import type { FilterExpression } from '../types/filter';
 import type { SchemaRegistry } from './registry';
-import { mapFilterExpression } from '../internal/filter-recursion';
 
 // =============================================================================
 // VALIDATION ERROR TYPES
@@ -110,7 +110,7 @@ export const validateSchema = (schema: SchemaDefinition): DetailedValidationResu
  */
 export const validateTableDefinition = (
   table: TableDefinition,
-  tableName: string
+  tableName: string,
 ): DetailedValidationResult => {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
@@ -188,21 +188,14 @@ export const validateTableDefinition = (
 /**
  * Validate a query against a schema registry.
  */
-export const validateQuery = (
-  query: Query,
-  registry: SchemaRegistry
-): DetailedValidationResult => {
+export const validateQuery = (query: Query, registry: SchemaRegistry): DetailedValidationResult => {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
   if (query.measures) {
     for (let index = 0; index < query.measures.length; index++) {
       const measure = query.measures[index];
-      const measureValidation = validateMeasureSpec(
-        measure,
-        registry,
-        `query.measures[${index}]`
-      );
+      const measureValidation = validateMeasureSpec(measure, registry, `query.measures[${index}]`);
       errors.push(...measureValidation.errors);
       warnings.push(...measureValidation.warnings);
     }
@@ -235,7 +228,7 @@ export const validateQuery = (
       const timeDimensionValidation = validateTimeDimension(
         timeDimension,
         registry,
-        `query.timeDimensions[${index}]`
+        `query.timeDimensions[${index}]`,
       );
       errors.push(...timeDimensionValidation.errors);
       warnings.push(...timeDimensionValidation.warnings);
@@ -248,7 +241,7 @@ export const validateQuery = (
       const filterValidation = validateFilterExpression(
         filter,
         registry,
-        `query.filters[${index}]`
+        `query.filters[${index}]`,
       );
       errors.push(...filterValidation.errors);
       warnings.push(...filterValidation.warnings);
@@ -301,7 +294,7 @@ export const validateQuery = (
 const validateMeasureSpec = (
   measure: MeasureSpec,
   registry: SchemaRegistry,
-  path: string
+  path: string,
 ): DetailedValidationResult => {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
@@ -334,7 +327,7 @@ const validateMeasureSpec = (
 const validateTimeDimension = (
   timeDimension: TimeDimensionSpec,
   registry: SchemaRegistry,
-  path: string
+  path: string,
 ): DetailedValidationResult => {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
@@ -369,7 +362,7 @@ const validateTimeDimension = (
 const validateFilterExpression = (
   filter: FilterExpression,
   registry: SchemaRegistry,
-  path: string
+  path: string,
 ): DetailedValidationResult => {
   return mapFilterExpression(filter, {
     onCondition: (condition) => {
@@ -443,8 +436,7 @@ export const isValidQuery = (query: Query, registry: SchemaRegistry): boolean =>
 /**
  * Quick schema validation helper.
  */
-export const isValidSchema = (schema: SchemaDefinition): boolean =>
-  validateSchema(schema).valid;
+export const isValidSchema = (schema: SchemaDefinition): boolean => validateSchema(schema).valid;
 
 /**
  * Format validation result for logs/UI.

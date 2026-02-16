@@ -32,11 +32,7 @@ export const LabelSlots = ['icon', 'requiredIndicator', 'tooltipContent', 'descr
  * Label's own props
  */
 export interface LabelOwnProps
-  extends OIComponentOwnProps<
-    typeof LabelVariants,
-    typeof LabelModifiers,
-    typeof LabelSlots
-  > {
+  extends OIComponentOwnProps<typeof LabelVariants, typeof LabelModifiers, typeof LabelSlots> {
   /** Size of the label */
   size?: (typeof LabelVariants.size)[number];
   /** Whether the field is required */

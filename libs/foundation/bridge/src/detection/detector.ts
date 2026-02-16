@@ -47,9 +47,7 @@ const isElectronEnvironment = (): boolean => {
   // Check for Electron-specific globals
   if (typeof window !== 'undefined') {
     // Check window.process.type (Electron renderer)
-    if (
-      typeof (window as Window & { process?: { type?: string } }).process?.type === 'string'
-    ) {
+    if (typeof (window as Window & { process?: { type?: string } }).process?.type === 'string') {
       return true;
     }
 
@@ -65,11 +63,7 @@ const isElectronEnvironment = (): boolean => {
   }
 
   // Check for Node.js process with Electron versions
-  if (
-    typeof process !== 'undefined' &&
-    process.versions &&
-    process.versions.electron
-  ) {
+  if (typeof process !== 'undefined' && process.versions && process.versions.electron) {
     return true;
   }
 
@@ -80,9 +74,7 @@ const isElectronEnvironment = (): boolean => {
  * Detect Node.js environment (not Electron)
  */
 const isNodeEnvironment = (): boolean =>
-  typeof process !== 'undefined' &&
-  !!process.versions?.node &&
-  !process.versions?.electron;
+  typeof process !== 'undefined' && !!process.versions?.node && !process.versions?.electron;
 
 /**
  * Detect current runtime environment

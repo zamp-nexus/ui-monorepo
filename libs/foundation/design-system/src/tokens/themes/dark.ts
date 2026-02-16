@@ -1,13 +1,13 @@
 /**
  * Dark Theme - Primary Theme
  * Linear-inspired dark theme implementation
- * 
+ *
  * Design principles:
  * - Mercury White (#F4F5F8) for highlights
  * - Nordic Gray (#222326) as base
  * - Subtle layer elevation
  * - High contrast text hierarchy
- * 
+ *
  * @module tokens/themes/dark
  */
 
@@ -24,28 +24,28 @@ export const darkTheme = createTheme({
   colors: {
     background: {
       // Layer system: darker = deeper
-      layer00: 'hsl(228 6% 10%)',   // Deepest - canvas
-      layer01: 'hsl(228 6% 12%)',   // Default surface
-      layer02: 'hsl(228 6% 14%)',   // Elevated
-      layer03: 'hsl(228 6% 16%)',   // Highest - modals
+      layer00: 'hsl(228 6% 10%)', // Deepest - canvas
+      layer01: 'hsl(228 6% 12%)', // Default surface
+      layer02: 'hsl(228 6% 14%)', // Elevated
+      layer03: 'hsl(228 6% 16%)', // Highest - modals
       overlay: 'hsla(228 6% 8% / 0.8)', // Backdrop
     },
 
     text: {
       // Text hierarchy: lighter = more emphasis
       highlight: 'hsl(228 15% 96%)', // Mercury White - maximum
-      primary: 'hsl(228 6% 94%)',    // High contrast
-      secondary: 'hsl(228 6% 74%)',  // Reduced
-      tertiary: 'hsl(228 6% 62%)',   // Placeholders
-      muted: 'hsl(228 6% 40%)',      // Disabled
-      inverted: 'hsl(228 6% 8%)',    // On colored BG
+      primary: 'hsl(228 6% 94%)', // High contrast
+      secondary: 'hsl(228 6% 74%)', // Reduced
+      tertiary: 'hsl(228 6% 62%)', // Placeholders
+      muted: 'hsl(228 6% 40%)', // Disabled
+      inverted: 'hsl(228 6% 8%)', // On colored BG
     },
 
     interactive: {
       primary: {
-        resting: 'hsl(235 56% 60%)',  // Linear accent
-        hovered: 'hsl(235 56% 65%)',  // Lighter on hover
-        pressed: 'hsl(235 56% 55%)',  // Darker on press
+        resting: 'hsl(235 56% 60%)', // Linear accent
+        hovered: 'hsl(235 56% 65%)', // Lighter on hover
+        pressed: 'hsl(235 56% 55%)', // Darker on press
         disabled: 'hsl(235 20% 40%)', // Desaturated
       },
       secondary: {

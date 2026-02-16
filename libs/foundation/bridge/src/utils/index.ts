@@ -21,10 +21,6 @@ export {
   applyLimitOffset,
 } from './sql';
 
-export {
-  validatePoolConfig,
-  validateRouterConfig,
-  resolvePoolConfig,
-} from './validation';
+export { validatePoolConfig, validateRouterConfig, resolvePoolConfig } from './validation';
 
 export type { RouterConfigForValidation } from './validation';

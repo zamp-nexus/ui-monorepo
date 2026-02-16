@@ -30,11 +30,7 @@ export const ModalSlots = [] as const;
  * Modal's own props
  */
 export interface ModalOwnProps
-  extends OIComponentOwnProps<
-    typeof ModalVariants,
-    typeof ModalModifiers,
-    typeof ModalSlots
-  > {
+  extends OIComponentOwnProps<typeof ModalVariants, typeof ModalModifiers, typeof ModalSlots> {
   /** Size of the modal */
   size?: (typeof ModalVariants.size)[number];
   /** Fill the container height */

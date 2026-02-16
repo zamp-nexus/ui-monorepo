@@ -1,26 +1,21 @@
 /**
  * Typography Primitives - Tier 1 Tokens
  * Font metrics, weights, and text style presets
- * 
+ *
  * Design rationale:
  * - Variable font weights for Inter variable font support
  * - Negative letter-spacing for tighter, modern look (Linear-style)
  * - Responsive font sizes with device-specific adjustments
- * 
+ *
  * @module tokens/primitives/typography
  */
 
-import type {
-  FontWeightToken,
-  FontFamilyToken,
-  DimensionToken,
-  NumberToken,
-} from '../types';
+import type { DimensionToken, FontFamilyToken, FontWeightToken, NumberToken } from '../types';
 
 /**
  * Font weight tokens for variable fonts
  * Values optimized for Inter variable font
- * 
+ *
  * Standard weights mapped to variable font values:
  * - thin: 80 (extra light)
  * - light: 210
@@ -83,7 +78,8 @@ export const fontWeights = {
 export const fontFamilies = {
   sans: {
     $type: 'fontFamily',
-    $value: '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+    $value:
+      '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
     $fallbacks: [
       'Inter',
       '-apple-system',
@@ -97,13 +93,7 @@ export const fontFamilies = {
   mono: {
     $type: 'fontFamily',
     $value: '"JetBrains Mono", "SF Mono", "Fira Code", Consolas, "Liberation Mono", monospace',
-    $fallbacks: [
-      'SF Mono',
-      'Fira Code',
-      'Consolas',
-      'Liberation Mono',
-      'monospace',
-    ],
+    $fallbacks: ['SF Mono', 'Fira Code', 'Consolas', 'Liberation Mono', 'monospace'],
     $description: 'Monospace font for code',
   },
 } as const satisfies Record<string, FontFamilyToken>;
@@ -115,7 +105,7 @@ function createDimensionToken(
   value: string,
   numericValue: number,
   unit: 'px' | 'rem' | 'em',
-  description?: string
+  description?: string,
 ): DimensionToken {
   return {
     $type: 'dimension',
@@ -149,7 +139,7 @@ export interface TextStyleDefinition {
 
 /**
  * Text style presets
- * 
+ *
  * Naming convention follows semantic hierarchy:
  * - title-*: Page/section headings
  * - subtitle-*: Subheadings
@@ -157,7 +147,7 @@ export interface TextStyleDefinition {
  * - system/system-*: UI text (buttons, labels)
  * - caption: Small helper text
  * - footnote: Smallest text for legal/fine print
- * 
+ *
  * All styles include:
  * - fontSize: The size of the text
  * - lineHeight: Unitless multiplier for line-height
@@ -194,7 +184,7 @@ export const textStyles = {
     lineHeight: createNumberToken(1.35, 'Subtitle line height'),
     letterSpacing: createDimensionToken('-0.02em', -0.02, 'em', 'Tighter tracking'),
   },
-  'body': {
+  body: {
     fontSize: createDimensionToken('0.9375rem', 15, 'px', 'Default body size'),
     lineHeight: createNumberToken(1.5, 'Comfortable reading line height'),
     letterSpacing: createDimensionToken('-0.0175em', -0.0175, 'em', 'Slight negative tracking'),
@@ -209,7 +199,7 @@ export const textStyles = {
     lineHeight: createNumberToken(1.4, 'Compact line height'),
     letterSpacing: createDimensionToken('-0.015em', -0.015, 'em', 'Slight negative tracking'),
   },
-  'system': {
+  system: {
     fontSize: createDimensionToken('0.8125rem', 13, 'px', 'Default UI text size'),
     lineHeight: createNumberToken(1.32, 'Compact UI line height'),
     letterSpacing: createDimensionToken('-0.005em', -0.005, 'em', 'Minimal tracking adjustment'),
@@ -219,12 +209,12 @@ export const textStyles = {
     lineHeight: createNumberToken(1.35, 'Compact line height'),
     letterSpacing: createDimensionToken('-0.01em', -0.01, 'em', 'Slight negative tracking'),
   },
-  'caption': {
+  caption: {
     fontSize: createDimensionToken('0.75rem', 12, 'px', 'Caption size'),
     lineHeight: createNumberToken(1.35, 'Caption line height'),
     letterSpacing: createDimensionToken('0em', 0, 'em', 'No tracking adjustment'),
   },
-  'footnote': {
+  footnote: {
     fontSize: createDimensionToken('0.6875rem', 11, 'px', 'Footnote size'),
     lineHeight: createNumberToken(1.4, 'Footnote line height'),
     letterSpacing: createDimensionToken('-0.005em', -0.005, 'em', 'Minimal tracking'),

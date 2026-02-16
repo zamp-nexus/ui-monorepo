@@ -2,13 +2,14 @@
  * Tests for number guard utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  isPositiveInteger,
-  isNonNegative,
-  isNonNegativeInteger,
   isFiniteNumber,
   isInRange,
+  isNonNegative,
+  isNonNegativeInteger,
+  isPositiveInteger,
   isValidPercentage,
   isValidPort,
 } from './number-guards';

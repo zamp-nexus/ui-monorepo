@@ -7,13 +7,14 @@
  * @module compiler/sql-utils
  */
 
-import type { FilterValue } from '../types/filter';
 import {
-  validateIdentifier as bridgeValidateIdentifier,
+  escapeString as bridgeEscapeString,
   isValidIdentifier as bridgeIsValidIdentifier,
   quoteIdentifier as bridgeQuoteIdentifier,
-  escapeString as bridgeEscapeString,
+  validateIdentifier as bridgeValidateIdentifier,
 } from '@open-insights-web/foundation-bridge';
+
+import type { FilterValue } from '../types/filter';
 import { parseMemberRef } from '../utils/member-ref';
 
 // =============================================================================
@@ -79,10 +80,7 @@ export const quoteIdentifier = (identifier: string): string => {
 /**
  * Quote a table name with optional schema
  */
-export const quoteTableName = (
-  tableName: string,
-  schema?: string
-): string => {
+export const quoteTableName = (tableName: string, schema?: string): string => {
   if (schema) {
     return `${quoteIdentifier(schema)}.${quoteIdentifier(tableName)}`;
   }
@@ -92,10 +90,7 @@ export const quoteTableName = (
 /**
  * Quote a column with optional table alias
  */
-export const quoteColumn = (
-  columnName: string,
-  tableAlias?: string
-): string => {
+export const quoteColumn = (columnName: string, tableAlias?: string): string => {
   if (tableAlias) {
     return `${quoteIdentifier(tableAlias)}.${quoteIdentifier(columnName)}`;
   }
@@ -155,10 +150,7 @@ export const formatValueList = (values: ReadonlyArray<FilterValue>): string => {
  * Escape a LIKE pattern (escape % and _ characters)
  */
 export const escapeLikePattern = (pattern: string): string => {
-  return pattern
-    .replace(/\\/g, '\\\\')
-    .replace(/%/g, '\\%')
-    .replace(/_/g, '\\_');
+  return pattern.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 };
 
 /**
@@ -260,7 +252,7 @@ export const buildAggregation = (
   func: string,
   column: string,
   distinct = false,
-  filter?: string
+  filter?: string,
 ): string => {
   let expression: string;
 
@@ -286,11 +278,9 @@ export const buildAggregation = (
  */
 export const buildCaseExpression = (
   conditions: ReadonlyArray<{ when: string; then: string }>,
-  elseValue?: string
+  elseValue?: string,
 ): string => {
-  const whenClauses = conditions
-    .map(({ when, then }) => `WHEN ${when} THEN ${then}`)
-    .join(' ');
+  const whenClauses = conditions.map(({ when, then }) => `WHEN ${when} THEN ${then}`).join(' ');
 
   if (elseValue !== undefined) {
     return `CASE ${whenClauses} ELSE ${elseValue} END`;

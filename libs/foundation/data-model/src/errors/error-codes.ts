@@ -210,7 +210,8 @@ export const FOUNDATION_ERROR_CODE = {
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
 } as const;
 
-export type FoundationErrorCode = (typeof FOUNDATION_ERROR_CODE)[keyof typeof FOUNDATION_ERROR_CODE];
+export type FoundationErrorCode =
+  (typeof FOUNDATION_ERROR_CODE)[keyof typeof FOUNDATION_ERROR_CODE];
 
 // =============================================================================
 // Error Categories

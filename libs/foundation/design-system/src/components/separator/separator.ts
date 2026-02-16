@@ -89,4 +89,3 @@ export const separatorDefaultTheme: ComponentThemeConfigStructure = {
     orientation: 'horizontal',
   },
 };
-

@@ -1,19 +1,20 @@
 /**
  * Conflict resolution strategies
- * 
+ *
  * NOTE: ConflictStrategy, ConflictContext, ConflictResult, and MergeConfig types
  * should be imported directly from @open-insights-web/foundation-data-model
- * 
+ *
  * @module conflicts/strategies
  */
 
 import isEqual from 'react-fast-compare';
+
 import {
   CONFLICT_STRATEGY,
   CONFLICT_WINNER,
   type ConflictContext,
-  type ConflictStrategy,
   type ConflictResult,
+  type ConflictStrategy,
   type MergeConfig,
 } from '@open-insights-web/foundation-data-model';
 
@@ -70,7 +71,7 @@ export const lastWriteWins = <T>(context: ConflictContext<T>): ConflictResult<T>
  */
 export const merge = <T extends Record<string, unknown>>(
   context: ConflictContext<T>,
-  config: MergeConfig = DEFAULT_MERGE_CONFIG
+  config: MergeConfig = DEFAULT_MERGE_CONFIG,
 ): ConflictResult<T> => {
   const serverData: Record<string, unknown> = context.serverData;
   const clientData: Record<string, unknown> = context.clientData;
@@ -81,10 +82,7 @@ export const merge = <T extends Record<string, unknown>>(
   const conflictedFields: string[] = [];
 
   // Get all unique keys
-  const allKeys = new Set([
-    ...Object.keys(serverData),
-    ...Object.keys(clientData),
-  ]);
+  const allKeys = new Set([...Object.keys(serverData), ...Object.keys(clientData)]);
 
   for (const key of allKeys) {
     const serverValue = serverData[key];
@@ -114,18 +112,26 @@ export const merge = <T extends Record<string, unknown>>(
     }
 
     // Concat fields (arrays)
-    if (config.concatFields?.includes(key) && Array.isArray(serverValue) && Array.isArray(clientValue)) {
+    if (
+      config.concatFields?.includes(key) &&
+      Array.isArray(serverValue) &&
+      Array.isArray(clientValue)
+    ) {
       resolvedData[key] = [...serverValue, ...clientValue];
       mergedFields.push(key);
       continue;
     }
 
     // Union fields (arrays/sets)
-    if (config.unionFields?.includes(key) && Array.isArray(serverValue) && Array.isArray(clientValue)) {
+    if (
+      config.unionFields?.includes(key) &&
+      Array.isArray(serverValue) &&
+      Array.isArray(clientValue)
+    ) {
       // Use deep equality for deduplication
       const combined = [...serverValue];
       for (const item of clientValue) {
-        if (!combined.some(existing => isEqual(existing, item))) {
+        if (!combined.some((existing) => isEqual(existing, item))) {
           combined.push(item);
         }
       }
@@ -162,9 +168,10 @@ export const merge = <T extends Record<string, unknown>>(
 
   return {
     resolvedData: resolvedData as T,
-    winner: conflictedFields.length > 0 || mergedFields.length > 0
-      ? CONFLICT_WINNER.MERGED
-      : CONFLICT_WINNER.SERVER,
+    winner:
+      conflictedFields.length > 0 || mergedFields.length > 0
+        ? CONFLICT_WINNER.MERGED
+        : CONFLICT_WINNER.SERVER,
     requiresReview: conflictedFields.length > 0,
     mergedFields,
     conflictedFields,
@@ -194,6 +201,9 @@ export const strategyResolvers: Record<
   [CONFLICT_STRATEGY.SERVER_WINS]: serverWins,
   [CONFLICT_STRATEGY.CLIENT_WINS]: clientWins,
   [CONFLICT_STRATEGY.LAST_WRITE_WINS]: lastWriteWins,
-  [CONFLICT_STRATEGY.MERGE]: merge as <T>(context: ConflictContext<T>, config?: MergeConfig) => ConflictResult<T>,
+  [CONFLICT_STRATEGY.MERGE]: merge as <T>(
+    context: ConflictContext<T>,
+    config?: MergeConfig,
+  ) => ConflictResult<T>,
   [CONFLICT_STRATEGY.MANUAL]: manual,
 };

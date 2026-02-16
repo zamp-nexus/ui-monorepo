@@ -1,7 +1,25 @@
-# foundation-mocks
+# Foundation Mocks
 
-This library was generated with [Nx](https://nx.dev).
+`@open-insights-web/foundation-mocks` provides test builders and mock utilities for foundation-layer tests.
 
-## Running unit tests
+## Purpose
 
-Run `nx test foundation-mocks` to execute the unit tests via [Vitest](https://vitest.dev/).
+Use this package in unit/integration tests to create consistent, typed test data and payloads.
+
+## Public Surface
+
+- Builders from `./src/builders`
+- Domain-specific mock helpers exported by library index
+
+## Example
+
+```ts
+import { MutationBuilder, QueryBuilder } from '@open-insights-web/foundation-mocks';
+
+const query = QueryBuilder.create().withTable('events').withMeasure('count', 'count').build();
+const mutation = MutationBuilder.create()
+  .ofType('create')
+  .forTable('users')
+  .withData({ name: 'Ada' })
+  .build();
+```

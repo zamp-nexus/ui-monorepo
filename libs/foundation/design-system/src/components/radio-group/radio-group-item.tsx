@@ -7,9 +7,9 @@ import React from 'react';
 import { Radio } from '@base-ui/react/radio';
 
 import { useTheme } from '../../theme';
-import { useRadioGroupContext } from './radio-group.context';
 import type { RadioGroupItemComponent, RadioGroupItemProps } from './radio-group';
 import { radioGroupDefaultTheme } from './radio-group';
+import { useRadioGroupContext } from './radio-group.context';
 
 /**
  * Circle indicator for checked state

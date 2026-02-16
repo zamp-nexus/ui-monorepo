@@ -1,6 +1,8 @@
 import React, { type PropsWithChildren } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, waitFor } from '@testing-library/react';
+
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useDLAnalytics } from './use-dl-analytics';
@@ -55,7 +57,7 @@ describe('useDLAnalytics', () => {
     const internals = createInternals();
     const { result } = renderHook(
       () => useDLAnalytics({ sql: 'SELECT 1 as count', queryKey: ['analytics', 'count'] }),
-      { wrapper: createWrapper(internals) }
+      { wrapper: createWrapper(internals) },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

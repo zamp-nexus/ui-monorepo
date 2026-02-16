@@ -4,16 +4,17 @@
  */
 
 import type { z } from 'zod';
+
 import type {
+  CreateSessionSchema,
+  ExitPageSchema,
+  LandingPageSchema,
+  SessionFiltersSchema,
+  SessionMetricsSchema,
   SessionSchema,
   SessionStatusSchema,
-  LandingPageSchema,
-  ExitPageSchema,
-  SessionMetricsSchema,
-  CreateSessionSchema,
-  UpdateSessionSchema,
-  SessionFiltersSchema,
   SessionSummarySchema,
+  UpdateSessionSchema,
 } from '../schemas/session.schema';
 import type { Event } from './event';
 

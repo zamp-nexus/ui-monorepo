@@ -8,14 +8,14 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
+import type { BannerComponent, BannerContextValue, BannerProps } from './banner';
+import { bannerDefaultTheme } from './banner';
 import { BannerActions } from './banner-actions';
 import { BannerBody } from './banner-body';
 import { BannerClose } from './banner-close';
 import { BannerDescription } from './banner-description';
 import { BannerTitle } from './banner-title';
 import { BannerContext } from './banner.context';
-import type { BannerComponent, BannerContextValue, BannerProps } from './banner';
-import { bannerDefaultTheme } from './banner';
 
 /**
  * Default variant icons
@@ -118,9 +118,7 @@ const BannerRoot = React.forwardRef(function Banner<T extends React.ElementType 
         )}
 
         {/* Main content */}
-        <div className={theme.content?.({}) ?? 'flex-1 min-w-0'}>
-          {children}
-        </div>
+        <div className={theme.content?.({}) ?? 'flex-1 min-w-0'}>{children}</div>
 
         {/* Close button (rendered via context) */}
         {dismissible && <BannerClose />}

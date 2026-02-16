@@ -9,7 +9,7 @@ export interface AnalyticsRuntimeResolverOptions {
 }
 
 export const getAnalyticsRouterOrThrow = async (
-  options: AnalyticsRuntimeResolverOptions
+  options: AnalyticsRuntimeResolverOptions,
 ): Promise<DuckDBRouter> => {
   const { duckdbRouter, initializeAnalytics } = options;
 

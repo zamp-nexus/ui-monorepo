@@ -7,6 +7,12 @@
  * @packageDocumentation
  */
 
+import type { z } from 'zod';
+
+import type { BaseEntitySchema as BaseEntitySchemaType } from './schemas/base.schema';
+import type { EventSchema as EventSchemaType } from './schemas/event.schema';
+import type { SessionSchema as SessionSchemaType } from './schemas/session.schema';
+
 // ============================================================================
 // Base Schemas (common building blocks)
 // ============================================================================
@@ -192,11 +198,6 @@ export type {
 } from './types';
 
 // Inferred types from schemas
-import type { z } from 'zod';
-import type { SessionSchema as SessionSchemaType } from './schemas/session.schema';
-import type { EventSchema as EventSchemaType } from './schemas/event.schema';
-import type { BaseEntitySchema as BaseEntitySchemaType } from './schemas/base.schema';
-
 export type Session = z.infer<typeof SessionSchemaType>;
 export type Event = z.infer<typeof EventSchemaType>;
 export type BaseEntity = z.infer<typeof BaseEntitySchemaType>;
@@ -254,10 +255,7 @@ export { SCHEMA_VERSION } from './versioning';
 // Validation Types
 // ============================================================================
 
-export type {
-  ValidationSeverity,
-  ValidationIssue,
-} from './types';
+export type { ValidationSeverity, ValidationIssue } from './types';
 export { VALIDATION_SEVERITY, ValidationResult, BrandedTypeValidationError } from './types';
 
 // ============================================================================

@@ -124,10 +124,7 @@ export interface JoinSpec {
  * Check if value is a valid join type.
  */
 export const isJoinType = (value: unknown): value is JoinType => {
-  return (
-    typeof value === 'string' &&
-    Object.values(JOIN_TYPES).includes(value as JoinType)
-  );
+  return typeof value === 'string' && Object.values(JOIN_TYPES).includes(value as JoinType);
 };
 
 /**
@@ -251,11 +248,7 @@ export const getJoinSqlKeyword = (type: JoinType): string => {
  * createJoin('orders.user_id', 'users.id')
  * createJoin('orders.user_id', 'users.id', 'left')
  */
-export const createJoin = (
-  left: string,
-  right: string,
-  type: JoinType = 'inner'
-): JoinSpec => ({
+export const createJoin = (left: string, right: string, type: JoinType = 'inner'): JoinSpec => ({
   left,
   right,
   type,

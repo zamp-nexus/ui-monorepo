@@ -39,8 +39,7 @@ export interface QueryCacheEntry<TData = JsonValue> {
  * Query cache entry with status
  * @template TData - Type of the cached data (defaults to JsonValue)
  */
-export interface QueryCacheEntryWithStatus<TData = JsonValue>
-  extends QueryCacheEntry<TData> {
+export interface QueryCacheEntryWithStatus<TData = JsonValue> extends QueryCacheEntry<TData> {
   status: QueryCacheStatus;
 }
 
@@ -64,10 +63,7 @@ export const isCacheExpired = (entry: QueryCacheEntry): boolean => {
 /**
  * Check if a cache entry is stale
  */
-export const isCacheStale = (
-  entry: QueryCacheEntry,
-  staleThreshold: number
-): boolean => {
+export const isCacheStale = (entry: QueryCacheEntry, staleThreshold: number): boolean => {
   const age = Date.now() - entry.dataUpdatedAt;
   return age > staleThreshold;
 };
@@ -77,7 +73,7 @@ export const isCacheStale = (
  */
 export const getCacheStatus = (
   entry: QueryCacheEntry,
-  staleThreshold: number
+  staleThreshold: number,
 ): QueryCacheStatus => {
   if (isCacheExpired(entry)) {
     return QUERY_CACHE_STATUS.EXPIRED;
@@ -107,7 +103,7 @@ export const createCacheEntry = <TData = JsonValue>(
   queryHash: string,
   queryKey: QueryKeyBase,
   data: TData,
-  options: CreateCacheEntryOptions
+  options: CreateCacheEntryOptions,
 ): QueryCacheEntry<TData> => {
   const now = Date.now();
 
@@ -149,7 +145,10 @@ export interface QueryCacheOperations {
 
   // Bulk operations
   /** Get multiple cache entries by query hashes in a single operation */
-  bulkGet(queryHashes: string[], options?: GetCacheOptions): Promise<(QueryCacheEntryWithStatus | null)[]>;
+  bulkGet(
+    queryHashes: string[],
+    options?: GetCacheOptions,
+  ): Promise<(QueryCacheEntryWithStatus | null)[]>;
   /** Set multiple cache entries in a single operation */
   bulkSet(entries: QueryCacheEntry[]): Promise<void>;
   /** Delete multiple cache entries by query hashes */

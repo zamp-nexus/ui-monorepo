@@ -8,16 +8,28 @@
  * @module hooks/use-conflict-resolution
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+
 import { useQueryClient } from '@tanstack/react-query';
+
 import {
   SYNC_EVENT_TYPE,
   SYNC_STATE_KEY,
   toJsonSerializable,
 } from '@open-insights-web/foundation-data-model';
+
+import { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType } from '../core/constants';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';
-import { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType } from '../core/constants';
 
 // =============================================================================
 // Types
@@ -160,11 +172,11 @@ export const useConflictResolution = (): {
   const { syncCoordinator, database } = useDataLayerInternals();
   const queryClient = useQueryClient();
   const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
-  
+
   // Use refs for values needed in callbacks to avoid unstable dependencies
   const conflictsRef = useRef<ConflictInfo[]>(conflicts);
   conflictsRef.current = conflicts;
-  
+
   // Track initialization state
   const initializedRef = useRef(false);
 
@@ -314,7 +326,7 @@ export const useConflictResolution = (): {
       // Invalidate related queries to refresh data
       syncCoordinator.invalidateQueries([[conflict.tableName, conflict.entityId]]);
     },
-    [syncCoordinator, queryClient] // Stable dependencies only - conflicts accessed via ref
+    [syncCoordinator, queryClient], // Stable dependencies only - conflicts accessed via ref
   );
 
   // Resolve all conflicts with the same resolution
@@ -323,13 +335,13 @@ export const useConflictResolution = (): {
     async (resolution: ConflictResolution): Promise<void> => {
       // Copy current conflicts to avoid issues with state changes during iteration
       const currentConflicts = [...conflictsRef.current];
-      
+
       // Process conflicts sequentially to avoid race conditions
       for (const conflict of currentConflicts) {
         await resolveConflict(conflict.id, resolution);
       }
     },
-    [resolveConflict] // Now stable since resolveConflict uses refs
+    [resolveConflict], // Now stable since resolveConflict uses refs
   );
 
   // Dismiss a conflict without resolving (also persisted)
@@ -388,9 +400,7 @@ export const ConflictsProvider = ({
   readonly conflicts: ConflictInfo[];
   readonly children: ReactNode;
 }): React.ReactElement => (
-  <ConflictsContext.Provider value={{ conflicts }}>
-    {children}
-  </ConflictsContext.Provider>
+  <ConflictsContext.Provider value={{ conflicts }}>{children}</ConflictsContext.Provider>
 );
 
 /**
@@ -419,8 +429,9 @@ export const useEntityConflict = (tableName: string, entityId: string): Conflict
 
   // Memoize the find operation to avoid unnecessary recalculations
   return useMemo(
-    () => contextConflicts.find((c) => c.tableName === tableName && c.entityId === entityId) ?? null,
-    [contextConflicts, tableName, entityId]
+    () =>
+      contextConflicts.find((c) => c.tableName === tableName && c.entityId === entityId) ?? null,
+    [contextConflicts, tableName, entityId],
   );
 };
 

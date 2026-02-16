@@ -3,7 +3,10 @@
  * @module types/config
  */
 
-import type { Environment, ComplianceRegion } from '@open-insights-web/foundation-data-model';
+import type { AxiosInstance } from 'axios';
+
+import type { ComplianceRegion, Environment } from '@open-insights-web/foundation-data-model';
+
 import type { FoundationMetricsPlugin } from './plugin';
 
 /**
@@ -39,6 +42,7 @@ export interface NetworkSignalConfig {
   trackRetries: boolean;
   ignoreUrls: string[];
   propagateTraceContextTo: string[];
+  axiosInstance?: AxiosInstance;
 }
 
 /**
@@ -138,7 +142,8 @@ type ResolvedConfigOptionalKey =
 /**
  * Resolved configuration with all defaults applied
  */
-export interface ResolvedConfig extends Required<Omit<FoundationMetricsConfig, ResolvedConfigOptionalKey>> {
+export interface ResolvedConfig
+  extends Required<Omit<FoundationMetricsConfig, ResolvedConfigOptionalKey>> {
   tenant?: TenantConfig;
   plugins: FoundationMetricsPlugin[];
   resourceAttributes: Record<string, string>;

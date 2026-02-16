@@ -120,9 +120,7 @@ export const DEFAULT_CONFIG: Omit<ResolvedQueryEngineConfig, 'dataSourceApi'> = 
 /**
  * Resolve configuration with defaults.
  */
-export const resolveQueryEngineConfig = (
-  config: QueryEngineConfig
-): ResolvedQueryEngineConfig => ({
+export const resolveQueryEngineConfig = (config: QueryEngineConfig): ResolvedQueryEngineConfig => ({
   dataSourceApi: config.dataSourceApi ?? null,
   defaultStaleTime: config.defaultStaleTime ?? DEFAULT_STALE_TIME,
   autoRefreshOnUpdate: config.autoRefreshOnUpdate ?? false,

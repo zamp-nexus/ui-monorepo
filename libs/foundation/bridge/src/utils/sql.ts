@@ -7,8 +7,9 @@
  */
 
 import type { SqlIdentifier, SqlTableName } from '@open-insights-web/foundation-data-model';
-import { SqlValidationError } from '../errors/query-errors';
+
 import { SQL } from '../constants';
+import { SqlValidationError } from '../errors/query-errors';
 
 // =============================================================================
 // Constants (imported from centralized constants)
@@ -111,7 +112,7 @@ export const validateIdentifier = (name: string): SqlIdentifier => {
     cacheInvalidIdentifier(name);
     throw new SqlValidationError(
       name,
-      `Identifier exceeds maximum length of ${MAX_IDENTIFIER_LENGTH}`
+      `Identifier exceeds maximum length of ${MAX_IDENTIFIER_LENGTH}`,
     );
   }
 
@@ -119,7 +120,7 @@ export const validateIdentifier = (name: string): SqlIdentifier => {
     cacheInvalidIdentifier(name);
     throw new SqlValidationError(
       name,
-      'Identifier must start with letter or underscore and contain only alphanumeric characters or underscores'
+      'Identifier must start with letter or underscore and contain only alphanumeric characters or underscores',
     );
   }
 
@@ -218,10 +219,7 @@ export const validateViewSql = (sql: string): void => {
   // Check that the statement starts with SELECT or WITH (CTEs)
   const trimmedUpper = stripped.trim().toUpperCase();
   if (!trimmedUpper.startsWith('SELECT') && !trimmedUpper.startsWith('WITH')) {
-    throw new SqlValidationError(
-      sql.slice(0, 50),
-      'View SQL must start with SELECT or WITH'
-    );
+    throw new SqlValidationError(sql.slice(0, 50), 'View SQL must start with SELECT or WITH');
   }
 
   // Check for forbidden keywords as whole words in the non-quoted portion.
@@ -231,7 +229,7 @@ export const validateViewSql = (sql: string): void => {
     if (pattern.test(stripped)) {
       throw new SqlValidationError(
         sql.slice(0, 50),
-        `View SQL contains forbidden keyword: ${keyword}`
+        `View SQL contains forbidden keyword: ${keyword}`,
       );
     }
   }
@@ -278,7 +276,7 @@ export const quoteIdentifier = (identifier: SqlIdentifier): string => {
 export const buildCreateViewSql = (
   viewName: SqlIdentifier,
   sql: string,
-  orReplace = true
+  orReplace = true,
 ): string => {
   const prefix = orReplace ? 'CREATE OR REPLACE VIEW' : 'CREATE VIEW';
   return `${prefix} ${quoteIdentifier(viewName)} AS ${sql}`;
@@ -291,10 +289,7 @@ export const buildCreateViewSql = (
  * @param ifExists - Whether to use IF EXISTS (default: true)
  * @returns Complete DROP VIEW SQL statement
  */
-export const buildDropViewSql = (
-  viewName: SqlIdentifier,
-  ifExists = true
-): string => {
+export const buildDropViewSql = (viewName: SqlIdentifier, ifExists = true): string => {
   const suffix = ifExists ? ' IF EXISTS' : '';
   return `DROP VIEW${suffix} ${quoteIdentifier(viewName)}`;
 };
@@ -320,17 +315,17 @@ export const escapeString = (value: string): string => value.replace(/'/g, "''")
  */
 export const buildParameterizedSql = (
   sql: string,
-  paramCount: number
+  paramCount: number,
 ): { sql: string; placeholderCount: number } => {
   const placeholderCount = (sql.match(/\?/g) || []).length;
-  
+
   if (placeholderCount !== paramCount) {
     throw new SqlValidationError(
       sql.slice(0, 50),
-      `Expected ${paramCount} parameters but found ${placeholderCount} placeholders`
+      `Expected ${paramCount} parameters but found ${placeholderCount} placeholders`,
     );
   }
-  
+
   return { sql, placeholderCount };
 };
 
@@ -342,23 +337,13 @@ export const buildParameterizedSql = (
  * @param offset - Number of rows to skip
  * @returns SQL with LIMIT/OFFSET applied
  */
-export const applyLimitOffset = (
-  sql: string,
-  limit?: number,
-  offset?: number
-): string => {
+export const applyLimitOffset = (sql: string, limit?: number, offset?: number): string => {
   if (limit !== undefined && limit < 0) {
-    throw new SqlValidationError(
-      String(limit),
-      'LIMIT must be a non-negative number'
-    );
+    throw new SqlValidationError(String(limit), 'LIMIT must be a non-negative number');
   }
 
   if (offset !== undefined && offset < 0) {
-    throw new SqlValidationError(
-      String(offset),
-      'OFFSET must be a non-negative number'
-    );
+    throw new SqlValidationError(String(offset), 'OFFSET must be a non-negative number');
   }
 
   let result = sql;

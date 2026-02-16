@@ -8,8 +8,8 @@
  */
 
 import type { Milliseconds, QueryId } from '../types/branded';
-import { FoundationError } from './foundation-error';
 import { FOUNDATION_ERROR_CODE } from './error-codes';
+import { FoundationError } from './foundation-error';
 
 /**
  * Reason for query cancellation.
@@ -23,8 +23,7 @@ export const CANCELLATION_REASON = {
 /**
  * Cancellation reason type.
  */
-export type CancellationReasonKind =
-  (typeof CANCELLATION_REASON)[keyof typeof CANCELLATION_REASON];
+export type CancellationReasonKind = (typeof CANCELLATION_REASON)[keyof typeof CANCELLATION_REASON];
 
 /**
  * Error thrown when a query exceeds its timeout.
@@ -32,11 +31,7 @@ export type CancellationReasonKind =
 export class QueryTimeoutError extends FoundationError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT;
 
-  constructor(
-    readonly queryId: QueryId,
-    readonly timeoutMs: Milliseconds,
-    readonly sql?: string
-  ) {
+  constructor(readonly queryId: QueryId, readonly timeoutMs: Milliseconds, readonly sql?: string) {
     super(`Query ${queryId} timed out after ${timeoutMs}ms`, {
       queryId,
       timeoutMs,
@@ -53,7 +48,7 @@ export class QueryCancelledError extends FoundationError {
 
   constructor(
     readonly queryId: QueryId,
-    readonly reason: CancellationReasonKind = CANCELLATION_REASON.USER
+    readonly reason: CancellationReasonKind = CANCELLATION_REASON.USER,
   ) {
     super(`Query ${queryId} was cancelled (${reason})`, {
       queryId,
@@ -68,14 +63,14 @@ export class QueryCancelledError extends FoundationError {
 export class QueryExecutionError extends FoundationError {
   readonly code = FOUNDATION_ERROR_CODE.QUERY_EXECUTION_FAILED;
 
-  constructor(
-    readonly queryId: QueryId,
-    readonly sql: string,
-    cause: Error
-  ) {
-    super(`Query ${queryId} execution failed: ${cause.message}`, {
-      queryId,
-      sql: sql.slice(0, 200),
-    }, cause);
+  constructor(readonly queryId: QueryId, readonly sql: string, cause: Error) {
+    super(
+      `Query ${queryId} execution failed: ${cause.message}`,
+      {
+        queryId,
+        sql: sql.slice(0, 200),
+      },
+      cause,
+    );
   }
 }

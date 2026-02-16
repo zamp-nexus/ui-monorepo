@@ -3,7 +3,7 @@
  * @module theme/theme-resolver
  */
 
-import type { SlotThemeConfig, ComponentThemeConfigStructure } from '../types';
+import type { ComponentThemeConfigStructure, SlotThemeConfig } from '../types';
 import { cn } from '../utils/cn';
 
 /**
@@ -220,4 +220,3 @@ function mergeModifiers(
     ...userModifiers,
   };
 }
-

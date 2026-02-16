@@ -6,7 +6,7 @@
 import { Disposable } from '../disposable/disposable';
 import { createDebugLogger, type Logger } from '../logger';
 import { TIMER_STATE, type TimerState } from './constants';
-import type { SafeTimerConfig, TimerStats, ITimer } from './types';
+import type { ITimer, SafeTimerConfig, TimerStats } from './types';
 
 /**
  * SafeTimer - A timer that extends Disposable for automatic cleanup
@@ -239,8 +239,7 @@ export class SafeTimer extends Disposable implements ITimer {
 /**
  * Create a SafeTimer instance
  */
-export const createSafeTimer = (config: SafeTimerConfig): SafeTimer =>
-  new SafeTimer(config);
+export const createSafeTimer = (config: SafeTimerConfig): SafeTimer => new SafeTimer(config);
 
 /**
  * Create a one-shot timer that auto-disposes after execution
@@ -248,7 +247,7 @@ export const createSafeTimer = (config: SafeTimerConfig): SafeTimer =>
 export const createOneShotTimer = (
   delay: number,
   callback: () => void | Promise<void>,
-  options?: { signal?: AbortSignal; debug?: boolean }
+  options?: { signal?: AbortSignal; debug?: boolean },
 ): SafeTimer => {
   const timer = new SafeTimer({
     delay,

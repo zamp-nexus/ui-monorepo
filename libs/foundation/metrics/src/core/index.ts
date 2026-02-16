@@ -38,11 +38,7 @@ export {
   shutdownContextManager,
 } from './context-manager';
 
-export {
-  resolveConfig,
-  validateConfig,
-  mergeConfigs,
-} from './config-resolver';
+export { resolveConfig, validateConfig, mergeConfigs } from './config-resolver';
 
 export {
   createTransport,

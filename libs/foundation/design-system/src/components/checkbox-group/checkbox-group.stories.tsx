@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { CheckboxGroup } from './checkbox-group';
 
@@ -43,9 +44,7 @@ export const Default: Story = {
           <CheckboxGroup.Item value="angular">Angular</CheckboxGroup.Item>
           <CheckboxGroup.Item value="svelte">Svelte</CheckboxGroup.Item>
         </CheckboxGroup>
-        <div className="text-sm text-muted-foreground">
-          Selected: {value.join(', ') || 'None'}
-        </div>
+        <div className="text-sm text-muted-foreground">Selected: {value.join(', ') || 'None'}</div>
       </div>
     );
   },
@@ -67,9 +66,7 @@ export const WithSelectAll: Story = {
           <CheckboxGroup.Item value="item3">Item 3</CheckboxGroup.Item>
           <CheckboxGroup.Item value="item4">Item 4</CheckboxGroup.Item>
         </CheckboxGroup>
-        <div className="text-sm text-muted-foreground">
-          Selected: {value.length} of 4
-        </div>
+        <div className="text-sm text-muted-foreground">Selected: {value.length} of 4</div>
       </div>
     );
   },
@@ -186,9 +183,7 @@ export const FormFieldExample: Story = {
       <div className="w-64 space-y-4 rounded-lg border p-4">
         <div>
           <h3 className="text-sm font-medium">User Permissions</h3>
-          <p className="text-xs text-muted-foreground">
-            Select the permissions for this user
-          </p>
+          <p className="text-xs text-muted-foreground">Select the permissions for this user</p>
         </div>
         <CheckboxGroup value={permissions} onValueChange={setPermissions}>
           <CheckboxGroup.Label selectAll>All permissions</CheckboxGroup.Label>
@@ -226,12 +221,7 @@ export const FilterPanelExample: Story = {
         </div>
         <div>
           <h3 className="mb-3 text-sm font-semibold">Sizes</h3>
-          <CheckboxGroup
-            orientation="horizontal"
-            value={sizes}
-            onValueChange={setSizes}
-            size="sm"
-          >
+          <CheckboxGroup orientation="horizontal" value={sizes} onValueChange={setSizes} size="sm">
             <CheckboxGroup.Item value="xs">XS</CheckboxGroup.Item>
             <CheckboxGroup.Item value="s">S</CheckboxGroup.Item>
             <CheckboxGroup.Item value="m">M</CheckboxGroup.Item>

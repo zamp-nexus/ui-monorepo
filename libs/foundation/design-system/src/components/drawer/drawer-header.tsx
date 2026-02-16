@@ -13,19 +13,11 @@ import { drawerDefaultTheme } from './drawer';
  *
  * Container for the drawer header (title, description, close button).
  */
-export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const DrawerHeader: React.FC<DrawerHeaderProps> = ({ children, className, oiid }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
 
   return (
-    <div
-      className={theme.header?.({ className }) ?? className}
-      data-oiid={oiid}
-      data-slot="header"
-    >
+    <div className={theme.header?.({ className }) ?? className} data-oiid={oiid} data-slot="header">
       {children}
     </div>
   );

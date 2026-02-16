@@ -4,18 +4,19 @@
  */
 
 import type { z } from 'zod';
+
 import type {
+  BrowserInfoSchema,
+  CreateEventSchema,
+  DeviceInfoSchema,
+  DeviceTypeSchema,
+  EventAggregationSchema,
+  EventFiltersSchema,
   EventSchema,
   EventTypeSchema,
-  DeviceTypeSchema,
-  BrowserInfoSchema,
-  DeviceInfoSchema,
   GeoLocationSchema,
   PageContextSchema,
   UtmParamsSchema,
-  CreateEventSchema,
-  EventFiltersSchema,
-  EventAggregationSchema,
 } from '../schemas/event.schema';
 
 /**
@@ -122,4 +123,4 @@ export const COMMON_EVENT_PROPERTIES = [
   'label',
 ] as const;
 
-export type CommonEventProperty = typeof COMMON_EVENT_PROPERTIES[number];
+export type CommonEventProperty = (typeof COMMON_EVENT_PROPERTIES)[number];

@@ -11,15 +11,18 @@
  */
 
 import { useCallback } from 'react';
+
 import {
   useQuery,
-  type UseQueryResult,
   type QueryKey,
   type UseQueryOptions,
+  type UseQueryResult,
 } from '@tanstack/react-query';
+
 import type { DuckDBResult, DuckDBRow } from '@open-insights-web/foundation-bridge';
-import { useDataLayerInternals } from '../provider/data-layer-internals-context';
+
 import { ANALYTICS_QUERY_RETRY_MAX, QUERY_RETRY_DELAY_BASE_MS } from '../core/constants';
+import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { getAnalyticsRouterOrThrow } from '../utils/analytics-runtime';
 
 // =============================================================================
@@ -81,7 +84,7 @@ export interface DLAnalyticsResult<TData extends DuckDBRow = DuckDBRow>
  * ```
  */
 export const useDLAnalytics = <TData extends DuckDBRow = DuckDBRow>(
-  options: UseDLAnalyticsOptions<TData>
+  options: UseDLAnalyticsOptions<TData>,
 ): DLAnalyticsResult<TData> => {
   const { duckdbRouter, cacheConfig, analyticsEnabled, initializeAnalytics } =
     useDataLayerInternals();
@@ -108,12 +111,7 @@ export const useDLAnalytics = <TData extends DuckDBRow = DuckDBRow>(
   }, [duckdbRouter, initializeAnalytics, sql, params]);
 
   // Execute query
-  const queryOptions: UseQueryOptions<
-    DuckDBResult<TData>,
-    Error,
-    DuckDBResult<TData>,
-    QueryKey
-  > = {
+  const queryOptions: UseQueryOptions<DuckDBResult<TData>, Error, DuckDBResult<TData>, QueryKey> = {
     queryKey,
     queryFn,
     enabled: enabled && isDuckDBAvailable,

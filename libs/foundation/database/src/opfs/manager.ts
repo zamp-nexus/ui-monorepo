@@ -8,40 +8,42 @@
  */
 
 import isEqual from 'fast-deep-equal';
+
 import {
   type LegacyErrorCallback,
   type OpfsFileType,
 } from '@open-insights-web/foundation-data-model';
+import {
+  clearDirectory,
+  createDebugLogger,
+  createDeepEqualComparison,
+  createDirectoryPath,
+  createSingletonFactory,
+  fileExistsInOpfs,
+  getDirectoryAtPath,
+  getErrorMessage,
+  getOpfsRootDirectory,
+  isOpfsSupported,
+  listDirectoryEntries,
+  normalizeError,
+  type Logger,
+} from '@open-insights-web/foundation-utils';
+
 import type { InsightsDatabase } from '../core/database';
 import { getDatabase } from '../core/database';
 import {
-  createOpfsMetadata,
-  type OpfsMetadataEntry,
-  type OpfsFileSchema,
-} from '../tables/opfs-metadata';
-import { OpfsMetadataService } from '../services/opfs-metadata';
-import {
-  createOpfsNotSupportedError,
   createOpfsInitFailedError,
+  createOpfsNotSupportedError,
   createQuotaExceededError,
   createValidationError,
   isQuotaExceededError,
 } from '../errors/database-errors';
+import { OpfsMetadataService } from '../services/opfs-metadata';
 import {
-  createDebugLogger,
-  getErrorMessage,
-  normalizeError,
-  createSingletonFactory,
-  createDeepEqualComparison,
-  createDirectoryPath,
-  getDirectoryAtPath,
-  fileExistsInOpfs,
-  isOpfsSupported,
-  listDirectoryEntries,
-  clearDirectory,
-  getOpfsRootDirectory,
-  type Logger,
-} from '@open-insights-web/foundation-utils';
+  createOpfsMetadata,
+  type OpfsFileSchema,
+  type OpfsMetadataEntry,
+} from '../tables/opfs-metadata';
 
 /**
  * Default error handler that logs to console.error
@@ -184,7 +186,7 @@ export class OpfsManager {
    */
   private getDirectory = async (
     path: string,
-    options: { create?: boolean } = {}
+    options: { create?: boolean } = {},
   ): Promise<FileSystemDirectoryHandle> => {
     const root = await this.ensureInitialized();
     const shouldCreate = options.create ?? true;
@@ -235,7 +237,7 @@ export class OpfsManager {
   writeFile = async (
     path: string,
     data: ArrayBuffer | Uint8Array | string,
-    options: WriteFileOptions
+    options: WriteFileOptions,
   ): Promise<OpfsMetadataEntry> => {
     const root = await this.ensureInitialized();
 
@@ -258,7 +260,7 @@ export class OpfsManager {
     } else {
       bytes = data;
     }
-    
+
     // Create a fresh ArrayBuffer copy to ensure it's not a SharedArrayBuffer
     const buffer = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(buffer).set(bytes);
@@ -330,9 +332,7 @@ export class OpfsManager {
       // Parse and validate path
       const { dirPath, fileName } = this.parsePath(path);
 
-      const dirHandle = dirPath
-        ? await getDirectoryAtPath(root, dirPath, { create: false })
-        : root;
+      const dirHandle = dirPath ? await getDirectoryAtPath(root, dirPath, { create: false }) : root;
       if (!dirHandle) {
         return false;
       }
@@ -477,7 +477,7 @@ const opfsManagerFactory = createSingletonFactory(
         await instance.dispose();
       }
     },
-  }
+  },
 );
 
 /**

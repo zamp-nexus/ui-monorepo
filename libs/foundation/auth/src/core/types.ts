@@ -7,20 +7,16 @@
  */
 
 import type {
-  Session,
   Identity,
   LoginFlow,
-  RegistrationFlow,
   RecoveryFlow,
-  VerificationFlow,
+  RegistrationFlow,
+  Session,
   SettingsFlow,
+  VerificationFlow,
 } from '@ory/client-fetch';
-import type {
-  AuthStateType,
-  AuthFlowType,
-  SessionStateType,
-  FlowStateType,
-} from './constants';
+
+import type { AuthFlowType, AuthStateType, FlowStateType, SessionStateType } from './constants';
 
 // =============================================================================
 // User Role and Permission Types (compatible with data-model)
@@ -107,8 +103,7 @@ const ROLE_PERMISSIONS: Readonly<Record<UserRole, UserPermissions>> = {
 /**
  * Get permissions for a user role
  */
-export const getUserPermissions = (role: UserRole): UserPermissions =>
-  ROLE_PERMISSIONS[role];
+export const getUserPermissions = (role: UserRole): UserPermissions => ROLE_PERMISSIONS[role];
 
 // =============================================================================
 // Configuration Types
@@ -333,12 +328,7 @@ export type AuthStateListener = (event: AuthStateChangeEvent) => void;
 /**
  * Union type for all Ory flow types
  */
-export type OryFlow =
-  | LoginFlow
-  | RegistrationFlow
-  | RecoveryFlow
-  | VerificationFlow
-  | SettingsFlow;
+export type OryFlow = LoginFlow | RegistrationFlow | RecoveryFlow | VerificationFlow | SettingsFlow;
 
 /**
  * Flow state wrapper

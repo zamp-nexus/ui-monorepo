@@ -4,28 +4,18 @@
  */
 
 import { z } from 'zod';
+
 import { SoftDeleteSchema, TenantScopedSchema } from './base.schema';
 
 /**
  * User role enum
  */
-export const UserRoleSchema = z.enum([
-  'owner',
-  'admin',
-  'member',
-  'viewer',
-  'guest',
-]);
+export const UserRoleSchema = z.enum(['owner', 'admin', 'member', 'viewer', 'guest']);
 
 /**
  * User status enum
  */
-export const UserStatusSchema = z.enum([
-  'active',
-  'inactive',
-  'pending',
-  'suspended',
-]);
+export const UserStatusSchema = z.enum(['active', 'inactive', 'pending', 'suspended']);
 
 /**
  * User preferences schema
@@ -34,15 +24,19 @@ export const UserPreferencesSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']).default('system'),
   language: z.string().default('en'),
   timezone: z.string().default('UTC'),
-  notifications: z.object({
-    email: z.boolean().default(true),
-    push: z.boolean().default(true),
-    inApp: z.boolean().default(true),
-  }).default({}),
-  dashboard: z.object({
-    defaultView: z.string().optional(),
-    favoriteReports: z.array(z.string()).default([]),
-  }).default({}),
+  notifications: z
+    .object({
+      email: z.boolean().default(true),
+      push: z.boolean().default(true),
+      inApp: z.boolean().default(true),
+    })
+    .default({}),
+  dashboard: z
+    .object({
+      defaultView: z.string().optional(),
+      favoriteReports: z.array(z.string()).default([]),
+    })
+    .default({}),
 });
 
 /**

@@ -3,11 +3,7 @@
  * @module lifecycle
  */
 
-export {
-  IdleTimer,
-  createIdleTimer,
-  type IdleTimerConfig,
-} from './idle-timer';
+export { IdleTimer, createIdleTimer, type IdleTimerConfig } from './idle-timer';
 
 export {
   RehydrationController,

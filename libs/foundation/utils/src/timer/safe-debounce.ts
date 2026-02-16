@@ -6,7 +6,7 @@
 import { Disposable } from '../disposable/disposable';
 import { createDebugLogger, type Logger } from '../logger';
 import { TIMER_STATE, type TimerState } from './constants';
-import type { SafeDebounceConfig, DebounceStats, IDebounce } from './types';
+import type { DebounceStats, IDebounce, SafeDebounceConfig } from './types';
 
 /**
  * SafeDebounce - A debounce utility that extends Disposable for automatic cleanup
@@ -34,7 +34,10 @@ import type { SafeDebounceConfig, DebounceStats, IDebounce } from './types';
  * debounced.dispose();
  * ```
  */
-export class SafeDebounce<TArgs extends unknown[] = []> extends Disposable implements IDebounce<TArgs> {
+export class SafeDebounce<TArgs extends unknown[] = []>
+  extends Disposable
+  implements IDebounce<TArgs>
+{
   private readonly config: Required<Omit<SafeDebounceConfig<TArgs>, 'signal' | 'maxWait'>> & {
     signal?: AbortSignal;
     maxWait?: number;
@@ -50,7 +53,7 @@ export class SafeDebounce<TArgs extends unknown[] = []> extends Disposable imple
   private readonly _stats: DebounceStats = {
     startCount: 0,
     executionCount: 0,
-    cancelCount: 0, 
+    cancelCount: 0,
     restartCount: 0,
     lastExecutionAt: null,
     totalExecutionTime: 0,
@@ -298,7 +301,7 @@ export class SafeDebounce<TArgs extends unknown[] = []> extends Disposable imple
  * Create a SafeDebounce instance
  */
 export const createSafeDebounce = <TArgs extends unknown[]>(
-  config: SafeDebounceConfig<TArgs>
+  config: SafeDebounceConfig<TArgs>,
 ): SafeDebounce<TArgs> => new SafeDebounce(config);
 
 /**
@@ -344,7 +347,7 @@ export interface DebouncedFunction<TArgs extends unknown[]> {
 export const debounce = <TArgs extends unknown[]>(
   callback: (...args: TArgs) => void | Promise<void>,
   delay: number,
-  options?: Omit<SafeDebounceConfig<TArgs>, 'callback' | 'delay'>
+  options?: Omit<SafeDebounceConfig<TArgs>, 'callback' | 'delay'>,
 ): DebouncedFunction<TArgs> => {
   const instance = new SafeDebounce({
     delay,

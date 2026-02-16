@@ -7,16 +7,18 @@
  * @module utils/use-mutation-internals
  */
 
-import { useMemo, useRef, useState, useCallback } from 'react';
-import { useQueryClient, type QueryKey, type QueryClient } from '@tanstack/react-query';
-import type { IQueueManager } from '@open-insights-web/foundation-sync-engine';
-import type { DatabaseFacade } from '@open-insights-web/foundation-database';
-import type { SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
+
 import type { WithId } from '@open-insights-web/foundation-data-model';
+import type { DatabaseFacade } from '@open-insights-web/foundation-database';
+import type { IQueueManager, SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
+
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
-import type { OptimisticContext, rollbackOptimisticUpdate } from './optimistic-updates';
-import { invalidateQueries, collectInvalidationKeys } from './mutation-helpers';
 import type { ErrorSeverityValue } from './error-handler';
+import { collectInvalidationKeys, invalidateQueries } from './mutation-helpers';
+import type { OptimisticContext, rollbackOptimisticUpdate } from './optimistic-updates';
 
 // =============================================================================
 // MUTATION INTERNALS
@@ -56,10 +58,7 @@ export const useMutationInternals = (): MutationInternals => {
   const { database, syncCoordinator, isOnline } = useDataLayerInternals();
 
   // Memoize queue manager to avoid repeated access
-  const queueManager = useMemo(
-    () => syncCoordinator.getQueueManager(),
-    [syncCoordinator]
-  );
+  const queueManager = useMemo(() => syncCoordinator.getQueueManager(), [syncCoordinator]);
 
   return {
     queryClient,
@@ -163,11 +162,13 @@ export interface MutationCallbackOptions<TData, TVariables> {
   /** User's onError callback */
   readonly onError?: ((error: Error, variables: TVariables) => void | Promise<void>) | undefined;
   /** User's onSettled callback */
-  readonly onSettled?: ((
-    data: TData | undefined,
-    error: Error | null,
-    variables: TVariables
-  ) => void | Promise<void>) | undefined;
+  readonly onSettled?:
+    | ((
+        data: TData | undefined,
+        error: Error | null,
+        variables: TVariables,
+      ) => void | Promise<void>)
+    | undefined;
 }
 
 /**
@@ -182,7 +183,7 @@ export const createOnSuccessCallback = <TData, TVariables>(
   options: Pick<
     MutationCallbackOptions<TData, TVariables>,
     'internals' | 'invalidateKeys' | 'listQueryKey' | 'itemQueryKey' | 'entityIdRef' | 'onSuccess'
-  >
+  >,
 ): ((data: TData, variables: TVariables) => Promise<void>) => {
   const { internals, invalidateKeys, listQueryKey, itemQueryKey, entityIdRef, onSuccess } = options;
 
@@ -192,7 +193,7 @@ export const createOnSuccessCallback = <TData, TVariables>(
       invalidateKeys,
       listQueryKey,
       itemQueryKey,
-      entityIdRef.current
+      entityIdRef.current,
     );
     await invalidateQueries(internals.queryClient, keysToInvalidate);
 
@@ -211,7 +212,7 @@ type RollbackFn = typeof rollbackOptimisticUpdate;
  */
 type ScopedErrorHandler = (
   error: unknown,
-  options?: { severity?: ErrorSeverityValue; data?: Record<string, unknown> }
+  options?: { severity?: ErrorSeverityValue; data?: Record<string, unknown> },
 ) => Error;
 
 /**
@@ -233,7 +234,7 @@ export const createOnErrorCallback = <TData, TVariables, TListData extends WithI
     readonly table?: string;
     /** Additional error handling logic */
     readonly additionalErrorHandling?: (error: Error, variables: TVariables) => Promise<void>;
-  }
+  },
 ): ((error: Error, variables: TVariables) => Promise<void>) => {
   const {
     internals,
@@ -288,12 +289,8 @@ export const createOnErrorCallback = <TData, TVariables, TListData extends WithI
 export const createOnSettledCallback = <TData, TVariables>(
   options: Pick<MutationCallbackOptions<TData, TVariables>, 'onSettled'> & {
     readonly clearRefs: () => void;
-  }
-): ((
-  data: TData | undefined,
-  error: Error | null,
-  variables: TVariables
-) => Promise<void>) => {
+  },
+): ((data: TData | undefined, error: Error | null, variables: TVariables) => Promise<void>) => {
   const { clearRefs, onSettled } = options;
 
   return async (data, error, variables) => {
@@ -318,10 +315,8 @@ export const createOnSettledCallback = <TData, TVariables>(
  * @param entityId - Original entity ID (may be provisional)
  * @returns Resolved server ID or original ID
  */
-export const resolveEntityId = (
-  queueManager: IQueueManager,
-  entityId: string
-): string => queueManager.resolveId(entityId);
+export const resolveEntityId = (queueManager: IQueueManager, entityId: string): string =>
+  queueManager.resolveId(entityId);
 
 /**
  * Prepare variables with resolved ID
@@ -336,7 +331,7 @@ export const resolveEntityId = (
 export const prepareResolvedVariables = <TVariables>(
   variables: TVariables,
   originalId: string,
-  resolvedId: string
+  resolvedId: string,
 ): TVariables => {
   if (originalId === resolvedId) {
     return variables;

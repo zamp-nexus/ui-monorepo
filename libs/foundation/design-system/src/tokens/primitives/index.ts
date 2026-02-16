@@ -19,12 +19,7 @@ export {
   getScaleColor,
   colorVar,
 } from './colors';
-export type {
-  ColorDefinition,
-  ColorScaleName,
-  NeutralStep,
-  AccentStep,
-} from './colors';
+export type { ColorDefinition, ColorScaleName, NeutralStep, AccentStep } from './colors';
 
 // Typography primitives
 export {
@@ -35,12 +30,7 @@ export {
   fontWeightVar,
   fontFamilyVar,
 } from './typography';
-export type {
-  TextStyleDefinition,
-  TextStyleKey,
-  FontWeightKey,
-  FontFamilyKey,
-} from './typography';
+export type { TextStyleDefinition, TextStyleKey, FontWeightKey, FontFamilyKey } from './typography';
 
 // Spacing primitives
 export {
@@ -54,11 +44,7 @@ export {
   radiusVar,
   calculatePhiSpacing,
 } from './spacing';
-export type {
-  SpacingKey,
-  StandardSpacingKey,
-  RadiusKey,
-} from './spacing';
+export type { SpacingKey, StandardSpacingKey, RadiusKey } from './spacing';
 
 // Motion primitives
 export {
@@ -72,9 +58,4 @@ export {
   createTransition,
   createTransitions,
 } from './motion';
-export type {
-  DurationKey,
-  EasingKey,
-  TransitionKey,
-  AnimationKey,
-} from './motion';
+export type { DurationKey, EasingKey, TransitionKey, AnimationKey } from './motion';

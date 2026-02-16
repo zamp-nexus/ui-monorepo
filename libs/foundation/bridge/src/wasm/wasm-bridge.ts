@@ -7,16 +7,40 @@
  * @module wasm/wasm-bridge
  */
 
-import type { AsyncDuckDB, AsyncDuckDBConnection, Logger as DuckDBLogger } from '@duckdb/duckdb-wasm';
+import type {
+  AsyncDuckDB,
+  AsyncDuckDBConnection,
+  Logger as DuckDBLogger,
+} from '@duckdb/duckdb-wasm';
 
-import { Timestamp, QueryId } from '@open-insights-web/foundation-data-model';
-import type { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo, ColumnInfo } from '../types/bridge';
-import { createDuckDBInstance } from './duckdb-init';
+import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
+import {
+  createDebugLogger,
+  getErrorMessage,
+  normalizeError,
+  type Logger,
+} from '@open-insights-web/foundation-utils';
+
 import { convertArrowToQueryResult } from '../duckdb/arrow-converter';
-import { validateIdentifier, quoteIdentifier, buildCreateViewSql, buildDropViewSql, applyLimitOffset, escapeString } from '../utils/sql';
-import { type Logger, createDebugLogger, getErrorMessage, normalizeError } from '@open-insights-web/foundation-utils';
-import { BridgeNotInitializedError, BridgeInitializationError } from '../errors/bridge-errors';
-import { QueryExecutionError, QueryCancelledError } from '../errors/query-errors';
+import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';
+import { QueryCancelledError, QueryExecutionError } from '../errors/query-errors';
+import type {
+  ColumnInfo,
+  DuckDBBridge,
+  QueryOptions,
+  QueryResult,
+  TableInfo,
+  ViewDefinition,
+} from '../types/bridge';
+import {
+  applyLimitOffset,
+  buildCreateViewSql,
+  buildDropViewSql,
+  escapeString,
+  quoteIdentifier,
+  validateIdentifier,
+} from '../utils/sql';
+import { createDuckDBInstance } from './duckdb-init';
 
 // =============================================================================
 // Types
@@ -96,7 +120,6 @@ export class WasmDuckDBBridge implements DuckDBBridge {
     }
     return database;
   }
-
 
   // ===========================================================================
   // Lifecycle Methods
@@ -194,7 +217,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
    */
   async query<T extends Record<string, unknown> = Record<string, unknown>>(
     sql: string,
-    options?: QueryOptions
+    options?: QueryOptions,
   ): Promise<QueryResult<T>> {
     const conn = this.getConnection();
 
@@ -389,12 +412,10 @@ export class WasmDuckDBBridge implements DuckDBBridge {
 
     // Query for view names to ensure we have current state
     const result = await conn.query(
-      "SELECT table_name FROM information_schema.views WHERE table_schema = 'main'"
+      "SELECT table_name FROM information_schema.views WHERE table_schema = 'main'",
     );
 
-    const viewNames = new Set(
-      result.toArray().map((row) => String(row.table_name))
-    );
+    const viewNames = new Set(result.toArray().map((row) => String(row.table_name)));
 
     // Return tracked definitions for views that still exist
     const views: ViewDefinition[] = [];
@@ -434,14 +455,14 @@ export class WasmDuckDBBridge implements DuckDBBridge {
 
     // Get table names
     const tablesResult = await conn.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_type = 'BASE TABLE'"
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_type = 'BASE TABLE'",
     );
 
     const tables: TableInfo[] = [];
 
     // Prepare statement for column queries (parameterized for safety)
     const columnStmt = await conn.prepare(
-      "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = ? AND table_schema = 'main'"
+      "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = ? AND table_schema = 'main'",
     );
 
     try {
@@ -460,7 +481,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
         // Get row count - table name is from database, quote for safety
         const safeTableName = validateIdentifier(tableName);
         const countResult = await conn.query(
-          `SELECT COUNT(*) as cnt FROM ${quoteIdentifier(safeTableName)}`
+          `SELECT COUNT(*) as cnt FROM ${quoteIdentifier(safeTableName)}`,
         );
         const rowCount = Number(countResult.toArray()[0]?.cnt ?? 0);
 
@@ -485,7 +506,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
 
     // Use prepared statement for safety against SQL injection
     const stmt = await conn.prepare(
-      "SELECT COUNT(*) as cnt FROM information_schema.tables WHERE table_name = ? AND table_schema = 'main'"
+      "SELECT COUNT(*) as cnt FROM information_schema.tables WHERE table_name = ? AND table_schema = 'main'",
     );
 
     try {
@@ -518,9 +539,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
 
     this.logger.debug('Exporting to Parquet', { table: safeTableName, path });
 
-    await conn.query(
-      `COPY ${quoteIdentifier(safeTableName)} TO '${safePath}' (FORMAT PARQUET)`
-    );
+    await conn.query(`COPY ${quoteIdentifier(safeTableName)} TO '${safePath}' (FORMAT PARQUET)`);
   }
 
   /**
@@ -541,7 +560,7 @@ export class WasmDuckDBBridge implements DuckDBBridge {
     this.logger.debug('Importing Parquet', { path, table: safeTableName });
 
     await conn.query(
-      `CREATE TABLE ${quoteIdentifier(safeTableName)} AS SELECT * FROM read_parquet('${safePath}')`
+      `CREATE TABLE ${quoteIdentifier(safeTableName)} AS SELECT * FROM read_parquet('${safePath}')`,
     );
   }
 

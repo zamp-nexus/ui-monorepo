@@ -7,9 +7,16 @@
  * @module hooks/use-dl-get
  */
 
-import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { useQuery, type UseQueryOptions, type UseQueryResult, type QueryKey } from '@tanstack/react-query';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+
+import {
+  useQuery,
+  type QueryKey,
+  type UseQueryOptions,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
 import {
   hashQueryKey,
   SCHEMA_VERSION,
@@ -17,9 +24,10 @@ import {
   type DataSource,
 } from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
+
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
-import { buildQueryKey, getDataSource } from '../utils/query-key';
 import { createScopedErrorHandler } from '../utils/error-handler';
+import { buildQueryKey, getDataSource } from '../utils/query-key';
 
 // =============================================================================
 // Types
@@ -89,7 +97,9 @@ const handleGetError = createScopedErrorHandler('useDLGet');
 export const useDLGet = <
   TQuery extends FunctionReference<'query'>,
   TData = FunctionReturnType<TQuery>,
->(options: UseDLGetOptions<TQuery, TData>): DLGetResult<TData> => {
+>(
+  options: UseDLGetOptions<TQuery, TData>,
+): DLGetResult<TData> => {
   const { database, isOnline, cacheConfig, convexClient } = useDataLayerInternals();
 
   const {
@@ -110,17 +120,17 @@ export const useDLGet = <
   // Build query key - memoized
   const queryKey = useMemo(
     () => customQueryKey ?? buildQueryKey(table, entityId, args),
-    [customQueryKey, table, entityId, args]
+    [customQueryKey, table, entityId, args],
   );
 
   // Use refs for values needed in persist effect but shouldn't trigger re-runs
   // This optimizes the effect by reducing unnecessary dependency changes
   const databaseRef = useRef(database);
   databaseRef.current = database;
-  
+
   const tableRef = useRef(table);
   tableRef.current = table;
-  
+
   const cacheConfigRef = useRef(cacheConfig);
   cacheConfigRef.current = cacheConfig;
 
@@ -177,17 +187,12 @@ export const useDLGet = <
 
     const qHash = hashQueryKey(queryKey);
     const serializedData = toJsonSerializable(result.data);
-    const entry = createCacheEntry(
-      qHash,
-      queryKey,
-      serializedData,
-      {
-        tableName: currentTable,
-        ttl: currentCacheConfig.defaultGcTime,
-        schemaVersion: SCHEMA_VERSION,
-        isOfflineData: false,
-      }
-    );
+    const entry = createCacheEntry(qHash, queryKey, serializedData, {
+      tableName: currentTable,
+      ttl: currentCacheConfig.defaultGcTime,
+      schemaVersion: SCHEMA_VERSION,
+      isOfflineData: false,
+    });
 
     // Fire and forget - persist to cache
     currentDatabase.queries.set(entry).catch((err) => {
@@ -199,7 +204,7 @@ export const useDLGet = <
   // Compute derived state - memoized
   const dataSource = useMemo(
     () => getDataSource(result.data !== undefined, isOnline, result.isFetching),
-    [result.data, isOnline, result.isFetching]
+    [result.data, isOnline, result.isFetching],
   );
 
   return {
@@ -210,7 +215,7 @@ export const useDLGet = <
     dataSource,
     lastSyncedAt: result.dataUpdatedAt ?? null,
   };
-}
+};
 
 /**
  * Simplified hook for list queries (no entityId needed)
@@ -227,8 +232,9 @@ export const useDLGet = <
 export const useDLGetList = <
   TQuery extends FunctionReference<'query'>,
   TData = FunctionReturnType<TQuery>,
->(options: Omit<UseDLGetOptions<TQuery, TData>, 'entityId'>): DLGetResult<TData> =>
-  useDLGet(options);
+>(
+  options: Omit<UseDLGetOptions<TQuery, TData>, 'entityId'>,
+): DLGetResult<TData> => useDLGet(options);
 
 /**
  * Simplified hook for single item queries (entityId required)
@@ -246,5 +252,6 @@ export const useDLGetList = <
 export const useDLGetOne = <
   TQuery extends FunctionReference<'query'>,
   TData = FunctionReturnType<TQuery>,
->(options: UseDLGetOptions<TQuery, TData> & { entityId: string }): DLGetResult<TData> =>
-  useDLGet(options);
+>(
+  options: UseDLGetOptions<TQuery, TData> & { entityId: string },
+): DLGetResult<TData> => useDLGet(options);

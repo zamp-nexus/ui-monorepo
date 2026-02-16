@@ -19,9 +19,7 @@ export interface ParsedMemberRef {
 /**
  * Parse a member reference in `table.column` format.
  */
-export const parseMemberRef = (
-  member: string
-): ParsedMemberRef | null => {
+export const parseMemberRef = (member: string): ParsedMemberRef | null => {
   if (!MemberRefUtil.isValid(member)) {
     return null;
   }

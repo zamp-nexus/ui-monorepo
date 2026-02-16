@@ -2,7 +2,7 @@
  * useAbortController - Manage AbortController lifecycle
  * @module use-abort-controller
  */
-import { useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Result of the useAbortController hook

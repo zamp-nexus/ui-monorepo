@@ -7,8 +7,9 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useAuthInternals } from '../providers/auth-internals-context';
+
 import type { UseAuthSessionResult } from '../core/types';
+import { useAuthInternals } from '../providers/auth-internals-context';
 
 /**
  * Get current session with management functions
@@ -61,6 +62,6 @@ export const useAuthSession = (): UseAuthSessionResult => {
       getAccessToken,
       refresh,
     }),
-    [state.session, state.isLoading, getAccessToken, refresh]
+    [state.session, state.isLoading, getAccessToken, refresh],
   );
 };

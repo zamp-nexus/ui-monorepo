@@ -5,11 +5,13 @@
  */
 
 import type { ConvexReactClient } from 'convex/react';
+
 import type {
   DataSourceFileInfo,
-  DataSourceTableInfo,
   DataSourceResponse,
+  DataSourceTableInfo,
 } from '@open-insights-web/foundation-data-model';
+
 import {
   TableSyncService,
   type LocalTableMetadata,
@@ -25,11 +27,15 @@ function createMockConvexClient(): ConvexReactClient {
   return { query: vi.fn() } as unknown as ConvexReactClient;
 }
 
-const MOCK_DATASOURCE_API = { _type: 'function' } as unknown as TableSyncServiceConfig['datasourceApi'];
+const MOCK_DATASOURCE_API = {
+  _type: 'function',
+} as unknown as TableSyncServiceConfig['datasourceApi'];
 
 function createMockDatabase(): TableSyncDatabaseOperations {
   return {
-    get: vi.fn<(name: string) => Promise<LocalTableMetadata | undefined>>().mockResolvedValue(undefined),
+    get: vi
+      .fn<(name: string) => Promise<LocalTableMetadata | undefined>>()
+      .mockResolvedValue(undefined),
     set: vi.fn<(entry: LocalTableMetadata) => Promise<void>>().mockResolvedValue(undefined),
     getMany: vi
       .fn<(names: string[]) => Promise<Map<string, LocalTableMetadata | undefined>>>()
@@ -72,9 +78,10 @@ function makeLocalMetadata(overrides: Partial<LocalTableMetadata> = {}): LocalTa
   };
 }
 
-function createService(
-  overrides: Partial<TableSyncServiceConfig> = {}
-): { service: TableSyncService; database: TableSyncDatabaseOperations } {
+function createService(overrides: Partial<TableSyncServiceConfig> = {}): {
+  service: TableSyncService;
+  database: TableSyncDatabaseOperations;
+} {
   const database = createMockDatabase();
   const service = new TableSyncService({
     convexClient: createMockConvexClient(),
@@ -273,7 +280,8 @@ describe('TableSyncService', () => {
 
       expect(database.set).toHaveBeenCalledTimes(1);
 
-      const savedMetadata = (database.set as ReturnType<typeof vi.fn>).mock.calls[0][0] as LocalTableMetadata;
+      const savedMetadata = (database.set as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as LocalTableMetadata;
       expect(savedMetadata.name).toBe('users');
       expect(savedMetadata.lastIngestedAt).toBe(6000);
       expect(savedMetadata.totalSize).toBe(4096);

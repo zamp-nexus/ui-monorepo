@@ -22,7 +22,13 @@ export { usePendingMutationCount } from './use-pending-mutation-count';
 // Query Hooks
 // =============================================================================
 
-export { useDLGet, useDLGetList, useDLGetOne, type UseDLGetOptions, type DLGetResult } from './use-dl-get';
+export {
+  useDLGet,
+  useDLGetList,
+  useDLGetOne,
+  type UseDLGetOptions,
+  type DLGetResult,
+} from './use-dl-get';
 
 // =============================================================================
 // Mutation Hooks

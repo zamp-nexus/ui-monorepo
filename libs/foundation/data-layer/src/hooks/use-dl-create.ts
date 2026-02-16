@@ -11,34 +11,37 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { useMutation, type QueryKey } from '@tanstack/react-query';
+
 import { useConvexMutation } from '@convex-dev/react-query';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
+import { useMutation, type QueryKey } from '@tanstack/react-query';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
 import {
   generateProvisionalId,
   hashQueryKey,
   SCHEMA_VERSION,
   toJsonSerializable,
 } from '@open-insights-web/foundation-data-model';
+import type { WithId } from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
-import { createScopedErrorHandler } from '../utils/error-handler';
-import {
-  type OptimisticContext,
-  optimisticAddToList,
-  rollbackOptimisticUpdate,
-  replaceProvisionalId,
-} from '../utils/optimistic-updates';
-import { buildMutationResult, executeLocalFirstMutation } from '../utils/mutation-helpers';
+
 import { DEFAULT_CACHE_TTL } from '../core/constants';
+import type { BaseMutationOptions, DLMutationResult, OptimisticMetadata } from '../core/types';
+import { createScopedErrorHandler } from '../utils/error-handler';
+import { buildMutationResult, executeLocalFirstMutation } from '../utils/mutation-helpers';
 import {
+  optimisticAddToList,
+  replaceProvisionalId,
+  rollbackOptimisticUpdate,
+  type OptimisticContext,
+} from '../utils/optimistic-updates';
+import {
+  createOnErrorCallback,
+  createOnSettledCallback,
+  createOnSuccessCallback,
   useMutationInternals,
   useQueueState,
-  createOnSuccessCallback,
-  createOnSettledCallback,
-  createOnErrorCallback,
 } from '../utils/use-mutation-internals';
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import type { BaseMutationOptions, DLMutationResult, OptimisticMetadata } from '../core/types';
 
 // Scoped error handler for this hook
 const handleCreateError = createScopedErrorHandler('useDLCreate');
@@ -103,7 +106,7 @@ export const useDLCreate = <
   TData = FunctionReturnType<TMutation>,
   TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
 >(
-  options: UseDLCreateOptions<TMutation, TData, TVariables>
+  options: UseDLCreateOptions<TMutation, TData, TVariables>,
 ): DLMutationResult<TData, TVariables> => {
   // Use shared mutation internals
   const internals = useMutationInternals();
@@ -157,7 +160,7 @@ export const useDLCreate = <
         optimisticContextRef.current = optimisticAddToList(
           queryClient,
           listQueryKey,
-          optimisticWithId
+          optimisticWithId,
         );
       }
 
@@ -211,7 +214,7 @@ export const useDLCreate = <
                 ttl: DEFAULT_CACHE_TTL,
                 schemaVersion: SCHEMA_VERSION,
                 isOfflineData: false,
-              }
+              },
             );
             await database.queries.set(serverEntry);
             await database.queries.delete(cacheKey);
@@ -236,7 +239,7 @@ export const useDLCreate = <
       queueManager,
       setIsQueued,
       table,
-    ]
+    ],
   );
 
   // Create shared callbacks

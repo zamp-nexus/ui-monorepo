@@ -5,47 +5,40 @@
 
 import { SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
 
+import { isBrowser } from '@open-insights-web/foundation-utils';
+
 import type {
-  FoundationMetricsConfig,
-  ResolvedConfig,
-  ErrorContext,
-  MessageContext,
-  SpanOptions,
-  WebVitalMetric,
-  InteractionEvent,
-  Breadcrumb,
-  UserTraits,
-  MetricsLogLevel,
   ActiveSpan,
+  Breadcrumb,
+  ErrorContext,
+  FoundationMetricsConfig,
+  InteractionEvent,
+  MessageContext,
+  MetricsLogLevel,
+  ResolvedConfig,
+  SpanOptions,
+  UserTraits,
+  WebVitalMetric,
 } from '../types';
+import { BREADCRUMB_CATEGORY, ERROR_TYPE, LOG_LEVEL, SPAN_KIND } from '../types/constants';
+import { resolveConfig, validateConfig } from './config-resolver';
 import {
-  BREADCRUMB_CATEGORY,
-  ERROR_TYPE,
-  LOG_LEVEL,
-  SPAN_KIND,
-} from '../types/constants';
-
-import {
-  initializeOTelProviders,
-  getTracer,
-  getMeter,
-  shutdownProviders,
-  flushProviders,
-  isInitialized as isOTelInitialized,
-} from './otel-provider';
-
-import {
-  initializeContextManager,
-  setUser as setContextUser,
   clearUser as clearContextUser,
-  setTenant as setContextTenant,
-  setCustomAttributes,
   getSpanAttributes,
+  initializeContextManager,
+  setTenant as setContextTenant,
+  setUser as setContextUser,
+  setCustomAttributes,
   shutdownContextManager,
 } from './context-manager';
-
-import { resolveConfig, validateConfig } from './config-resolver';
-import { isBrowser } from '@open-insights-web/foundation-utils';
+import {
+  flushProviders,
+  getMeter,
+  getTracer,
+  initializeOTelProviders,
+  isInitialized as isOTelInitialized,
+  shutdownProviders,
+} from './otel-provider';
 
 // =============================================================================
 // Lifecycle State
@@ -111,13 +104,17 @@ let lifecycleState: MetricsLifecycleState = 'uninitialized';
 export class FoundationMetrics {
   private config: ResolvedConfig;
   private isShutdown = false;
-  
+
   // Store event handlers for cleanup on shutdown
   private pagehideHandler: (() => void) | null = null;
   private visibilityChangeHandler: (() => void) | null = null;
 
   /** Cached OTel instruments to avoid recreating per invocation */
-  private readonly instrumentCache = new Map<string, ReturnType<ReturnType<typeof getMeter>['createHistogram']> | ReturnType<ReturnType<typeof getMeter>['createCounter']>>();
+  private readonly instrumentCache = new Map<
+    string,
+    | ReturnType<ReturnType<typeof getMeter>['createHistogram']>
+    | ReturnType<ReturnType<typeof getMeter>['createCounter']>
+  >();
 
   private constructor(config: ResolvedConfig) {
     this.config = config;
@@ -172,7 +169,7 @@ export class FoundationMetrics {
     if (lifecycleState === 'shutdown') {
       throw new Error(
         'FoundationMetrics was shut down. Call FoundationMetrics.reinitialize() to re-initialize, ' +
-        'which properly cleans up previous OTel exporters before creating new ones.'
+          'which properly cleans up previous OTel exporters before creating new ones.',
       );
     }
 
@@ -206,7 +203,7 @@ export class FoundationMetrics {
     if (lifecycleState !== 'shutdown' && lifecycleState !== 'uninitialized') {
       throw new Error(
         `FoundationMetrics.reinitialize() can only be called in 'shutdown' or 'uninitialized' state ` +
-        `(current: '${lifecycleState}')`
+          `(current: '${lifecycleState}')`,
       );
     }
 
@@ -273,7 +270,9 @@ export class FoundationMetrics {
    * Check if SDK is initialized and ready
    */
   static isInitialized(): boolean {
-    return lifecycleState === 'ready' && instance !== null && !instance.isShutdown && isOTelInitialized();
+    return (
+      lifecycleState === 'ready' && instance !== null && !instance.isShutdown && isOTelInitialized()
+    );
   }
 
   /**
@@ -675,7 +674,7 @@ export class FoundationMetrics {
     this.pagehideHandler = () => {
       this.flush();
     };
-    
+
     this.visibilityChangeHandler = () => {
       if (document.visibilityState === 'hidden') {
         this.flush();
@@ -685,7 +684,7 @@ export class FoundationMetrics {
     window.addEventListener('pagehide', this.pagehideHandler);
     document.addEventListener('visibilitychange', this.visibilityChangeHandler);
   }
-  
+
   /**
    * Remove page unload handlers
    */
@@ -693,12 +692,12 @@ export class FoundationMetrics {
     if (typeof window === 'undefined') {
       return;
     }
-    
+
     if (this.pagehideHandler) {
       window.removeEventListener('pagehide', this.pagehideHandler);
       this.pagehideHandler = null;
     }
-    
+
     if (this.visibilityChangeHandler) {
       document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
       this.visibilityChangeHandler = null;
@@ -723,7 +722,7 @@ export class FoundationMetrics {
    * Flatten metadata for span attributes
    */
   private flattenMetadata(
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): Record<string, string | number | boolean> {
     if (!metadata) {
       return {};

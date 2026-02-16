@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Switch } from './switch';
 
@@ -177,7 +178,10 @@ export const SettingsForm: Story = {
               Receive email about your account
             </p>
           </div>
-          <Switch checked={settings.notifications} onCheckedChange={handleChange('notifications')} />
+          <Switch
+            checked={settings.notifications}
+            onCheckedChange={handleChange('notifications')}
+          />
         </label>
 
         <label
@@ -190,9 +194,7 @@ export const SettingsForm: Story = {
         >
           <div>
             <p style={{ margin: 0, fontWeight: 500 }}>Marketing emails</p>
-            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-              Receive marketing emails
-            </p>
+            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Receive marketing emails</p>
           </div>
           <Switch checked={settings.marketing} onCheckedChange={handleChange('marketing')} />
         </label>
@@ -207,9 +209,7 @@ export const SettingsForm: Story = {
         >
           <div>
             <p style={{ margin: 0, fontWeight: 500 }}>Analytics</p>
-            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-              Share usage data
-            </p>
+            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Share usage data</p>
           </div>
           <Switch checked={settings.analytics} onCheckedChange={handleChange('analytics')} />
         </label>
@@ -217,4 +217,3 @@ export const SettingsForm: Story = {
     );
   },
 };
-

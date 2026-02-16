@@ -30,18 +30,9 @@ export {
 } from './hooks/use-dl-get';
 
 // Mutation hooks
-export {
-  useDLCreate,
-  type UseDLCreateOptions,
-} from './hooks/use-dl-create';
-export {
-  useDLUpdate,
-  type UseDLUpdateOptions,
-} from './hooks/use-dl-update';
-export {
-  useDLDelete,
-  type UseDLDeleteOptions,
-} from './hooks/use-dl-delete';
+export { useDLCreate, type UseDLCreateOptions } from './hooks/use-dl-create';
+export { useDLUpdate, type UseDLUpdateOptions } from './hooks/use-dl-update';
+export { useDLDelete, type UseDLDeleteOptions } from './hooks/use-dl-delete';
 
 // Analytics hooks
 export {

@@ -1,7 +1,7 @@
 /**
  * MultiSelect component type definitions
  * @module components/multi-select/types
- * 
+ *
  * MultiSelect uses CheckboxGroup internally for selection management.
  */
 

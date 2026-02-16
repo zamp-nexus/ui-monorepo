@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Icon } from '@open-insights-web/foundation-icons';
 
@@ -112,9 +113,7 @@ export const Spotlight: Story = {
       </Banner>
       <Banner variant="warning" spotlight dismissible>
         <Banner.Title>Warning Spotlight</Banner.Title>
-        <Banner.Description>
-          Important warning that needs attention.
-        </Banner.Description>
+        <Banner.Description>Important warning that needs attention.</Banner.Description>
       </Banner>
     </div>
   ),
@@ -168,11 +167,7 @@ export const AllVariants: Story = {
  */
 export const CustomIcon: Story = {
   render: () => (
-    <Banner
-      variant="info"
-      dismissible
-      icon={<Icon name="sparkles" />}
-    >
+    <Banner variant="info" dismissible icon={<Icon name="sparkles" />}>
       <Banner.Title>New Feature</Banner.Title>
       <Banner.Description>
         We've just launched a new feature that you might be interested in!
@@ -194,9 +189,7 @@ export const WithBody: Story = {
   render: () => (
     <Banner variant="warning" dismissible>
       <Banner.Title>Action Required</Banner.Title>
-      <Banner.Description>
-        Please review the following items before proceeding.
-      </Banner.Description>
+      <Banner.Description>Please review the following items before proceeding.</Banner.Description>
       <Banner.Body>
         <ul className="mt-2 list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300">
           <li>Update your billing information</li>
@@ -219,19 +212,13 @@ export const Interactive: Story = {
     const [visible, setVisible] = useState(true);
 
     if (!visible) {
-      return (
-        <Button onClick={() => setVisible(true)}>
-          Show Banner
-        </Button>
-      );
+      return <Button onClick={() => setVisible(true)}>Show Banner</Button>;
     }
 
     return (
       <Banner variant="success" dismissible onDismiss={() => setVisible(false)}>
         <Banner.Title>Welcome Back!</Banner.Title>
-        <Banner.Description>
-          You have 3 new notifications since your last visit.
-        </Banner.Description>
+        <Banner.Description>You have 3 new notifications since your last visit.</Banner.Description>
         <Banner.Actions>
           <Button size="sm">View Notifications</Button>
         </Banner.Actions>

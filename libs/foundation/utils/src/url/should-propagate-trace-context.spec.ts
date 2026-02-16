@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { shouldPropagateTraceContext } from './should-propagate-trace-context';
 
 describe('shouldPropagateTraceContext', () => {
@@ -44,7 +45,9 @@ describe('shouldPropagateTraceContext', () => {
   });
 
   it('should match nested subdomain with wildcard', () => {
-    const result = shouldPropagateTraceContext('https://api.v2.example.com/data', ['*.example.com']);
+    const result = shouldPropagateTraceContext('https://api.v2.example.com/data', [
+      '*.example.com',
+    ]);
     expect(result).toBe(true);
   });
 
@@ -61,7 +64,9 @@ describe('shouldPropagateTraceContext', () => {
   it('should check multiple allowed domains', () => {
     const allowedDomains = ['api.example.com', '*.internal.com'];
     expect(shouldPropagateTraceContext('https://api.example.com/data', allowedDomains)).toBe(true);
-    expect(shouldPropagateTraceContext('https://service.internal.com/data', allowedDomains)).toBe(true);
+    expect(shouldPropagateTraceContext('https://service.internal.com/data', allowedDomains)).toBe(
+      true,
+    );
     expect(shouldPropagateTraceContext('https://other.com/data', allowedDomains)).toBe(false);
   });
 

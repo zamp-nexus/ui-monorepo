@@ -21,9 +21,4 @@ export type {
   BannerCloseProps,
   BannerContextValue,
 } from './banner';
-export {
-  BannerVariants,
-  BannerModifiers,
-  BannerSlots,
-  bannerDefaultTheme,
-} from './banner';
+export { BannerVariants, BannerModifiers, BannerSlots, bannerDefaultTheme } from './banner';

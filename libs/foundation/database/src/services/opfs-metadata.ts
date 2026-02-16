@@ -7,12 +7,13 @@
  * @module services/opfs-metadata
  */
 
-import { BaseService } from './base';
 import { OPFS_FILE_TYPE } from '@open-insights-web/foundation-data-model';
-import type { OpfsMetadataOperations, OpfsMetadataEntry } from '../tables/opfs-metadata';
+
+import type { OpfsMetadataEntry, OpfsMetadataOperations } from '../tables/opfs-metadata';
 import { sortByDependencies } from '../tables/opfs-metadata';
-import { opfsMetadataEntrySchema } from '../validation/schemas';
 import { assertValid } from '../validation/assert-valid';
+import { opfsMetadataEntrySchema } from '../validation/schemas';
+import { BaseService } from './base';
 
 /**
  * OPFS Metadata Service

@@ -4,8 +4,9 @@
  * Tests for query parameter cleaning and array serialization.
  */
 
-import { describe, it, expect } from 'vitest';
 import type { InternalAxiosRequestConfig } from 'axios';
+import { describe, expect, it } from 'vitest';
+
 import { createParamsInterceptor, createParamsSerializer } from './params-interceptor';
 
 // =============================================================================

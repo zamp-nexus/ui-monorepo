@@ -3,13 +3,22 @@
  * @module instrumentation/network/retry-tracker
  */
 
-import axios, { type AxiosResponseHeaders, type RawAxiosResponseHeaders } from 'axios';
-import { sleep } from '@open-insights-web/foundation-utils';
-import { sanitizeUrl, extractRoute, normalizeError } from '@open-insights-web/foundation-utils';
+import axios, {
+  type AxiosInstance,
+  type AxiosResponseHeaders,
+  type RawAxiosResponseHeaders,
+} from 'axios';
 
-import type { NetworkSignalConfig } from '../../types';
-import { getMeter } from '../../core/otel-provider';
+import {
+  extractRoute,
+  normalizeError,
+  sanitizeUrl,
+  sleep,
+} from '@open-insights-web/foundation-utils';
+
 import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { NetworkSignalConfig } from '../../types';
 
 /**
  * Retry state for a request
@@ -48,8 +57,7 @@ export const initializeRetryTracker = (config: NetworkSignalConfig): void => {
 /**
  * Generate a key for a request
  */
-const getRequestKey = (url: string, method: string): string =>
-  `${method}:${sanitizeUrl(url)}`;
+const getRequestKey = (url: string, method: string): string => `${method}:${sanitizeUrl(url)}`;
 
 /**
  * Record retry metric
@@ -94,11 +102,7 @@ const recordRetryMetric = (retryState: RetryState): void => {
 /**
  * Track a retry attempt
  */
-export const trackRetryAttempt = (
-  url: string,
-  method: string,
-  errorMessage?: string,
-): number => {
+export const trackRetryAttempt = (url: string, method: string, errorMessage?: string): number => {
   if (!state?.config.trackRetries) {
     return 0;
   }
@@ -180,8 +184,7 @@ export const getRetryCount = (url: string, method: string): number => {
 /**
  * Get all tracked retry states (for debugging)
  */
-export const getRetryStates = (): Map<string, RetryState> =>
-  state?.requests ?? new Map();
+export const getRetryStates = (): Map<string, RetryState> => state?.requests ?? new Map();
 
 /**
  * Clear all retry states
@@ -215,7 +218,10 @@ export const createRetryFetch = (
   maxRetries = 3,
   retryDelay = 1000,
   retryOn: number[] = [500, 502, 503, 504],
+  axiosInstance?: AxiosInstance,
 ): typeof fetch => {
+  const resolvedAxiosInstance = axiosInstance ?? state?.config.axiosInstance ?? axios;
+
   const toHeadersRecord = (headers: Headers): Record<string, string> => {
     const result: Record<string, string> = {};
     headers.forEach((value, key) => {
@@ -224,9 +230,7 @@ export const createRetryFetch = (
     return result;
   };
 
-  const toResponseHeaders = (
-    headers: RawAxiosResponseHeaders | AxiosResponseHeaders,
-  ): Headers => {
+  const toResponseHeaders = (headers: RawAxiosResponseHeaders | AxiosResponseHeaders): Headers => {
     const responseHeaders = new Headers();
     Object.entries(headers).forEach(([key, value]) => {
       if (typeof value === 'string') {
@@ -256,10 +260,7 @@ export const createRetryFetch = (
     });
   };
 
-  const retryFetch = async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
+  const retryFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = new Request(input, init);
     const url = request.url;
     const method = request.method || 'GET';
@@ -278,7 +279,7 @@ export const createRetryFetch = (
           await sleep(retryDelay * Math.pow(2, attempt - 1)); // Exponential backoff
         }
 
-        const axiosResponse = await axios.request<ArrayBuffer>({
+        const axiosResponse = await resolvedAxiosInstance.request<ArrayBuffer>({
           url,
           method,
           headers: requestHeaders,

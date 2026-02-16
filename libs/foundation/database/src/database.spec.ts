@@ -7,41 +7,52 @@
  * @module database.spec
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import {
+  createTableSyncMetadataEntry,
   FOUNDATION_ERROR_CODE,
+  getFilesNeedingDownload as getSharedFilesNeedingDownload,
+  hasErrorCode,
   MUTATION_STATUS,
   MUTATION_TYPE,
-  hasErrorCode,
+  needsTableUpdate as needsSharedTableUpdate,
 } from '@open-insights-web/foundation-data-model';
 import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
+
+import { DEFAULT_DATABASE_CONFIG, mergeConfig } from './core/config';
+import { getDatabase, hasDatabase, resetDatabase } from './core/database';
 import {
+  createOpfsNotSupportedError,
+  createQuotaExceededError,
+  createValidationError,
   // Errors
   DatabaseError,
-  createQuotaExceededError,
-  createOpfsNotSupportedError,
-  createValidationError,
   isDatabaseError,
   isQuotaExceededError,
 } from './errors';
-import {
-  // Utils
-  generateIdempotencyKey,
-} from './utils';
-import {
-  // Validation
-  queryCacheEntrySchema,
-  mutationQueueEntrySchema,
-  createValidator,
-  validateQueryCacheEntry,
-} from './validation';
 import {
   DATABASE_TRANSACTION_MODE,
   DATABASE_TRANSACTION_TABLE,
   getDatabaseFacade,
   resetDatabaseFacade,
 } from './facade/database-facade';
-import { getDatabase, hasDatabase, resetDatabase } from './core/database';
+import { isDuckDBViewsValue, isLastSyncValue, isNetworkStatus } from './tables/sync-state';
+import {
+  getFilesNeedingDownload as getLocalFilesNeedingDownload,
+  needsTableUpdate as needsLocalTableUpdate,
+} from './tables/table-sync-metadata';
+import {
+  // Utils
+  generateIdempotencyKey,
+} from './utils';
+import {
+  createValidator,
+  mutationQueueEntrySchema,
+  // Validation
+  queryCacheEntrySchema,
+  validateQueryCacheEntry,
+} from './validation';
 
 // =============================================================================
 // Error Tests
@@ -52,7 +63,7 @@ describe('Database Errors', () => {
     it('should create error with code and message', () => {
       const error = new DatabaseError(
         FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED,
-        'Storage full'
+        'Storage full',
       );
 
       expect(error.code).toBe(FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED);
@@ -371,18 +382,14 @@ describe('Validation Schemas', () => {
 // =============================================================================
 
 describe('Config', () => {
-  it('should provide default config', async () => {
-    const { DEFAULT_DATABASE_CONFIG } = await import('./core/config');
-
+  it('should provide default config', () => {
     expect(DEFAULT_DATABASE_CONFIG.name).toBe('open-insights-db');
     expect(DEFAULT_DATABASE_CONFIG.version).toBe(1);
     expect(DEFAULT_DATABASE_CONFIG.queryCacheTTL).toBe(5 * 60 * 1000);
     expect(DEFAULT_DATABASE_CONFIG.maxRetryAttempts).toBe(3);
   });
 
-  it('mergeConfig should override defaults', async () => {
-    const { mergeConfig } = await import('./core/config');
-
+  it('mergeConfig should override defaults', () => {
     const merged = mergeConfig({ name: 'custom-db', debug: true });
 
     expect(merged.name).toBe('custom-db');
@@ -396,33 +403,27 @@ describe('Config', () => {
 // =============================================================================
 
 describe('Sync State Type Guards', () => {
-  it('isLastSyncValue should validate correctly', async () => {
-    const { isLastSyncValue } = await import('./tables/sync-state');
-
+  it('isLastSyncValue should validate correctly', () => {
     expect(isLastSyncValue({ timestamp: 123, tables: {} })).toBe(true);
     expect(isLastSyncValue({ timestamp: 123 })).toBe(false);
     expect(isLastSyncValue(null)).toBe(false);
     expect(isLastSyncValue('string')).toBe(false);
   });
 
-  it('isNetworkStatus should validate correctly', async () => {
-    const { isNetworkStatus } = await import('./tables/sync-state');
-
+  it('isNetworkStatus should validate correctly', () => {
     expect(
       isNetworkStatus({
         isOnline: true,
         lastOnlineAt: null,
         lastOfflineAt: null,
-      })
+      }),
     ).toBe(true);
 
     expect(isNetworkStatus({ isOnline: 'not boolean' })).toBe(false);
     expect(isNetworkStatus({})).toBe(false);
   });
 
-  it('isDuckDBViewsValue should validate correctly', async () => {
-    const { isDuckDBViewsValue } = await import('./tables/sync-state');
-
+  it('isDuckDBViewsValue should validate correctly', () => {
     expect(isDuckDBViewsValue({ views: [], lastUpdatedAt: 0 })).toBe(true);
     expect(isDuckDBViewsValue({ views: 'not array' })).toBe(false);
     expect(isDuckDBViewsValue({})).toBe(false);
@@ -475,29 +476,20 @@ describe('DatabaseFacade lifecycle', () => {
 // =============================================================================
 
 describe('Shared table sync helpers', () => {
-  it('should re-export table sync helpers from foundation-data-model', async () => {
-    const dataModel = await import('@open-insights-web/foundation-data-model');
-    const databaseTableHelpers = await import('./tables/table-sync-metadata');
-
-    const localMetadata = dataModel.createTableSyncMetadataEntry(
-      'sessions',
-      100,
-      { 'sessions.parquet': 'hash-1' }
-    );
+  it('should re-export table sync helpers from foundation-data-model', () => {
+    const localMetadata = createTableSyncMetadataEntry('sessions', 100, {
+      'sessions.parquet': 'hash-1',
+    });
     const remoteFiles = [
       { filename: 'sessions.parquet', hash: 'hash-1' },
       { filename: 'events.parquet', hash: 'hash-2' },
     ];
 
-    expect(
-      databaseTableHelpers.needsTableUpdate(localMetadata, 101)
-    ).toBe(
-      dataModel.needsTableUpdate(localMetadata, 101)
+    expect(needsLocalTableUpdate(localMetadata, 101)).toBe(
+      needsSharedTableUpdate(localMetadata, 101),
     );
-    expect(
-      databaseTableHelpers.getFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)
-    ).toEqual(
-      dataModel.getFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)
+    expect(getLocalFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)).toEqual(
+      getSharedFilesNeedingDownload(localMetadata.fileHashes, remoteFiles),
     );
   });
 });

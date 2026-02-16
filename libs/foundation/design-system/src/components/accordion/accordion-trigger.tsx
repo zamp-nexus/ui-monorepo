@@ -10,9 +10,9 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import { useAccordionContext } from './accordion.context';
 import type { AccordionTriggerProps } from './accordion';
 import { accordionDefaultTheme } from './accordion';
+import { useAccordionContext } from './accordion.context';
 
 /**
  * Accordion.Trigger component

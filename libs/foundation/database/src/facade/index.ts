@@ -12,7 +12,4 @@ export {
   hasDatabaseFacade,
 } from './database-facade';
 
-export type {
-  DatabaseTransactionMode,
-  DatabaseTransactionTable,
-} from './database-facade';
+export type { DatabaseTransactionMode, DatabaseTransactionTable } from './database-facade';

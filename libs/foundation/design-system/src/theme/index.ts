@@ -35,4 +35,3 @@ export {
   mergeThemeConfigs,
   type SlotResolverProps,
 } from './theme-resolver';
-

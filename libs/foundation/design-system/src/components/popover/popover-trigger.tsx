@@ -20,12 +20,7 @@ export const PopoverTrigger: React.FC<PopoverTriggerProps> = ({
   ...rest
 }) => {
   return (
-    <PopoverPrimitive.Trigger
-      className={className}
-      data-oiid={oiid}
-      data-slot="trigger"
-      {...rest}
-    >
+    <PopoverPrimitive.Trigger className={className} data-oiid={oiid} data-slot="trigger" {...rest}>
       {children}
     </PopoverPrimitive.Trigger>
   );

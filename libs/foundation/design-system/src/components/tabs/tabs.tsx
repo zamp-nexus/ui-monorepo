@@ -7,12 +7,12 @@ import { useMemo } from 'react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { useTheme } from '../../theme';
+import type { TabsComponent, TabsContextValue } from './tabs';
+import { tabsDefaultTheme } from './tabs';
 import { TabsContent } from './tabs-content';
 import { TabsList } from './tabs-list';
 import { TabsTrigger } from './tabs-trigger';
 import { TabsContext } from './tabs.context';
-import type { TabsComponent, TabsContextValue } from './tabs';
-import { tabsDefaultTheme } from './tabs';
 
 /**
  * Tabs component

@@ -1,13 +1,13 @@
 /**
  * Semantic Border Tokens - Tier 2
  * Usage-based border colors and styles
- * 
+ *
  * @module tokens/semantic/borders
  */
 
 /**
  * Border color tokens
- * 
+ *
  * Hierarchy:
  * - subtle: Barely visible, for grouping
  * - default: Standard borders

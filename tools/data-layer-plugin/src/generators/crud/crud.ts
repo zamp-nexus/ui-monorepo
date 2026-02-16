@@ -127,23 +127,33 @@ function updateIndexFile(tree: Tree, options: NormalizedOptions): void {
   ];
 
   if (!options.skipDetail) {
-    exports.push(`export { useDLGet${options.className}Query } from './use-dl-${options.fileName}';`);
+    exports.push(
+      `export { useDLGet${options.className}Query } from './use-dl-${options.fileName}';`,
+    );
   }
 
   if (!options.skipList) {
-    exports.push(`export { useDLGet${options.className}ListQuery } from './use-dl-${options.fileName}-list';`);
+    exports.push(
+      `export { useDLGet${options.className}ListQuery } from './use-dl-${options.fileName}-list';`,
+    );
   }
 
   if (!options.skipCreate) {
-    exports.push(`export { useDLMutatePost${options.className} } from './use-dl-create-${options.fileName}';`);
+    exports.push(
+      `export { useDLCreate${options.className} } from './use-dl-create-${options.fileName}';`,
+    );
   }
 
   if (!options.skipUpdate) {
-    exports.push(`export { useDLMutatePatch${options.className} } from './use-dl-update-${options.fileName}';`);
+    exports.push(
+      `export { useDLUpdate${options.className} } from './use-dl-update-${options.fileName}';`,
+    );
   }
 
   if (!options.skipDelete) {
-    exports.push(`export { useDLMutateDelete${options.className} } from './use-dl-delete-${options.fileName}';`);
+    exports.push(
+      `export { useDLDelete${options.className} } from './use-dl-delete-${options.fileName}';`,
+    );
   }
 
   const content = `/**

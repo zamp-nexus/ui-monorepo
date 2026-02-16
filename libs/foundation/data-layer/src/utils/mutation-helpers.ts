@@ -7,12 +7,18 @@
  * @module utils/mutation-helpers
  */
 
-import type { QueryKey, UseMutationResult, QueryClient } from '@tanstack/react-query';
-import { hashQueryKey, SCHEMA_VERSION, toJsonSerializable } from '@open-insights-web/foundation-data-model';
+import type { QueryClient, QueryKey, UseMutationResult } from '@tanstack/react-query';
+
+import {
+  hashQueryKey,
+  SCHEMA_VERSION,
+  toJsonSerializable,
+} from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
 import type { DatabaseFacade } from '@open-insights-web/foundation-database';
-import type { DLMutationResult } from '../core/types';
+
 import { DEFAULT_CACHE_TTL } from '../core/constants';
+import type { DLMutationResult } from '../core/types';
 
 // =============================================================================
 // QUERY INVALIDATION
@@ -34,11 +40,9 @@ import { DEFAULT_CACHE_TTL } from '../core/constants';
  */
 export const invalidateQueries = async (
   queryClient: QueryClient,
-  keys: QueryKey[]
+  keys: QueryKey[],
 ): Promise<void> => {
-  await Promise.all(
-    keys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
-  );
+  await Promise.all(keys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
 };
 
 /**
@@ -57,7 +61,7 @@ export const collectInvalidationKeys = (
   invalidateKeys: QueryKey[],
   listQueryKey?: QueryKey,
   itemQueryKey?: (entityId: string) => QueryKey,
-  entityId?: string | null
+  entityId?: string | null,
 ): QueryKey[] => {
   const keys = [...invalidateKeys];
 
@@ -114,7 +118,7 @@ export const createCacheEntryWithDefaults = <T>(
   table: string,
   entityId: string,
   data: T,
-  options: CreateCacheEntryOptions
+  options: CreateCacheEntryOptions,
 ) => {
   const cacheKey = hashQueryKey([table, entityId]);
   // Convert to JsonSerializable with validation
@@ -145,7 +149,7 @@ export const persistToCache = async <T>(
   table: string,
   entityId: string,
   data: T,
-  isOfflineData: boolean
+  isOfflineData: boolean,
 ): Promise<void> => {
   const entry = createCacheEntryWithDefaults(table, entityId, data, {
     tableName: table,
@@ -164,7 +168,7 @@ export const persistToCache = async <T>(
 export const deleteFromCache = async (
   database: DatabaseFacade,
   table: string,
-  entityId: string
+  entityId: string,
 ): Promise<void> => {
   const cacheKey = hashQueryKey([table, entityId]);
   await database.queries.delete(cacheKey);
@@ -197,7 +201,7 @@ export interface LocalFirstMutationExecutionOptions<TData> {
 }
 
 export const executeLocalFirstMutation = async <TData>(
-  options: LocalFirstMutationExecutionOptions<TData>
+  options: LocalFirstMutationExecutionOptions<TData>,
 ): Promise<TData> => {
   const { isOnline, setIsQueued, queueOffline, executeOnline, offlineResult } = options;
 
@@ -232,7 +236,7 @@ export const executeLocalFirstMutation = async <TData>(
  * ```
  */
 export const buildMutationResult = <TData, TVariables>(
-  options: BuildMutationResultOptions<TData, TVariables>
+  options: BuildMutationResultOptions<TData, TVariables>,
 ): DLMutationResult<TData, TVariables> => {
   const { mutationResult, isQueued, provisionalId, isOffline } = options;
 

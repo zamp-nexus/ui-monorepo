@@ -4,10 +4,10 @@
  */
 
 import type {
-  OIDefaultProps,
+  ComponentThemeConfigStructure,
   OIComponentOwnProps,
   OIComponentRef,
-  ComponentThemeConfigStructure,
+  OIDefaultProps,
 } from '../../types';
 
 /**
@@ -108,4 +108,3 @@ export const textareaDefaultTheme: ComponentThemeConfigStructure = {
     size: 'md',
   },
 };
-

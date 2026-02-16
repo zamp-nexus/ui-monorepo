@@ -8,6 +8,7 @@
  */
 
 import { TIME_MS } from '@open-insights-web/foundation-utils';
+
 import type { CacheConfig, ResolvedCacheConfig } from './types';
 
 // =============================================================================

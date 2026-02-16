@@ -3,7 +3,7 @@
  * but always calls the latest version
  * @module use-stable-callback
  */
-import { useRef, useCallback, useLayoutEffect } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 
 /**
  * Creates a stable callback reference that can be passed to effects
@@ -27,7 +27,7 @@ import { useRef, useCallback, useLayoutEffect } from 'react';
  * ```
  */
 export function useStableCallback<T extends (...args: never[]) => unknown>(
-  callback: T | undefined
+  callback: T | undefined,
 ): T | undefined {
   const callbackRef = useRef(callback);
 
@@ -37,7 +37,7 @@ export function useStableCallback<T extends (...args: never[]) => unknown>(
 
   const stableCallback = useCallback(
     ((...args: Parameters<T>) => callbackRef.current?.(...args)) as T,
-    []
+    [],
   );
 
   // Return undefined if callback is undefined to preserve the same semantics

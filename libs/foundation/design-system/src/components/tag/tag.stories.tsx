@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Icon } from '@open-insights-web/foundation-icons';
 
@@ -206,9 +207,7 @@ export const InteractiveTags: Story = {
             </Tag>
           ))}
         </div>
-        {tags.length === 0 && (
-          <p style={{ margin: 0, color: '#666' }}>All tags removed</p>
-        )}
+        {tags.length === 0 && <p style={{ margin: 0, color: '#666' }}>All tags removed</p>}
         {tags.length < 4 && (
           <button
             onClick={() => setTags(['React', 'TypeScript', 'Tailwind', 'Storybook'])}
@@ -254,4 +253,3 @@ export const TagGroup: Story = {
     </div>
   ),
 };
-

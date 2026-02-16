@@ -2,9 +2,9 @@ import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
 import { TIME_MS } from '@open-insights-web/foundation-utils';
 
 import {
-  TableRegistry,
   createTableRegistry,
   DATA_FRESHNESS,
+  TableRegistry,
   type UnifiedTableConfig,
 } from './table-registry';
 
@@ -88,7 +88,7 @@ describe('TableRegistry', () => {
 
       expect(registry.getAllTables()).toHaveLength(allMockTables.length);
       expect(registry.getTableNames()).toEqual(
-        expect.arrayContaining(['users', 'posts', 'comments', 'events', 'settings', 'logs'])
+        expect.arrayContaining(['users', 'posts', 'comments', 'events', 'settings', 'logs']),
       );
     });
 
@@ -133,7 +133,7 @@ describe('TableRegistry', () => {
 
       it('should throw for an unregistered table', () => {
         expect(() => registry.getTableOrThrow('nonexistent')).toThrow(
-          "[TableRegistry] Table 'nonexistent' not registered"
+          "[TableRegistry] Table 'nonexistent' not registered",
         );
       });
     });
@@ -167,7 +167,7 @@ describe('TableRegistry', () => {
         const names = registry.getTableNames();
         expect(names).toHaveLength(allMockTables.length);
         expect(names).toEqual(
-          expect.arrayContaining(['users', 'posts', 'comments', 'events', 'settings', 'logs'])
+          expect.arrayContaining(['users', 'posts', 'comments', 'events', 'settings', 'logs']),
         );
       });
 
@@ -407,9 +407,7 @@ describe('TableRegistry', () => {
       it('should return default for non-existent table', () => {
         const registry = new TableRegistry();
 
-        expect(registry.getConflictStrategy('nonexistent')).toBe(
-          CONFLICT_STRATEGY.LAST_WRITE_WINS
-        );
+        expect(registry.getConflictStrategy('nonexistent')).toBe(CONFLICT_STRATEGY.LAST_WRITE_WINS);
       });
     });
 
@@ -529,9 +527,7 @@ describe('TableRegistry', () => {
       });
 
       it('should return NEAR_REALTIME for non-existent table', () => {
-        expect(registry.getAnalyticsFreshness('nonexistent')).toBe(
-          DATA_FRESHNESS.NEAR_REALTIME
-        );
+        expect(registry.getAnalyticsFreshness('nonexistent')).toBe(DATA_FRESHNESS.NEAR_REALTIME);
       });
     });
 

@@ -13,11 +13,7 @@ import { emptyStateDefaultTheme } from './empty-state';
  *
  * Title text for the empty state
  */
-export const EmptyStateTitle: React.FC<EmptyStateTitleProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const EmptyStateTitle: React.FC<EmptyStateTitleProps> = ({ children, className, oiid }) => {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);
 
   return (

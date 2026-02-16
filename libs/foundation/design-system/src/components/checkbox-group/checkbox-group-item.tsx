@@ -6,9 +6,9 @@ import React, { useEffect } from 'react';
 
 import { useTheme } from '../../theme';
 import { Checkbox } from '../checkbox';
-import { useCheckboxGroupContext } from './checkbox-group.context';
 import type { CheckboxGroupItemProps } from './checkbox-group';
 import { checkboxGroupDefaultTheme } from './checkbox-group';
+import { useCheckboxGroupContext } from './checkbox-group.context';
 
 /**
  * CheckboxGroup.Item component
@@ -50,7 +50,7 @@ export const CheckboxGroupItem: React.FC<CheckboxGroupItemProps> = ({
 
   const handleCheckedChange = (checked: boolean | 'indeterminate') => {
     if (checked === 'indeterminate') return;
-    
+
     if (checked) {
       // Add to selection
       onValueChange([...groupValue, itemValue]);
@@ -78,11 +78,7 @@ export const CheckboxGroupItem: React.FC<CheckboxGroupItemProps> = ({
         size={checkboxSize}
         oiid={oiid ? `${oiid}__checkbox` : undefined}
       />
-      {children && (
-        <span className={theme.label?.({ size }) ?? ''}>
-          {children}
-        </span>
-      )}
+      {children && <span className={theme.label?.({ size }) ?? ''}>{children}</span>}
     </label>
   );
 };

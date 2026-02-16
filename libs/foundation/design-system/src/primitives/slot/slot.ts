@@ -48,4 +48,3 @@ export interface SlotComponent {
   ): React.ReactNode;
   displayName?: string;
 }
-

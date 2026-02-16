@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Icon } from '@open-insights-web/foundation-icons';
 
@@ -161,12 +162,7 @@ export const InteractiveList: Story = {
     return (
       <div className="flex flex-wrap gap-2">
         {chips.map((chip) => (
-          <Chip
-            key={chip}
-            variant="primary"
-            removable
-            onRemove={() => handleRemove(chip)}
-          >
+          <Chip key={chip} variant="primary" removable onRemove={() => handleRemove(chip)}>
             {chip}
           </Chip>
         ))}
@@ -195,10 +191,7 @@ export const CustomStart: Story = {
       >
         John Doe
       </Chip>
-      <Chip
-        variant="success"
-        start={<span className="h-2 w-2 rounded-full bg-green-500" />}
-      >
+      <Chip variant="success" start={<span className="h-2 w-2 rounded-full bg-green-500" />}>
         Online
       </Chip>
     </div>
@@ -211,7 +204,7 @@ export const CustomStart: Story = {
 export const FilterChips: Story = {
   render: function FilterChipsExample() {
     const [activeFilters, setActiveFilters] = useState(['Status: Active', 'Type: Premium']);
-    
+
     const handleRemove = (filter: string) => {
       setActiveFilters((prev) => prev.filter((f) => f !== filter));
     };

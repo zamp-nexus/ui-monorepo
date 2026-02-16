@@ -16,31 +16,33 @@
  * @module hooks/use-dl-mutate-query-engine
  */
 
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+
 import type { QueryKey } from '@tanstack/react-query';
+
 import {
   useDataLayerInternals,
   useDLCreate,
-  useDLUpdate,
   useDLDelete,
+  useDLUpdate,
 } from '@open-insights-web/foundation-data-layer';
 import { getEntityId as getDataModelEntityId } from '@open-insights-web/foundation-data-model';
+import { EMPTY_ARRAY } from '@open-insights-web/foundation-utils';
 
 import { getTableExtractor } from '../engine/table-extractor';
-import { EMPTY_ARRAY } from '@open-insights-web/foundation-utils';
-import {
-  type UseDLMutateQueryEngineOptions,
-  type UseDLMutateQueryEngineResult,
-  type MutationOperation,
-  MUTATION_OPERATIONS,
-  EXECUTION_PATHS,
-} from './types';
 import {
   getAnyMutationReference,
   getAnyMutationReferenceFromRegistry,
   getMutationReference,
   resolveMutationOperation,
 } from './internal/data-layer-adapters';
+import {
+  EXECUTION_PATHS,
+  MUTATION_OPERATIONS,
+  type MutationOperation,
+  type UseDLMutateQueryEngineOptions,
+  type UseDLMutateQueryEngineResult,
+} from './types';
 
 // =============================================================================
 // HELPERS
@@ -65,9 +67,9 @@ const toRecord = (value: unknown): Record<string, unknown> => {
   return {};
 };
 
-const toVariables = <TVariables,>(value: unknown): TVariables => value as TVariables;
+const toVariables = <TVariables>(value: unknown): TVariables => value as TVariables;
 
-const toResultData = <TData,>(value: unknown): TData => value as TData;
+const toResultData = <TData>(value: unknown): TData => value as TData;
 
 const toQueryKeyArray = (keys: ReadonlyArray<QueryKey> | undefined): QueryKey[] => {
   if (!keys || keys.length === 0) {
@@ -115,7 +117,7 @@ const toQueryKeyArray = (keys: ReadonlyArray<QueryKey> | undefined): QueryKey[] 
  * ```
  */
 export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
-  options: UseDLMutateQueryEngineOptions<TData, TVariables>
+  options: UseDLMutateQueryEngineOptions<TData, TVariables>,
 ): UseDLMutateQueryEngineResult<TData, TVariables> => {
   const {
     query,
@@ -143,10 +145,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
   // EXTRACT TABLE AND OPERATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const extraction = useMemo(
-    () => tableExtractor.extractDetailed(query),
-    [tableExtractor, query]
-  );
+  const extraction = useMemo(() => tableExtractor.extractDetailed(query), [tableExtractor, query]);
 
   const table = extraction.primaryTable ?? '';
   const operation: MutationOperation = resolveMutationOperation(query.operation);
@@ -173,7 +172,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
 
   if (!fallbackMutationRef) {
     throw new Error(
-      'useDLMutateQueryEngine requires at least one mutation API reference in the table registry'
+      'useDLMutateQueryEngine requires at least one mutation API reference in the table registry',
     );
   }
 
@@ -192,21 +191,19 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
       // Invalidate additional keys
       if (invalidateKeys && invalidateKeys.length > 0) {
         await Promise.all(
-          invalidateKeys.map((key) =>
-            queryClient.invalidateQueries({ queryKey: key })
-          )
+          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })),
         );
       }
       await onSuccess?.(toResultData<TData>(data), toVariables<TVariables>(vars));
     },
-    [invalidateKeys, queryClient, onSuccess]
+    [invalidateKeys, queryClient, onSuccess],
   );
 
   const handleError = useCallback(
     async (error: Error, vars: unknown) => {
       await onError?.(error, toVariables<TVariables>(vars));
     },
-    [onError]
+    [onError],
   );
 
   const handleSettled = useCallback(
@@ -214,24 +211,25 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
       await onSettled?.(
         data === undefined ? undefined : toResultData<TData>(data),
         error,
-        toVariables<TVariables>(vars)
+        toVariables<TVariables>(vars),
       );
     },
-    [onSettled]
+    [onSettled],
   );
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE MUTATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const isCreateEnabled = operation === MUTATION_OPERATIONS.CREATE && mutationRefs?.create !== undefined;
+  const isCreateEnabled =
+    operation === MUTATION_OPERATIONS.CREATE && mutationRefs?.create !== undefined;
 
   const createOptimistic = useCallback(
     (vars: unknown): unknown => {
       if (!onOptimistic) return vars;
       return onOptimistic(toVariables<TVariables>(vars), undefined);
     },
-    [onOptimistic]
+    [onOptimistic],
   );
 
   const createMutation = useDLCreate({
@@ -249,7 +247,8 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
   // UPDATE MUTATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const isUpdateEnabled = operation === MUTATION_OPERATIONS.UPDATE && mutationRefs?.update !== undefined;
+  const isUpdateEnabled =
+    operation === MUTATION_OPERATIONS.UPDATE && mutationRefs?.update !== undefined;
 
   const updateOptimistic = useCallback(
     (vars: unknown, prev: unknown): unknown => {
@@ -259,12 +258,12 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
       const previousData = prev === undefined ? undefined : toResultData<TData>(prev);
       return onOptimistic(toVariables<TVariables>(vars), previousData);
     },
-    [onOptimistic]
+    [onOptimistic],
   );
 
   const resolveEntityId = useCallback(
     (vars: unknown): string => getEntityId(toVariables<TVariables>(vars)),
-    [getEntityId]
+    [getEntityId],
   );
 
   const updateMutation = useDLUpdate({
@@ -283,7 +282,8 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
   // DELETE MUTATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const isDeleteEnabled = operation === MUTATION_OPERATIONS.DELETE && mutationRefs?.delete !== undefined;
+  const isDeleteEnabled =
+    operation === MUTATION_OPERATIONS.DELETE && mutationRefs?.delete !== undefined;
 
   const deleteMutation = useDLDelete({
     mutation: mutationRefs?.delete ?? fallbackMutationRef,
@@ -336,7 +336,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
     (variables: TVariables) => {
       mut.mutate(variables);
     },
-    [mut]
+    [mut],
   );
 
   // Create stable mutateAsync function
@@ -345,7 +345,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
       const result = await mut.mutateAsync(variables);
       return toResultData<TData>(result);
     },
-    [mut]
+    [mut],
   );
 
   // Reset function

@@ -53,7 +53,8 @@ export class PriorityQueue<T> {
   ]);
 
   /** Map index for O(1) lookups by ID */
-  private readonly idIndex: Map<string, { priority: PriorityLevel; item: QueueItem<T> }> = new Map();
+  private readonly idIndex: Map<string, { priority: PriorityLevel; item: QueueItem<T> }> =
+    new Map();
 
   /** Counter for generating unique IDs */
   private idCounter = 0;

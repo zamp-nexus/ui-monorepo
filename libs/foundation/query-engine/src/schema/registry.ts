@@ -18,11 +18,6 @@
  * @module schema/registry
  */
 
-import {
-  createLogger,
-  type IDisposable,
-  DisposedError,
-} from '@open-insights-web/foundation-utils';
 import type {
   MemberRef,
   SqlTableName as TableName,
@@ -31,6 +26,8 @@ import {
   MemberRef as MemberRefUtil,
   SqlTableName as TableNameUtil,
 } from '@open-insights-web/foundation-data-model';
+import { createLogger, DisposedError, type IDisposable } from '@open-insights-web/foundation-utils';
+
 import type {
   DimensionDefinition,
   MeasureDefinition,
@@ -110,7 +107,6 @@ export interface SchemaValidationStatus {
   readonly warnings: ReadonlyArray<string>;
 }
 
-
 // =============================================================================
 // CUSTOM ERRORS
 // =============================================================================
@@ -125,8 +121,7 @@ export const SCHEMA_ELEMENT_TYPES = {
   MEMBER: 'member',
 } as const;
 
-type SchemaElementType =
-  (typeof SCHEMA_ELEMENT_TYPES)[keyof typeof SCHEMA_ELEMENT_TYPES];
+type SchemaElementType = (typeof SCHEMA_ELEMENT_TYPES)[keyof typeof SCHEMA_ELEMENT_TYPES];
 
 /**
  * Error thrown when a schema element is not found
@@ -391,7 +386,7 @@ export class SchemaRegistry implements IDisposable {
    * Get a dimension definition
    */
   getDimension = (
-    memberRef: MemberRef | string
+    memberRef: MemberRef | string,
   ): DimensionDefinition | TimeDimensionDefinition | null => {
     const resolved = this.resolveMember(memberRef);
     if (resolved?.type === MEMBER_TYPES.DIMENSION) {
@@ -481,7 +476,7 @@ export class SchemaRegistry implements IDisposable {
     required: {
       measures?: ReadonlyArray<string>;
       dimensions?: ReadonlyArray<string>;
-    }
+    },
   ): SchemaValidationStatus => {
     const errors: string[] = [];
     const warnings: string[] = [];

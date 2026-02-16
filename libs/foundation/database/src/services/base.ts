@@ -23,9 +23,14 @@
  * @module services/base
  */
 
-import { getErrorMessage, createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
-import type { InsightsDatabase } from '../core/database';
+import {
+  createDebugLogger,
+  getErrorMessage,
+  type Logger,
+} from '@open-insights-web/foundation-utils';
+
 import type { DatabaseConfig } from '../core/config';
+import type { InsightsDatabase } from '../core/database';
 
 /**
  * Abstract base service with shared utilities

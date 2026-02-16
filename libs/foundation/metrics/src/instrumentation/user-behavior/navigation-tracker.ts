@@ -3,10 +3,11 @@
  * @module instrumentation/user-behavior/navigation-tracker
  */
 
-import type { UserBehaviorSignalConfig, NavigationEvent } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { NavigationEvent, UserBehaviorSignalConfig } from '../../types';
 
 /**
  * Navigation tracker state
@@ -26,7 +27,7 @@ let state: NavigationTrackerState | null = null;
  */
 export function installNavigationTracking(
   config: UserBehaviorSignalConfig,
-  callback?: (event: NavigationEvent) => void
+  callback?: (event: NavigationEvent) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -72,20 +73,21 @@ export function uninstallNavigationTracking(): void {
  * Patch history methods
  */
 function patchHistoryMethods(): void {
-  if (typeof history === 'undefined') {
+  if (typeof window === 'undefined' || typeof window.history === 'undefined') {
     return;
   }
 
-  const originalPushState = history.pushState.bind(history);
-  const originalReplaceState = history.replaceState.bind(history);
+  const historyApi = window.history;
+  const originalPushState = historyApi.pushState.bind(historyApi);
+  const originalReplaceState = historyApi.replaceState.bind(historyApi);
 
-  history.pushState = function (...args) {
+  historyApi.pushState = function (...args) {
     const result = originalPushState(...args);
     handleNavigation();
     return result;
   };
 
-  history.replaceState = function (...args) {
+  historyApi.replaceState = function (...args) {
     const result = originalReplaceState(...args);
     handleNavigation();
     return result;

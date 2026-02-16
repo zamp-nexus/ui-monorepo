@@ -6,9 +6,9 @@ import React from 'react';
 
 import { useTheme } from '../../theme';
 import { Checkbox } from '../checkbox';
-import { useCheckboxGroupContext } from './checkbox-group.context';
 import type { CheckboxGroupLabelProps } from './checkbox-group';
 import { checkboxGroupDefaultTheme } from './checkbox-group';
+import { useCheckboxGroupContext } from './checkbox-group.context';
 
 /**
  * CheckboxGroup.Label component
@@ -46,13 +46,14 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
   } = useCheckboxGroupContext();
 
   // Calculate select all state
-  const allSelected = allItemValues.length > 0 && allItemValues.every((v) => groupValue.includes(v));
+  const allSelected =
+    allItemValues.length > 0 && allItemValues.every((v) => groupValue.includes(v));
   const someSelected = allItemValues.some((v) => groupValue.includes(v));
   const isIndeterminate = someSelected && !allSelected;
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === 'indeterminate') return;
-    
+
     if (checked) {
       // Select all items
       const newValue = [...new Set([...groupValue, ...allItemValues])];
@@ -81,9 +82,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
           indeterminate={isIndeterminate}
           oiid={oiid ? `${oiid}__select-all` : undefined}
         />
-        <span className={theme.label?.({ size }) ?? ''}>
-          {children}
-        </span>
+        <span className={theme.label?.({ size }) ?? ''}>{children}</span>
       </label>
     );
   }
@@ -94,9 +93,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
       data-oiid={oiid}
       data-slot="label"
     >
-      <span className={theme.label?.({ size }) ?? ''}>
-        {children}
-      </span>
+      <span className={theme.label?.({ size }) ?? ''}>{children}</span>
     </div>
   );
 };

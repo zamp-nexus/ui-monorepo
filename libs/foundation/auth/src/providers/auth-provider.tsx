@@ -6,33 +6,23 @@
  * @module providers/auth-provider
  */
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  type ReactNode,
-} from 'react';
-import { AuthContext } from './auth-context';
-import { AuthInternalsContext } from './auth-internals-context';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
+import { AUTH_STATE, SESSION_STATE, type AuthStateType } from '../core/constants';
 import { AuthContainer, type AuthContainerDependencies } from '../core/container';
-import {
-  AUTH_STATE,
-  SESSION_STATE,
-  type AuthStateType,
-} from '../core/constants';
 import type {
   AuthConfig,
-  AuthState,
-  AuthUser,
-  AuthProviderProps,
   AuthContextValue,
   AuthInternals,
+  AuthProviderProps,
+  AuthState,
+  AuthUser,
   SessionStateChangeEvent,
-  UserRole,
   UserPermissions,
+  UserRole,
 } from '../core/types';
+import { AuthContext } from './auth-context';
+import { AuthInternalsContext } from './auth-internals-context';
 
 // =============================================================================
 // Auth Provider
@@ -177,7 +167,7 @@ export const AuthProvider = ({
         onAuthStateChangeRef.current(nextAuthState);
       }
     },
-    [] // Stable: reads all mutable state from refs
+    [], // Stable: reads all mutable state from refs
   );
 
   // ==========================================================================
@@ -262,60 +252,72 @@ export const AuthProvider = ({
   // Actions
   // ==========================================================================
 
-  const login = useCallback(async (returnTo?: string) => {
-    if (!deps) return;
+  const login = useCallback(
+    async (returnTo?: string) => {
+      if (!deps) return;
 
-    try {
-      const flow = await deps.flowService.createLoginFlow(returnTo);
+      try {
+        const flow = await deps.flowService.createLoginFlow(returnTo);
 
-      // In a SPA, we'd typically show a form. Here we redirect to Ory UI.
-      // This can be customized based on the app's needs.
-      if (flow.request_url) {
-        window.location.href = flow.request_url;
+        // In a SPA, we'd typically show a form. Here we redirect to Ory UI.
+        // This can be customized based on the app's needs.
+        if (flow.request_url) {
+          window.location.href = flow.request_url;
+        }
+      } catch (error) {
+        console.error('[AuthProvider] Login flow creation failed:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('[AuthProvider] Login flow creation failed:', error);
-      throw error;
-    }
-  }, [deps]);
+    },
+    [deps],
+  );
 
-  const register = useCallback(async (returnTo?: string) => {
-    if (!deps) return;
+  const register = useCallback(
+    async (returnTo?: string) => {
+      if (!deps) return;
 
-    try {
-      const flow = await deps.flowService.createRegistrationFlow(returnTo);
+      try {
+        const flow = await deps.flowService.createRegistrationFlow(returnTo);
 
-      if (flow.request_url) {
-        window.location.href = flow.request_url;
+        if (flow.request_url) {
+          window.location.href = flow.request_url;
+        }
+      } catch (error) {
+        console.error('[AuthProvider] Registration flow creation failed:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('[AuthProvider] Registration flow creation failed:', error);
-      throw error;
-    }
-  }, [deps]);
+    },
+    [deps],
+  );
 
-  const logout = useCallback(async (returnTo?: string) => {
-    if (!deps) return;
+  const logout = useCallback(
+    async (returnTo?: string) => {
+      if (!deps) return;
 
-    try {
-      await deps.sessionService.logout(returnTo);
-    } catch (error) {
-      console.error('[AuthProvider] Logout failed:', error);
-      throw error;
-    }
-  }, [deps]);
+      try {
+        await deps.sessionService.logout(returnTo);
+      } catch (error) {
+        console.error('[AuthProvider] Logout failed:', error);
+        throw error;
+      }
+    },
+    [deps],
+  );
 
-  const recoverPassword = useCallback(async (email: string) => {
-    if (!deps) return;
+  const recoverPassword = useCallback(
+    async (email: string) => {
+      if (!deps) return;
 
-    try {
-      const flow = await deps.flowService.createRecoveryFlow();
-      await deps.flowService.submitRecoveryFlow(flow.id, { email });
-    } catch (error) {
-      console.error('[AuthProvider] Password recovery failed:', error);
-      throw error;
-    }
-  }, [deps]);
+      try {
+        const flow = await deps.flowService.createRecoveryFlow();
+        await deps.flowService.submitRecoveryFlow(flow.id, { email });
+      } catch (error) {
+        console.error('[AuthProvider] Password recovery failed:', error);
+        throw error;
+      }
+    },
+    [deps],
+  );
 
   // ==========================================================================
   // Permission Checks
@@ -326,7 +328,7 @@ export const AuthProvider = ({
       if (!authState.user) return false;
       return authState.user.permissions[permission] === true;
     },
-    [authState.user]
+    [authState.user],
   );
 
   const hasRole = useCallback(
@@ -335,7 +337,7 @@ export const AuthProvider = ({
       const roles = Array.isArray(role) ? role : [role];
       return roles.includes(authState.user.role);
     },
-    [authState.user]
+    [authState.user],
   );
 
   const hasAnyRole = useCallback(
@@ -343,7 +345,7 @@ export const AuthProvider = ({
       if (!authState.user) return false;
       return roles.includes(authState.user.role);
     },
-    [authState.user]
+    [authState.user],
   );
 
   // ==========================================================================
@@ -392,7 +394,7 @@ export const AuthProvider = ({
       hasPermission,
       hasRole,
       hasAnyRole,
-    ]
+    ],
   );
 
   const internalsContextValue = useMemo<AuthInternals>(
@@ -403,7 +405,7 @@ export const AuthProvider = ({
       state: authState,
       config,
     }),
-    [deps?.facade, getAccessToken, reauthenticate, authState, config]
+    [deps?.facade, getAccessToken, reauthenticate, authState, config],
   );
 
   // ==========================================================================
@@ -418,9 +420,7 @@ export const AuthProvider = ({
   // Show error component on initialization error
   if (authState.state === AUTH_STATE.ERROR && authState.error && errorComponent) {
     const errorContent =
-      typeof errorComponent === 'function'
-        ? errorComponent(authState.error)
-        : errorComponent;
+      typeof errorComponent === 'function' ? errorComponent(authState.error) : errorComponent;
     return errorContent;
   }
 

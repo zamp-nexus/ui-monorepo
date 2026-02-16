@@ -7,9 +7,15 @@
  * @module types/pool
  */
 
-import type { QueryId, WorkerId, Milliseconds, Timestamp } from '@open-insights-web/foundation-data-model';
-import type { QueryResult } from './bridge';
+import type {
+  Milliseconds,
+  QueryId,
+  Timestamp,
+  WorkerId,
+} from '@open-insights-web/foundation-data-model';
+
 import type { PriorityLevel, QueryLockMode } from '../constants';
+import type { QueryResult } from './bridge';
 
 // =============================================================================
 // Query Types

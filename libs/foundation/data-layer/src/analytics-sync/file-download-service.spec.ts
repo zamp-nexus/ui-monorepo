@@ -1,14 +1,15 @@
 import {
-  FoundationError,
   FOUNDATION_ERROR_CODE,
+  FoundationError,
   OPFS_FILE_TYPE,
 } from '@open-insights-web/foundation-data-model';
 import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
+
 import {
   DownloadError,
   FileDownloadService,
-  type OpfsManagerOperations,
   type DownloadRetryConfig,
+  type OpfsManagerOperations,
 } from './file-download-service';
 
 // ---------------------------------------------------------------------------
@@ -108,19 +109,27 @@ describe('FileDownloadService', () => {
       await service.downloadFile(file);
 
       expect(mockAxios.get).toHaveBeenCalledOnce();
-      expect(mockAxios.get).toHaveBeenCalledWith(file.url, expect.objectContaining({
-        responseType: 'arraybuffer',
-      }));
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        file.url,
+        expect.objectContaining({
+          responseType: 'arraybuffer',
+        }),
+      );
     });
 
     it('calls onProgress during download', async () => {
       const buf = makeArrayBuffer();
-      mockAxios.get.mockImplementation((_url: string, config: { onDownloadProgress?: (e: { loaded: number; total: number }) => void }) => {
-        // Simulate progress events
-        config?.onDownloadProgress?.({ loaded: 256, total: 1024 });
-        config?.onDownloadProgress?.({ loaded: 1024, total: 1024 });
-        return Promise.resolve({ data: buf });
-      });
+      mockAxios.get.mockImplementation(
+        (
+          _url: string,
+          config: { onDownloadProgress?: (e: { loaded: number; total: number }) => void },
+        ) => {
+          // Simulate progress events
+          config?.onDownloadProgress?.({ loaded: 256, total: 1024 });
+          config?.onDownloadProgress?.({ loaded: 1024, total: 1024 });
+          return Promise.resolve({ data: buf });
+        },
+      );
 
       const onProgress = vi.fn();
       const file = makeFile({ size: 1024 });
@@ -248,8 +257,18 @@ describe('FileDownloadService', () => {
       mockAxios.get.mockResolvedValue({ data: buf });
 
       const files: DataSourceFileInfo[] = [
-        makeFile({ filename: 'a.parquet', url: 'https://cdn.example.com/a.parquet', size: 100, rowCount: 10 }),
-        makeFile({ filename: 'b.parquet', url: 'https://cdn.example.com/b.parquet', size: 200, rowCount: 20 }),
+        makeFile({
+          filename: 'a.parquet',
+          url: 'https://cdn.example.com/a.parquet',
+          size: 100,
+          rowCount: 10,
+        }),
+        makeFile({
+          filename: 'b.parquet',
+          url: 'https://cdn.example.com/b.parquet',
+          size: 200,
+          rowCount: 20,
+        }),
       ];
 
       await service.downloadAndSaveFiles('events', files);
@@ -296,13 +315,15 @@ describe('FileDownloadService', () => {
 
       // Final call should report completion
       const lastCall = onProgress.mock.calls[onProgress.mock.calls.length - 1][0];
-      expect(lastCall).toEqual(expect.objectContaining({
-        isDownloading: false,
-        progress: 100,
-        filesTotal: 1,
-        filesCompleted: 1,
-        currentFile: null,
-      }));
+      expect(lastCall).toEqual(
+        expect.objectContaining({
+          isDownloading: false,
+          progress: 100,
+          filesTotal: 1,
+          filesCompleted: 1,
+          currentFile: null,
+        }),
+      );
     });
 
     it('returns early for empty files array', async () => {

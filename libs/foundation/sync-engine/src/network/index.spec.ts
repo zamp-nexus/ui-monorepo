@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { NetworkStatusMonitor } from './index';
 
 const createFakeDatabase = () => ({

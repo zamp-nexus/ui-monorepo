@@ -2,7 +2,13 @@
   "name": "@open-insights-web/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint . --cache --cache-location .nx/cache/eslint",
+    "lint:fix": "eslint . --cache --cache-location .nx/cache/eslint --fix",
+    "lint:oxlint": "oxlint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
   "private": true,
   "dependencies": {
     "@base-ui/react": "^1.1.0",

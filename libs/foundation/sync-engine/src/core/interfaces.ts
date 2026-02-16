@@ -12,30 +12,30 @@
  */
 
 import type { QueryClient } from '@tanstack/react-query';
+import type { AxiosInstance } from 'axios';
 import type { ConvexReactClient } from 'convex/react';
+
 import type {
-  InsightsDatabase,
-} from '@open-insights-web/foundation-database';
-import type {
-  CreateMutationOptions,
-  MutationQueueEntry,
-  QueryKeyBase,
-  IdMapping,
-  ConflictStrategy,
-  MutationStatus,
   ConflictContext,
   ConflictResult,
-  QueueStats,
-  ProcessingResult,
-  SyncState,
-  NetworkStatus,
-  NetworkStatusListener,
-  CrossTabMessageType,
+  ConflictStrategy,
+  CreateMutationOptions,
   CrossTabMessage,
   CrossTabMessageHandler,
+  CrossTabMessageType,
+  IdMapping,
+  MutationQueueEntry,
+  MutationStatus,
+  NetworkStatus,
+  NetworkStatusListener,
+  ProcessingResult,
+  QueryKeyBase,
+  QueueStats,
   SyncEventListener,
+  SyncState,
 } from '@open-insights-web/foundation-data-model';
-import type { IDisposable, IAsyncDisposable } from '@open-insights-web/foundation-utils';
+import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+import type { IAsyncDisposable, IDisposable } from '@open-insights-web/foundation-utils';
 
 // ============================================================================
 // Network Monitor Interface
@@ -65,7 +65,7 @@ export interface INetworkMonitor extends IAsyncDisposable {
 
 /**
  * ID Mapping Store interface
- * 
+ *
  * Extracted from IQueueManager to follow Interface Segregation Principle.
  * Responsible for managing mappings between provisional (client-generated) IDs
  * and server-assigned IDs after mutations are synced.
@@ -87,7 +87,7 @@ export interface IIdMappingStore {
 
 /**
  * Core queue operations interface
- * 
+ *
  * Contains the primary queue management operations without ID mapping.
  * Use IQueueManager for the full interface including ID mapping.
  */
@@ -101,7 +101,11 @@ export interface IQueueOperations extends IDisposable {
   /** Get mutations by status */
   getByStatus(status: MutationStatus): Promise<MutationQueueEntry[]>;
   /** Update mutation status */
-  updateStatus(id: string, status: MutationStatus, updates?: Partial<MutationQueueEntry>): Promise<void>;
+  updateStatus(
+    id: string,
+    status: MutationStatus,
+    updates?: Partial<MutationQueueEntry>,
+  ): Promise<void>;
   /** Mark mutation as in progress */
   markInProgress(id: string): Promise<void>;
   /** Mark mutation as completed */
@@ -128,17 +132,17 @@ export interface IQueueOperations extends IDisposable {
 
 /**
  * Full queue manager interface
- * 
+ *
  * Combines queue operations with ID mapping functionality.
  * This is the interface typically used by consumers that need both capabilities.
- * 
+ *
  * @example
  * // If you only need ID mapping, use IIdMappingStore
  * function resolveIds(store: IIdMappingStore) { ... }
- * 
+ *
  * // If you only need queue operations, use IQueueOperations
  * function processQueue(queue: IQueueOperations) { ... }
- * 
+ *
  * // IQueueManager provides both for convenience
  * const manager: IQueueManager = new OfflineQueueManager();
  */
@@ -159,7 +163,12 @@ export interface IConflictResolver extends IDisposable {
   /** Resolve a conflict */
   resolve<T>(context: ConflictContext<T>): ConflictResult<T>;
   /** Check if there's a conflict */
-  hasConflict<T>(serverData: T, clientData: T, serverTimestamp: number, clientTimestamp: number): boolean;
+  hasConflict<T>(
+    serverData: T,
+    clientData: T,
+    serverTimestamp: number,
+    clientTimestamp: number,
+  ): boolean;
   /** Set strategy for a table */
   setTableStrategy(tableName: string, strategy: ConflictStrategy): void;
 }
@@ -187,7 +196,12 @@ export interface ICrossTabManager extends IDisposable {
   /** Invalidate queries across tabs */
   invalidateQueries(queryKeys: QueryKeyBase[]): void;
   /** Notify mutation completed */
-  notifyMutationCompleted(tableName: string, entityId: string, mutationId: string, data?: unknown): void;
+  notifyMutationCompleted(
+    tableName: string,
+    entityId: string,
+    mutationId: string,
+    data?: unknown,
+  ): void;
   /** Notify online */
   notifyOnline(): void;
   /** Notify offline */
@@ -250,6 +264,8 @@ export interface SyncEngineConfig {
   healthCheckUrl?: string;
   /** Health check interval */
   healthCheckInterval?: number;
+  /** Optional shared Axios instance for network health checks */
+  axiosInstance?: AxiosInstance;
   /** Enable debug logging */
   debug?: boolean;
 }

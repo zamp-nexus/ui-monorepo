@@ -2,10 +2,12 @@
  * Tests for OPFS metadata service.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { OPFS_FILE_TYPE } from '@open-insights-web/foundation-data-model';
-import { OpfsMetadataService } from './opfs-metadata';
+
 import type { DatabaseConfig } from '../core/config';
+import { OpfsMetadataService } from './opfs-metadata';
 
 describe('OpfsMetadataService', () => {
   it('should retrieve view definitions using fileType-indexed query path', async () => {

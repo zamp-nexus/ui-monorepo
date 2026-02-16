@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { isSameOrigin } from './is-same-origin';
 
 describe('isSameOrigin', () => {

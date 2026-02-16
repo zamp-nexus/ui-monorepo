@@ -100,7 +100,7 @@ export const calculateTotalSize = (tables: ReadonlyArray<DataSourceTableInfo>): 
 
 export const getTablesNeedingUpdate = (
   response: DataSourceResponse,
-  clientLoadTimes: Readonly<Record<string, number>>
+  clientLoadTimes: Readonly<Record<string, number>>,
 ): ReadonlyArray<DataSourceTableInfo> =>
   response.tables.filter((table) => {
     const clientLoadedAt = clientLoadTimes[table.name];

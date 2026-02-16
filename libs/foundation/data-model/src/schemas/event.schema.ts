@@ -4,7 +4,8 @@
  */
 
 import { z } from 'zod';
-import { TenantScopedSchema, DateRangeSchema } from './base.schema';
+
+import { DateRangeSchema, TenantScopedSchema } from './base.schema';
 
 /**
  * Event type enum - common analytics events
@@ -24,12 +25,7 @@ export const EventTypeSchema = z.enum([
 /**
  * Device type enum
  */
-export const DeviceTypeSchema = z.enum([
-  'desktop',
-  'mobile',
-  'tablet',
-  'unknown',
-]);
+export const DeviceTypeSchema = z.enum(['desktop', 'mobile', 'tablet', 'unknown']);
 
 /**
  * Browser info schema
@@ -47,10 +43,12 @@ export const DeviceInfoSchema = z.object({
   type: DeviceTypeSchema,
   os: z.string().optional(),
   osVersion: z.string().optional(),
-  screen: z.object({
-    width: z.number().int().optional(),
-    height: z.number().int().optional(),
-  }).optional(),
+  screen: z
+    .object({
+      width: z.number().int().optional(),
+      height: z.number().int().optional(),
+    })
+    .optional(),
 });
 
 /**

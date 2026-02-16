@@ -40,11 +40,11 @@ export interface ContrastOptions {
 
 /**
  * WCAG 2.1 contrast ratio requirements
- * 
+ *
  * AA Level:
  * - Normal text: 4.5:1
  * - Large text (>= 18pt or >= 14pt bold): 3:1
- * 
+ *
  * AAA Level:
  * - Normal text: 7:1
  * - Large text: 4.5:1
@@ -57,16 +57,14 @@ const CONTRAST_REQUIREMENTS: Record<WCAGLevel, { normal: number; large: number }
 /**
  * Calculates the relative luminance of an RGB color
  * Per WCAG 2.1 definition: https://www.w3.org/WAI/GL/wiki/Relative_luminance
- * 
+ *
  * @param rgb - RGB color object
  * @returns Relative luminance value (0-1)
  */
 export function getRelativeLuminance(rgb: RGBColor): number {
   const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((channel) => {
     const sRGB = channel / 255;
-    return sRGB <= 0.03928
-      ? sRGB / 12.92
-      : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
   });
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -74,7 +72,7 @@ export function getRelativeLuminance(rgb: RGBColor): number {
 
 /**
  * Calculates the relative luminance from HSL color
- * 
+ *
  * @param hsl - HSL color object
  * @returns Relative luminance value (0-1)
  */
@@ -85,11 +83,11 @@ export function getRelativeLuminanceFromHSL(hsl: HSLColor): number {
 /**
  * Calculates the contrast ratio between two colors
  * Per WCAG 2.1: https://www.w3.org/WAI/GL/wiki/Contrast_ratio
- * 
+ *
  * @param color1 - First HSL color
  * @param color2 - Second HSL color
  * @returns Contrast ratio (1:1 to 21:1)
- * 
+ *
  * @example
  * const ratio = calculateContrastRatio(
  *   { h: 228, s: 6, l: 94 },  // Light text
@@ -97,10 +95,7 @@ export function getRelativeLuminanceFromHSL(hsl: HSLColor): number {
  * );
  * // ratio ≈ 12.5
  */
-export function calculateContrastRatio(
-  color1: HSLColor,
-  color2: HSLColor
-): number {
+export function calculateContrastRatio(color1: HSLColor, color2: HSLColor): number {
   const lum1 = getRelativeLuminanceFromHSL(color1);
   const lum2 = getRelativeLuminanceFromHSL(color2);
 
@@ -112,12 +107,12 @@ export function calculateContrastRatio(
 
 /**
  * Validates if a foreground/background color combination meets WCAG requirements
- * 
+ *
  * @param foreground - Foreground (text) HSL color
  * @param background - Background HSL color
  * @param options - Validation options
  * @returns ContrastResult with pass/fail and details
- * 
+ *
  * @example
  * // Validate AA compliance for normal text
  * const result = validateContrast(
@@ -125,7 +120,7 @@ export function calculateContrastRatio(
  *   { h: 228, s: 6, l: 12 },
  *   { level: 'AA' }
  * );
- * 
+ *
  * if (result.passes) {
  *   console.log(`Ratio ${result.ratio.toFixed(2)}:1 passes AA`);
  * }
@@ -133,7 +128,7 @@ export function calculateContrastRatio(
 export function validateContrast(
   foreground: HSLColor,
   background: HSLColor,
-  options?: ContrastOptions
+  options?: ContrastOptions,
 ): ContrastResult {
   const { level = 'AA', isLargeText = false } = options ?? {};
 
@@ -152,7 +147,7 @@ export function validateContrast(
 
 /**
  * Finds the minimum lightness adjustment needed to meet contrast requirements
- * 
+ *
  * @param foreground - Foreground HSL color
  * @param background - Background HSL color
  * @param options - Validation options
@@ -161,7 +156,7 @@ export function validateContrast(
 export function suggestLightnessAdjustment(
   foreground: HSLColor,
   background: HSLColor,
-  options?: ContrastOptions
+  options?: ContrastOptions,
 ): number {
   const result = validateContrast(foreground, background, options);
 
@@ -182,15 +177,9 @@ export function suggestLightnessAdjustment(
 
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
-    const testL = shouldBeLighter
-      ? foreground.l + mid
-      : foreground.l - mid;
+    const testL = shouldBeLighter ? foreground.l + mid : foreground.l - mid;
 
-    const testResult = validateContrast(
-      { ...foreground, l: testL },
-      background,
-      options
-    );
+    const testResult = validateContrast({ ...foreground, l: testL }, background, options);
 
     if (testResult.passes) {
       adjustment = shouldBeLighter ? mid : -mid;
@@ -205,7 +194,7 @@ export function suggestLightnessAdjustment(
 
 /**
  * Batch validates multiple foreground colors against a background
- * 
+ *
  * @param foregrounds - Array of foreground HSL colors with identifiers
  * @param background - Background HSL color
  * @param options - Validation options
@@ -214,7 +203,7 @@ export function suggestLightnessAdjustment(
 export function batchValidateContrast(
   foregrounds: Array<{ id: string; color: HSLColor }>,
   background: HSLColor,
-  options?: ContrastOptions
+  options?: ContrastOptions,
 ): Map<string, ContrastResult> {
   const results = new Map<string, ContrastResult>();
 
@@ -228,7 +217,7 @@ export function batchValidateContrast(
 /**
  * Checks if a color is considered "light" based on luminance
  * Useful for determining appropriate text color
- * 
+ *
  * @param hsl - HSL color to check
  * @param threshold - Luminance threshold (default: 0.5)
  * @returns true if color is light
@@ -239,12 +228,10 @@ export function isLightColor(hsl: HSLColor, threshold = 0.5): boolean {
 
 /**
  * Determines the best text color (black or white) for a given background
- * 
+ *
  * @param background - Background HSL color
  * @returns 'light' for white text, 'dark' for black text
  */
-export function getOptimalTextColor(
-  background: HSLColor
-): 'light' | 'dark' {
+export function getOptimalTextColor(background: HSLColor): 'light' | 'dark' {
   return isLightColor(background) ? 'dark' : 'light';
 }

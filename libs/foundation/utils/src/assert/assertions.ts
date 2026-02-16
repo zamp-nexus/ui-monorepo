@@ -24,10 +24,7 @@
  * console.log(value.toUpperCase());
  * ```
  */
-export function assert(
-  condition: unknown,
-  message: string
-): asserts condition {
+export function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`);
   }
@@ -50,10 +47,7 @@ export function assert(
  * // definedElement is now HTMLElement, not HTMLElement | null
  * ```
  */
-export const assertDefined = <T>(
-  value: T | null | undefined,
-  name: string
-): T => {
+export const assertDefined = <T>(value: T | null | undefined, name: string): T => {
   if (value === null || value === undefined) {
     throw new Error(`${name} is required but was ${value}`);
   }
@@ -70,10 +64,7 @@ export const assertDefined = <T>(
  * @returns The value if not null
  * @throws Error if value is null
  */
-export const assertNotNull = <T>(
-  value: T | null,
-  name: string
-): T => {
+export const assertNotNull = <T>(value: T | null, name: string): T => {
   if (value === null) {
     throw new Error(`${name} must not be null`);
   }
@@ -99,7 +90,7 @@ export const assertNotNull = <T>(
 export const assertType = <T>(
   value: unknown,
   guard: (v: unknown) => v is T,
-  typeName: string
+  typeName: string,
 ): T => {
   if (!guard(value)) {
     throw new Error(`Expected ${typeName} but got ${typeof value}`);
@@ -131,13 +122,8 @@ export const assertType = <T>(
  * }
  * ```
  */
-export const assertNever = (
-  value: never,
-  message?: string
-): never => {
-  throw new Error(
-    message ?? `Unexpected value: ${JSON.stringify(value)}`
-  );
+export const assertNever = (value: never, message?: string): never => {
+  throw new Error(message ?? `Unexpected value: ${JSON.stringify(value)}`);
 };
 
 /**
@@ -148,10 +134,7 @@ export const assertNever = (
  * @returns The array if not empty
  * @throws Error if array is empty
  */
-export const assertNonEmpty = <T>(
-  array: T[],
-  name: string
-): T[] => {
+export const assertNonEmpty = <T>(array: T[], name: string): T[] => {
   if (array.length === 0) {
     throw new Error(`${name} must not be empty`);
   }
@@ -168,12 +151,7 @@ export const assertNonEmpty = <T>(
  * @returns The value if within range
  * @throws Error if value is outside range
  */
-export const assertInRange = (
-  value: number,
-  min: number,
-  max: number,
-  name: string
-): number => {
+export const assertInRange = (value: number, min: number, max: number, name: string): number => {
   if (value < min || value > max) {
     throw new Error(`${name} must be between ${min} and ${max}, got ${value}`);
   }

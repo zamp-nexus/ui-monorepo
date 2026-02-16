@@ -3,8 +3,8 @@
  * @module tables/opfs-metadata
  */
 
-import { topologicalSort, hasCircularDependency } from '@open-insights-web/foundation-utils';
 import { OPFS_FILE_TYPE, type OpfsFileType } from '@open-insights-web/foundation-data-model';
+import { hasCircularDependency, topologicalSort } from '@open-insights-web/foundation-utils';
 
 export { OPFS_FILE_TYPE };
 
@@ -66,7 +66,7 @@ export interface CreateOpfsMetadataOptions {
  */
 export const createOpfsMetadata = (
   path: string,
-  options: CreateOpfsMetadataOptions
+  options: CreateOpfsMetadataOptions,
 ): OpfsMetadataEntry => {
   return {
     path,
@@ -124,14 +124,12 @@ export interface OpfsMetadataOperations {
  * Uses topologicalSort from foundation-utils for consistent implementation
  * across the codebase.
  */
-export const sortByDependencies = (
-  files: OpfsMetadataEntry[]
-): OpfsMetadataEntry[] => {
+export const sortByDependencies = (files: OpfsMetadataEntry[]): OpfsMetadataEntry[] => {
   // Check for circular dependencies first
   const hasCycle = hasCircularDependency(
     files,
     (f) => f.path,
-    (f) => f.dependencies ?? []
+    (f) => f.dependencies ?? [],
   );
 
   if (hasCycle) {
@@ -142,6 +140,6 @@ export const sortByDependencies = (
   return topologicalSort(
     files,
     (f) => f.path,
-    (f) => f.dependencies ?? []
+    (f) => f.dependencies ?? [],
   );
 };

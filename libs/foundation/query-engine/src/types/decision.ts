@@ -6,10 +6,10 @@
  * @module types/decision
  */
 
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import type { Operation } from './operations';
 import type { Query } from './query';
 import type { AnalyticsFreshness } from './table';
-import { QUERY_ENGINE_PATHS } from '../internal/constants';
 
 /**
  * Canonical query-engine execution paths used by DecisionEngine.
@@ -247,8 +247,7 @@ export interface DecisionRule {
  */
 export const isExecutionPath = (value: unknown): value is ExecutionPath => {
   return (
-    typeof value === 'string' &&
-    Object.values(DECISION_PATHS).includes(value as ExecutionPath)
+    typeof value === 'string' && Object.values(DECISION_PATHS).includes(value as ExecutionPath)
   );
 };
 

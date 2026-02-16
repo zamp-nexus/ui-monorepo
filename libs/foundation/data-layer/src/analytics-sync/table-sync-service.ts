@@ -8,13 +8,15 @@
  */
 
 import type { ConvexReactClient } from 'convex/react';
-import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+
 import {
   isDataSourceResponse,
+  type DataSourceFileInfo,
   type DataSourceResponse,
   type DataSourceTableInfo,
-  type DataSourceFileInfo,
 } from '@open-insights-web/foundation-data-model';
+import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+
 import type { ConvexQueryReference } from '../core/types';
 
 /**
@@ -119,7 +121,7 @@ export class TableSyncService {
    * Get local metadata for multiple tables
    */
   getLocalMetadataForTables = async (
-    tables: ReadonlyArray<string>
+    tables: ReadonlyArray<string>,
   ): Promise<Map<string, LocalTableMetadata | undefined>> => {
     return this.database.getMany([...tables]);
   };
@@ -139,7 +141,7 @@ export class TableSyncService {
       this.logger.debug(
         `Table ${remote.name} needs update:`,
         `remote.lastIngestedAt=${remote.lastIngestedAt}`,
-        `> local.lastIngestedAt=${local.lastIngestedAt}`
+        `> local.lastIngestedAt=${local.lastIngestedAt}`,
       );
     }
 
@@ -151,7 +153,7 @@ export class TableSyncService {
    */
   getFilesToDownload = (
     remote: DataSourceTableInfo,
-    local: LocalTableMetadata | undefined
+    local: LocalTableMetadata | undefined,
   ): ReadonlyArray<DataSourceFileInfo> => {
     if (!local) {
       this.logger.debug(`Table ${remote.name}: downloading all ${remote.files.length} files`);
@@ -164,7 +166,7 @@ export class TableSyncService {
     });
 
     this.logger.debug(
-      `Table ${remote.name}: ${filesToDownload.length}/${remote.files.length} files need download`
+      `Table ${remote.name}: ${filesToDownload.length}/${remote.files.length} files need download`,
     );
 
     return filesToDownload;
@@ -175,7 +177,7 @@ export class TableSyncService {
    */
   analyzeUpdates = (
     response: DataSourceResponse,
-    localMetadata: Map<string, LocalTableMetadata | undefined>
+    localMetadata: Map<string, LocalTableMetadata | undefined>,
   ): TableUpdatePlan[] => {
     return response.tables
       .map((remoteTable): TableUpdatePlan => {

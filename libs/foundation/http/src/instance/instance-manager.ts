@@ -8,14 +8,11 @@
  */
 
 import type { AxiosInstance } from 'axios';
+
 import type { HttpClientConfig, ResolvedHttpConfig } from '../core/types';
+import { HttpConfigError, HttpNotInitializedError } from '../errors/http-errors';
+import { removeInterceptors, setupInterceptors, type InterceptorIds } from '../interceptors/setup';
 import { createConfiguredAxiosInstance } from './axios-factory';
-import {
-  setupInterceptors,
-  removeInterceptors,
-  type InterceptorIds,
-} from '../interceptors/setup';
-import { HttpNotInitializedError, HttpConfigError } from '../errors/http-errors';
 
 // =============================================================================
 // Types
@@ -66,10 +63,9 @@ class HttpInstanceManager {
       throw new HttpConfigError('baseUrl is required');
     }
 
-    const { instance, resolvedConfig, getAccessToken } =
-      createConfiguredAxiosInstance(config, {
-        getAccessToken: options?.getAccessToken,
-      });
+    const { instance, resolvedConfig, getAccessToken } = createConfiguredAxiosInstance(config, {
+      getAccessToken: options?.getAccessToken,
+    });
 
     const interceptorIds = setupInterceptors(instance, resolvedConfig, {
       getAccessToken,
@@ -91,8 +87,7 @@ class HttpInstanceManager {
     return managed;
   }
 
-  getInstance = (key: string): ManagedInstance | undefined =>
-    this.instances.get(key);
+  getInstance = (key: string): ManagedInstance | undefined => this.instances.get(key);
 
   getDefaultInstance(): ManagedInstance {
     if (this.defaultKey === null) {
@@ -107,8 +102,7 @@ class HttpInstanceManager {
     return instance;
   }
 
-  hasInstance = (key: string): boolean =>
-    this.instances.has(key);
+  hasInstance = (key: string): boolean => this.instances.has(key);
 
   hasDefaultInstance = (): boolean =>
     this.defaultKey !== null && this.instances.has(this.defaultKey);
@@ -143,8 +137,7 @@ class HttpInstanceManager {
     this.defaultKey = key;
   }
 
-  getInstanceKeys = (): string[] =>
-    Array.from(this.instances.keys());
+  getInstanceKeys = (): string[] => Array.from(this.instances.keys());
 
   /**
    * Removes all managed instances, ejecting every interceptor.

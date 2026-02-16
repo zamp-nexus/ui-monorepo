@@ -33,11 +33,7 @@ export const ToastSlots = ['start', 'end', 'close'] as const;
  * Toast's own props
  */
 export interface ToastOwnProps
-  extends OIComponentOwnProps<
-    typeof ToastVariants,
-    typeof ToastModifiers,
-    typeof ToastSlots
-  > {
+  extends OIComponentOwnProps<typeof ToastVariants, typeof ToastModifiers, typeof ToastSlots> {
   /** Feedback variant */
   feedback?: (typeof ToastVariants.feedback)[number];
   /** Whether the toast can be closed */

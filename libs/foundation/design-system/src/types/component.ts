@@ -199,10 +199,9 @@ export type OIComponentProps<T extends React.ElementType = React.ElementType, TP
 /**
  * Type for component that supports polymorphism via `component` prop
  */
-export type OIPolymorphicComponent<
-  TDefaultElement extends React.ElementType,
-  TProps = object,
-> = <T extends React.ElementType = TDefaultElement>(
+export type OIPolymorphicComponent<TDefaultElement extends React.ElementType, TProps = object> = <
+  T extends React.ElementType = TDefaultElement,
+>(
   props: PolymorphicProps<T, TProps & OIDefaultProps>,
 ) => React.ReactNode;
 

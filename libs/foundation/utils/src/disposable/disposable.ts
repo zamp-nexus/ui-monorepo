@@ -195,10 +195,7 @@ export const createDisposable = (cleanup: () => void): IDisposable => {
 /**
  * Using pattern - ensures disposal after use
  */
-export const using = <T extends IDisposable, R>(
-  disposable: T,
-  fn: (resource: T) => R
-): R => {
+export const using = <T extends IDisposable, R>(disposable: T, fn: (resource: T) => R): R => {
   try {
     return fn(disposable);
   } finally {
@@ -211,7 +208,7 @@ export const using = <T extends IDisposable, R>(
  */
 export const usingAsync = async <T extends IAsyncDisposable, R>(
   disposable: T,
-  fn: (resource: T) => Promise<R>
+  fn: (resource: T) => Promise<R>,
 ): Promise<R> => {
   try {
     return await fn(disposable);

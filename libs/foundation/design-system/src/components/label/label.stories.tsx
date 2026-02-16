@@ -147,9 +147,7 @@ export const CustomRequiredIndicator: Story = {
     children: 'Username',
     htmlFor: 'username',
     required: true,
-    requiredIndicator: (
-      <span className="text-destructive text-xs">(required)</span>
-    ),
+    requiredIndicator: <span className="text-destructive text-xs">(required)</span>,
   },
 };
 
@@ -159,18 +157,10 @@ export const CustomRequiredIndicator: Story = {
 export const WithInput: Story = {
   render: () => (
     <div className="w-64 space-y-2">
-      <Label
-        htmlFor="email-input"
-        required
-        tooltip="We'll never share your email"
-      >
+      <Label htmlFor="email-input" required tooltip="We'll never share your email">
         Email Address
       </Label>
-      <Input
-        id="email-input"
-        type="email"
-        placeholder="you@example.com"
-      />
+      <Input id="email-input" type="email" placeholder="you@example.com" />
     </div>
   ),
 };
@@ -232,10 +222,7 @@ export const FormExample: Story = {
       </div>
 
       <div className="space-y-2">
-        <Label
-          htmlFor="phone"
-          description="Optional - for two-factor authentication"
-        >
+        <Label htmlFor="phone" description="Optional - for two-factor authentication">
           Phone Number
         </Label>
         <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" />

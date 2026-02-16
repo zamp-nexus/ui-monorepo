@@ -6,32 +6,30 @@
  * @module hooks/use-auth-flow
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import type {
   LoginFlow,
-  RegistrationFlow,
   RecoveryFlow,
-  VerificationFlow,
+  RegistrationFlow,
   SettingsFlow,
+  VerificationFlow,
 } from '@ory/client-fetch';
-import { useAuthInternals } from '../providers/auth-internals-context';
-import {
-  AUTH_FLOW_TYPE,
-  FLOW_STATE,
-  type AuthFlowType,
-} from '../core/constants';
+
+import { AUTH_FLOW_TYPE, FLOW_STATE, type AuthFlowType } from '../core/constants';
 import type {
-  OryFlow,
   FlowState,
+  LoginSubmission,
+  OryFlow,
+  RecoverySubmission,
+  RegistrationSubmission,
+  SettingsSubmission,
   UseAuthFlowOptions,
   UseAuthFlowResult,
-  LoginSubmission,
-  RegistrationSubmission,
-  RecoverySubmission,
   VerificationSubmission,
-  SettingsSubmission,
 } from '../core/types';
 import { FlowExpiredError } from '../errors/auth-errors';
+import { useAuthInternals } from '../providers/auth-internals-context';
 
 // =============================================================================
 // Type Helpers
@@ -92,7 +90,7 @@ type SubmissionTypeMap = {
  * ```
  */
 export const useAuthFlow = <T extends AuthFlowType>(
-  options: UseAuthFlowOptions<T>
+  options: UseAuthFlowOptions<T>,
 ): UseAuthFlowResult<FlowTypeMap[T]> => {
   const { type, autoCreate = false, returnTo } = options;
   const { facade } = useAuthInternals();
@@ -194,34 +192,25 @@ export const useAuthFlow = <T extends AuthFlowType>(
       try {
         switch (type) {
           case AUTH_FLOW_TYPE.LOGIN:
-            await facade.flow.submitLoginFlow(
-              flowState.flowId,
-              data as LoginSubmission
-            );
+            await facade.flow.submitLoginFlow(flowState.flowId, data as LoginSubmission);
             break;
           case AUTH_FLOW_TYPE.REGISTRATION:
             await facade.flow.submitRegistrationFlow(
               flowState.flowId,
-              data as RegistrationSubmission
+              data as RegistrationSubmission,
             );
             break;
           case AUTH_FLOW_TYPE.RECOVERY:
-            await facade.flow.submitRecoveryFlow(
-              flowState.flowId,
-              data as RecoverySubmission
-            );
+            await facade.flow.submitRecoveryFlow(flowState.flowId, data as RecoverySubmission);
             break;
           case AUTH_FLOW_TYPE.VERIFICATION:
             await facade.flow.submitVerificationFlow(
               flowState.flowId,
-              data as VerificationSubmission
+              data as VerificationSubmission,
             );
             break;
           case AUTH_FLOW_TYPE.SETTINGS:
-            await facade.flow.submitSettingsFlow(
-              flowState.flowId,
-              data as SettingsSubmission
-            );
+            await facade.flow.submitSettingsFlow(flowState.flowId, data as SettingsSubmission);
             break;
         }
 
@@ -248,7 +237,7 @@ export const useAuthFlow = <T extends AuthFlowType>(
         setIsSubmitting(false);
       }
     },
-    [facade, flowState.flowId, flowState.expiresAt, type]
+    [facade, flowState.flowId, flowState.expiresAt, type],
   );
 
   // ==========================================================================
@@ -291,7 +280,7 @@ export const useAuthFlow = <T extends AuthFlowType>(
       isLoading,
       isSubmitting,
     }),
-    [flowState, createFlow, submitFlow, resetFlow, isLoading, isSubmitting]
+    [flowState, createFlow, submitFlow, resetFlow, isLoading, isSubmitting],
   );
 };
 
@@ -308,9 +297,8 @@ export const useLoginFlow = (options?: Omit<UseAuthFlowOptions<'login'>, 'type'>
 /**
  * Manage registration flow
  */
-export const useRegistrationFlow = (
-  options?: Omit<UseAuthFlowOptions<'registration'>, 'type'>
-) => useAuthFlow({ ...options, type: AUTH_FLOW_TYPE.REGISTRATION });
+export const useRegistrationFlow = (options?: Omit<UseAuthFlowOptions<'registration'>, 'type'>) =>
+  useAuthFlow({ ...options, type: AUTH_FLOW_TYPE.REGISTRATION });
 
 /**
  * Manage recovery flow
@@ -321,9 +309,8 @@ export const useRecoveryFlow = (options?: Omit<UseAuthFlowOptions<'recovery'>, '
 /**
  * Manage verification flow
  */
-export const useVerificationFlow = (
-  options?: Omit<UseAuthFlowOptions<'verification'>, 'type'>
-) => useAuthFlow({ ...options, type: AUTH_FLOW_TYPE.VERIFICATION });
+export const useVerificationFlow = (options?: Omit<UseAuthFlowOptions<'verification'>, 'type'>) =>
+  useAuthFlow({ ...options, type: AUTH_FLOW_TYPE.VERIFICATION });
 
 /**
  * Manage settings flow

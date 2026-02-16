@@ -1,12 +1,12 @@
 /**
  * Spacing Primitives - Tier 1 Tokens
  * Phi-based (√2) spacing scale for visual harmony
- * 
+ *
  * Design rationale:
  * - Uses √2 (≈1.414) as the ratio for mathematically harmonious spacing
  * - Provides both standard increments and phi-based scale
  * - Supports dynamic spacing that scales with typography
- * 
+ *
  * @module tokens/primitives/spacing
  */
 
@@ -29,14 +29,14 @@ export const PHI_POWERS = {
   i4: Math.pow(PHI, -4), // ≈ 0.25
   i3: Math.pow(PHI, -3), // ≈ 0.354
   i2: Math.pow(PHI, -2), // ≈ 0.5
-  i1: PHI_INVERSE,       // ≈ 0.707
-  0: 1,                  // 1 (base)
-  1: PHI,                // ≈ 1.414
-  2: Math.pow(PHI, 2),   // ≈ 2
-  3: Math.pow(PHI, 3),   // ≈ 2.828
-  4: Math.pow(PHI, 4),   // ≈ 4
-  5: Math.pow(PHI, 5),   // ≈ 5.657
-  6: Math.pow(PHI, 6),   // ≈ 8
+  i1: PHI_INVERSE, // ≈ 0.707
+  0: 1, // 1 (base)
+  1: PHI, // ≈ 1.414
+  2: Math.pow(PHI, 2), // ≈ 2
+  3: Math.pow(PHI, 3), // ≈ 2.828
+  4: Math.pow(PHI, 4), // ≈ 4
+  5: Math.pow(PHI, 5), // ≈ 5.657
+  6: Math.pow(PHI, 6), // ≈ 8
 } as const;
 
 /**
@@ -45,7 +45,7 @@ export const PHI_POWERS = {
 function createSpacingToken(
   value: string,
   numericValue: number,
-  description?: string
+  description?: string,
 ): DimensionToken {
   return {
     $type: 'dimension',
@@ -58,7 +58,7 @@ function createSpacingToken(
 
 /**
  * Spacing scale using phi ratios
- * 
+ *
  * Scale progression (base = 1rem = 16px):
  * - 5xs: 0.125rem (2px)   - Hairline gaps
  * - 4xs: 0.177rem (2.8px) - Micro spacing
@@ -77,26 +77,26 @@ function createSpacingToken(
 export const spacingPrimitives = {
   /** Zero spacing */
   '0': createSpacingToken('0', 0, 'No spacing'),
-  
+
   /** 1px spacing */
-  'px': createSpacingToken('1px', 0.0625, '1 pixel'),
-  
+  px: createSpacingToken('1px', 0.0625, '1 pixel'),
+
   /** Phi-based scale (negative powers) */
   '5xs': createSpacingToken('0.125rem', 0.125, 'Extra extra extra extra small (2px)'),
   '4xs': createSpacingToken('0.177rem', 0.177, 'Extra extra extra small (2.8px)'),
   '3xs': createSpacingToken('0.25rem', 0.25, 'Extra extra small (4px)'),
   '2xs': createSpacingToken('0.354rem', 0.354, 'Extra small (5.7px)'),
-  'xs': createSpacingToken('0.5rem', 0.5, 'Small (8px)'),
-  
+  xs: createSpacingToken('0.5rem', 0.5, 'Small (8px)'),
+
   /** Transition spacing */
-  'sm': createSpacingToken('0.707rem', 0.707, 'Small-medium (11px)'),
-  
+  sm: createSpacingToken('0.707rem', 0.707, 'Small-medium (11px)'),
+
   /** Base spacing */
-  'base': createSpacingToken('1rem', 1, 'Base spacing (16px)'),
-  
+  base: createSpacingToken('1rem', 1, 'Base spacing (16px)'),
+
   /** Phi-based scale (positive powers) */
-  'lg': createSpacingToken('1.414rem', 1.414, 'Large (23px)'),
-  'xl': createSpacingToken('2rem', 2, 'Extra large (32px)'),
+  lg: createSpacingToken('1.414rem', 1.414, 'Large (23px)'),
+  xl: createSpacingToken('2rem', 2, 'Extra large (32px)'),
   '2xl': createSpacingToken('2.828rem', 2.828, 'Extra extra large (45px)'),
   '3xl': createSpacingToken('4rem', 4, 'Extra extra extra large (64px)'),
   '4xl': createSpacingToken('5.657rem', 5.657, 'Huge (90px)'),
@@ -138,15 +138,15 @@ export const standardSpacing = {
  * Follows a similar scale pattern for consistency
  */
 export const radiusPrimitives = {
-  'none': createSpacingToken('0', 0, 'No radius'),
-  'sm': createSpacingToken('0.125rem', 0.125, 'Small radius (2px)'),
-  'default': createSpacingToken('0.25rem', 0.25, 'Default radius (4px)'),
-  'md': createSpacingToken('0.375rem', 0.375, 'Medium radius (6px)'),
-  'lg': createSpacingToken('0.5rem', 0.5, 'Large radius (8px)'),
-  'xl': createSpacingToken('0.75rem', 0.75, 'Extra large radius (12px)'),
+  none: createSpacingToken('0', 0, 'No radius'),
+  sm: createSpacingToken('0.125rem', 0.125, 'Small radius (2px)'),
+  default: createSpacingToken('0.25rem', 0.25, 'Default radius (4px)'),
+  md: createSpacingToken('0.375rem', 0.375, 'Medium radius (6px)'),
+  lg: createSpacingToken('0.5rem', 0.5, 'Large radius (8px)'),
+  xl: createSpacingToken('0.75rem', 0.75, 'Extra large radius (12px)'),
   '2xl': createSpacingToken('1rem', 1, 'Extra extra large radius (16px)'),
   '3xl': createSpacingToken('1.5rem', 1.5, 'Very large radius (24px)'),
-  'full': {
+  full: {
     $type: 'dimension',
     $value: '9999px',
     $numericValue: 9999,
@@ -187,14 +187,11 @@ export function radiusVar(key: RadiusKey): string {
 /**
  * Calculates dynamic spacing based on a multiplier
  * Useful for component-specific spacing that scales with the system
- * 
+ *
  * @param multiplier - Phi power to use
  * @param base - Base value in rem (default: 1)
  * @returns Spacing value in rem
  */
-export function calculatePhiSpacing(
-  multiplier: keyof typeof PHI_POWERS,
-  base = 1
-): number {
+export function calculatePhiSpacing(multiplier: keyof typeof PHI_POWERS, base = 1): number {
   return Number((base * PHI_POWERS[multiplier]).toFixed(4));
 }

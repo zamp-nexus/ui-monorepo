@@ -156,7 +156,7 @@ export interface MenuGroupLabelProps extends OIDefaultProps {
 /**
  * Menu Separator props
  */
-export type MenuSeparatorProps = OIDefaultProps
+export type MenuSeparatorProps = OIDefaultProps;
 
 /**
  * Menu Sub props

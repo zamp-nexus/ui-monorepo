@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
+
 import { render } from '@testing-library/react';
 
+import type { OIComponentModifiers, OIComponentSlot, OIComponentVariants } from '../types';
 import { slotOiid } from '../utils/oiid';
 import { normalizeSlot } from '../utils/slot-helpers';
-import type { OIComponentModifiers, OIComponentSlot, OIComponentVariants } from '../types';
 import { ensureVariantsStructure, testModifiers, testVariants } from './describe-component';
 import { randomString } from './random';
 import { getTestingComponentState } from './test-state';
@@ -150,4 +151,3 @@ export function describeSlot(
     }
   });
 }
-

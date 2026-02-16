@@ -7,7 +7,8 @@
  * @module utils/optimistic-updates
  */
 
-import type { QueryKey, QueryClient } from '@tanstack/react-query';
+import type { QueryClient, QueryKey } from '@tanstack/react-query';
+
 import type { WithId } from '@open-insights-web/foundation-data-model';
 import { matchesEntityId } from '@open-insights-web/foundation-data-model';
 
@@ -41,7 +42,7 @@ export interface OptimisticContext<T> {
  */
 export const createOptimisticContext = <T>(
   queryClient: QueryClient,
-  queryKey: QueryKey
+  queryKey: QueryKey,
 ): OptimisticContext<T> => ({
   queryKey,
   previousData: queryClient.getQueryData<T>(queryKey),
@@ -66,7 +67,7 @@ export const createOptimisticContext = <T>(
  */
 export const rollbackOptimisticUpdate = <T>(
   queryClient: QueryClient,
-  context: OptimisticContext<T>
+  context: OptimisticContext<T>,
 ): void => {
   if (context.previousData !== undefined) {
     queryClient.setQueryData(context.queryKey, context.previousData);
@@ -98,7 +99,7 @@ export const rollbackOptimisticUpdate = <T>(
 export const optimisticAddToList = <T extends WithId>(
   queryClient: QueryClient,
   queryKey: QueryKey,
-  item: T
+  item: T,
 ): OptimisticContext<T[]> => {
   const context = createOptimisticContext<T[]>(queryClient, queryKey);
 
@@ -129,7 +130,7 @@ export const optimisticAddToList = <T extends WithId>(
 export const optimisticRemoveFromList = <T extends WithId>(
   queryClient: QueryClient,
   queryKey: QueryKey,
-  entityId: string
+  entityId: string,
 ): OptimisticContext<T[]> => {
   const context = createOptimisticContext<T[]>(queryClient, queryKey);
 
@@ -167,15 +168,13 @@ export const optimisticUpdateInList = <T extends WithId>(
   queryClient: QueryClient,
   queryKey: QueryKey,
   entityId: string,
-  updater: (item: T) => T
+  updater: (item: T) => T,
 ): OptimisticContext<T[]> => {
   const context = createOptimisticContext<T[]>(queryClient, queryKey);
 
   queryClient.setQueryData<T[]>(queryKey, (old) => {
     if (!old) return old;
-    return old.map((item) =>
-      matchesEntityId(item, entityId) ? updater(item) : item
-    );
+    return old.map((item) => (matchesEntityId(item, entityId) ? updater(item) : item));
   });
 
   return context;
@@ -208,7 +207,7 @@ export const optimisticUpdateInList = <T extends WithId>(
 export const optimisticUpdateItem = <T>(
   queryClient: QueryClient,
   queryKey: QueryKey,
-  updater: (item: T | undefined) => T
+  updater: (item: T | undefined) => T,
 ): OptimisticContext<T> => {
   const context = createOptimisticContext<T>(queryClient, queryKey);
 
@@ -238,14 +237,12 @@ export const replaceProvisionalId = <T extends WithId>(
   queryClient: QueryClient,
   queryKey: QueryKey,
   provisionalId: string,
-  serverId: string
+  serverId: string,
 ): void => {
   queryClient.setQueryData<T[]>(queryKey, (old) => {
     if (!old) return old;
     return old.map((item) =>
-      matchesEntityId(item, provisionalId)
-        ? { ...item, id: serverId, _id: serverId }
-        : item
+      matchesEntityId(item, provisionalId) ? { ...item, id: serverId, _id: serverId } : item,
     );
   });
 };

@@ -17,9 +17,4 @@ export type {
   ToastBodyProps,
   ToastActionsProps,
 } from './toast';
-export {
-  ToastVariants,
-  ToastModifiers,
-  ToastSlots,
-  toastDefaultTheme,
-} from './toast';
+export { ToastVariants, ToastModifiers, ToastSlots, toastDefaultTheme } from './toast';

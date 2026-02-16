@@ -34,11 +34,7 @@ export {
   filterByCategory,
   filterByCode,
 } from './error-callback';
-export type {
-  ErrorInfo,
-  FoundationErrorCallback,
-  LegacyErrorCallback,
-} from './error-callback';
+export type { ErrorInfo, FoundationErrorCallback, LegacyErrorCallback } from './error-callback';
 
 // Shared query execution errors (used across bridge/query-engine/data-layer)
 export {

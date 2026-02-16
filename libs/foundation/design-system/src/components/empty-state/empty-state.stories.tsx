@@ -87,9 +87,7 @@ export const Small: Story = {
     <div className="w-64 border rounded-lg">
       <EmptyState size="sm" icon={<Icon name="file" />}>
         <EmptyState.Title>No files</EmptyState.Title>
-        <EmptyState.Description>
-          Upload files to get started.
-        </EmptyState.Description>
+        <EmptyState.Description>Upload files to get started.</EmptyState.Description>
       </EmptyState>
     </div>
   ),
@@ -103,8 +101,8 @@ export const Large: Story = {
     <EmptyState size="lg" icon={<Icon name="users" />}>
       <EmptyState.Title>No team members</EmptyState.Title>
       <EmptyState.Description>
-        Invite your team members to collaborate on this project.
-        They'll be able to view, edit, and contribute to your work.
+        Invite your team members to collaborate on this project. They'll be able to view, edit, and
+        contribute to your work.
       </EmptyState.Description>
       <EmptyState.Actions>
         <Button size="lg">Invite team members</Button>

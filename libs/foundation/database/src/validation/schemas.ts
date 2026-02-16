@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+
 import {
   CONFLICT_STRATEGY,
   MUTATION_STATUS,
@@ -108,7 +109,7 @@ const opfsFileSchemaSchema = z.object({
       name: nonEmptyStringSchema,
       type: nonEmptyStringSchema,
       nullable: z.boolean(),
-    })
+    }),
   ),
 });
 
@@ -162,7 +163,7 @@ export const duckDBViewsValueSchema = z.object({
       name: nonEmptyStringSchema,
       sql: nonEmptyStringSchema,
       dependencies: z.array(z.string()),
-    })
+    }),
   ),
   lastUpdatedAt: nonNegativeTimestampSchema,
 });
@@ -199,7 +200,7 @@ export class ZodValidationError extends Error {
 /**
  * Create a type-safe validator from a Zod schema
  * Returns a Result type for explicit error handling
- * 
+ *
  * @example
  * ```typescript
  * const validator = createValidator(mySchema);
@@ -212,7 +213,7 @@ export class ZodValidationError extends Error {
  * ```
  */
 export const createValidator = <T>(
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): ((data: unknown) => Result<T, ZodValidationError>) => {
   return (data: unknown): Result<T, ZodValidationError> => {
     const result = schema.safeParse(data);

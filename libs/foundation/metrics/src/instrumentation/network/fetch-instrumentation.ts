@@ -3,19 +3,20 @@
  * @module instrumentation/network/fetch-instrumentation
  */
 
-import { SpanKind, SpanStatusCode, context, propagation } from '@opentelemetry/api';
+import { context, propagation, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+
 import type { HttpMethod } from '@open-insights-web/foundation-data-model';
 import {
-  sanitizeUrl,
   extractRoute,
+  sanitizeUrl,
   shouldIgnoreUrl,
   shouldPropagateTraceContext,
 } from '@open-insights-web/foundation-utils';
 
-import type { NetworkSignalConfig, NetworkRequest } from '../../types';
-import { getTracer, getMeter } from '../../core/otel-provider';
 import { getSpanAttributes } from '../../core/context-manager';
-import { toHttpMethod, recordNetworkMetrics } from '../../utils/http-utils';
+import { getMeter, getTracer } from '../../core/otel-provider';
+import type { NetworkRequest, NetworkSignalConfig } from '../../types';
+import { recordNetworkMetrics, toHttpMethod } from '../../utils/http-utils';
 
 /**
  * Fetch instrumentation state
@@ -231,5 +232,4 @@ export const uninstallFetchInstrumentation = (): void => {
 /**
  * Check if fetch instrumentation is installed
  */
-export const isFetchInstrumentationInstalled = (): boolean =>
-  state?.isInstalled ?? false;
+export const isFetchInstrumentationInstalled = (): boolean => state?.isInstalled ?? false;

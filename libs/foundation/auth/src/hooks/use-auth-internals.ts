@@ -7,7 +7,4 @@
  */
 
 // Re-export from providers for convenience
-export {
-  useAuthInternals,
-  useRequiredAuthInternals,
-} from '../providers/auth-internals-context';
+export { useAuthInternals, useRequiredAuthInternals } from '../providers/auth-internals-context';

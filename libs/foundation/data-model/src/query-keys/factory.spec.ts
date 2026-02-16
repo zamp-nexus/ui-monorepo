@@ -5,20 +5,21 @@
  * metadata extraction, and pre-defined factories.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  createQueryKeys,
   createAnalyticsQueryKey,
+  createQueryKeys,
+  dashboardKeys,
+  eventKeys,
   extractQueryKeyMeta,
   hashQueryKey,
   matchesQueryKey,
-  userKeys,
-  eventKeys,
+  projectKeys,
+  reportKeys,
   sessionKeys,
   tenantKeys,
-  projectKeys,
-  dashboardKeys,
-  reportKeys,
+  userKeys,
 } from './factory';
 
 // =============================================================================

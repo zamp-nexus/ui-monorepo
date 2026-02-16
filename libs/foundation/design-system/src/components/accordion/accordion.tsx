@@ -7,12 +7,12 @@ import { useMemo } from 'react';
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 
 import { useTheme } from '../../theme';
+import type { AccordionComponent, AccordionContextValue } from './accordion';
+import { accordionDefaultTheme } from './accordion';
 import { AccordionContent } from './accordion-content';
 import { AccordionItem } from './accordion-item';
 import { AccordionTrigger } from './accordion-trigger';
 import { AccordionContext } from './accordion.context';
-import type { AccordionComponent, AccordionContextValue } from './accordion';
-import { accordionDefaultTheme } from './accordion';
 
 /**
  * Accordion component

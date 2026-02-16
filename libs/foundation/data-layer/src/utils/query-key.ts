@@ -9,6 +9,7 @@
  */
 
 import type { QueryKey } from '@tanstack/react-query';
+
 import { DATA_SOURCE, type DataSource } from '@open-insights-web/foundation-data-model';
 
 /**
@@ -26,11 +27,7 @@ import { DATA_SOURCE, type DataSource } from '@open-insights-web/foundation-data
  * buildQueryKey('users', undefined, { limit: 10 });
  * ```
  */
-export const buildQueryKey = (
-  table: string,
-  entityId?: string,
-  args?: unknown
-): QueryKey => {
+export const buildQueryKey = (table: string, entityId?: string, args?: unknown): QueryKey => {
   const key: unknown[] = [table];
   if (entityId) key.push(entityId);
   if (args) key.push(args);
@@ -48,7 +45,7 @@ export const buildQueryKey = (
 export const getDataSource = (
   hasData: boolean,
   isOnline: boolean,
-  isFetching: boolean
+  isFetching: boolean,
 ): DataSource => {
   if (!hasData) return DATA_SOURCE.NONE;
   if (!isOnline) return DATA_SOURCE.CACHE;

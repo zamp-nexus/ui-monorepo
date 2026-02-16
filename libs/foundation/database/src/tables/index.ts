@@ -1,9 +1,9 @@
 /**
  * Table definitions exports
- * 
+ *
  * NOTE: JsonSerializable and related utilities should be imported directly from
  * @open-insights-web/foundation-data-model
- * 
+ *
  * @module tables
  */
 

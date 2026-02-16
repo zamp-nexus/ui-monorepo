@@ -5,11 +5,12 @@
  */
 
 import type { FunctionReference } from 'convex/server';
+
 import {
   isMutationOperation,
+  WRITE_OPERATIONS,
   type Operation,
   type WriteOperation,
-  WRITE_OPERATIONS,
 } from '../../types/operations';
 
 type QueryFunctionReference = FunctionReference<'query'>;
@@ -24,9 +25,7 @@ interface ConvexFunctionMap {
 }
 
 interface TableRegistryLike {
-  getTable: (
-    tableName: string
-  ) => { readonly convex?: ConvexFunctionMap } | undefined;
+  getTable: (tableName: string) => { readonly convex?: ConvexFunctionMap } | undefined;
   getTableNames?: () => ReadonlyArray<string>;
 }
 
@@ -35,15 +34,14 @@ interface TableRegistryLike {
  */
 export const getListQueryReference = (
   tableRegistry: TableRegistryLike,
-  tableName: string
-): QueryFunctionReference | undefined =>
-  tableRegistry.getTable(tableName)?.convex?.list;
+  tableName: string,
+): QueryFunctionReference | undefined => tableRegistry.getTable(tableName)?.convex?.list;
 
 /**
  * Return the first available query reference in the registry.
  */
 export const getAnyQueryReference = (
-  tableRegistry: TableRegistryLike
+  tableRegistry: TableRegistryLike,
 ): QueryFunctionReference | undefined => {
   const tableNames = tableRegistry.getTableNames?.() ?? [];
 
@@ -71,7 +69,7 @@ export const getAnyQueryReference = (
 export const getMutationReference = (
   tableRegistry: TableRegistryLike,
   tableName: string,
-  operation: WriteOperation
+  operation: WriteOperation,
 ): MutationFunctionReference | undefined => {
   const convexFunctions = tableRegistry.getTable(tableName)?.convex;
   if (!convexFunctions) {
@@ -95,7 +93,7 @@ export const getMutationReference = (
  */
 export const getAnyMutationReference = (
   tableRegistry: TableRegistryLike,
-  tableName: string
+  tableName: string,
 ): MutationFunctionReference | undefined => {
   const convexFunctions = tableRegistry.getTable(tableName)?.convex;
   if (!convexFunctions) {
@@ -109,7 +107,7 @@ export const getAnyMutationReference = (
  * Return the first available mutation reference in the registry.
  */
 export const getAnyMutationReferenceFromRegistry = (
-  tableRegistry: TableRegistryLike
+  tableRegistry: TableRegistryLike,
 ): MutationFunctionReference | undefined => {
   const tableNames = tableRegistry.getTableNames?.() ?? [];
 
@@ -126,9 +124,5 @@ export const getAnyMutationReferenceFromRegistry = (
 /**
  * Normalize operation to a concrete mutation operation.
  */
-export const resolveMutationOperation = (
-  operation: Operation | undefined
-): WriteOperation =>
-  operation !== undefined && isMutationOperation(operation)
-    ? operation
-    : WRITE_OPERATIONS.CREATE;
+export const resolveMutationOperation = (operation: Operation | undefined): WriteOperation =>
+  operation !== undefined && isMutationOperation(operation) ? operation : WRITE_OPERATIONS.CREATE;

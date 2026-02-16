@@ -12,8 +12,8 @@ import {
   type MutationQueueEntry,
   type MutationStatus,
 } from '@open-insights-web/foundation-data-model';
-import { generateIdempotencyKey } from '../utils/hash';
 
+import { generateIdempotencyKey } from '../utils/hash';
 
 export { MUTATION_TYPE };
 export type { CreateMutationOptions, MutationQueueEntry };
@@ -24,7 +24,7 @@ export type { CreateMutationOptions, MutationQueueEntry };
  */
 export const createMutationEntry = <TPayload = JsonValue>(
   id: string,
-  options: CreateMutationOptions<TPayload>
+  options: CreateMutationOptions<TPayload>,
 ): MutationQueueEntry<TPayload> => {
   // Generate idempotency key using shared utility
   // Includes type in payload hash to differentiate create vs update on same entity
@@ -62,7 +62,7 @@ export const createMutationEntry = <TPayload = JsonValue>(
  */
 export const canProcessMutation = <TPayload = JsonValue>(
   mutation: MutationQueueEntry<TPayload>,
-  completedIds: Set<string>
+  completedIds: Set<string>,
 ): boolean => {
   if (!mutation.dependsOn || mutation.dependsOn.length === 0) {
     return true;
@@ -75,12 +75,9 @@ export const canProcessMutation = <TPayload = JsonValue>(
  */
 export const shouldRetry = <TPayload = JsonValue>(
   mutation: MutationQueueEntry<TPayload>,
-  maxRetries: number
+  maxRetries: number,
 ): boolean => {
-  return (
-    mutation.status === MUTATION_STATUS.FAILED &&
-    mutation.retryCount < maxRetries
-  );
+  return mutation.status === MUTATION_STATUS.FAILED && mutation.retryCount < maxRetries;
 };
 
 /**
@@ -88,7 +85,7 @@ export const shouldRetry = <TPayload = JsonValue>(
  */
 export const prepareForRetry = <TPayload = JsonValue>(
   mutation: MutationQueueEntry<TPayload>,
-  error?: string
+  error?: string,
 ): MutationQueueEntry<TPayload> => {
   return {
     ...mutation,
@@ -112,7 +109,7 @@ export interface MutationQueueOperations {
   updateStatus(
     id: string,
     status: MutationStatus,
-    updates?: Partial<MutationQueueEntry>
+    updates?: Partial<MutationQueueEntry>,
   ): Promise<void>;
   /** Get all pending mutations in order */
   getPending(): Promise<MutationQueueEntry[]>;

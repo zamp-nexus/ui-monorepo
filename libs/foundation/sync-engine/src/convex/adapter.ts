@@ -4,19 +4,21 @@
  */
 
 import type { ConvexReactClient } from 'convex/react';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
 import type { MutationQueueEntry } from '@open-insights-web/foundation-data-model';
-import type { MutationExecutorResult } from '../queue/processor';
 import {
-  Disposable,
   CompositeDisposable,
   createDebugLogger,
+  Disposable,
   getErrorMessage,
-  normalizeError,
   hashPayloadSync,
+  normalizeError,
   SafeTimer,
 } from '@open-insights-web/foundation-utils';
+
 import { DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS } from '../core/defaults';
+import type { MutationExecutorResult } from '../queue/processor';
 
 /**
  * Convex adapter configuration
@@ -111,7 +113,7 @@ export class ConvexSyncAdapter extends Disposable {
    */
   async query<Query extends FunctionReference<'query'>>(
     queryFn: Query,
-    args?: FunctionArgs<Query>
+    args?: FunctionArgs<Query>,
   ): Promise<FunctionReturnType<Query>> {
     this.ensureNotDisposed();
     this.logger.debug('Executing query:', queryFn, args);
@@ -132,7 +134,7 @@ export class ConvexSyncAdapter extends Disposable {
    */
   async mutate<Mutation extends FunctionReference<'mutation'>>(
     mutationFn: Mutation,
-    args?: FunctionArgs<Mutation>
+    args?: FunctionArgs<Mutation>,
   ): Promise<FunctionReturnType<Mutation>> {
     this.ensureNotDisposed();
     this.logger.debug('Executing mutation:', mutationFn, args);
@@ -151,11 +153,11 @@ export class ConvexSyncAdapter extends Disposable {
    * Create a mutation executor for the queue processor
    */
   createMutationExecutor(
-    mutationMap: Record<string, ConvexMutationOptions>
+    mutationMap: Record<string, ConvexMutationOptions>,
   ): (entry: MutationQueueEntry) => Promise<MutationExecutorResult> {
     return async (entry: MutationQueueEntry): Promise<MutationExecutorResult> => {
       this.ensureNotDisposed();
-      
+
       // Get mutation options for this table and type
       const key = `${entry.tableName}:${entry.type}`;
       const options = mutationMap[key];
@@ -176,7 +178,7 @@ export class ConvexSyncAdapter extends Disposable {
 
         // Extract server ID if applicable
         const serverId = options.extractServerId?.(result);
-        
+
         // Extract server data for conflict detection
         const serverData = options.extractServerData?.(result);
 
@@ -198,12 +200,12 @@ export class ConvexSyncAdapter extends Disposable {
 
   /**
    * Subscribe to a Convex query with polling-based updates using SafeTimer
-   * 
+   *
    * NOTE: This method provides a subscription using polling since Convex's
    * real-time subscriptions are React-based (via hooks). For React components,
    * prefer using useQuery directly from convex/react for better performance.
    * This is intended for non-React contexts or manual subscription management.
-   * 
+   *
    * @param queryFn - Convex query function reference
    * @param args - Query arguments
    * @param callbacks - Callbacks for updates and errors
@@ -213,7 +215,7 @@ export class ConvexSyncAdapter extends Disposable {
     queryFn: Query,
     args: FunctionArgs<Query>,
     callbacks: SubscriptionCallbacks<FunctionReturnType<Query>>,
-    pollInterval = DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS
+    pollInterval = DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS,
   ): () => void {
     this.ensureNotDisposed();
 
@@ -309,12 +311,12 @@ export class ConvexSyncAdapter extends Disposable {
    */
   refreshSubscriptions(): void {
     if (this.isDisposed) return;
-    
+
     const subscriptionCount = this.subscriptions.size;
     this.logger.debug('Refreshing', subscriptionCount, 'active subscriptions');
-    
+
     if (subscriptionCount === 0) return;
-    
+
     // Trigger immediate poll for all active subscriptions and reset adaptive backoff
     const pollPromises: Promise<void>[] = [];
     for (const [id, state] of this.subscriptions) {
@@ -326,10 +328,10 @@ export class ConvexSyncAdapter extends Disposable {
         pollPromises.push(state.poll());
       }
     }
-    
+
     // Wait for all polls to complete (fire-and-forget, but log errors)
     Promise.allSettled(pollPromises).then((results) => {
-      const failed = results.filter(r => r.status === 'rejected');
+      const failed = results.filter((r) => r.status === 'rejected');
       if (failed.length > 0) {
         this.logger.warn('Some subscription refreshes failed:', failed.length);
       }

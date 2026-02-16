@@ -4,15 +4,17 @@
  */
 
 import type { MutationFunction } from '@tanstack/react-query';
+
 import {
-  MUTATION_TYPE,
   generateProvisionalId,
+  MUTATION_TYPE,
   tryToJsonSerializable,
   type MutationType,
-  type QueryKeyBase,
   type OfflineMutationResult,
+  type QueryKeyBase,
 } from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, isNetworkError } from '@open-insights-web/foundation-utils';
+
 import type { NetworkStatusMonitor } from '../network/index';
 import { getNetworkMonitor } from '../network/index';
 import type { OfflineQueueManager } from '../queue/manager';
@@ -55,16 +57,13 @@ const DEFAULT_CONFIG = {
 };
 
 const hasStringId = (value: unknown): value is { id: string } =>
-  value !== null &&
-  typeof value === 'object' &&
-  'id' in value &&
-  typeof value.id === 'string';
+  value !== null && typeof value === 'object' && 'id' in value && typeof value.id === 'string';
 
 /**
  * Create an offline-aware mutation function
  */
 export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
-  config: OfflineMutationFnConfig<TData, TVariables>
+  config: OfflineMutationFnConfig<TData, TVariables>,
 ): MutationFunction<OfflineMutationResult<TData>, TVariables> => {
   const {
     mutateFn,
@@ -82,8 +81,8 @@ export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
   const logger = createDebugLogger('OfflineMutationFn', debug);
 
   return async (variables: TVariables): Promise<OfflineMutationResult<TData>> => {
-    const entityId = getEntityId?.(variables) ??
-      (type === MUTATION_TYPE.CREATE ? generateProvisionalId() : '');
+    const entityId =
+      getEntityId?.(variables) ?? (type === MUTATION_TYPE.CREATE ? generateProvisionalId() : '');
     const mutationId = crypto.randomUUID();
     const optimisticData = getOptimisticData?.(variables);
     const serializedPayload = tryToJsonSerializable(variables);
@@ -106,7 +105,7 @@ export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
         entityId,
         payload: serializedPayload,
         optimisticData: serializedOptimisticData ?? undefined,
-        invalidateKeys: invalidateKeys?.map(key => JSON.stringify(key)),
+        invalidateKeys: invalidateKeys?.map((key) => JSON.stringify(key)),
         dependsOn,
       });
 
@@ -148,7 +147,7 @@ export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
           entityId,
           payload: serializedPayload,
           optimisticData: serializedOptimisticData ?? undefined,
-          invalidateKeys: invalidateKeys?.map(key => JSON.stringify(key)),
+          invalidateKeys: invalidateKeys?.map((key) => JSON.stringify(key)),
           dependsOn,
         });
 
@@ -172,7 +171,7 @@ export const createOfflineMutationFn = <TData = unknown, TVariables = unknown>(
  */
 export const createOnlineMutationFn = <TData = unknown, TVariables = unknown>(
   mutateFn: (variables: TVariables) => Promise<TData>,
-  options?: { debug?: boolean }
+  options?: { debug?: boolean },
 ): MutationFunction<TData, TVariables> => {
   const logger = createDebugLogger('OnlineMutationFn', options?.debug ?? false);
 

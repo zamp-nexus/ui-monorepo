@@ -13,7 +13,12 @@ import {
   FoundationError,
   type ErrorContext,
 } from '@open-insights-web/foundation-data-model';
-import { HTTP_ERROR_CODE, type HttpErrorCode, type SerializationOperation } from '../core/constants';
+
+import {
+  HTTP_ERROR_CODE,
+  type HttpErrorCode,
+  type SerializationOperation,
+} from '../core/constants';
 
 // =============================================================================
 // HTTP Error Options
@@ -83,10 +88,10 @@ export class HttpNotInitializedError extends HttpError {
   readonly httpCode = HTTP_ERROR_CODE.NOT_INITIALIZED;
 
   constructor(operation?: string, cause?: Error) {
-    super(
-      `HTTP client not initialized${operation ? `. Cannot perform: ${operation}` : ''}`,
-      { context: { operation }, cause },
-    );
+    super(`HTTP client not initialized${operation ? `. Cannot perform: ${operation}` : ''}`, {
+      context: { operation },
+      cause,
+    });
   }
 }
 
@@ -117,13 +122,7 @@ export class HttpRequestError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.REQUEST_FAILED;
 
-  constructor(
-    message: string,
-    statusCode?: number,
-    url?: string,
-    method?: string,
-    cause?: Error,
-  ) {
+  constructor(message: string, statusCode?: number, url?: string, method?: string, cause?: Error) {
     super(message, { statusCode, url, method, cause });
   }
 }
@@ -257,13 +256,7 @@ export class HttpServerError extends HttpError {
   readonly code = FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED;
   readonly httpCode = HTTP_ERROR_CODE.SERVER_ERROR;
 
-  constructor(
-    statusCode: number,
-    message?: string,
-    url?: string,
-    method?: string,
-    cause?: Error,
-  ) {
+  constructor(statusCode: number, message?: string, url?: string, method?: string, cause?: Error) {
     super(message ?? `Server error: ${statusCode}`, {
       statusCode,
       url,

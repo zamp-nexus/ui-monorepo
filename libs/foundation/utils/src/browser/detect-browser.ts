@@ -84,21 +84,24 @@ const hasClientHints = (): boolean =>
  * Parse browser info from Client Hints brands
  */
 const parseBrowserFromClientHints = (
-  brands: NavigatorUABrandVersion[]
+  brands: NavigatorUABrandVersion[],
 ): { name: string; version: string } => {
   // Priority order for browser detection from brands
   const browserPriority = ['Google Chrome', 'Microsoft Edge', 'Opera', 'Firefox', 'Safari'];
 
   // Filter out generic brands
   const significantBrands = brands.filter(
-    (b) => !b.brand.includes('Not') && b.brand !== 'Chromium'
+    (b) => !b.brand.includes('Not') && b.brand !== 'Chromium',
   );
 
   // Find the highest priority browser
   for (const browserName of browserPriority) {
     const found = significantBrands.find((b) => b.brand === browserName);
     if (found) {
-      return { name: found.brand.replace('Google ', '').replace('Microsoft ', ''), version: found.version };
+      return {
+        name: found.brand.replace('Google ', '').replace('Microsoft ', ''),
+        version: found.version,
+      };
     }
   }
 
@@ -178,8 +181,8 @@ const detectDeviceType = (ua: string): DeviceType => {
  * Get screen information
  */
 const getScreenInfo = () => ({
-  screenWidth: screen.width || 0,
-  screenHeight: screen.height || 0,
+  screenWidth: window.screen.width || 0,
+  screenHeight: window.screen.height || 0,
   viewportWidth: window.innerWidth || 0,
   viewportHeight: window.innerHeight || 0,
   devicePixelRatio: window.devicePixelRatio || 1,
@@ -223,8 +226,7 @@ const getConnectionInfo = (): {
 /**
  * Detect touch support
  */
-const detectTouchSupport = (): boolean =>
-  'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const detectTouchSupport = (): boolean => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 /**
  * Create empty browser info for SSR

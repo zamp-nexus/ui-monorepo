@@ -7,9 +7,9 @@ import React from 'react';
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 
 import { useTheme } from '../../theme';
-import { useAccordionContext } from './accordion.context';
 import type { AccordionItemProps } from './accordion';
 import { accordionDefaultTheme } from './accordion';
+import { useAccordionContext } from './accordion.context';
 
 /**
  * Accordion.Item component

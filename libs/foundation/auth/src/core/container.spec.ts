@@ -4,15 +4,16 @@
  * DI container lifecycle management.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AuthContainer, createAuthContainer, type AuthContainerConfig } from './container';
 import type {
   AuthConfig,
-  SessionServiceInterface,
-  FlowServiceInterface,
-  UserServiceInterface,
   AuthFacadeInterface,
+  FlowServiceInterface,
+  SessionServiceInterface,
+  UserServiceInterface,
 } from './types';
-import { AuthContainer, createAuthContainer, type AuthContainerConfig } from './container';
 
 // =============================================================================
 // Helpers
@@ -76,7 +77,9 @@ const createConfig = (overrides: Partial<AuthConfig> = {}): AuthConfig => ({
  * Create a container config with all factories mocked.
  * This avoids needing to mock the actual service module imports.
  */
-const createFullyMockedContainerConfig = (overrides: Partial<AuthContainerConfig> = {}): AuthContainerConfig => {
+const createFullyMockedContainerConfig = (
+  overrides: Partial<AuthContainerConfig> = {},
+): AuthContainerConfig => {
   const session = createMockSessionService();
   const flow = createMockFlowService();
   const user = createMockUserService();
@@ -239,14 +242,16 @@ describe('AuthContainer', () => {
   describe('factory overrides', () => {
     it('should use custom session service factory', async () => {
       const customSession = createMockSessionService();
-      const c = new AuthContainer(createFullyMockedContainerConfig({
-        factories: {
-          sessionService: () => customSession,
-          flowService: () => createMockFlowService(),
-          userService: () => createMockUserService(),
-          facade: () => createMockFacade({ session: customSession }),
-        },
-      }));
+      const c = new AuthContainer(
+        createFullyMockedContainerConfig({
+          factories: {
+            sessionService: () => customSession,
+            flowService: () => createMockFlowService(),
+            userService: () => createMockUserService(),
+            facade: () => createMockFacade({ session: customSession }),
+          },
+        }),
+      );
 
       const deps = await c.initialize();
       expect(deps.sessionService).toBe(customSession);
@@ -254,14 +259,16 @@ describe('AuthContainer', () => {
 
     it('should use custom flow service factory', async () => {
       const customFlow = createMockFlowService();
-      const c = new AuthContainer(createFullyMockedContainerConfig({
-        factories: {
-          sessionService: () => createMockSessionService(),
-          flowService: () => customFlow,
-          userService: () => createMockUserService(),
-          facade: () => createMockFacade({ flow: customFlow }),
-        },
-      }));
+      const c = new AuthContainer(
+        createFullyMockedContainerConfig({
+          factories: {
+            sessionService: () => createMockSessionService(),
+            flowService: () => customFlow,
+            userService: () => createMockUserService(),
+            facade: () => createMockFacade({ flow: customFlow }),
+          },
+        }),
+      );
 
       const deps = await c.initialize();
       expect(deps.flowService).toBe(customFlow);
@@ -269,14 +276,16 @@ describe('AuthContainer', () => {
 
     it('should use custom user service factory', async () => {
       const customUser = createMockUserService();
-      const c = new AuthContainer(createFullyMockedContainerConfig({
-        factories: {
-          sessionService: () => createMockSessionService(),
-          flowService: () => createMockFlowService(),
-          userService: () => customUser,
-          facade: () => createMockFacade({ user: customUser }),
-        },
-      }));
+      const c = new AuthContainer(
+        createFullyMockedContainerConfig({
+          factories: {
+            sessionService: () => createMockSessionService(),
+            flowService: () => createMockFlowService(),
+            userService: () => customUser,
+            facade: () => createMockFacade({ user: customUser }),
+          },
+        }),
+      );
 
       const deps = await c.initialize();
       expect(deps.userService).toBe(customUser);
@@ -284,14 +293,16 @@ describe('AuthContainer', () => {
 
     it('should use custom facade factory', async () => {
       const customFacade = createMockFacade();
-      const c = new AuthContainer(createFullyMockedContainerConfig({
-        factories: {
-          sessionService: () => createMockSessionService(),
-          flowService: () => createMockFlowService(),
-          userService: () => createMockUserService(),
-          facade: () => customFacade,
-        },
-      }));
+      const c = new AuthContainer(
+        createFullyMockedContainerConfig({
+          factories: {
+            sessionService: () => createMockSessionService(),
+            flowService: () => createMockFlowService(),
+            userService: () => createMockUserService(),
+            facade: () => customFacade,
+          },
+        }),
+      );
 
       const deps = await c.initialize();
       expect(deps.facade).toBe(customFacade);

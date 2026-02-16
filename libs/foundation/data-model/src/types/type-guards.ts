@@ -390,10 +390,7 @@ export type ArrowTypeId = (typeof ARROW_TYPE_ID)[keyof typeof ARROW_TYPE_ID];
  * const jsValue = convertArrowValueSafe(field.type, rawValue);
  * ```
  */
-export function convertArrowValueSafe(
-  fieldType: unknown,
-  value: unknown
-): unknown {
+export function convertArrowValueSafe(fieldType: unknown, value: unknown): unknown {
   if (value === null || value === undefined) return null;
 
   // Get type ID if available
@@ -450,7 +447,7 @@ export function convertArrowValueSafe(
  */
 export function convertArrowRow(
   schema: { fields: ReadonlyArray<{ name: string; type: unknown }> },
-  row: Record<string, unknown>
+  row: Record<string, unknown>,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
@@ -480,7 +477,12 @@ export function convertArrowRow(
  * ```
  */
 export const hasId = (obj: unknown): obj is { id: string } => {
-  return typeof obj === 'object' && obj !== null && 'id' in obj && typeof (obj as { id: unknown }).id === 'string';
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    typeof (obj as { id: unknown }).id === 'string'
+  );
 };
 
 /**
@@ -497,7 +499,12 @@ export const hasId = (obj: unknown): obj is { id: string } => {
  * ```
  */
 export const has_Id = (obj: unknown): obj is { _id: string } => {
-  return typeof obj === 'object' && obj !== null && '_id' in obj && typeof (obj as { _id: unknown })._id === 'string';
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    '_id' in obj &&
+    typeof (obj as { _id: unknown })._id === 'string'
+  );
 };
 
 /**

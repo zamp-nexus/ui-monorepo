@@ -13,16 +13,19 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { QueryClient } from '@tanstack/react-query';
+
 import type { ConvexQueryClient } from '@convex-dev/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import type { ConvexReactClient } from 'convex/react';
+
+import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
 import type { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
 import type { SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
-import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
-import type { TableSyncService } from '../analytics-sync/table-sync-service';
+
 import type { FileDownloadService } from '../analytics-sync/file-download-service';
-import type { ResolvedCacheConfig, ConvexQueryReference } from '../core/types';
+import type { TableSyncService } from '../analytics-sync/table-sync-service';
 import type { TableRegistry } from '../core/table-registry';
+import type { ConvexQueryReference, ResolvedCacheConfig } from '../core/types';
 
 /**
  * Internal data layer state accessible by hooks

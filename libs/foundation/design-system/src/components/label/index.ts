@@ -5,9 +5,4 @@
 
 export { Label } from './label';
 export type { LabelProps, LabelComponent, LabelOwnProps } from './label';
-export {
-  LabelVariants,
-  LabelModifiers,
-  LabelSlots,
-  labelDefaultTheme,
-} from './label';
+export { LabelVariants, LabelModifiers, LabelSlots, labelDefaultTheme } from './label';

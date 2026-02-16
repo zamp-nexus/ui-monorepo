@@ -96,10 +96,14 @@ export const createOryAuthProviderFromEnv = (envPrefix = 'ORY'): ConvexAuthProvi
   const applicationId = process.env[`${envPrefix}_APPLICATION_ID`];
 
   if (!issuer) {
-    throw new Error(`[createOryAuthProviderFromEnv] ${envPrefix}_ISSUER environment variable is required`);
+    throw new Error(
+      `[createOryAuthProviderFromEnv] ${envPrefix}_ISSUER environment variable is required`,
+    );
   }
   if (!applicationId) {
-    throw new Error(`[createOryAuthProviderFromEnv] ${envPrefix}_APPLICATION_ID environment variable is required`);
+    throw new Error(
+      `[createOryAuthProviderFromEnv] ${envPrefix}_APPLICATION_ID environment variable is required`,
+    );
   }
 
   return createOryAuthProvider({ issuer, applicationId });

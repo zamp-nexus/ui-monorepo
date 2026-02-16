@@ -13,11 +13,7 @@ import { toastDefaultTheme } from './toast';
  *
  * Title text for the toast notification
  */
-export const ToastTitle: React.FC<ToastTitleProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const ToastTitle: React.FC<ToastTitleProps> = ({ children, className, oiid }) => {
   const theme = useTheme('toast', toastDefaultTheme);
 
   return (

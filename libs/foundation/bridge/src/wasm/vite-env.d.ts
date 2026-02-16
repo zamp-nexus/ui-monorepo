@@ -2,7 +2,7 @@
 
 /**
  * Type declarations for DuckDB-WASM asset imports via Vite's ?url suffix
- * 
+ *
  * Note: vite/client.d.ts already provides generic ?url support.
  * These declarations are for specific module paths used in duckdb-init.ts.
  */

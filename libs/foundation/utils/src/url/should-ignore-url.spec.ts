@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { shouldIgnoreUrl } from './should-ignore-url';
 
 describe('shouldIgnoreUrl', () => {
@@ -8,7 +9,9 @@ describe('shouldIgnoreUrl', () => {
   });
 
   it('should match URL with regex pattern', () => {
-    const result = shouldIgnoreUrl('https://example.com/health', ['^https://example\\.com/health$']);
+    const result = shouldIgnoreUrl('https://example.com/health', [
+      '^https://example\\.com/health$',
+    ]);
     expect(result).toBe(true);
   });
 
@@ -28,7 +31,11 @@ describe('shouldIgnoreUrl', () => {
   });
 
   it('should return true if any pattern matches', () => {
-    const result = shouldIgnoreUrl('https://example.com/health', ['/admin', '/health', '/internal']);
+    const result = shouldIgnoreUrl('https://example.com/health', [
+      '/admin',
+      '/health',
+      '/internal',
+    ]);
     expect(result).toBe(true);
   });
 

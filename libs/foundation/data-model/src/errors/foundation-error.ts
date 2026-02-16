@@ -9,12 +9,12 @@
 
 import { Timestamp } from '../types/branded';
 import {
-  FOUNDATION_ERROR_CODE,
   ERROR_CATEGORY,
+  FOUNDATION_ERROR_CODE,
   getErrorCategory,
   isRetryableErrorCode,
-  type FoundationErrorCode,
   type ErrorCategory,
+  type FoundationErrorCode,
 } from './error-codes';
 
 // =============================================================================
@@ -180,9 +180,7 @@ export abstract class FoundationError extends Error {
    */
   override toString(): string {
     const contextStr =
-      Object.keys(this.context).length > 0
-        ? ` [${JSON.stringify(this.context)}]`
-        : '';
+      Object.keys(this.context).length > 0 ? ` [${JSON.stringify(this.context)}]` : '';
     return `${this.name} [${this.code}]: ${this.message}${contextStr}`;
   }
 
@@ -197,13 +195,9 @@ export abstract class FoundationError extends Error {
     const Constructor = this.constructor as new (
       message: string,
       context: ErrorContext,
-      cause?: Error
+      cause?: Error,
     ) => this;
-    return new Constructor(
-      this.message,
-      { ...this.context, ...additionalContext },
-      this.cause
-    );
+    return new Constructor(this.message, { ...this.context, ...additionalContext }, this.cause);
   }
 }
 
@@ -221,7 +215,7 @@ export class GenericFoundationError extends FoundationError {
     code: FoundationErrorCode,
     message: string,
     context: ErrorContext = {},
-    cause?: Error
+    cause?: Error,
   ) {
     super(message, context, cause);
     this.code = code;
@@ -243,13 +237,11 @@ export class GenericFoundationError extends FoundationError {
 export function toFoundationError(
   error: unknown,
   fallbackCode: FoundationErrorCode = FOUNDATION_ERROR_CODE.INTERNAL_ERROR,
-  context: ErrorContext = {}
+  context: ErrorContext = {},
 ): FoundationError {
   // Already a FoundationError
   if (error instanceof FoundationError) {
-    return context && Object.keys(context).length > 0
-      ? error.withContext(context)
-      : error;
+    return context && Object.keys(context).length > 0 ? error.withContext(context) : error;
   }
 
   // Standard Error
@@ -263,11 +255,7 @@ export function toFoundationError(
   }
 
   // Unknown error
-  return new GenericFoundationError(
-    fallbackCode,
-    String(error),
-    context
-  );
+  return new GenericFoundationError(fallbackCode, String(error), context);
 }
 
 /**
@@ -287,10 +275,7 @@ export function isFoundationError(error: unknown): error is FoundationError {
  * @param code - Error code to check for
  * @returns True if error has the specified code
  */
-export function hasErrorCode(
-  error: unknown,
-  code: FoundationErrorCode
-): error is FoundationError {
+export function hasErrorCode(error: unknown, code: FoundationErrorCode): error is FoundationError {
   return isFoundationError(error) && error.code === code;
 }
 
@@ -301,9 +286,6 @@ export function hasErrorCode(
  * @param category - Category to check for
  * @returns True if error is in the specified category
  */
-export function isErrorCategory(
-  error: unknown,
-  category: ErrorCategory
-): error is FoundationError {
+export function isErrorCategory(error: unknown, category: ErrorCategory): error is FoundationError {
   return isFoundationError(error) && error.category === category;
 }

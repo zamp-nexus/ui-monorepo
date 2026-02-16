@@ -60,6 +60,6 @@ export const isDeeplyFrozen = (obj: unknown): boolean => {
   }
 
   return Object.getOwnPropertyNames(obj).every((name) =>
-    isDeeplyFrozen((obj as Record<string, unknown>)[name])
+    isDeeplyFrozen((obj as Record<string, unknown>)[name]),
   );
 };

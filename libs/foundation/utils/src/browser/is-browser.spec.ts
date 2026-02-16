@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
 import { isBrowser } from './is-browser';
 
 describe('isBrowser', () => {

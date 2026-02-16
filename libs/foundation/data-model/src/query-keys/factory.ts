@@ -4,11 +4,11 @@
  */
 
 import type {
-  EntityQueryKeyFactory,
   AnalyticsQueryKey,
-  QueryKeyMeta,
-  QueryKeyBase,
+  EntityQueryKeyFactory,
   EntityTableName,
+  QueryKeyBase,
+  QueryKeyMeta,
   QueryScope,
 } from './types';
 import { QUERY_SCOPE } from './types';
@@ -18,7 +18,7 @@ import { QUERY_SCOPE } from './types';
  */
 export function createQueryKeys<
   TEntity extends string,
-  TFilters extends Record<string, unknown> = Record<string, unknown>
+  TFilters extends Record<string, unknown> = Record<string, unknown>,
 >(entity: TEntity): EntityQueryKeyFactory<TEntity, TFilters> {
   return {
     all: [entity] as const,
@@ -46,17 +46,17 @@ export function createQueryKeys<
  */
 export function createAnalyticsQueryKey(
   tables: EntityTableName | EntityTableName[],
-  queryName: string
+  queryName: string,
 ): readonly ['analytics', string, string];
 export function createAnalyticsQueryKey<TParams extends Record<string, unknown>>(
   tables: EntityTableName | EntityTableName[],
   queryName: string,
-  params: TParams
+  params: TParams,
 ): readonly ['analytics', string, string, TParams];
 export function createAnalyticsQueryKey(
   tables: EntityTableName | EntityTableName[],
   queryName: string,
-  params?: Record<string, unknown>
+  params?: Record<string, unknown>,
 ): AnalyticsQueryKey<Record<string, unknown>> | AnalyticsQueryKey<undefined> {
   const tablesString = Array.isArray(tables)
     ? `tables:${[...tables].sort().join(',')}`
@@ -155,10 +155,7 @@ export function hashQueryKey(queryKey: QueryKeyBase): string {
  * Check if a query key matches a pattern
  * Used for cache invalidation
  */
-export function matchesQueryKey(
-  queryKey: QueryKeyBase,
-  pattern: QueryKeyBase
-): boolean {
+export function matchesQueryKey(queryKey: QueryKeyBase, pattern: QueryKeyBase): boolean {
   if (pattern.length > queryKey.length) {
     return false;
   }
@@ -183,8 +180,7 @@ export function matchesQueryKey(
       const patternKeys = Object.keys(patternPart);
       const matches = patternKeys.every(
         (k) =>
-          (patternPart as Record<string, unknown>)[k] ===
-          (keyPart as Record<string, unknown>)[k]
+          (patternPart as Record<string, unknown>)[k] === (keyPart as Record<string, unknown>)[k],
       );
       if (!matches) return false;
       continue;

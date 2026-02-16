@@ -93,11 +93,7 @@ export {
   applyLimitOffset,
 } from './utils/sql';
 
-export {
-  validatePoolConfig,
-  validateRouterConfig,
-  resolvePoolConfig,
-} from './utils/validation';
+export { validatePoolConfig, validateRouterConfig, resolvePoolConfig } from './utils/validation';
 
 export type { RouterConfigForValidation } from './utils/validation';
 
@@ -112,20 +108,18 @@ export type { RouterConfigForValidation } from './utils/validation';
 // All Constants (Internal Access)
 // ============================================================================
 
-export {
-  DEFAULTS,
-  PRIORITY_VALUES,
-  SQL,
-  WORKER_MESSAGE_TYPES,
-} from './constants';
+export { DEFAULTS, PRIORITY_VALUES, SQL, WORKER_MESSAGE_TYPES } from './constants';
 
-export type {
-  SqlReservedWord,
-  WorkerMessageType,
-} from './constants';
+export type { SqlReservedWord, WorkerMessageType } from './constants';
 
 // Constants (CAPITAL_SNAKE) and types (PascalCase)
-export { PRIORITY, QUERY_MODE, BRIDGE_TYPE, RUNTIME_ENVIRONMENT, STORAGE_STRATEGY } from './constants';
+export {
+  PRIORITY,
+  QUERY_MODE,
+  BRIDGE_TYPE,
+  RUNTIME_ENVIRONMENT,
+  STORAGE_STRATEGY,
+} from './constants';
 export type {
   PriorityLevel,
   QueryLockMode,
@@ -158,16 +152,10 @@ export {
 // WASM Bridge Internals
 // ============================================================================
 
-export {
-  WasmDuckDBBridge,
-  type WasmDuckDBBridgeConfig,
-} from './wasm/wasm-bridge';
+export { WasmDuckDBBridge, type WasmDuckDBBridgeConfig } from './wasm/wasm-bridge';
 
 // ============================================================================
 // Native Bridge Internals
 // ============================================================================
 
-export {
-  ElectronDuckDBBridge,
-  type ElectronDuckDBBridgeConfig,
-} from './native/electron-bridge';
+export { ElectronDuckDBBridge, type ElectronDuckDBBridgeConfig } from './native/electron-bridge';

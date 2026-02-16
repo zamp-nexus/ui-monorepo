@@ -151,10 +151,7 @@ const extractPayload = (token: string | DecodedJwt | JwtPayload): JwtPayload | n
  * }
  * ```
  */
-export const isTokenExpired = (
-  token: string | DecodedJwt | JwtPayload,
-  bufferMs = 0
-): boolean => {
+export const isTokenExpired = (token: string | DecodedJwt | JwtPayload, bufferMs = 0): boolean => {
   const payload = extractPayload(token);
 
   if (!payload?.exp) {
@@ -190,9 +187,7 @@ export const getTokenExpiration = (token: string | DecodedJwt | JwtPayload): num
  * @param token - JWT string or decoded JWT
  * @returns Milliseconds until expiration, or null if no expiration
  */
-export const getTimeUntilExpiration = (
-  token: string | DecodedJwt | JwtPayload
-): number | null => {
+export const getTimeUntilExpiration = (token: string | DecodedJwt | JwtPayload): number | null => {
   const expiration = getTokenExpiration(token);
   if (expiration === null) {
     return null;
@@ -246,7 +241,7 @@ export const getEmailFromToken = (token: string | JwtPayload): string | null => 
  */
 export const getClaimFromToken = <T = unknown>(
   token: string | JwtPayload,
-  claim: string
+  claim: string,
 ): T | null => {
   const payload = getPayloadFromInput(token);
   return (payload?.[claim] as T) ?? null;
@@ -276,7 +271,7 @@ const base64UrlDecode = (input: string): string => {
       atob(base64)
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .join(''),
     );
   } else {
     // Node.js

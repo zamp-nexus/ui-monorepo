@@ -3,17 +3,23 @@
  * @module conflicts/resolver
  */
 
+import isEqual from 'react-fast-compare';
+
 import {
   CONFLICT_STRATEGY,
-  type ConflictStrategy,
   type ConflictContext,
   type ConflictResult,
+  type ConflictStrategy,
   type MergeConfig,
 } from '@open-insights-web/foundation-data-model';
-import { Disposable, createDebugLogger, createSingletonFactory } from '@open-insights-web/foundation-utils';
-import isEqual from 'react-fast-compare';
-import { strategyResolvers, DEFAULT_MERGE_CONFIG } from './strategies';
+import {
+  createDebugLogger,
+  createSingletonFactory,
+  Disposable,
+} from '@open-insights-web/foundation-utils';
+
 import type { IConflictResolver } from '../core/interfaces';
+import { DEFAULT_MERGE_CONFIG, strategyResolvers } from './strategies';
 
 /**
  * Conflict resolver configuration
@@ -36,7 +42,9 @@ export interface ConflictResolverConfig {
 /**
  * Default conflict resolver configuration
  */
-const DEFAULT_RESOLVER_CONFIG: Required<Omit<ConflictResolverConfig, 'onConflictReview' | 'tableStrategies' | 'tableMergeConfigs'>> = {
+const DEFAULT_RESOLVER_CONFIG: Required<
+  Omit<ConflictResolverConfig, 'onConflictReview' | 'tableStrategies' | 'tableMergeConfigs'>
+> = {
   defaultStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
   mergeConfig: DEFAULT_MERGE_CONFIG,
   debug: false,
@@ -70,7 +78,9 @@ export class ConflictResolver extends Disposable implements IConflictResolver {
    * Get merge config for a table
    */
   getMergeConfig(tableName: string): MergeConfig {
-    return this.config.tableMergeConfigs?.[tableName] ?? this.config.mergeConfig ?? DEFAULT_MERGE_CONFIG;
+    return (
+      this.config.tableMergeConfigs?.[tableName] ?? this.config.mergeConfig ?? DEFAULT_MERGE_CONFIG
+    );
   }
 
   /**
@@ -78,12 +88,14 @@ export class ConflictResolver extends Disposable implements IConflictResolver {
    */
   resolve<T>(context: ConflictContext<T>): ConflictResult<T> {
     this.ensureNotDisposed();
-    
+
     const strategy = this.getStrategy(context.tableName);
     const resolver = strategyResolvers[strategy];
     const mergeConfig = this.getMergeConfig(context.tableName);
 
-    this.logger.debug(`Resolving conflict for ${context.tableName}:${context.entityId} using ${strategy}`);
+    this.logger.debug(
+      `Resolving conflict for ${context.tableName}:${context.entityId} using ${strategy}`,
+    );
 
     const result = resolver(context, mergeConfig);
 
@@ -108,10 +120,10 @@ export class ConflictResolver extends Disposable implements IConflictResolver {
     serverData: T,
     clientData: T,
     serverTimestamp: number,
-    clientTimestamp: number
+    clientTimestamp: number,
   ): boolean {
     this.ensureNotDisposed();
-    
+
     // If timestamps are the same, assume no conflict
     if (serverTimestamp === clientTimestamp) {
       return false;
@@ -131,7 +143,7 @@ export class ConflictResolver extends Disposable implements IConflictResolver {
    */
   setTableStrategy(tableName: string, strategy: ConflictStrategy): void {
     this.ensureNotDisposed();
-    
+
     if (!this.config.tableStrategies) {
       this.config.tableStrategies = {};
     }
@@ -143,7 +155,7 @@ export class ConflictResolver extends Disposable implements IConflictResolver {
    */
   setTableMergeConfig(tableName: string, config: MergeConfig): void {
     this.ensureNotDisposed();
-    
+
     if (!this.config.tableMergeConfigs) {
       this.config.tableMergeConfigs = {};
     }
@@ -170,7 +182,7 @@ const conflictResolverFactory = createSingletonFactory(
         instance.dispose();
       }
     },
-  }
+  },
 );
 
 /**
@@ -189,5 +201,6 @@ export const resetConflictResolver = (): void => {
 /**
  * Create a new ConflictResolver instance (non-singleton).
  */
-export const createConflictResolver = (config?: Partial<ConflictResolverConfig>): ConflictResolver =>
-  new ConflictResolver(config);
+export const createConflictResolver = (
+  config?: Partial<ConflictResolverConfig>,
+): ConflictResolver => new ConflictResolver(config);

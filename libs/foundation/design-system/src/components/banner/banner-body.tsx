@@ -13,19 +13,11 @@ import { bannerDefaultTheme } from './banner';
  *
  * Container for custom body content in the banner
  */
-export const BannerBody: React.FC<BannerBodyProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const BannerBody: React.FC<BannerBodyProps> = ({ children, className, oiid }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
 
   return (
-    <div
-      className={theme.body?.({ className }) ?? className}
-      data-oiid={oiid}
-      data-slot="body"
-    >
+    <div className={theme.body?.({ className }) ?? className} data-oiid={oiid} data-slot="body">
       {children}
     </div>
   );

@@ -65,7 +65,7 @@
 export const topologicalSort = <T>(
   items: readonly T[],
   getKey: (item: T) => string,
-  getDependencies: (item: T) => readonly string[]
+  getDependencies: (item: T) => readonly string[],
 ): T[] => {
   const itemMap = new Map(items.map((item) => [getKey(item), item]));
   const visited = new Set<string>();
@@ -114,7 +114,7 @@ export const topologicalSort = <T>(
 export const hasCircularDependency = <T>(
   items: readonly T[],
   getKey: (item: T) => string,
-  getDependencies: (item: T) => readonly string[]
+  getDependencies: (item: T) => readonly string[],
 ): boolean => {
   const itemMap = new Map(items.map((item) => [getKey(item), item]));
   const visited = new Set<string>();

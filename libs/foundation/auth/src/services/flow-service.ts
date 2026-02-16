@@ -8,34 +8,35 @@
 
 import type {
   LoginFlow,
-  RegistrationFlow,
   RecoveryFlow,
-  VerificationFlow,
+  RegistrationFlow,
   SettingsFlow,
   UpdateLoginFlowBody,
-  UpdateRegistrationFlowBody,
   UpdateRecoveryFlowBody,
-  UpdateVerificationFlowBody,
+  UpdateRegistrationFlowBody,
   UpdateSettingsFlowBody,
+  UpdateVerificationFlowBody,
+  VerificationFlow,
 } from '@ory/client-fetch';
-import type { OryClientInstance } from '../core/ory-client';
+
 import { AUTH_FLOW_TYPE } from '../core/constants';
+import type { OryClientInstance } from '../core/ory-client';
 import type {
   AuthConfig,
   FlowServiceInterface,
   LoginSubmission,
-  RegistrationSubmission,
   RecoverySubmission,
-  VerificationSubmission,
+  RegistrationSubmission,
   SettingsSubmission,
+  VerificationSubmission,
 } from '../core/types';
 import {
+  AuthNetworkError,
   FlowCreationError,
+  FlowExpiredError,
   FlowNotFoundError,
   FlowSubmissionError,
-  FlowExpiredError,
   InvalidCredentialsError,
-  AuthNetworkError,
 } from '../errors/auth-errors';
 
 // =============================================================================
@@ -155,10 +156,7 @@ export class FlowService implements FlowServiceInterface {
   /**
    * Submit a registration flow
    */
-  submitRegistrationFlow = async (
-    flowId: string,
-    data: RegistrationSubmission
-  ): Promise<void> => {
+  submitRegistrationFlow = async (flowId: string, data: RegistrationSubmission): Promise<void> => {
     this.ensureNotDisposed();
 
     try {
@@ -289,10 +287,7 @@ export class FlowService implements FlowServiceInterface {
   /**
    * Submit a verification flow
    */
-  submitVerificationFlow = async (
-    flowId: string,
-    data: VerificationSubmission
-  ): Promise<void> => {
+  submitVerificationFlow = async (flowId: string, data: VerificationSubmission): Promise<void> => {
     this.ensureNotDisposed();
 
     try {
@@ -371,10 +366,7 @@ export class FlowService implements FlowServiceInterface {
           csrf_token: data.csrf_token,
         };
       } else {
-        throw new FlowSubmissionError(
-          AUTH_FLOW_TYPE.SETTINGS,
-          'No valid settings data provided'
-        );
+        throw new FlowSubmissionError(AUTH_FLOW_TYPE.SETTINGS, 'No valid settings data provided');
       }
 
       await this.oryClient.frontend.updateSettingsFlow({
@@ -416,12 +408,13 @@ export class FlowService implements FlowServiceInterface {
    */
   private checkFlowExpiry = (
     flow: { expires_at?: Date | string; id: string },
-    flowType: string
+    flowType: string,
   ): void => {
     if (flow.expires_at) {
-      const expiresAt = flow.expires_at instanceof Date
-        ? flow.expires_at.getTime()
-        : new Date(flow.expires_at).getTime();
+      const expiresAt =
+        flow.expires_at instanceof Date
+          ? flow.expires_at.getTime()
+          : new Date(flow.expires_at).getTime();
       if (expiresAt < Date.now()) {
         throw new FlowExpiredError(flow.id, flowType, expiresAt);
       }
@@ -438,18 +431,14 @@ export class FlowService implements FlowServiceInterface {
     return new FlowCreationError(
       flowType,
       error instanceof Error ? error.message : 'Unknown error',
-      error instanceof Error ? error : undefined
+      error instanceof Error ? error : undefined,
     );
   };
 
   /**
    * Handle flow retrieval errors
    */
-  private handleFlowRetrievalError = (
-    flowId: string,
-    flowType: string,
-    error: unknown
-  ): Error => {
+  private handleFlowRetrievalError = (flowId: string, flowType: string, error: unknown): Error => {
     // 404 means flow not found
     if (this.isNotFoundError(error)) {
       return new FlowNotFoundError(flowId, flowType, error as Error);
@@ -488,7 +477,7 @@ export class FlowService implements FlowServiceInterface {
     return new FlowSubmissionError(
       flowType,
       error instanceof Error ? error.message : 'Unknown error',
-      error instanceof Error ? error : undefined
+      error instanceof Error ? error : undefined,
     );
   };
 

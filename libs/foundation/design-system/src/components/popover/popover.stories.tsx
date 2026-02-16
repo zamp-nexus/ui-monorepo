@@ -47,9 +47,7 @@ export const Default: Story = {
       <Popover.Content>
         <div className="space-y-2">
           <h4 className="font-semibold">Dimensions</h4>
-          <p className="text-sm text-muted-foreground">
-            Set the dimensions for the layer.
-          </p>
+          <p className="text-sm text-muted-foreground">Set the dimensions for the layer.</p>
         </div>
       </Popover.Content>
     </Popover>
@@ -170,8 +168,8 @@ export const MaxWidths: Story = {
         </Popover.Trigger>
         <Popover.Content>
           <p className="text-sm">
-            This popover has a max width of 320px. Lorem ipsum dolor sit amet,
-            consectetur adipiscing elit.
+            This popover has a max width of 320px. Lorem ipsum dolor sit amet, consectetur
+            adipiscing elit.
           </p>
         </Popover.Content>
       </Popover>
@@ -182,8 +180,8 @@ export const MaxWidths: Story = {
         </Popover.Trigger>
         <Popover.Content>
           <p className="text-sm">
-            This popover has a max width of 480px. Lorem ipsum dolor sit amet,
-            consectetur adipiscing elit.
+            This popover has a max width of 480px. Lorem ipsum dolor sit amet, consectetur
+            adipiscing elit.
           </p>
         </Popover.Content>
       </Popover>
@@ -204,9 +202,7 @@ export const WithForm: Story = {
         <div className="space-y-4">
           <div className="space-y-2">
             <h4 className="font-medium">Dimensions</h4>
-            <p className="text-sm text-muted-foreground">
-              Set the dimensions for the layer.
-            </p>
+            <p className="text-sm text-muted-foreground">Set the dimensions for the layer.</p>
           </div>
           <div className="grid gap-2">
             <div className="grid grid-cols-3 items-center gap-4">
@@ -268,9 +264,7 @@ export const WithCloseButton: Story = {
         <Popover.Close />
         <div className="space-y-2 pr-6">
           <h4 className="font-semibold">Notification</h4>
-          <p className="text-sm text-muted-foreground">
-            You have 3 new messages in your inbox.
-          </p>
+          <p className="text-sm text-muted-foreground">You have 3 new messages in your inbox.</p>
           <Button size="sm" className="mt-2">
             View all
           </Button>

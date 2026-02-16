@@ -59,7 +59,7 @@ export const migrations: Migration[] = [
  */
 export function getMigrationPath(
   fromVersion: number,
-  toVersion: number = SCHEMA_VERSION
+  toVersion: number = SCHEMA_VERSION,
 ): Migration[] {
   if (fromVersion >= toVersion) {
     return [];
@@ -76,7 +76,7 @@ export function getMigrationPath(
 export function applyMigrations<T>(
   data: unknown,
   fromVersion: number,
-  toVersion: number = SCHEMA_VERSION
+  toVersion: number = SCHEMA_VERSION,
 ): T {
   const path = getMigrationPath(fromVersion, toVersion);
 
@@ -147,9 +147,7 @@ export function checkCompatibility(dataVersion: number): CompatibilityResult {
   // Check for non-reversible migrations
   const nonReversible = path.filter((m) => !m.rollback);
   if (nonReversible.length > 0) {
-    warnings.push(
-      `${nonReversible.length} migration(s) are not reversible.`
-    );
+    warnings.push(`${nonReversible.length} migration(s) are not reversible.`);
   }
 
   return {

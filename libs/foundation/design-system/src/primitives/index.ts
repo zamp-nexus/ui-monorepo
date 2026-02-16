@@ -10,4 +10,3 @@ export type { SlotProps, SlotComponent, SlotOwnProps, SlotDefaultElement } from 
 
 // VisuallyHidden
 export { VisuallyHidden, type VisuallyHiddenProps } from './visually-hidden';
-

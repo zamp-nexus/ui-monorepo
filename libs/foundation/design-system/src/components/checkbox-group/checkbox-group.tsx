@@ -1,21 +1,18 @@
 /**
  * CheckboxGroup component
  * @module components/checkbox-group
- * 
+ *
  * A standalone primitive for managing multi-selection state.
  * Designed to be reused by MultiSelect and Menu components.
  */
 import { useCallback, useMemo, useState } from 'react';
 
 import { useTheme } from '../../theme';
+import type { CheckboxGroupComponent, CheckboxGroupContextValue } from './checkbox-group';
+import { checkboxGroupDefaultTheme } from './checkbox-group';
 import { CheckboxGroupItem } from './checkbox-group-item';
 import { CheckboxGroupLabel } from './checkbox-group-label';
 import { CheckboxGroupContext } from './checkbox-group.context';
-import type {
-  CheckboxGroupComponent,
-  CheckboxGroupContextValue,
-} from './checkbox-group';
-import { checkboxGroupDefaultTheme } from './checkbox-group';
 
 /**
  * CheckboxGroup component
@@ -112,7 +109,16 @@ const CheckboxGroupRoot: CheckboxGroupComponent = ({
       unregisterItem,
       allItemValues,
     }),
-    [value, onValueChange, disabled, size, orientation, registerItem, unregisterItem, allItemValues],
+    [
+      value,
+      onValueChange,
+      disabled,
+      size,
+      orientation,
+      registerItem,
+      unregisterItem,
+      allItemValues,
+    ],
   );
 
   return (

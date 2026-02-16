@@ -6,6 +6,7 @@ import { useId, useMemo } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
+import type { DrawerComponent, DrawerContextValue } from './drawer';
 import { DrawerBody } from './drawer-body';
 import { DrawerClose } from './drawer-close';
 import { DrawerContent } from './drawer-content';
@@ -15,7 +16,6 @@ import { DrawerHeader } from './drawer-header';
 import { DrawerTitle } from './drawer-title';
 import { DrawerTrigger } from './drawer-trigger';
 import { DrawerContext } from './drawer.context';
-import type { DrawerComponent, DrawerContextValue } from './drawer';
 
 /**
  * Drawer component
@@ -69,11 +69,7 @@ const DrawerRoot: DrawerComponent = ({
 
   return (
     <DrawerContext.Provider value={contextValue}>
-      <Dialog.Root
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={onOpenChange}
-      >
+      <Dialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
         {children}
       </Dialog.Root>
     </DrawerContext.Provider>

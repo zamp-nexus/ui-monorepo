@@ -34,11 +34,7 @@ export const AvatarSlots = ['context', 'fallback'] as const;
  * Avatar's own props
  */
 export interface AvatarOwnProps
-  extends OIComponentOwnProps<
-    typeof AvatarVariants,
-    typeof AvatarModifiers,
-    typeof AvatarSlots
-  > {
+  extends OIComponentOwnProps<typeof AvatarVariants, typeof AvatarModifiers, typeof AvatarSlots> {
   /** Size of the avatar */
   size?: (typeof AvatarVariants.size)[number];
   /** Shape of the avatar */

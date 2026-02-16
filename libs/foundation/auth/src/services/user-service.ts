@@ -7,20 +7,21 @@
  */
 
 import type { Identity } from '@ory/client-fetch';
+
+import { AUTH_FLOW_TYPE } from '../core/constants';
 import type { OryClientInstance } from '../core/ory-client';
 import type {
   AuthConfig,
-  UserServiceInterface,
-  TypedIdentity,
   IdentityTraits,
+  TypedIdentity,
+  UserServiceInterface,
 } from '../core/types';
 import {
-  UserNotFoundError,
   AuthNetworkError,
   FlowCreationError,
   FlowSubmissionError,
+  UserNotFoundError,
 } from '../errors/auth-errors';
-import { AUTH_FLOW_TYPE } from '../core/constants';
 
 // =============================================================================
 // User Service
@@ -65,10 +66,7 @@ export class UserService implements UserServiceInterface {
         throw new AuthNetworkError('getCurrentIdentity', error as Error);
       }
 
-      throw new UserNotFoundError(
-        undefined,
-        error instanceof Error ? error : undefined
-      );
+      throw new UserNotFoundError(undefined, error instanceof Error ? error : undefined);
     }
   };
 
@@ -118,14 +116,14 @@ export class UserService implements UserServiceInterface {
         throw new FlowSubmissionError(
           AUTH_FLOW_TYPE.SETTINGS,
           error instanceof Error ? error.message : 'Unknown error',
-          error instanceof Error ? error : undefined
+          error instanceof Error ? error : undefined,
         );
       }
 
       throw new FlowCreationError(
         AUTH_FLOW_TYPE.SETTINGS,
         error instanceof Error ? error.message : 'Unknown error',
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
   };
@@ -162,31 +160,43 @@ export class UserService implements UserServiceInterface {
       schema_id: identity.schema_id,
       schema_url: identity.schema_url,
       state: identity.state,
-      state_changed_at: identity.state_changed_at instanceof Date
-        ? identity.state_changed_at.toISOString()
-        : identity.state_changed_at,
+      state_changed_at:
+        identity.state_changed_at instanceof Date
+          ? identity.state_changed_at.toISOString()
+          : identity.state_changed_at,
       traits,
-      verifiable_addresses: identity.verifiable_addresses?.map(addr => ({
+      verifiable_addresses: identity.verifiable_addresses?.map((addr) => ({
         id: addr.id,
         value: addr.value,
         verified: addr.verified,
         via: addr.via,
         status: addr.status,
-        verified_at: addr.verified_at instanceof Date ? addr.verified_at.toISOString() : addr.verified_at,
-        created_at: addr.created_at instanceof Date ? addr.created_at.toISOString() : addr.created_at,
-        updated_at: addr.updated_at instanceof Date ? addr.updated_at.toISOString() : addr.updated_at,
+        verified_at:
+          addr.verified_at instanceof Date ? addr.verified_at.toISOString() : addr.verified_at,
+        created_at:
+          addr.created_at instanceof Date ? addr.created_at.toISOString() : addr.created_at,
+        updated_at:
+          addr.updated_at instanceof Date ? addr.updated_at.toISOString() : addr.updated_at,
       })),
-      recovery_addresses: identity.recovery_addresses?.map(addr => ({
+      recovery_addresses: identity.recovery_addresses?.map((addr) => ({
         id: addr.id,
         value: addr.value,
         via: addr.via,
-        created_at: addr.created_at instanceof Date ? addr.created_at.toISOString() : addr.created_at,
-        updated_at: addr.updated_at instanceof Date ? addr.updated_at.toISOString() : addr.updated_at,
+        created_at:
+          addr.created_at instanceof Date ? addr.created_at.toISOString() : addr.created_at,
+        updated_at:
+          addr.updated_at instanceof Date ? addr.updated_at.toISOString() : addr.updated_at,
       })),
       metadata_public: identity.metadata_public as Record<string, unknown> | undefined,
       metadata_admin: identity.metadata_admin as Record<string, unknown> | undefined,
-      created_at: identity.created_at instanceof Date ? identity.created_at.toISOString() : identity.created_at,
-      updated_at: identity.updated_at instanceof Date ? identity.updated_at.toISOString() : identity.updated_at,
+      created_at:
+        identity.created_at instanceof Date
+          ? identity.created_at.toISOString()
+          : identity.created_at,
+      updated_at:
+        identity.updated_at instanceof Date
+          ? identity.updated_at.toISOString()
+          : identity.updated_at,
     };
   };
 

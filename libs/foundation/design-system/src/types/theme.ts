@@ -4,7 +4,7 @@
  */
 
 import type { ComponentAnalytics } from './component';
-import type { SlotThemeConfig, ComponentThemeConfigStructure } from './cva';
+import type { ComponentThemeConfigStructure, SlotThemeConfig } from './cva';
 
 /**
  * Design token configuration for runtime overrides

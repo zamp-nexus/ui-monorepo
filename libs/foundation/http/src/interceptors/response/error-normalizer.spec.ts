@@ -4,17 +4,18 @@
  * Tests for converting AxiosErrors and non-2xx responses into typed HttpErrors.
  */
 
-import { describe, it, expect } from 'vitest';
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { describe, expect, it } from 'vitest';
+
 import {
   HttpCancelledError,
-  HttpTimeoutError,
-  HttpNetworkError,
-  HttpUnauthorizedError,
   HttpForbiddenError,
+  HttpNetworkError,
   HttpNotFoundError,
-  HttpServerError,
   HttpRequestError,
+  HttpServerError,
+  HttpTimeoutError,
+  HttpUnauthorizedError,
 } from '../../errors/http-errors';
 import { convertAxiosError, convertResponseError } from './error-normalizer';
 
@@ -22,7 +23,11 @@ import { convertAxiosError, convertResponseError } from './error-normalizer';
 // Helpers
 // =============================================================================
 
-const makeConfig = (url = '/api/test', method = 'get', timeout = 30_000): InternalAxiosRequestConfig =>
+const makeConfig = (
+  url = '/api/test',
+  method = 'get',
+  timeout = 30_000,
+): InternalAxiosRequestConfig =>
   ({ url, method, timeout, headers: {} } as unknown as InternalAxiosRequestConfig);
 
 const makeAxiosError = (
@@ -34,7 +39,7 @@ const makeAxiosError = (
 ): AxiosError => {
   const config = makeConfig(url, method);
   const response = status
-    ? { status, data, config, headers: {}, statusText: '' } as AxiosResponse
+    ? ({ status, data, config, headers: {}, statusText: '' } as AxiosResponse)
     : undefined;
 
   return {
@@ -60,7 +65,7 @@ const makeResponse = (
     config: makeConfig(url, method),
     headers: {},
     statusText: '',
-  }) as AxiosResponse;
+  } as AxiosResponse);
 
 // =============================================================================
 // convertAxiosError

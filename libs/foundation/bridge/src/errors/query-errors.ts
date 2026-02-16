@@ -5,12 +5,13 @@
  */
 
 import {
+  CANCELLATION_REASON,
   FOUNDATION_ERROR_CODE,
-  QueryTimeoutError,
   QueryCancelledError,
   QueryExecutionError,
-  CANCELLATION_REASON,
+  QueryTimeoutError,
 } from '@open-insights-web/foundation-data-model';
+
 import { BridgeError } from './base-error';
 
 // =============================================================================
@@ -23,10 +24,7 @@ import { BridgeError } from './base-error';
 export class SqlValidationError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_SQL_VALIDATION_FAILED;
 
-  constructor(
-    readonly identifier: string,
-    readonly reason: string
-  ) {
+  constructor(readonly identifier: string, readonly reason: string) {
     super(`Invalid SQL identifier "${identifier}": ${reason}`, {
       identifier,
       reason,
@@ -34,10 +32,5 @@ export class SqlValidationError extends BridgeError {
   }
 }
 
-export {
-  QueryTimeoutError,
-  QueryCancelledError,
-  QueryExecutionError,
-  CANCELLATION_REASON,
-};
+export { QueryTimeoutError, QueryCancelledError, QueryExecutionError, CANCELLATION_REASON };
 export type { CancellationReasonKind } from '@open-insights-web/foundation-data-model';

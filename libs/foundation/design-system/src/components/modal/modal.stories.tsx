@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 import { expect, userEvent, within } from 'storybook/test';
 
 import { Button } from '../button';
@@ -82,9 +83,7 @@ export const Small: Story = {
       <Modal.Content>
         <Modal.Header>
           <Modal.Title>Confirm Action</Modal.Title>
-          <Modal.Description>
-            Are you sure you want to proceed?
-          </Modal.Description>
+          <Modal.Description>Are you sure you want to proceed?</Modal.Description>
           <Modal.Close />
         </Modal.Header>
         <Modal.Footer>
@@ -110,9 +109,7 @@ export const Large: Story = {
       <Modal.Content>
         <Modal.Header>
           <Modal.Title>Large Content Area</Modal.Title>
-          <Modal.Description>
-            This modal has more space for complex content.
-          </Modal.Description>
+          <Modal.Description>This modal has more space for complex content.</Modal.Description>
           <Modal.Close />
         </Modal.Header>
         <Modal.Body>
@@ -158,9 +155,7 @@ export const FullScreen: Story = {
       <Modal.Content>
         <Modal.Header>
           <Modal.Title>Full Screen Content</Modal.Title>
-          <Modal.Description>
-            This modal takes up most of the viewport.
-          </Modal.Description>
+          <Modal.Description>This modal takes up most of the viewport.</Modal.Description>
           <Modal.Close />
         </Modal.Header>
         <Modal.Body>
@@ -192,15 +187,11 @@ export const Controlled: Story = {
           <Modal.Content>
             <Modal.Header>
               <Modal.Title>Controlled Modal</Modal.Title>
-              <Modal.Description>
-                This modal is controlled via state.
-              </Modal.Description>
+              <Modal.Description>This modal is controlled via state.</Modal.Description>
               <Modal.Close />
             </Modal.Header>
             <Modal.Body>
-              <p className="text-sm text-muted-foreground">
-                Open state: {open ? 'true' : 'false'}
-              </p>
+              <p className="text-sm text-muted-foreground">Open state: {open ? 'true' : 'false'}</p>
             </Modal.Body>
             <Modal.Footer>
               <Button intent="secondary" onClick={() => setOpen(false)}>
@@ -226,18 +217,16 @@ export const ScrollableContent: Story = {
       <Modal.Content>
         <Modal.Header>
           <Modal.Title>Terms of Service</Modal.Title>
-          <Modal.Description>
-            Please read and accept our terms of service.
-          </Modal.Description>
+          <Modal.Description>Please read and accept our terms of service.</Modal.Description>
           <Modal.Close />
         </Modal.Header>
         <Modal.Body>
           <div className="space-y-4">
             {Array.from({ length: 20 }).map((_, i) => (
               <p key={i} className="text-sm text-muted-foreground">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-                enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+                exercitation ullamco laboris.
               </p>
             ))}
           </div>
@@ -266,8 +255,7 @@ export const ConfirmationDialog: Story = {
         <Modal.Header>
           <Modal.Title>Delete Item</Modal.Title>
           <Modal.Description>
-            Are you sure you want to delete this item? This action cannot be
-            undone.
+            Are you sure you want to delete this item? This action cannot be undone.
           </Modal.Description>
         </Modal.Header>
         <Modal.Footer>
@@ -297,8 +285,8 @@ export const WithoutFooter: Story = {
         </Modal.Header>
         <Modal.Body>
           <p className="text-sm text-muted-foreground">
-            This modal only has a header and body, no footer. The close button
-            in the header can be used to dismiss it.
+            This modal only has a header and body, no footer. The close button in the header can be
+            used to dismiss it.
           </p>
         </Modal.Body>
       </Modal.Content>
@@ -319,9 +307,7 @@ export const ModalInteractionTest: Story = {
       <Modal.Content>
         <Modal.Header>
           <Modal.Title>Test Modal</Modal.Title>
-          <Modal.Description>
-            This modal is used for interaction testing.
-          </Modal.Description>
+          <Modal.Description>This modal is used for interaction testing.</Modal.Description>
           <Modal.Close />
         </Modal.Header>
         <Modal.Body>
@@ -380,9 +366,7 @@ export const ModalKeyboardTest: Story = {
           <Modal.Close />
         </Modal.Header>
         <Modal.Body>
-          <p className="text-sm text-muted-foreground">
-            Press Escape to close this modal.
-          </p>
+          <p className="text-sm text-muted-foreground">Press Escape to close this modal.</p>
         </Modal.Body>
       </Modal.Content>
     </Modal>

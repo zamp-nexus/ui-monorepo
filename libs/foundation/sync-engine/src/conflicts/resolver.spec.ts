@@ -2,12 +2,14 @@
  * Tests for ConflictResolver
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import {
   CONFLICT_STRATEGY,
   CONFLICT_WINNER,
   type ConflictContext,
 } from '@open-insights-web/foundation-data-model';
+
 import { ConflictResolver } from './resolver';
 
 describe('ConflictResolver', () => {
@@ -164,45 +166,25 @@ describe('ConflictResolver', () => {
 
   describe('hasConflict', () => {
     it('should return false when data is equal', () => {
-      const hasConflict = resolver.hasConflict(
-        { name: 'Same' },
-        { name: 'Same' },
-        1000,
-        2000
-      );
+      const hasConflict = resolver.hasConflict({ name: 'Same' }, { name: 'Same' }, 1000, 2000);
 
       expect(hasConflict).toBe(false);
     });
 
     it('should return false when timestamps are equal', () => {
-      const hasConflict = resolver.hasConflict(
-        { name: 'Server' },
-        { name: 'Client' },
-        1000,
-        1000
-      );
+      const hasConflict = resolver.hasConflict({ name: 'Server' }, { name: 'Client' }, 1000, 1000);
 
       expect(hasConflict).toBe(false);
     });
 
     it('should return true when server is newer and data differs', () => {
-      const hasConflict = resolver.hasConflict(
-        { name: 'Server' },
-        { name: 'Client' },
-        2000,
-        1000
-      );
+      const hasConflict = resolver.hasConflict({ name: 'Server' }, { name: 'Client' }, 2000, 1000);
 
       expect(hasConflict).toBe(true);
     });
 
     it('should return false when client is newer (no server conflict)', () => {
-      const hasConflict = resolver.hasConflict(
-        { name: 'Server' },
-        { name: 'Client' },
-        1000,
-        2000
-      );
+      const hasConflict = resolver.hasConflict({ name: 'Server' }, { name: 'Client' }, 1000, 2000);
 
       expect(hasConflict).toBe(false);
     });

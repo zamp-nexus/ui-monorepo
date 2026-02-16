@@ -4,15 +4,16 @@
  * Validates constant values and type exports.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
+  AUTH_ERROR_CODE,
   AUTH_FLOW_TYPE,
   AUTH_STATE,
-  AUTH_ERROR_CODE,
   DEFAULT_AUTH_CONFIG,
-  SESSION_STATE,
   FLOW_STATE,
   IDENTITY_TRAIT,
+  SESSION_STATE,
 } from './constants';
 
 describe('auth constants', () => {

@@ -7,7 +7,7 @@
  * @module duckdb/arrow-converter
  */
 
-import type { Field, Table, Vector, StructRowProxy } from 'apache-arrow';
+import type { Field, StructRowProxy, Table, Vector } from 'apache-arrow';
 import { Type } from 'apache-arrow';
 
 /**
@@ -32,9 +32,7 @@ export const convertArrowValue = (field: Field, value: unknown): unknown => {
     case Type.Date:
     case Type.DateDay:
     case Type.DateMillisecond:
-      return value instanceof Date
-        ? value.toISOString()
-        : new Date(value as number).toISOString();
+      return value instanceof Date ? value.toISOString() : new Date(value as number).toISOString();
 
     // Timestamp types - convert to ISO string
     case Type.Timestamp:
@@ -42,9 +40,7 @@ export const convertArrowValue = (field: Field, value: unknown): unknown => {
     case Type.TimestampMillisecond:
     case Type.TimestampMicrosecond:
     case Type.TimestampNanosecond:
-      return value instanceof Date
-        ? value.toISOString()
-        : new Date(value as number).toISOString();
+      return value instanceof Date ? value.toISOString() : new Date(value as number).toISOString();
 
     // Time types - keep as number (milliseconds)
     case Type.Time:
@@ -126,9 +122,7 @@ export const convertArrowValue = (field: Field, value: unknown): unknown => {
         return Array.isArray(value) ? value : [];
       }
 
-      return vector.toArray().map((item: unknown) =>
-        convertArrowValue(childField, item)
-      );
+      return vector.toArray().map((item: unknown) => convertArrowValue(childField, item));
     }
 
     // Map type
@@ -160,10 +154,7 @@ export const convertArrowValue = (field: Field, value: unknown): unknown => {
       const structValue = value as Record<string, unknown>;
 
       for (const childField of structFields) {
-        result[childField.name] = convertArrowValue(
-          childField,
-          structValue[childField.name]
-        );
+        result[childField.name] = convertArrowValue(childField, structValue[childField.name]);
       }
 
       return result;
@@ -207,7 +198,7 @@ export const convertArrowValue = (field: Field, value: unknown): unknown => {
  */
 export const convertArrowRow = <T extends Record<string, unknown>>(
   row: StructRowProxy,
-  fields: readonly Field[]
+  fields: readonly Field[],
 ): T => {
   const result: Record<string, unknown> = {};
 
@@ -225,14 +216,10 @@ export const convertArrowRow = <T extends Record<string, unknown>>(
  * @param table - Apache Arrow Table
  * @returns Array of plain JavaScript objects with proper types
  */
-export const convertArrowTableToJSON = <T extends Record<string, unknown>>(
-  table: Table
-): T[] => {
+export const convertArrowTableToJSON = <T extends Record<string, unknown>>(table: Table): T[] => {
   const fields = table.schema.fields;
 
-  return table.toArray().map((row: StructRowProxy) =>
-    convertArrowRow<T>(row, fields)
-  );
+  return table.toArray().map((row: StructRowProxy) => convertArrowRow<T>(row, fields));
 };
 
 /**
@@ -242,7 +229,7 @@ export const convertArrowTableToJSON = <T extends Record<string, unknown>>(
  * @returns Object mapping column names to their type information
  */
 export const getColumnMetadata = (
-  table: Table
+  table: Table,
 ): Record<string, { type: string; typeId: Type; nullable: boolean }> => {
   const metadata: Record<string, { type: string; typeId: Type; nullable: boolean }> = {};
 
@@ -296,7 +283,7 @@ export interface ArrowQueryResult<T = Record<string, unknown>> {
  */
 export const convertArrowToQueryResult = <T = Record<string, unknown>>(
   arrowTable: Table,
-  executionTimeMs: number
+  executionTimeMs: number,
 ): ArrowQueryResult<T> => {
   const rows = convertArrowTableToJSON<T & Record<string, unknown>>(arrowTable);
   const columns = arrowTable.schema.fields.map((f) => f.name);

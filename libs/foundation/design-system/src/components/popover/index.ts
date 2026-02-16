@@ -17,9 +17,4 @@ export type {
   PopoverCloseProps,
   PopoverContextValue,
 } from './popover';
-export {
-  PopoverVariants,
-  PopoverModifiers,
-  PopoverSlots,
-  popoverDefaultTheme,
-} from './popover';
+export { PopoverVariants, PopoverModifiers, PopoverSlots, popoverDefaultTheme } from './popover';

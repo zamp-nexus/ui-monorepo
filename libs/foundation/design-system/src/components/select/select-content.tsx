@@ -7,9 +7,9 @@ import React from 'react';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 
 import { useTheme } from '../../theme';
-import { useSelectContext } from './select.context';
 import type { SelectContentComponent, SelectContentProps } from './select';
 import { selectDefaultTheme } from './select';
+import { useSelectContext } from './select.context';
 
 /**
  * SelectContent component

@@ -10,29 +10,29 @@ export type {
   DesignToken,
   TokenReference,
   TokenGroup,
-  
+
   // Color types
   HSLColor,
   RGBColor,
   ColorToken,
-  
+
   // Dimension types
   DimensionUnit,
   DimensionToken,
-  
+
   // Typography types
   FontWeightToken,
   FontFamilyToken,
   TypographyToken,
-  
+
   // Animation types
   DurationToken,
   CubicBezierToken,
-  
+
   // Effect types
   ShadowToken,
   ShadowLayer,
-  
+
   // Number type
   NumberToken,
 } from './token';

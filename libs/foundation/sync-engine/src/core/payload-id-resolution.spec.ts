@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { resolvePayloadProvisionalIds } from './payload-id-resolution';
 
 describe('resolvePayloadProvisionalIds', () => {
@@ -8,11 +9,7 @@ describe('resolvePayloadProvisionalIds', () => {
       nested: {
         childIds: ['provisional_child_1', 'server_child_2'],
       },
-      mixed: [
-        { id: 'provisional_item_1' },
-        'provisional_item_2',
-        123,
-      ],
+      mixed: [{ id: 'provisional_item_1' }, 'provisional_item_2', 123],
     };
 
     const resolved = resolvePayloadProvisionalIds(payload, (id) => {
@@ -27,11 +24,7 @@ describe('resolvePayloadProvisionalIds', () => {
       nested: {
         childIds: ['server_child_1', 'server_child_2'],
       },
-      mixed: [
-        { id: 'server_item_1' },
-        'server_item_2',
-        123,
-      ],
+      mixed: [{ id: 'server_item_1' }, 'server_item_2', 123],
     });
   });
 });

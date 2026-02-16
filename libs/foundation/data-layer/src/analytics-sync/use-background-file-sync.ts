@@ -11,14 +11,12 @@
  * @module analytics-sync/use-background-file-sync
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
-import { useDataLayerInternals } from '../provider/data-layer-internals-context';
-import {
-  type DownloadProgressState,
-  INITIAL_DOWNLOAD_STATE,
-} from './file-download-service';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { createDebugLogger } from '@open-insights-web/foundation-utils';
+
+import { useDataLayerInternals } from '../provider/data-layer-internals-context';
+import { INITIAL_DOWNLOAD_STATE, type DownloadProgressState } from './file-download-service';
 
 /**
  * Options for useBackgroundFileSync hook
@@ -65,24 +63,17 @@ const INITIAL_SYNC_STATE: BackgroundSyncState = Object.freeze({
  * Background file sync hook for analytics tables.
  */
 export const useBackgroundFileSync = (
-  options: UseBackgroundFileSyncOptions
+  options: UseBackgroundFileSyncOptions,
 ): UseBackgroundFileSyncResult => {
   const { tables, enabled = true, onProgress, onComplete, onError, debug = false } = options;
 
-  const {
-    queryClient,
-    datasourceApi,
-    getTableSyncService,
-    getFileDownloadService,
-  } = useDataLayerInternals();
+  const { queryClient, datasourceApi, getTableSyncService, getFileDownloadService } =
+    useDataLayerInternals();
   const [state, setState] = useState<BackgroundSyncState>(INITIAL_SYNC_STATE);
   const isSyncingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const logger = useMemo(
-    () => createDebugLogger('useBackgroundFileSync', debug),
-    [debug]
-  );
+  const logger = useMemo(() => createDebugLogger('useBackgroundFileSync', debug), [debug]);
 
   const isConfigured = datasourceApi !== null;
 
@@ -133,7 +124,9 @@ export const useBackgroundFileSync = (
 
       const downloadService = await getFileDownloadService();
       if (!downloadService) {
-        const opfsError = new Error('Background sync unavailable: OPFS manager could not be initialized.');
+        const opfsError = new Error(
+          'Background sync unavailable: OPFS manager could not be initialized.',
+        );
         setState((previousState) => ({
           ...previousState,
           isChecking: false,
@@ -162,7 +155,7 @@ export const useBackgroundFileSync = (
             setState((previousState) => ({ ...previousState, downloadProgress: overallProgress }));
             onProgress?.(overallProgress);
           },
-          controller.signal
+          controller.signal,
         );
 
         filesCompleted += plan.filesToDownload.length;

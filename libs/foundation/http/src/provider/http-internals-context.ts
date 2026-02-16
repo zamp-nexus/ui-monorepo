@@ -8,7 +8,8 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { HttpInternals, HttpClientConfig } from '../core/types';
+
+import type { HttpClientConfig, HttpInternals } from '../core/types';
 
 // =============================================================================
 // Default Value

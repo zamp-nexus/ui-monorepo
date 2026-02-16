@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { extractColumnName, extractTableName, parseMemberRef } from './member-ref';
 
 describe('utils/member-ref', () => {
@@ -22,4 +23,3 @@ describe('utils/member-ref', () => {
     expect(extractColumnName('orders')).toBeNull();
   });
 });
-

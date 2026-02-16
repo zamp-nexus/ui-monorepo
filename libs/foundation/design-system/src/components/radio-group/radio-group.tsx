@@ -7,10 +7,10 @@ import React from 'react';
 import { RadioGroup as RadioGroupPrimitive } from '@base-ui/react/radio-group';
 
 import { useTheme } from '../../theme';
-import { RadioGroupItem } from './radio-group-item';
-import { RadioGroupProvider } from './radio-group.context';
 import type { RadioGroupComponent, RadioGroupProps } from './radio-group';
 import { radioGroupDefaultTheme } from './radio-group';
+import { RadioGroupItem } from './radio-group-item';
+import { RadioGroupProvider } from './radio-group.context';
 
 /**
  * RadioGroup component
@@ -41,17 +41,7 @@ import { radioGroupDefaultTheme } from './radio-group';
  */
 const RadioGroupRoot: RadioGroupComponent = React.forwardRef<HTMLDivElement, RadioGroupProps>(
   function RadioGroup(
-    {
-      className,
-      oiid,
-      size = 'md',
-      disabled,
-      value,
-      defaultValue,
-      onValueChange,
-      children,
-      name,
-    },
+    { className, oiid, size = 'md', disabled, value, defaultValue, onValueChange, children, name },
     ref: React.ForwardedRef<HTMLDivElement>,
   ) {
     const theme = useTheme('radioGroup', radioGroupDefaultTheme);

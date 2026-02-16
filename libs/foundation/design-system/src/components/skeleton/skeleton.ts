@@ -4,11 +4,11 @@
  */
 
 import type {
-  OIDefaultProps,
+  ComponentThemeConfigStructure,
   OIComponentOwnProps,
   OIComponentProps,
   OIComponentRef,
-  ComponentThemeConfigStructure,
+  OIDefaultProps,
 } from '../../types';
 
 /**
@@ -74,4 +74,3 @@ export const skeletonDefaultTheme: ComponentThemeConfigStructure = {
   },
   defaultVariants: {},
 };
-

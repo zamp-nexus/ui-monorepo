@@ -4,20 +4,22 @@
  */
 
 import type { QueryClient } from '@tanstack/react-query';
+import type { AxiosInstance } from 'axios';
 import type { ConvexReactClient } from 'convex/react';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { getDatabase } from '@open-insights-web/foundation-database';
+
 import {
   CROSS_TAB_MESSAGE_TYPE,
   SYNC_EVENT_TYPE,
-  type QueryKeyBase,
-  type SyncState,
-  type ProcessingResult,
   type ConflictStrategy,
   type NetworkStatus,
+  type ProcessingResult,
+  type QueryKeyBase,
   type SyncEvent,
   type SyncEventListener,
+  type SyncState,
 } from '@open-insights-web/foundation-data-model';
+import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+import { getDatabase } from '@open-insights-web/foundation-database';
 import {
   AsyncDisposable,
   CompositeDisposable,
@@ -28,24 +30,30 @@ import {
   SafeDebounce,
   SafeTimer,
 } from '@open-insights-web/foundation-utils';
-import type { NetworkStatusMonitor } from '../network/index';
-import { createNetworkMonitor } from '../network/index';
-import type { OfflineQueueManager } from '../queue/manager';
-import { createQueueManager } from '../queue/manager';
-import { QueueProcessor } from '../queue/processor';
+
 import type { ConflictResolver } from '../conflicts/resolver';
 import { createConflictResolver } from '../conflicts/resolver';
 import type { ConvexSyncAdapter } from '../convex/adapter';
 import { createConvexAdapter, type ConvexMutationOptions } from '../convex/adapter';
-import type { CrossTabManager } from '../cross-tab/manager';
-import { createCrossTabManager } from '../cross-tab/manager';
-import type { ISyncCoordinator, INetworkMonitor, IQueueManager, IConflictResolver } from '../core/interfaces';
 import {
   DEFAULT_AUTO_START,
   DEFAULT_CONFLICT_STRATEGY,
   DEFAULT_ENABLE_CROSS_TAB,
   DEFAULT_SYNC_DEBOUNCE_DELAY_MS,
 } from '../core/defaults';
+import type {
+  IConflictResolver,
+  INetworkMonitor,
+  IQueueManager,
+  ISyncCoordinator,
+} from '../core/interfaces';
+import type { CrossTabManager } from '../cross-tab/manager';
+import { createCrossTabManager } from '../cross-tab/manager';
+import type { NetworkStatusMonitor } from '../network/index';
+import { createNetworkMonitor } from '../network/index';
+import type { OfflineQueueManager } from '../queue/manager';
+import { createQueueManager } from '../queue/manager';
+import { QueueProcessor } from '../queue/processor';
 
 /**
  * Sync coordinator configuration
@@ -69,6 +77,8 @@ export interface SyncCoordinatorConfig {
   healthCheckUrl?: string;
   /** Health check interval */
   healthCheckInterval?: number;
+  /** Optional shared Axios instance for health checks */
+  axiosInstance?: AxiosInstance;
   /** Enable debug logging */
   debug?: boolean;
   /** Error callback for centralized error handling */
@@ -111,7 +121,7 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
   private listeners: Set<SyncEventListener> = new Set();
   private started = false;
   private lastSyncAt: number | null = null;
-  
+
   // Mutex for sync operations to prevent race conditions
   private syncMutex = new Mutex();
 
@@ -141,6 +151,7 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
       database: this.db,
       healthCheckUrl: config.healthCheckUrl,
       healthCheckInterval: config.healthCheckInterval,
+      axiosInstance: config.axiosInstance,
       debug: this.config.debug,
     });
 
@@ -243,9 +254,7 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
     await this.networkMonitor.start();
 
     // Subscribe to network status changes
-    const networkUnsubscribe = this.networkMonitor.subscribe(
-      this.handleNetworkStatusChange
-    );
+    const networkUnsubscribe = this.networkMonitor.subscribe(this.handleNetworkStatusChange);
     this.runtimeDisposables.addFunction(networkUnsubscribe);
 
     // Start cross-tab sync
@@ -341,7 +350,7 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
    */
   async sync(): Promise<ProcessingResult | null> {
     this.ensureNotDisposed();
-    
+
     // Try to acquire lock - if already syncing, schedule for later
     const release = this.syncMutex.tryAcquire();
     if (!release) {
@@ -513,7 +522,7 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
    */
   private handleNetworkStatusChange = (status: NetworkStatus | { isOnline: boolean }): void => {
     if (this.isDisposed) return;
-    
+
     if (status.isOnline) {
       this.logger.debug('Network online');
       this.emit({ type: SYNC_EVENT_TYPE.ONLINE, timestamp: Date.now() });
@@ -556,61 +565,73 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
     if (!this.crossTabManager) return;
 
     // Handle invalidation from other tabs
-    const invalidateUnsub = this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.INVALIDATE, (message) => {
-      if (message.payload?.queryKeys) {
-        for (const key of message.payload.queryKeys) {
-          if (Array.isArray(key)) {
-            this.queryClient.invalidateQueries({ queryKey: key });
+    const invalidateUnsub = this.crossTabManager.subscribe(
+      CROSS_TAB_MESSAGE_TYPE.INVALIDATE,
+      (message) => {
+        if (message.payload?.queryKeys) {
+          for (const key of message.payload.queryKeys) {
+            if (Array.isArray(key)) {
+              this.queryClient.invalidateQueries({ queryKey: key });
+            }
           }
         }
-      }
-    });
+      },
+    );
     disposables.addFunction(invalidateUnsub);
 
     // Handle mutation completion from other tabs
-    const mutationUnsub = this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.MUTATION_COMPLETED, (message) => {
-      if (message.payload?.tableName) {
-        // Invalidate queries for the affected table
-        this.queryClient.invalidateQueries({
-          queryKey: [message.payload.tableName],
-        });
-      }
-    });
+    const mutationUnsub = this.crossTabManager.subscribe(
+      CROSS_TAB_MESSAGE_TYPE.MUTATION_COMPLETED,
+      (message) => {
+        if (message.payload?.tableName) {
+          // Invalidate queries for the affected table
+          this.queryClient.invalidateQueries({
+            queryKey: [message.payload.tableName],
+          });
+        }
+      },
+    );
     disposables.addFunction(mutationUnsub);
 
     // Handle online status from other tabs
     const onlineUnsub = this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.ONLINE, () => {
       // Another tab detected we're online, verify and sync if we're leader
       if (!this.crossTabManager?.isLeader) return;
-      
-      this.networkMonitor.checkConnectivity().then((isOnline) => {
-        if (isOnline) {
-          // Use debounced sync to prevent thundering herd from multiple tabs
-          this.scheduleSync();
-        }
-      }).catch((error) => {
-        this.handleError(error, 'Cross-tab connectivity check');
-      });
+
+      this.networkMonitor
+        .checkConnectivity()
+        .then((isOnline) => {
+          if (isOnline) {
+            // Use debounced sync to prevent thundering herd from multiple tabs
+            this.scheduleSync();
+          }
+        })
+        .catch((error) => {
+          this.handleError(error, 'Cross-tab connectivity check');
+        });
     });
     disposables.addFunction(onlineUnsub);
 
     // Handle leader election - emit leader-changed event and sync if we became leader
-    const leaderUnsub = this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED, (message) => {
-      const isNowLeader = message.payload?.leaderId === this.crossTabManager?.id;
-      
-      // Emit leader-changed event for consumers
-      this.emit({
-        type: SYNC_EVENT_TYPE.LEADER_CHANGED,
-        timestamp: Date.now(),
-        data: { isLeader: isNowLeader },
-      });
-      
-      if (isNowLeader) {
-        this.logger.debug('This tab became leader, scheduling sync');
-        // Use debounced sync when becoming leader
-        this.scheduleSync();
-      }
-    });
+    const leaderUnsub = this.crossTabManager.subscribe(
+      CROSS_TAB_MESSAGE_TYPE.LEADER_ELECTED,
+      (message) => {
+        const isNowLeader = message.payload?.leaderId === this.crossTabManager?.id;
+
+        // Emit leader-changed event for consumers
+        this.emit({
+          type: SYNC_EVENT_TYPE.LEADER_CHANGED,
+          timestamp: Date.now(),
+          data: { isLeader: isNowLeader },
+        });
+
+        if (isNowLeader) {
+          this.logger.debug('This tab became leader, scheduling sync');
+          // Use debounced sync when becoming leader
+          this.scheduleSync();
+        }
+      },
+    );
     disposables.addFunction(leaderUnsub);
   }
 
@@ -662,7 +683,9 @@ export const createSyncCoordinator = (config: SyncCoordinatorConfig): SyncCoordi
  * @param config - Sync coordinator configuration
  * @returns Promise resolving to started SyncCoordinator instance
  */
-export const createAndStartSyncCoordinator = async (config: SyncCoordinatorConfig): Promise<SyncCoordinator> => {
+export const createAndStartSyncCoordinator = async (
+  config: SyncCoordinatorConfig,
+): Promise<SyncCoordinator> => {
   const coordinator = new SyncCoordinator(config);
   await coordinator.start();
   return coordinator;
@@ -680,7 +703,7 @@ const syncCoordinatorFactory = createSingletonFactory(
         await instance.disposeAsync();
       }
     },
-  }
+  },
 );
 
 /**

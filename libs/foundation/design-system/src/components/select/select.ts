@@ -4,10 +4,10 @@
  */
 
 import type {
-  OIDefaultProps,
+  ComponentThemeConfigStructure,
   OIComponentOwnProps,
   OIComponentRef,
-  ComponentThemeConfigStructure,
+  OIDefaultProps,
 } from '../../types';
 
 /**
@@ -196,4 +196,3 @@ export const selectDefaultTheme: ComponentThemeConfigStructure = {
     size: 'md',
   },
 };
-

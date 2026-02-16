@@ -46,13 +46,13 @@ This package is consumed from the monorepo workspace:
 
 ### Allowed Dependencies
 
-| Package | Usage |
-|---|---|
-| `foundation-data-layer` | Hooks and utilities for execution delegation |
-| `foundation-data-model` | Branded types, utility types, JSON types |
-| `foundation-bridge` | Shared SQL utilities (escaping, quoting) |
-| `foundation-utils` | Shared utilities (hashing, singletons, logging) |
-| `foundation-database` | OPFS types only (for file download service) |
+| Package                 | Usage                                           |
+| ----------------------- | ----------------------------------------------- |
+| `foundation-data-layer` | Hooks and utilities for execution delegation    |
+| `foundation-data-model` | Branded types, utility types, JSON types        |
+| `foundation-bridge`     | Shared SQL utilities (escaping, quoting)        |
+| `foundation-utils`      | Shared utilities (hashing, singletons, logging) |
+| `foundation-database`   | OPFS types only (for file download service)     |
 
 ### Forbidden Direct Dependencies
 
@@ -66,9 +66,7 @@ This package is consumed from the monorepo workspace:
 import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (
-  <DataLayerProvider config={{ tableConfigs: [] }}>
-    {children}
-  </DataLayerProvider>
+  <DataLayerProvider config={{ tableConfigs: [] }}>{children}</DataLayerProvider>
 );
 ```
 
@@ -77,10 +75,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 ### 1. Build a Typed Query
 
 ```ts
-import {
-  QueryBuilder,
-  FRESHNESS_REQUIREMENTS,
-} from '@open-insights-web/foundation-query-engine';
+import { FRESHNESS_REQUIREMENTS, QueryBuilder } from '@open-insights-web/foundation-query-engine';
 
 const query = new QueryBuilder()
   .dimension('orders.country')
@@ -98,9 +93,9 @@ const query = new QueryBuilder()
 
 ```tsx
 import {
-  useDLQueryEngine,
   isAnalyticsResult,
   isTransactionalResult,
+  useDLQueryEngine,
 } from '@open-insights-web/foundation-query-engine';
 
 export const OrdersByCountry = () => {
@@ -112,7 +107,9 @@ export const OrdersByCountry = () => {
   if (isAnalyticsResult(result)) {
     return (
       <div>
-        <p>Path: {result.executionPath} | SQL: {result.sql}</p>
+        <p>
+          Path: {result.executionPath} | SQL: {result.sql}
+        </p>
         <pre>{JSON.stringify(result.data, null, 2)}</pre>
       </div>
     );
@@ -161,10 +158,10 @@ export const CreateUserButton = () => {
 ```ts
 import {
   countByDimension,
+  extendPreset,
+  kpiQuery,
   timeSeriesCount,
   topNQuery,
-  kpiQuery,
-  extendPreset,
 } from '@open-insights-web/foundation-query-engine';
 
 // Count by status
@@ -191,7 +188,13 @@ const filteredTopCustomers = extendPreset(topCustomers, (builder) => {
 ### 5. Schema Definition with Builders
 
 ```ts
-import { schema, table, measure, dimension, timeDimension } from '@open-insights-web/foundation-query-engine';
+import {
+  dimension,
+  measure,
+  schema,
+  table,
+  timeDimension,
+} from '@open-insights-web/foundation-query-engine';
 
 const analyticsSchema = schema('analytics', '1.0.0')
   .table('orders', 'orders', (t) => {
@@ -257,15 +260,15 @@ const result = compiler.compile(query);
 
 ### Module Overview
 
-| Module | Purpose |
-|---|---|
-| `src/types/` | Canonical contracts, constants, type guards, and utility functions |
-| `src/builder/` | Fluent `QueryBuilder` API and preset factory functions |
-| `src/engine/` | `TableExtractor`, `DecisionEngine`, and `FilterConverter` |
-| `src/compiler/` | `SqlCompiler` (DuckDB SQL generation) and SQL utility wrappers |
-| `src/schema/` | `SchemaRegistry`, builder APIs, and schema/query validators |
-| `src/hooks/` | React integration: `useDLQueryEngine`, `useDLMutateQueryEngine`, `useBackgroundFileSync` |
-| `src/utils/` | Member reference parsing utilities |
+| Module          | Purpose                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `src/types/`    | Canonical contracts, constants, type guards, and utility functions                       |
+| `src/builder/`  | Fluent `QueryBuilder` API and preset factory functions                                   |
+| `src/engine/`   | `TableExtractor`, `DecisionEngine`, and `FilterConverter`                                |
+| `src/compiler/` | `SqlCompiler` (DuckDB SQL generation) and SQL utility wrappers                           |
+| `src/schema/`   | `SchemaRegistry`, builder APIs, and schema/query validators                              |
+| `src/hooks/`    | React integration: `useDLQueryEngine`, `useDLMutateQueryEngine`, `useBackgroundFileSync` |
+| `src/utils/`    | Member reference parsing utilities                                                       |
 
 ### Decision Engine Rules
 
@@ -305,11 +308,11 @@ Configuration is managed via `QueryEngineConfig` in `src/types/config.ts`:
 
 ```ts
 interface QueryEngineConfig {
-  dataSourceApi?: FunctionReference<'query'>;  // Convex query for Parquet metadata
-  defaultStaleTime?: number;                    // Default: 6 hours (21600000 ms)
-  autoRefreshOnUpdate?: boolean;                // Default: false
-  backgroundPollInterval?: number;              // 0 = disabled (default)
-  debug?: boolean;                              // Enable debug logging
+  dataSourceApi?: FunctionReference<'query'>; // Convex query for Parquet metadata
+  defaultStaleTime?: number; // Default: 6 hours (21600000 ms)
+  autoRefreshOnUpdate?: boolean; // Default: false
+  backgroundPollInterval?: number; // 0 = disabled (default)
+  debug?: boolean; // Enable debug logging
 }
 ```
 
@@ -323,10 +326,15 @@ Branded types provide type safety for domain identifiers. Import them from `foun
 
 ```ts
 import type { MemberRef, QueryId, SqlTableName } from '@open-insights-web/foundation-data-model';
-import { MemberRef as MemberRefUtil, QueryId as QueryIdUtil } from '@open-insights-web/foundation-data-model';
+import {
+  MemberRef as MemberRefUtil,
+  QueryId as QueryIdUtil,
+} from '@open-insights-web/foundation-data-model';
 
 // Type usage
-const processQuery = (id: QueryId): void => { /* ... */ };
+const processQuery = (id: QueryId): void => {
+  /* ... */
+};
 
 // Value creation
 const id = QueryIdUtil.create();
@@ -339,7 +347,7 @@ All enumerations use the const object pattern (no string literal unions):
 
 ```ts
 // ✅ Correct pattern (used throughout)
-const AGGREGATIONS = { SUM: 'sum', COUNT: 'count', /* ... */ } as const;
+const AGGREGATIONS = { SUM: 'sum', COUNT: 'count' /* ... */ } as const;
 type Aggregation = (typeof AGGREGATIONS)[keyof typeof AGGREGATIONS];
 
 // ❌ Avoided

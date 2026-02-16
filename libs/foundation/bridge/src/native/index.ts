@@ -3,7 +3,4 @@
  * @module native
  */
 
-export {
-  ElectronDuckDBBridge,
-  type ElectronDuckDBBridgeConfig,
-} from './electron-bridge';
+export { ElectronDuckDBBridge, type ElectronDuckDBBridgeConfig } from './electron-bridge';

@@ -3,16 +3,21 @@
  * @module lifecycle/rehydration
  */
 
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { getDatabase, SyncStateService } from '@open-insights-web/foundation-database';
-import { createDebugLogger, topologicalSort, type Logger } from '@open-insights-web/foundation-utils';
-import type { DuckDBRouter } from '../duckdb/router';
-import type { ViewDefinition } from '../types/bridge';
 import {
   SYNC_STATE_KEY,
   Timestamp,
   type DuckDBViewsValue,
 } from '@open-insights-web/foundation-data-model';
+import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+import { getDatabase, SyncStateService } from '@open-insights-web/foundation-database';
+import {
+  createDebugLogger,
+  topologicalSort,
+  type Logger,
+} from '@open-insights-web/foundation-utils';
+
+import type { DuckDBRouter } from '../duckdb/router';
+import type { ViewDefinition } from '../types/bridge';
 import { validateIdentifier, validateViewSql } from '../utils/sql';
 
 /**
@@ -153,16 +158,13 @@ export class RehydrationController {
       }
 
       // Get registered files from OPFS metadata
-      const opfsFiles = await this.db.opfsFiles
-        .where('isRegistered')
-        .equals(1)
-        .toArray();
+      const opfsFiles = await this.db.opfsFiles.where('isRegistered').equals(1).toArray();
 
       // Sort files by dependencies using shared utility
       const sortedFiles = topologicalSort(
         opfsFiles,
         (f) => f.path,
-        (f) => f.dependencies ?? []
+        (f) => f.dependencies ?? [],
       );
 
       // Re-register files
@@ -182,7 +184,7 @@ export class RehydrationController {
       const sortedViews = topologicalSort(
         savedState.views,
         (v) => v.name,
-        (v) => v.dependencies
+        (v) => v.dependencies,
       );
 
       // Recreate views (re-validate data loaded from DB to prevent stored injection)
@@ -245,5 +247,5 @@ export class RehydrationController {
  * Create a rehydration controller
  */
 export const createRehydrationController = (
-  config: RehydrationControllerConfig
+  config: RehydrationControllerConfig,
 ): RehydrationController => new RehydrationController(config);

@@ -6,42 +6,31 @@
  * @module builder/query-builder
  */
 
-import type {
-  DateRangeSpec,
-  TimeGranularity,
-  TimeDimensionSpec,
-} from '../types/time';
-import type { DimensionSpec, DimensionFormatType } from '../types/dimension';
-import type { MeasureSpec } from '../types/measure';
+import type { QueryId } from '@open-insights-web/foundation-data-model';
+import {
+  MemberRef as MemberRefUtil,
+  QueryId as QueryIdUtil,
+} from '@open-insights-web/foundation-data-model';
+
+import type { Aggregation } from '../types/aggregation';
+import { AGGREGATIONS } from '../types/aggregation';
+import type { DimensionFormatType, DimensionSpec } from '../types/dimension';
 import type {
   FilterAndGroup,
   FilterCondition,
   FilterExpression,
   FilterOperator,
-  FilterPrimitive,
   FilterOrGroup,
+  FilterPrimitive,
 } from '../types/filter';
+import { FILTER_OPERATORS } from '../types/filter';
 import type { JoinSpec, JoinType } from '../types/join';
+import { JOIN_TYPES } from '../types/join';
+import type { MeasureSpec } from '../types/measure';
 import type { OrderBySpec, OrderDirection } from '../types/order';
-import type { Aggregation } from '../types/aggregation';
-import type { QueryBackend, Query, FreshnessRequirement } from '../types/query';
-import type { QueryId } from '@open-insights-web/foundation-data-model';
-import {
-  QueryId as QueryIdUtil,
-  MemberRef as MemberRefUtil,
-} from '@open-insights-web/foundation-data-model';
-import {
-  AGGREGATIONS,
-} from '../types/aggregation';
-import {
-  FILTER_OPERATORS,
-} from '../types/filter';
-import {
-  JOIN_TYPES,
-} from '../types/join';
-import {
-  ORDER_DIRECTIONS,
-} from '../types/order';
+import { ORDER_DIRECTIONS } from '../types/order';
+import type { FreshnessRequirement, Query, QueryBackend } from '../types/query';
+import type { DateRangeSpec, TimeDimensionSpec, TimeGranularity } from '../types/time';
 
 type BuildQuery = {
   -readonly [K in keyof Query]?: Query[K];
@@ -115,7 +104,7 @@ export class QueryBuilder {
   measure = (
     member: string,
     aggregation: Aggregation = 'count',
-    options?: { alias?: string; distinct?: boolean }
+    options?: { alias?: string; distinct?: boolean },
   ): QueryBuilder => {
     const measureSpec: MeasureSpec = {
       member,
@@ -142,8 +131,7 @@ export class QueryBuilder {
   /**
    * Add a COUNT(*) measure
    */
-  count = (alias = 'count'): QueryBuilder =>
-    this.measure('*', AGGREGATIONS.COUNT, { alias });
+  count = (alias = 'count'): QueryBuilder => this.measure('*', AGGREGATIONS.COUNT, { alias });
 
   /**
    * Add a COUNT(DISTINCT column) measure
@@ -193,7 +181,10 @@ export class QueryBuilder {
   /**
    * Add a dimension
    */
-  dimension = (member: string, options?: { alias?: string; format?: DimensionFormatType }): QueryBuilder => {
+  dimension = (
+    member: string,
+    options?: { alias?: string; format?: DimensionFormatType },
+  ): QueryBuilder => {
     const dimensionSpec: DimensionSpec = {
       member,
       alias: options?.alias,
@@ -231,7 +222,7 @@ export class QueryBuilder {
   timeDimension = (
     member: string,
     granularity?: TimeGranularity,
-    dateRange?: DateRangeSpec
+    dateRange?: DateRangeSpec,
   ): QueryBuilder => {
     this._timeDimensions.push({
       dimension: MemberRefUtil.from(member),
@@ -248,7 +239,7 @@ export class QueryBuilder {
     member: string,
     granularity: TimeGranularity,
     dateRange: DateRangeSpec,
-    compareTo: DateRangeSpec
+    compareTo: DateRangeSpec,
   ): QueryBuilder => {
     this._timeDimensions.push({
       dimension: MemberRefUtil.from(member),
@@ -349,14 +340,12 @@ export class QueryBuilder {
   /**
    * Add a null check filter
    */
-  isNull = (member: string): QueryBuilder =>
-    this.filter(member, FILTER_OPERATORS.IS_NULL);
+  isNull = (member: string): QueryBuilder => this.filter(member, FILTER_OPERATORS.IS_NULL);
 
   /**
    * Add a not null check filter
    */
-  isNotNull = (member: string): QueryBuilder =>
-    this.filter(member, FILTER_OPERATORS.IS_NOT_NULL);
+  isNotNull = (member: string): QueryBuilder => this.filter(member, FILTER_OPERATORS.IS_NOT_NULL);
 
   /**
    * Add an AND logical filter
@@ -387,7 +376,7 @@ export class QueryBuilder {
     left: string,
     right: string,
     type: JoinType = JOIN_TYPES.INNER,
-    alias?: string
+    alias?: string,
   ): QueryBuilder => {
     this._joins.push({
       left,
@@ -579,9 +568,7 @@ export class QueryBuilder {
   build = (): Query => {
     const validationErrors = this.validate();
     if (validationErrors.length > 0) {
-      throw new Error(
-        `Invalid query: ${validationErrors.join('; ')}`
-      );
+      throw new Error(`Invalid query: ${validationErrors.join('; ')}`);
     }
 
     const query: BuildQuery = {};

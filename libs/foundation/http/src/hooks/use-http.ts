@@ -6,8 +6,8 @@
  * @module hooks/use-http
  */
 
-import { useHttpContext } from '../provider/http-context';
 import type { HttpContextValue } from '../core/types';
+import { useHttpContext } from '../provider/http-context';
 
 /**
  * Returns the configured axios instance and its initialisation status.

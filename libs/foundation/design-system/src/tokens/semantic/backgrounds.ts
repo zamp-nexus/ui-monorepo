@@ -1,16 +1,16 @@
 /**
  * Semantic Background Tokens - Tier 2
  * Usage-based background colors for consistent UI
- * 
+ *
  * These tokens reference primitives and provide semantic meaning
  * for different UI contexts and states.
- * 
+ *
  * @module tokens/semantic/backgrounds
  */
 
 /**
  * Layer system for depth hierarchy
- * 
+ *
  * Linear-inspired layering:
  * - layer00: Deepest background (canvas)
  * - layer01: Default surface (cards, panels)
@@ -43,7 +43,7 @@ export interface InteractiveStateTokens {
 
 /**
  * Interactive background tokens
- * 
+ *
  * Button and control states following Linear UX:
  * - Subtle hover states (not jarring)
  * - Clear pressed feedback

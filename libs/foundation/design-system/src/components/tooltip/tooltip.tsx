@@ -79,11 +79,7 @@ export const Tooltip: TooltipComponent = function Tooltip({
 
   return (
     <TooltipPrimitive.Provider delay={delayDuration}>
-      <TooltipPrimitive.Root
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={onOpenChange}
-      >
+      <TooltipPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
         <TooltipPrimitive.Trigger data-oiid={oiid} render={<span className="inline-flex" />}>
           {children}
         </TooltipPrimitive.Trigger>

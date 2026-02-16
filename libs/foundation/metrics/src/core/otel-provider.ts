@@ -4,36 +4,36 @@
  */
 
 import {
-  trace,
-  metrics,
   context,
-  propagation,
   diag,
   DiagConsoleLogger,
   DiagLogLevel,
-  type Tracer,
-  type Meter,
+  metrics,
+  propagation,
+  trace,
   type Counter,
+  type Meter,
+  type Tracer,
 } from '@opentelemetry/api';
 import type { Histogram } from '@opentelemetry/api';
+import { ZoneContextManager } from '@opentelemetry/context-zone';
+import { W3CTraceContextPropagator } from '@opentelemetry/core';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
+import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
+  ATTR_TELEMETRY_SDK_LANGUAGE,
   ATTR_TELEMETRY_SDK_NAME,
   ATTR_TELEMETRY_SDK_VERSION,
-  ATTR_TELEMETRY_SDK_LANGUAGE,
 } from '@opentelemetry/semantic-conventions';
-import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-web';
-import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { ZoneContextManager } from '@opentelemetry/context-zone';
-import { W3CTraceContextPropagator } from '@opentelemetry/core';
+
+import { detectBrowser } from '@open-insights-web/foundation-utils';
 
 import type { ResolvedConfig, ResourceAttributes } from '../types';
-import { detectBrowser } from '@open-insights-web/foundation-utils';
 
 const SDK_NAME = '@open-insights-web/foundation-metrics';
 const SDK_VERSION = '0.0.1';
@@ -144,7 +144,10 @@ export class OTelProvider {
   /**
    * Get or create a cached histogram instrument
    */
-  getOrCreateHistogram = (name: string, options?: { description?: string; unit?: string }): Histogram => {
+  getOrCreateHistogram = (
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): Histogram => {
     const cached = this.histogramCache.get(name);
     if (cached) {
       return cached;
@@ -158,7 +161,10 @@ export class OTelProvider {
   /**
    * Get or create a cached counter instrument
    */
-  getOrCreateCounter = (name: string, options?: { description?: string; unit?: string }): Counter => {
+  getOrCreateCounter = (
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): Counter => {
     const cached = this.counterCache.get(name);
     if (cached) {
       return cached;
@@ -173,10 +179,7 @@ export class OTelProvider {
    * Shutdown all providers
    */
   shutdown = async (): Promise<void> => {
-    await Promise.all([
-      this.tracerProvider.shutdown(),
-      this.meterProvider.shutdown(),
-    ]);
+    await Promise.all([this.tracerProvider.shutdown(), this.meterProvider.shutdown()]);
 
     this.histogramCache.clear();
     this.counterCache.clear();
@@ -187,10 +190,7 @@ export class OTelProvider {
    * Force flush all providers
    */
   flush = async (): Promise<void> => {
-    await Promise.all([
-      this.tracerProvider.forceFlush(),
-      this.meterProvider.forceFlush(),
-    ]);
+    await Promise.all([this.tracerProvider.forceFlush(), this.meterProvider.forceFlush()]);
   };
 
   // ==========================================
@@ -227,7 +227,10 @@ export class OTelProvider {
   /**
    * Create and configure tracer provider
    */
-  private createTracerProvider = (config: ResolvedConfig, resource: Resource): WebTracerProvider => {
+  private createTracerProvider = (
+    config: ResolvedConfig,
+    resource: Resource,
+  ): WebTracerProvider => {
     const tracerProvider = new WebTracerProvider({
       resource,
     });
@@ -245,7 +248,7 @@ export class OTelProvider {
         maxQueueSize: config.transport.maxQueueSize,
         maxExportBatchSize: config.transport.batchSize,
         scheduledDelayMillis: config.transport.flushInterval,
-      })
+      }),
     );
 
     // Register as global tracer provider

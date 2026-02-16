@@ -1,19 +1,23 @@
 /**
  * DuckDB Pool Factory
- * 
+ *
  * Factory functions for creating and managing DuckDB worker pool instances.
- * 
+ *
  * @module wasm/pool/factory
  */
 
-import { createAsyncSingletonFactory, type ConfigComparisonResult } from '@open-insights-web/foundation-utils';
 import { Milliseconds } from '@open-insights-web/foundation-data-model';
-import { QueryCoordinator } from './query-coordinator';
+import {
+  createAsyncSingletonFactory,
+  type ConfigComparisonResult,
+} from '@open-insights-web/foundation-utils';
+
 import type { DuckDBPoolConfig } from '../../types/pool';
+import { QueryCoordinator } from './query-coordinator';
 
 /**
  * DuckDB Pool interface (public API)
- * 
+ *
  * Provides a clean interface for interacting with the worker pool.
  */
 export interface DuckDBPool {
@@ -31,10 +35,10 @@ export interface DuckDBPool {
 
 /**
  * Create a new DuckDB worker pool
- * 
+ *
  * @param config - Pool configuration
  * @returns Initialized DuckDB pool
- * 
+ *
  * @example
  * ```typescript
  * const pool = await createDuckDBPool({
@@ -43,19 +47,17 @@ export interface DuckDBPool {
  *   defaultQueryTimeout: 30000,
  *   debug: true,
  * });
- * 
+ *
  * const result = await pool.query({
  *   sql: 'SELECT * FROM users',
  *   tables: ['users'],
  *   mode: 'read',
  * });
- * 
+ *
  * await pool.shutdown();
  * ```
  */
-export const createDuckDBPool = async (
-  config: DuckDBPoolConfig = {}
-): Promise<DuckDBPool> => {
+export const createDuckDBPool = async (config: DuckDBPoolConfig = {}): Promise<DuckDBPool> => {
   const coordinator = new QueryCoordinator(config);
   await coordinator.initialize();
 
@@ -74,7 +76,7 @@ export const createDuckDBPool = async (
  */
 const comparePoolConfig = (
   existingConfig: DuckDBPoolConfig | undefined,
-  newConfig: DuckDBPoolConfig
+  newConfig: DuckDBPoolConfig,
 ): ConfigComparisonResult => {
   if (!existingConfig) {
     return { shouldWarn: false };
@@ -86,15 +88,25 @@ const comparePoolConfig = (
   if (existingConfig.workerCount !== newConfig.workerCount && newConfig.workerCount !== undefined) {
     changes.push(`workerCount: ${existingConfig.workerCount} → ${newConfig.workerCount}`);
   }
-  if (existingConfig.maxQueuePerWorker !== newConfig.maxQueuePerWorker && newConfig.maxQueuePerWorker !== undefined) {
-    changes.push(`maxQueuePerWorker: ${existingConfig.maxQueuePerWorker} → ${newConfig.maxQueuePerWorker}`);
+  if (
+    existingConfig.maxQueuePerWorker !== newConfig.maxQueuePerWorker &&
+    newConfig.maxQueuePerWorker !== undefined
+  ) {
+    changes.push(
+      `maxQueuePerWorker: ${existingConfig.maxQueuePerWorker} → ${newConfig.maxQueuePerWorker}`,
+    );
   }
   if (
     newConfig.defaultQueryTimeout !== undefined &&
     existingConfig.defaultQueryTimeout !== undefined &&
-    Milliseconds.unwrap(existingConfig.defaultQueryTimeout) !== Milliseconds.unwrap(newConfig.defaultQueryTimeout)
+    Milliseconds.unwrap(existingConfig.defaultQueryTimeout) !==
+      Milliseconds.unwrap(newConfig.defaultQueryTimeout)
   ) {
-    changes.push(`defaultQueryTimeout: ${Milliseconds.unwrap(existingConfig.defaultQueryTimeout)} → ${Milliseconds.unwrap(newConfig.defaultQueryTimeout)}`);
+    changes.push(
+      `defaultQueryTimeout: ${Milliseconds.unwrap(
+        existingConfig.defaultQueryTimeout,
+      )} → ${Milliseconds.unwrap(newConfig.defaultQueryTimeout)}`,
+    );
   }
 
   if (changes.length === 0) {
@@ -129,7 +141,7 @@ const poolFactory = createAsyncSingletonFactory(
       }
     },
     defaultConfig: {},
-  }
+  },
 );
 
 /**
@@ -159,15 +171,15 @@ export const getDuckDBPool = poolFactory.getInstance;
 
 /**
  * Reset the singleton pool
- * 
+ *
  * Shuts down the existing singleton pool if one exists.
  * The next call to getDuckDBPool will create a new pool.
- * 
+ *
  * @example
  * ```typescript
  * // Shutdown existing pool
  * await resetDuckDBPool();
- * 
+ *
  * // Create new pool with different config
  * const pool = await getDuckDBPool({ workerCount: 5 });
  * ```

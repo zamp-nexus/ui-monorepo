@@ -7,18 +7,20 @@
  * @module services/mutation-queue
  */
 
-import { BaseService } from './base';
 import Dexie from 'dexie';
+
 import { MUTATION_STATUS, type MutationStatus } from '@open-insights-web/foundation-data-model';
+
+import { createDuplicateEntryError } from '../errors/database-errors';
 import type {
-  MutationQueueOperations,
-  MutationQueueEntry,
   CreateMutationOptions,
+  MutationQueueEntry,
+  MutationQueueOperations,
 } from '../tables/mutation-queue';
 import { generateIdempotencyKey as generateIdempotencyKeyUtil } from '../utils/hash';
-import { mutationQueueEntrySchema } from '../validation/schemas';
-import { createDuplicateEntryError } from '../errors/database-errors';
 import { assertValid } from '../validation/assert-valid';
+import { mutationQueueEntrySchema } from '../validation/schemas';
+import { BaseService } from './base';
 
 /**
  * Extended CreateMutationOptions with optional idempotency key
@@ -38,7 +40,7 @@ export class MutationQueueService extends BaseService implements MutationQueueOp
    */
   private insertWithIdempotencyCheck = async (
     entry: MutationQueueEntry,
-    throwOnDuplicate: boolean
+    throwOnDuplicate: boolean,
   ): Promise<boolean> => {
     assertValid(mutationQueueEntrySchema, entry, 'MutationQueueEntry');
 
@@ -105,7 +107,7 @@ export class MutationQueueService extends BaseService implements MutationQueueOp
   updateStatus = async (
     id: string,
     status: MutationStatus,
-    updates?: Partial<MutationQueueEntry>
+    updates?: Partial<MutationQueueEntry>,
   ): Promise<void> => {
     await this.db.mutations.update(id, { status, ...updates });
     this.log('Mutation status updated:', id, status);
@@ -118,11 +120,21 @@ export class MutationQueueService extends BaseService implements MutationQueueOp
     const [pending, offlineQueued] = await Promise.all([
       this.db.mutations
         .where('[status+timestamp]')
-        .between([MUTATION_STATUS.PENDING, Dexie.minKey], [MUTATION_STATUS.PENDING, Dexie.maxKey], true, true)
+        .between(
+          [MUTATION_STATUS.PENDING, Dexie.minKey],
+          [MUTATION_STATUS.PENDING, Dexie.maxKey],
+          true,
+          true,
+        )
         .toArray(),
       this.db.mutations
         .where('[status+timestamp]')
-        .between([MUTATION_STATUS.OFFLINE_QUEUED, Dexie.minKey], [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.maxKey], true, true)
+        .between(
+          [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.minKey],
+          [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.maxKey],
+          true,
+          true,
+        )
         .toArray(),
     ]);
     return [...pending, ...offlineQueued].sort((a, b) => a.timestamp - b.timestamp);
@@ -179,9 +191,7 @@ export class MutationQueueService extends BaseService implements MutationQueueOp
   /**
    * Find mutation by idempotency key
    */
-  findByIdempotencyKey = async (
-    key: string
-  ): Promise<MutationQueueEntry | undefined> => {
+  findByIdempotencyKey = async (key: string): Promise<MutationQueueEntry | undefined> => {
     return this.db.mutations.where('idempotencyKey').equals(key).first();
   };
 

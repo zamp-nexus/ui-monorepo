@@ -16,8 +16,7 @@ const BOOLEAN_STRING_LITERAL = {
   FALSE: 'false',
 } as const;
 
-type BooleanStringLiteral =
-  (typeof BOOLEAN_STRING_LITERAL)[keyof typeof BOOLEAN_STRING_LITERAL];
+type BooleanStringLiteral = (typeof BOOLEAN_STRING_LITERAL)[keyof typeof BOOLEAN_STRING_LITERAL];
 
 export type ClassValue = string | null | undefined | ClassValue[];
 

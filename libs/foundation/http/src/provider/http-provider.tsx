@@ -9,7 +9,11 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+
 import type { AxiosInstance } from 'axios';
+
+import { hashPayloadSync } from '@open-insights-web/foundation-utils';
+
 import type {
   HttpClientConfig,
   HttpContextValue,
@@ -18,10 +22,9 @@ import type {
   ResolvedHttpConfig,
 } from '../core/types';
 import { createAxiosInstance } from '../instance/axios-factory';
-import { setupInterceptors, removeInterceptors, type InterceptorIds } from '../interceptors/setup';
+import { removeInterceptors, setupInterceptors, type InterceptorIds } from '../interceptors/setup';
 import { HttpContext } from './http-context';
 import { HttpInternalsContext } from './http-internals-context';
-import { hashPayloadSync } from '@open-insights-web/foundation-utils';
 
 // =============================================================================
 // Provider Component

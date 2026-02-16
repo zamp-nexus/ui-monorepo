@@ -8,9 +8,9 @@
 
 import {
   EntityId,
+  Milliseconds,
   ProvisionalId,
   Timestamp,
-  Milliseconds,
   type UserRole,
 } from '@open-insights-web/foundation-data-model';
 
@@ -86,7 +86,7 @@ export function randomUrl(base = 'https://example.com'): string {
  */
 export function randomTimestamp(
   start = Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
-  end = Date.now()
+  end = Date.now(),
 ): Timestamp {
   return Timestamp.from(randomInt(start, end));
 }
@@ -94,10 +94,7 @@ export function randomTimestamp(
 /**
  * Generate a random duration in milliseconds
  */
-export function randomDuration(
-  min = 100,
-  max = 10000
-): Milliseconds {
+export function randomDuration(min = 100, max = 10000): Milliseconds {
   return Milliseconds.from(randomInt(min, max));
 }
 
@@ -201,12 +198,8 @@ export interface TestSession {
 export function generateSession(overrides: Partial<TestSession> = {}): TestSession {
   const startedAt = overrides.startedAt ?? randomTimestamp();
   const hasEnded = randomBoolean();
-  const endedAt = hasEnded
-    ? Timestamp.from(startedAt + randomInt(60000, 3600000))
-    : undefined;
-  const duration = endedAt
-    ? Milliseconds.from(endedAt - startedAt)
-    : undefined;
+  const endedAt = hasEnded ? Timestamp.from(startedAt + randomInt(60000, 3600000)) : undefined;
+  const duration = endedAt ? Milliseconds.from(endedAt - startedAt) : undefined;
 
   return {
     id: overrides.id ?? EntityId.from(`session_${randomString(8)}`),
@@ -243,7 +236,10 @@ export function generateEvents(count: number, overrides: Partial<TestEvent> = {}
 /**
  * Generate multiple test sessions
  */
-export function generateSessions(count: number, overrides: Partial<TestSession> = {}): TestSession[] {
+export function generateSessions(
+  count: number,
+  overrides: Partial<TestSession> = {},
+): TestSession[] {
   return Array.from({ length: count }, () => generateSession(overrides));
 }
 

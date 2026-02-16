@@ -36,7 +36,7 @@ export interface SingletonFactoryConfig<TConfig> {
    */
   compareConfig?: (
     existingConfig: TConfig | undefined,
-    newConfig: TConfig
+    newConfig: TConfig,
   ) => ConfigComparisonResult;
   /** Custom logger function (default: console.warn) */
   logger?: (message: string) => void;
@@ -102,7 +102,7 @@ export interface SingletonFactory<T, TConfig> {
  */
 export const createSingletonFactory = <T, TConfig = unknown>(
   createFn: (config: TConfig) => T,
-  factoryConfig: SingletonFactoryConfig<TConfig>
+  factoryConfig: SingletonFactoryConfig<TConfig>,
 ): SingletonFactory<T, TConfig> => {
   let instance: T | null = null;
   let savedConfig: TConfig | undefined = undefined;
@@ -199,7 +199,7 @@ export const createSingletonFactory = <T, TConfig = unknown>(
  */
 export const createAsyncSingletonFactory = <T, TConfig = unknown>(
   createFn: (config: TConfig) => Promise<T>,
-  factoryConfig: SingletonFactoryConfig<TConfig>
+  factoryConfig: SingletonFactoryConfig<TConfig>,
 ): {
   getInstance: (config?: TConfig) => Promise<T>;
   reset: () => Promise<void>;
@@ -319,10 +319,11 @@ export const createAsyncSingletonFactory = <T, TConfig = unknown>(
  * );
  * ```
  */
-export const createDeepEqualComparison = <TConfig>(
-  isEqual: (a: unknown, b: unknown) => boolean,
-  name: string
-): ((existing: TConfig | undefined, provided: TConfig) => ConfigComparisonResult) =>
+export const createDeepEqualComparison =
+  <TConfig>(
+    isEqual: (a: unknown, b: unknown) => boolean,
+    name: string,
+  ): ((existing: TConfig | undefined, provided: TConfig) => ConfigComparisonResult) =>
   (existing, provided) => {
     if (!existing || isEqual(existing, provided)) {
       return { shouldWarn: false };

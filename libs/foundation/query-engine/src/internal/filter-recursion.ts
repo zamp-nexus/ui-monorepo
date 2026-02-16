@@ -16,8 +16,7 @@ export const FILTER_GROUP_KINDS = {
   OR: 'or',
 } as const;
 
-export type FilterGroupKind =
-  (typeof FILTER_GROUP_KINDS)[keyof typeof FILTER_GROUP_KINDS];
+export type FilterGroupKind = (typeof FILTER_GROUP_KINDS)[keyof typeof FILTER_GROUP_KINDS];
 
 /**
  * Mapper callbacks for `mapFilterExpression`.
@@ -36,7 +35,7 @@ export const mapFilterExpression = <TResult>(
   expression: FilterExpression,
   mapper: FilterExpressionMapper<TResult>,
   depth = 0,
-  maxDepth = FILTER_RECURSION_MAX_DEPTH
+  maxDepth = FILTER_RECURSION_MAX_DEPTH,
 ): TResult => {
   if (depth > maxDepth) {
     return mapper.onDepthExceeded(depth, maxDepth);
@@ -48,14 +47,14 @@ export const mapFilterExpression = <TResult>(
 
   if (isFilterAndGroup(expression)) {
     const children = expression.and.map((child) =>
-      mapFilterExpression(child, mapper, depth + 1, maxDepth)
+      mapFilterExpression(child, mapper, depth + 1, maxDepth),
     );
     return mapper.onAndGroup(children, depth);
   }
 
   if (isFilterOrGroup(expression)) {
     const children = expression.or.map((child) =>
-      mapFilterExpression(child, mapper, depth + 1, maxDepth)
+      mapFilterExpression(child, mapper, depth + 1, maxDepth),
     );
     return mapper.onOrGroup(children, depth);
   }

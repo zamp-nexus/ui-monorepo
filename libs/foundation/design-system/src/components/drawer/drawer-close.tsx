@@ -17,12 +17,7 @@ import { drawerDefaultTheme } from './drawer';
  *
  * Button that closes the drawer.
  */
-export const DrawerClose: React.FC<DrawerCloseProps> = ({
-  children,
-  className,
-  oiid,
-  ...rest
-}) => {
+export const DrawerClose: React.FC<DrawerCloseProps> = ({ children, className, oiid, ...rest }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
 
   return (

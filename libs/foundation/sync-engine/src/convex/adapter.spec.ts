@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { ConvexSyncAdapter } from './adapter';
 
 describe('ConvexSyncAdapter subscriptions', () => {
@@ -23,15 +24,17 @@ describe('ConvexSyncAdapter subscriptions', () => {
       {
         onUpdate: vi.fn(),
       },
-      10_000
+      10_000,
     );
 
     await Promise.resolve();
     await Promise.resolve();
 
-    const subscriptions = (adapter as unknown as {
-      subscriptions: Map<string, { currentInterval: number; baseInterval: number }>;
-    }).subscriptions;
+    const subscriptions = (
+      adapter as unknown as {
+        subscriptions: Map<string, { currentInterval: number; baseInterval: number }>;
+      }
+    ).subscriptions;
 
     const state = subscriptions.values().next().value;
     expect(state.baseInterval).toBe(10_000);

@@ -6,8 +6,8 @@ import React from 'react';
 
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 
-import { cn } from '../../utils/cn';
 import { useTheme } from '../../theme';
+import { cn } from '../../utils/cn';
 import type { ScrollAreaComponent, ScrollAreaProps } from './scroll-area';
 import { scrollAreaDefaultTheme } from './scroll-area';
 
@@ -37,9 +37,7 @@ import { scrollAreaDefaultTheme } from './scroll-area';
  *   Content...
  * </ScrollArea>
  */
-export const ScrollArea = React.forwardRef(function ScrollArea<
-  T extends React.ElementType = 'div',
->(
+export const ScrollArea = React.forwardRef(function ScrollArea<T extends React.ElementType = 'div'>(
   {
     component: _component,
     className,

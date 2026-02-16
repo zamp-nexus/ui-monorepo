@@ -1,43 +1,31 @@
 /**
- * useDLMutateDelete<%= className %> Hook
+ * useDLDelete<%= className %> Hook
  *
  * Deletes a <%= name %> by ID.
  */
 
-import { useDLMutateDelete } from '@open-insights-web/foundation-data-layer';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+import { useDLDelete, type UseDLDeleteOptions } from '@open-insights-web/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 /**
- * Delete a <%= name %> by ID
- *
- * Automatically invalidates list queries on success.
- *
- * @example
- * ```tsx
- * function Delete<%= className %>Button({ id }: { id: string }) {
- *   const mutation = useDLMutateDelete<%= className %>();
- *
- *   const handleDelete = () => {
- *     if (confirm('Are you sure?')) {
- *       mutation.mutate(id, {
- *         onSuccess: () => {
- *           console.log('Deleted');
- *         },
- *       });
- *     }
- *   };
- *
- *   return (
- *     <button onClick={handleDelete} disabled={mutation.isPending}>
- *       {mutation.isPending ? 'Deleting...' : 'Delete'}
- *     </button>
- *   );
- * }
- * ```
+ * Options for useDLDelete<%= className %>
  */
-export function useDLMutateDelete<%= className %>() {
-  return useDLMutateDelete<void, string>({
-    endpoint: (id) => `<%= endpoint %>/${id}`,
-    invalidates: [<%= propertyName %>Keys.lists()],
+export type UseDLDelete<%= className %>Options<TMutation extends FunctionReference<'mutation'>> = Omit<
+  UseDLDeleteOptions<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>,
+  'table'
+>;
+
+/**
+ * Delete a <%= name %> by ID
+ */
+export function useDLDelete<%= className %><TMutation extends FunctionReference<'mutation'>>(
+  options: UseDLDelete<%= className %>Options<TMutation>
+) {
+  return useDLDelete<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>({
+    ...options,
+    table: '<%= propertyName %>s',
+    listQueryKey: options.listQueryKey ?? <%= propertyName %>Keys.list(),
+    itemQueryKey: options.itemQueryKey ?? ((id: string) => <%= propertyName %>Keys.detail(id)),
   });
 }

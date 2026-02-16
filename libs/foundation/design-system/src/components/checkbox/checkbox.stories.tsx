@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Checkbox } from './checkbox';
 
@@ -155,4 +156,3 @@ export const AllSizes: Story = {
     </div>
   ),
 };
-

@@ -4,41 +4,44 @@
  * Fetches a single <%= name %> by ID.
  */
 
-import { useDLGetQuery, type UseDLQueryOptions } from '@open-insights-web/foundation-data-layer';
+import type { FunctionArgs, FunctionReference } from 'convex/server';
+import { useDLGetOne, type UseDLGetOptions } from '@open-insights-web/foundation-data-layer';
 import type { <%= className %> } from '<%= dataModel %>';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 /**
  * Options for useDLGet<%= className %>Query
  */
-export type UseDLGet<%= className %>QueryOptions = Omit<
-  UseDLQueryOptions<<%= className %>>,
-  'queryKey' | 'endpoint'
+export type UseDLGet<%= className %>QueryOptions<TQuery extends FunctionReference<'query'>> = Omit<
+  UseDLGetOptions<TQuery, <%= className %>>,
+  'query' | 'args' | 'table' | 'entityId' | 'queryKey'
 >;
 
 /**
- * Fetch a single <%= name %> by ID
- *
- * @example
- * ```tsx
- * function <%= className %>Detail({ id }: { id: string }) {
- *   const { data, isLoading, error } = useDLGet<%= className %>Query(id);
- *
- *   if (isLoading) return <Spinner />;
- *   if (error) return <Error error={error} />;
- *
- *   return <div>{data.name}</div>;
- * }
- * ```
+ * Input for useDLGet<%= className %>Query
  */
-export function useDLGet<%= className %>Query(
+export interface UseDLGet<%= className %>QueryInput<TQuery extends FunctionReference<'query'>> {
+  readonly query: TQuery;
+  readonly args?: FunctionArgs<TQuery>;
+  readonly options?: UseDLGet<%= className %>QueryOptions<TQuery>;
+}
+
+/**
+ * Fetch a single <%= name %> by ID
+ */
+export function useDLGet<%= className %>Query<TQuery extends FunctionReference<'query'>>(
   id: string,
-  options?: UseDLGet<%= className %>QueryOptions
+  input: UseDLGet<%= className %>QueryInput<TQuery>
 ) {
-  return useDLGetQuery<<%= className %>>({
+  const { query, args, options } = input;
+
+  return useDLGetOne<TQuery, <%= className %>>({
+    query,
+    args,
+    table: '<%= propertyName %>s',
+    entityId: id,
     queryKey: <%= propertyName %>Keys.detail(id),
-    endpoint: `<%= endpoint %>/${id}`,
-    enabled: !!id,
     ...options,
+    enabled: Boolean(id) && (options?.enabled ?? true),
   });
 }

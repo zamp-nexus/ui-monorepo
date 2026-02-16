@@ -7,10 +7,18 @@
  * @module compiler/sql-compiler
  */
 
+import {
+  createSingletonFactory,
+  DisposedError,
+  hashPayloadSync,
+  type IDisposable,
+} from '@open-insights-web/foundation-utils';
+
+import { mapFilterExpression } from '../internal/filter-recursion';
+import { getAggregationSqlFunction, isDistinctAggregation } from '../types/aggregation';
 import type { DimensionSpec } from '../types/dimension';
 import type { FilterCondition, FilterExpression, FilterPrimitive } from '../types/filter';
 import { operatorRequiresValues } from '../types/filter';
-import { getAggregationSqlFunction, isDistinctAggregation } from '../types/aggregation';
 import type { JoinSpec } from '../types/join';
 import { getJoinSqlKeyword } from '../types/join';
 import type { MeasureSpec } from '../types/measure';
@@ -25,19 +33,12 @@ import {
   isRelativeDateRange,
   resolvePresetDateRange,
 } from '../types/time';
-import {
-  quoteIdentifier as utilQuoteIdentifier,
-  formatValue as utilFormatValue,
-  formatSql,
-} from './sql-utils';
 import { parseMemberRef } from '../utils/member-ref';
-import { mapFilterExpression } from '../internal/filter-recursion';
 import {
-  hashPayloadSync,
-  createSingletonFactory,
-  type IDisposable,
-  DisposedError,
-} from '@open-insights-web/foundation-utils';
+  formatSql,
+  formatValue as utilFormatValue,
+  quoteIdentifier as utilQuoteIdentifier,
+} from './sql-utils';
 
 // =============================================================================
 // ERRORS
@@ -158,10 +159,7 @@ const getStringFilterValue = (value: FilterPrimitive): string =>
 /**
  * Build LIKE pattern for string operators.
  */
-const buildLikePattern = (
-  value: string,
-  operator: LikePatternOperator
-): string => {
+const buildLikePattern = (value: string, operator: LikePatternOperator): string => {
   // Escape special LIKE characters and single quotes
   const escaped = value.replace(/[%_\\]/g, '\\$&').replace(/'/g, "''");
 
@@ -181,8 +179,7 @@ const LIKE_PATTERN_OPERATORS = {
   ENDS_WITH: 'endsWith',
 } as const;
 
-type LikePatternOperator =
-  (typeof LIKE_PATTERN_OPERATORS)[keyof typeof LIKE_PATTERN_OPERATORS];
+type LikePatternOperator = (typeof LIKE_PATTERN_OPERATORS)[keyof typeof LIKE_PATTERN_OPERATORS];
 
 // =============================================================================
 // COMPILATION RESULT
@@ -228,7 +225,7 @@ export interface CompileOptions {
  */
 const validateFilterValues = (
   condition: FilterCondition,
-  values: ReadonlyArray<FilterPrimitive>
+  values: ReadonlyArray<FilterPrimitive>,
 ): void => {
   if (!operatorRequiresValues(condition.operator)) {
     return;
@@ -236,13 +233,13 @@ const validateFilterValues = (
 
   if (values.length === 0) {
     throw new QueryCompilationError(
-      `Filter operator '${condition.operator}' on member '${condition.member}' requires at least one value, but none were provided`
+      `Filter operator '${condition.operator}' on member '${condition.member}' requires at least one value, but none were provided`,
     );
   }
 
   if (condition.operator === 'between' && values.length < 2) {
     throw new QueryCompilationError(
-      `Filter operator 'between' on member '${condition.member}' requires exactly 2 values, but ${values.length} were provided`
+      `Filter operator 'between' on member '${condition.member}' requires exactly 2 values, but ${values.length} were provided`,
     );
   }
 };
@@ -298,16 +295,28 @@ const compileFilterCondition = (condition: FilterCondition): string => {
 
     // String operators
     case 'contains':
-      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.CONTAINS)} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(
+        getStringFilterValue(values[0]),
+        LIKE_PATTERN_OPERATORS.CONTAINS,
+      )} ESCAPE '\\'`;
 
     case 'notContains':
-      return `${memberRef} NOT LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.CONTAINS)} ESCAPE '\\'`;
+      return `${memberRef} NOT LIKE ${buildLikePattern(
+        getStringFilterValue(values[0]),
+        LIKE_PATTERN_OPERATORS.CONTAINS,
+      )} ESCAPE '\\'`;
 
     case 'startsWith':
-      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.STARTS_WITH)} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(
+        getStringFilterValue(values[0]),
+        LIKE_PATTERN_OPERATORS.STARTS_WITH,
+      )} ESCAPE '\\'`;
 
     case 'endsWith':
-      return `${memberRef} LIKE ${buildLikePattern(getStringFilterValue(values[0]), LIKE_PATTERN_OPERATORS.ENDS_WITH)} ESCAPE '\\'`;
+      return `${memberRef} LIKE ${buildLikePattern(
+        getStringFilterValue(values[0]),
+        LIKE_PATTERN_OPERATORS.ENDS_WITH,
+      )} ESCAPE '\\'`;
 
     case 'matches':
       return `${memberRef} ~ ${formatValue(values[0])}`;
@@ -336,9 +345,9 @@ const compileFilterCondition = (condition: FilterCondition): string => {
       const unknownOp: string = condition.operator;
       throw new QueryCompilationError(
         `Unknown filter operator '${unknownOp}' on member '${condition.member}'. ` +
-        `Valid operators: equals, notEquals, gt, gte, lt, lte, between, in, notIn, ` +
-        `contains, notContains, startsWith, endsWith, matches, isNull, isNotNull, ` +
-        `arrayContains, arrayContainsAny, arrayContainsAll`
+          `Valid operators: equals, notEquals, gt, gte, lt, lte, between, in, notIn, ` +
+          `contains, notContains, startsWith, endsWith, matches, isNull, isNotNull, ` +
+          `arrayContains, arrayContainsAny, arrayContainsAll`,
       );
     }
   }
@@ -356,11 +365,13 @@ const compileFilterCondition = (condition: FilterCondition): string => {
 const compileFilterExpression = (expression: FilterExpression): string =>
   mapFilterExpression(expression, {
     onCondition: compileFilterCondition,
-    onAndGroup: (children) => (children.length > 1 ? `(${children.join(' AND ')})` : children[0] ?? 'TRUE'),
-    onOrGroup: (children) => (children.length > 1 ? `(${children.join(' OR ')})` : children[0] ?? 'TRUE'),
+    onAndGroup: (children) =>
+      children.length > 1 ? `(${children.join(' AND ')})` : children[0] ?? 'TRUE',
+    onOrGroup: (children) =>
+      children.length > 1 ? `(${children.join(' OR ')})` : children[0] ?? 'TRUE',
     onDepthExceeded: (_depth, maxDepth) => {
       throw new QueryCompilationError(
-        `Filter nesting depth exceeds maximum of ${maxDepth}. Flatten deeply nested filter groups.`
+        `Filter nesting depth exceeds maximum of ${maxDepth}. Flatten deeply nested filter groups.`,
       );
     },
   });
@@ -395,9 +406,7 @@ const compileMeasureSelect = (measure: MeasureSpec): string => {
       ? `${aggFunc}(DISTINCT CASE WHEN ${filterCondition} THEN ${memberRef} END)`
       : `${aggFunc}(CASE WHEN ${filterCondition} THEN ${memberRef} END)`;
   } else {
-    expr = useDistinct
-      ? `${aggFunc}(DISTINCT ${memberRef})`
-      : `${aggFunc}(${memberRef})`;
+    expr = useDistinct ? `${aggFunc}(DISTINCT ${memberRef})` : `${aggFunc}(${memberRef})`;
   }
 
   // Get alias
@@ -421,10 +430,7 @@ const compileMeasureSelect = (measure: MeasureSpec): string => {
  * @param primaryTable - The primary (FROM) table name
  * @returns Newline-separated SQL JOIN clauses, or empty string if no joins
  */
-const compileJoinClauses = (
-  joins: ReadonlyArray<JoinSpec>,
-  primaryTable: string
-): string => {
+const compileJoinClauses = (joins: ReadonlyArray<JoinSpec>, primaryTable: string): string => {
   if (joins.length === 0) return '';
 
   const clauses: string[] = [];
@@ -437,9 +443,7 @@ const compileJoinClauses = (
     if (!leftParsed || !rightParsed) continue;
 
     // Determine which table to join
-    const tableToJoin = joinedTables.has(leftParsed.table)
-      ? rightParsed.table
-      : leftParsed.table;
+    const tableToJoin = joinedTables.has(leftParsed.table) ? rightParsed.table : leftParsed.table;
 
     joinedTables.add(tableToJoin);
 
@@ -493,9 +497,7 @@ const compileOrderByClause = (orderBy: ReadonlyArray<OrderBySpec>): string => {
 /**
  * Resolve a DateRangeSpec to absolute { from, to } date strings.
  */
-const resolveDateRange = (
-  dateRange: DateRangeSpec
-): { from: string; to: string } | null => {
+const resolveDateRange = (dateRange: DateRangeSpec): { from: string; to: string } | null => {
   if (isPresetDateRange(dateRange)) {
     const resolved = resolvePresetDateRange(dateRange);
     return resolved;
@@ -546,7 +548,7 @@ const resolveDateRange = (
  */
 const compileTimeDimensionSelect = (
   timeDim: TimeDimensionSpec,
-  granularity: TimeGranularity
+  granularity: TimeGranularity,
 ): string => {
   const memberRef = quoteMemberRef(timeDim.dimension);
   const truncUnit = getDateTruncUnit(granularity);
@@ -560,7 +562,7 @@ const compileTimeDimensionSelect = (
  */
 const compileTimeDimensionFilter = (
   timeDim: TimeDimensionSpec,
-  dateRange: DateRangeSpec
+  dateRange: DateRangeSpec,
 ): string | null => {
   const resolved = resolveDateRange(dateRange);
   if (!resolved) return null;
@@ -868,9 +870,8 @@ export class SqlCompiler implements IDisposable {
       }
     }
 
-    const whereClause = allWhereConditions.length > 0
-      ? `WHERE ${allWhereConditions.join(' AND ')}`
-      : '';
+    const whereClause =
+      allWhereConditions.length > 0 ? `WHERE ${allWhereConditions.join(' AND ')}` : '';
 
     // Build GROUP BY clause (required if we have dimensions/time dimensions with measures)
     const hasAggregations = measures.length > 0;
@@ -892,9 +893,7 @@ export class SqlCompiler implements IDisposable {
       }
     }
 
-    const groupByClause = groupByParts.length > 0
-      ? `GROUP BY ${groupByParts.join(', ')}`
-      : '';
+    const groupByClause = groupByParts.length > 0 ? `GROUP BY ${groupByParts.join(', ')}` : '';
 
     // Build ORDER BY clause
     const orderByClause = compileOrderByClause(orderBy);
@@ -923,9 +922,7 @@ export class SqlCompiler implements IDisposable {
     ].filter(Boolean);
 
     const rawSql = sqlParts.join('\n');
-    const sql = options?.pretty || this.config.prettyPrint
-      ? formatSql(rawSql, true)
-      : rawSql;
+    const sql = options?.pretty || this.config.prettyPrint ? formatSql(rawSql, true) : rawSql;
 
     return {
       sql,
@@ -1006,7 +1003,7 @@ const sqlCompilerFactory = createSingletonFactory<SqlCompiler, SqlCompilerConfig
       }
     },
     defaultConfig: {},
-  }
+  },
 );
 
 /**

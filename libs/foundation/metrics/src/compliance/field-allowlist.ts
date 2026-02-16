@@ -3,8 +3,9 @@
  * @module compliance/field-allowlist
  */
 
-import type { FieldListConfig } from '../types';
 import { isPlainObject } from '@open-insights-web/foundation-data-model';
+
+import type { FieldListConfig } from '../types';
 
 /**
  * Default denied fields (always scrubbed)
@@ -157,7 +158,7 @@ export const createAttributesFilter = (allowedAttributes: string[]) => {
    * Filter span attributes
    */
   const filterAttributes = (
-    attributes: Record<string, string | number | boolean | undefined>
+    attributes: Record<string, string | number | boolean | undefined>,
   ): Record<string, string | number | boolean | undefined> => {
     const result: Record<string, string | number | boolean | undefined> = {};
 
@@ -181,13 +182,10 @@ export const createAttributesFilter = (allowedAttributes: string[]) => {
  */
 export const mergeFieldListConfigs = (
   base: Partial<FieldListConfig>,
-  override: Partial<FieldListConfig>
+  override: Partial<FieldListConfig>,
 ): FieldListConfig => {
   return {
-    allowedFields: [
-      ...(base.allowedFields || []),
-      ...(override.allowedFields || []),
-    ],
+    allowedFields: [...(base.allowedFields || []), ...(override.allowedFields || [])],
     deniedFields: [
       ...new Set([
         ...(base.deniedFields || DEFAULT_DENIED_FIELDS),

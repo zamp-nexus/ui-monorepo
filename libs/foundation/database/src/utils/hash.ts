@@ -2,14 +2,14 @@
  * Hash Utilities
  *
  * Functions for generating idempotency keys for mutations.
- * 
+ *
  * NOTE: For generic hash functions (hashPayloadSync, hashPayloadAsync),
  * import directly from @open-insights-web/foundation-utils
  *
  * @module utils/hash
  */
 
-import { hashPayloadSync, hashPayloadAsync } from '@open-insights-web/foundation-utils';
+import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
 
 // =============================================================================
 // Idempotency Key Generation
@@ -39,7 +39,7 @@ export const generateIdempotencyKey = (options: IdempotencyKeyOptions): string =
  * Generate an idempotency key with SHA-256 (async version)
  */
 export const generateIdempotencyKeyAsync = async (
-  options: IdempotencyKeyOptions
+  options: IdempotencyKeyOptions,
 ): Promise<string> => {
   // If explicitly provided, use it
   if (options.customKey) return options.customKey;
@@ -49,4 +49,3 @@ export const generateIdempotencyKeyAsync = async (
   // Truncate to reasonable length
   return `${options.tableName}:${options.entityId}:${payloadHash.substring(0, 16)}`;
 };
-

@@ -33,8 +33,8 @@ Peer/runtime expectations:
 ## Quick start
 
 ```ts
+import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-insights-web/foundation-data-model';
 import { FoundationMetrics } from '@open-insights-web/foundation-metrics';
-import { ENVIRONMENT, COMPLIANCE_REGION } from '@open-insights-web/foundation-data-model';
 
 FoundationMetrics.init({
   serviceName: 'insights-web',
@@ -68,10 +68,10 @@ FoundationMetrics.init({
 
 ```ts
 import {
-  init,
-  getInstance,
-  isInitialized,
   FoundationMetrics,
+  getInstance,
+  init,
+  isInitialized,
 } from '@open-insights-web/foundation-metrics';
 
 init(config);

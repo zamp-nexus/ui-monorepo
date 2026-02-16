@@ -6,11 +6,11 @@ import React from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import { cn } from '../../utils/cn';
 import { useTheme } from '../../theme';
-import { useDrawerContext } from './drawer.context';
+import { cn } from '../../utils/cn';
 import type { DrawerContentProps } from './drawer';
 import { drawerDefaultTheme } from './drawer';
+import { useDrawerContext } from './drawer.context';
 
 /**
  * Get size class based on direction and size
@@ -37,11 +37,7 @@ function getSizeClass(
  *
  * Container for the drawer content. Renders backdrop and sliding panel.
  */
-export const DrawerContent: React.FC<DrawerContentProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const DrawerContent: React.FC<DrawerContentProps> = ({ children, className, oiid }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
   const { direction, size, titleId, descriptionId } = useDrawerContext();
 
@@ -54,11 +50,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({
         data-oiid={oiid ? `${oiid}__backdrop` : undefined}
       />
       <Dialog.Popup
-        className={cn(
-          theme.popup?.({ direction }) ?? '',
-          sizeClass,
-          className,
-        )}
+        className={cn(theme.popup?.({ direction }) ?? '', sizeClass, className)}
         data-oiid={oiid}
         data-slot="content"
         data-direction={direction}

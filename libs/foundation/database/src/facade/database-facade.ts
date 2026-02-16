@@ -7,35 +7,32 @@
  * @module facade/database-facade
  */
 
-import isEqual from 'fast-deep-equal';
 import type { TransactionMode } from 'dexie';
-import {
-  assertNever,
-  createSingletonFactory,
-  createDeepEqualComparison,
-} from '@open-insights-web/foundation-utils';
+import isEqual from 'fast-deep-equal';
+
 import {
   DATABASE_TRANSACTION_MODE,
   DATABASE_TRANSACTION_TABLE,
   type DatabaseTransactionMode,
   type DatabaseTransactionTable,
 } from '@open-insights-web/foundation-data-model';
+import {
+  assertNever,
+  createDeepEqualComparison,
+  createSingletonFactory,
+} from '@open-insights-web/foundation-utils';
+
+import type { DatabaseConfig } from '../core/config';
 import { getDatabase, resetDatabase, type DatabaseStats } from '../core/database';
 import type { InsightsDatabase } from '../core/database';
-import type { DatabaseConfig } from '../core/config';
-import { QueryCacheService } from '../services/query-cache';
 import { MutationQueueService } from '../services/mutation-queue';
-import { SyncStateService } from '../services/sync-state';
 import { OpfsMetadataService } from '../services/opfs-metadata';
+import { QueryCacheService } from '../services/query-cache';
+import { SyncStateService } from '../services/sync-state';
 import { TableSyncMetadataService } from '../services/table-sync-metadata';
-export {
-  DATABASE_TRANSACTION_MODE,
-  DATABASE_TRANSACTION_TABLE,
-};
-export type {
-  DatabaseTransactionMode,
-  DatabaseTransactionTable,
-};
+
+export { DATABASE_TRANSACTION_MODE, DATABASE_TRANSACTION_TABLE };
+export type { DatabaseTransactionMode, DatabaseTransactionTable };
 
 const DEXIE_TRANSACTION_MODE_MAP: Record<DatabaseTransactionMode, TransactionMode> = {
   [DATABASE_TRANSACTION_MODE.READ]: 'r',
@@ -188,7 +185,7 @@ export class DatabaseFacade {
   transaction = async <T>(
     mode: DatabaseTransactionMode,
     tables: DatabaseTransactionTable[],
-    fn: () => Promise<T>
+    fn: () => Promise<T>,
   ): Promise<T> => {
     const tableRefs = tables.map((name) => this.getTableReference(name));
     return this.db.transaction(DEXIE_TRANSACTION_MODE_MAP[mode], tableRefs, fn);
@@ -214,7 +211,7 @@ const facadeFactory = createSingletonFactory(
         instance.dispose();
       }
     },
-  }
+  },
 );
 
 /**
@@ -223,9 +220,7 @@ const facadeFactory = createSingletonFactory(
  * Note: If an instance already exists, the config parameter is ignored.
  * Call resetDatabaseFacade() first to change configuration.
  */
-export const getDatabaseFacade = (
-  config?: Partial<DatabaseConfig>
-): DatabaseFacade => {
+export const getDatabaseFacade = (config?: Partial<DatabaseConfig>): DatabaseFacade => {
   return facadeFactory.getInstance(config);
 };
 
@@ -237,7 +232,7 @@ export const getDatabaseFacade = (
  *
  * Note: This also resets the shared database singleton so facade/core accessors
  * stay synchronized across lifecycle transitions.
- * 
+ *
  * @returns Promise that resolves when reset is complete
  */
 export const resetDatabaseFacade = async (): Promise<void> => {

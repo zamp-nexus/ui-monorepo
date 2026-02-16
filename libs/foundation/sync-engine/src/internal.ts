@@ -7,7 +7,7 @@
  *
  * These exports are used internally by the foundation layer but should not
  * be imported directly by application code. Use the public coordinator API instead.
- * 
+ *
  * NOTE: For Mutex, Semaphore, Disposable, Logger, and other utilities,
  * import directly from @open-insights-web/foundation-utils
  *

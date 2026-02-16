@@ -8,14 +8,15 @@
  */
 
 import axios, { type AxiosInstance, type CreateAxiosDefaults } from 'axios';
-import type { HttpClientConfig, ResolvedHttpConfig } from '../core/types';
+
 import {
-  DEFAULT_TIMEOUT_MS,
-  DEFAULT_HTTP_RETRY_CONFIG,
-  DEFAULT_AUTH_CONFIG,
   CONTENT_TYPES,
+  DEFAULT_AUTH_CONFIG,
+  DEFAULT_HTTP_RETRY_CONFIG,
+  DEFAULT_TIMEOUT_MS,
   HTTP_HEADERS,
 } from '../core/constants';
+import type { HttpClientConfig, ResolvedHttpConfig } from '../core/types';
 
 // =============================================================================
 // Configuration Resolution
@@ -97,9 +98,7 @@ export const createConfiguredAxiosInstance = (
   const { instance, resolvedConfig } = createAxiosInstance(config);
 
   const getAccessToken =
-    options?.getAccessToken ??
-    resolvedConfig.auth.getAccessToken ??
-    (async () => null);
+    options?.getAccessToken ?? resolvedConfig.auth.getAccessToken ?? (async () => null);
 
   return { instance, resolvedConfig, getAccessToken };
 };

@@ -1,23 +1,25 @@
 /**
  * DuckDB Worker Pool Tests
- * 
+ *
  * Unit tests for the worker pool implementation including:
  * - Priority queue
  * - Table lock manager
  * - Worker instance (mocked)
  * - Query coordinator (mocked)
- * 
+ *
  * Note: Full integration tests require browser environment with Web Workers.
- * 
+ *
  * @module wasm/pool/pool.spec
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { Milliseconds, QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
+
+import { PoolShutdownError, WorkerError } from '../../errors/pool-errors';
+import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
 import { PriorityQueue } from './priority-queue';
 import { TableLockManager } from './table-lock-manager';
-import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
-import { PoolShutdownError, WorkerError } from '../../errors/pool-errors';
 
 // =============================================================================
 // Priority Queue Tests
@@ -89,7 +91,7 @@ describe('PriorityQueue', () => {
       queue.enqueue('keep2', 'normal');
 
       const removed = queue.remove((item) => item === 'remove');
-      
+
       expect(removed).toBe('remove');
       expect(queue.size()).toBe(2);
       expect(queue.dequeue()).toBe('keep1');
@@ -98,9 +100,9 @@ describe('PriorityQueue', () => {
 
     it('should return undefined if not found', () => {
       queue.enqueue('item1', 'normal');
-      
+
       const removed = queue.remove((item) => item === 'nonexistent');
-      
+
       expect(removed).toBeUndefined();
       expect(queue.size()).toBe(1);
     });
@@ -161,7 +163,7 @@ describe('PriorityQueue', () => {
       queue.enqueue('normal', 'normal');
 
       const items = [...queue];
-      
+
       expect(items).toEqual(['high', 'normal', 'low']);
     });
 
@@ -198,10 +200,10 @@ describe('TableLockManager', () => {
     it('should release read locks correctly', async () => {
       await lockManager.acquireLocks(['users'], 'read');
       await lockManager.acquireLocks(['users'], 'read');
-      
+
       lockManager.releaseLocks(['users'], 'read');
       expect(lockManager.getReaderCount('users')).toBe(1);
-      
+
       lockManager.releaseLocks(['users'], 'read');
       expect(lockManager.getReaderCount('users')).toBe(0);
       expect(lockManager.isLocked('users')).toBe(false);
@@ -237,7 +239,7 @@ describe('TableLockManager', () => {
       });
 
       // Give time for async operations
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       expect(writerAcquired).toBe(false);
 
       // Release reader
@@ -259,7 +261,7 @@ describe('TableLockManager', () => {
         readerAcquired = true;
       });
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       expect(readerAcquired).toBe(false);
 
       // Release writer
@@ -337,7 +339,7 @@ describe('Error Types', () => {
     const queryId = QueryId.from('query-123');
     const timeoutMs = Milliseconds.from(5000);
     const error = new QueryTimeoutError(queryId, timeoutMs);
-    
+
     expect(error.name).toBe('QueryTimeoutError');
     expect(error.queryId).toBe('query-123');
     expect(error.timeoutMs).toBe(5000);
@@ -348,7 +350,7 @@ describe('Error Types', () => {
   it('should create QueryCancelledError with correct properties', () => {
     const queryId = QueryId.from('query-456');
     const error = new QueryCancelledError(queryId);
-    
+
     expect(error.name).toBe('QueryCancelledError');
     expect(error.queryId).toBe('query-456');
     expect(error.message).toContain('cancelled');
@@ -367,7 +369,7 @@ describe('Error Types', () => {
 
   it('should create PoolShutdownError with correct properties', () => {
     const error = new PoolShutdownError();
-    
+
     expect(error.name).toBe('PoolShutdownError');
     expect(error.message).toContain('shutting down');
   });

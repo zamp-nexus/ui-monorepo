@@ -245,8 +245,8 @@ All table metadata is defined **ONCE** in `DataLayerConfig.tables`:
 ```typescript
 // libs/foundation/data-layer/src/core/types.ts (EXTENDED)
 
-import type { FunctionReference } from 'convex/server';
 import type { ConflictStrategy, MergeConfig } from '@foundation/sync-engine';
+import type { FunctionReference } from 'convex/server';
 
 /**
  * Unified table configuration - single source of truth
@@ -254,7 +254,7 @@ import type { ConflictStrategy, MergeConfig } from '@foundation/sync-engine';
 export interface UnifiedTableConfig {
   /** Table name (e.g., 'users', 'orders') */
   readonly name: string;
-  
+
   // ── CONVEX API REFERENCES ──────────────────────────────────────────────────
   readonly convex?: {
     readonly list?: FunctionReference<'query'>;
@@ -263,20 +263,20 @@ export interface UnifiedTableConfig {
     readonly update?: FunctionReference<'mutation'>;
     readonly delete?: FunctionReference<'mutation'>;
   };
-  
+
   // ── CACHE CONFIGURATION ────────────────────────────────────────────────────
-  readonly staleTime?: number;   // Per-table stale time (ms)
-  readonly gcTime?: number;       // Per-table GC time (ms)
-  
+  readonly staleTime?: number; // Per-table stale time (ms)
+  readonly gcTime?: number; // Per-table GC time (ms)
+
   // ── CONFLICT RESOLUTION ────────────────────────────────────────────────────
-  readonly conflictStrategy?: ConflictStrategy;  // Per-table strategy
-  readonly mergeConfig?: MergeConfig;             // For 'merge' strategy
-  
+  readonly conflictStrategy?: ConflictStrategy; // Per-table strategy
+  readonly mergeConfig?: MergeConfig; // For 'merge' strategy
+
   // ── ANALYTICS (for QueryEngine DuckDB path) ────────────────────────────────
   readonly analytics?: {
     readonly enabled: boolean;
     readonly freshness?: 'realtime' | 'near-realtime' | 'eventual';
-    readonly staleTime?: number;  // Analytics-specific stale time
+    readonly staleTime?: number; // Analytics-specific stale time
   };
 }
 
@@ -285,23 +285,23 @@ export interface UnifiedTableConfig {
  */
 export interface DataLayerConfig {
   readonly convexUrl: string;
-  
-  /** 
+
+  /**
    * Unified table registry - single source of truth.
    * Replaces the old `mutationMap` approach.
    */
   readonly tables?: ReadonlyArray<UnifiedTableConfig>;
-  
+
   // Global defaults
   readonly conflictStrategy?: ConflictStrategy;
   readonly defaultStaleTime?: number;
   readonly defaultGcTime?: number;
-  
+
   // Feature flags
   readonly enableCrossTab?: boolean;
   readonly enableAnalytics?: boolean;
   readonly debug?: boolean;
-  
+
   /** @deprecated Use `tables` instead */
   readonly mutationMap?: Record<string, TableMutations>;
 }
@@ -339,7 +339,7 @@ export class TableRegistry {
 
   // ── CONVEX API ACCESSORS (DataLayer, QueryEngine) ──────────────────────────
   getConvexRef(tableName: string, op: 'list' | 'get' | 'create' | 'update' | 'delete');
-  getMutationRefs(tableName: string): { create?, update?, delete? };
+  getMutationRefs(tableName: string): { create?; update?; delete? };
 
   // ── CACHE ACCESSORS (DataLayer, QueryEngine) ───────────────────────────────
   getStaleTime(tableName: string): number;
@@ -406,7 +406,7 @@ export interface DataLayerInternals {
   duckdbRouter: DuckDBRouter | null;
   isOnline: boolean;
   cacheConfig: ResolvedCacheConfig;
-  
+
   // NEW: Unified table registry (single source of truth)
   tableRegistry: TableRegistry;
 }
@@ -420,7 +420,7 @@ export interface DataLayerInternals {
 export const useQueryEngine = <TData>(options: UseQueryEngineOptions<TData>) => {
   // Get tableRegistry from data-layer (NOT from query-engine config!)
   const { tableRegistry, duckdbRouter, isOnline } = useDataLayerInternals();
-  
+
   // All table metadata comes from unified registry
   const tableConfig = tableRegistry.getTable(primaryTable);
   const listRef = tableRegistry.getConvexRef(primaryTable, 'list');
@@ -437,10 +437,10 @@ Since table metadata is in DataLayer, QueryEngineProvider only needs:
 export interface QueryEngineConfig {
   /** DataSource API for Parquet files (if using analytics) */
   readonly dataSourceApi?: FunctionReference<'query'>;
-  
+
   /** Default stale time override (optional, uses DataLayer default) */
   readonly defaultStaleTime?: number;
-  
+
   // NO MORE `tables` config here - it's in DataLayerConfig!
 }
 ```
@@ -489,7 +489,7 @@ export type Aggregation = (typeof AGGREGATIONS)[keyof typeof AGGREGATIONS];
 
 /**
  * Object-based dimension specification.
- * 
+ *
  * @example
  * { member: 'users.name' }
  * { member: 'users.name', alias: 'user_name' }
@@ -497,7 +497,7 @@ export type Aggregation = (typeof AGGREGATIONS)[keyof typeof AGGREGATIONS];
 export interface DimensionSpec {
   /** Member reference: 'table.column' */
   readonly member: string;
-  
+
   /** Optional alias for the result */
   readonly alias?: string;
 }
@@ -511,7 +511,7 @@ export interface DimensionSpec {
 /**
  * Object-based measure specification with aggregation.
  * Presence of measures triggers DuckDB path.
- * 
+ *
  * @example
  * { member: 'orders.amount', aggregation: 'sum' }
  * { member: 'orders.amount', aggregation: 'sum', alias: 'total_revenue' }
@@ -520,16 +520,16 @@ export interface DimensionSpec {
 export interface MeasureSpec {
   /** Member reference: 'table.column' */
   readonly member: string;
-  
+
   /** Aggregation function */
   readonly aggregation: Aggregation;
-  
+
   /** Optional alias for the result */
   readonly alias?: string;
-  
+
   /** Use DISTINCT */
   readonly distinct?: boolean;
-  
+
   /** Filter for this measure only */
   readonly filter?: FilterCondition;
 }
@@ -591,20 +591,20 @@ export type JoinType = (typeof JOIN_TYPES)[keyof typeof JOIN_TYPES];
 /**
  * Join specification. Tables inferred from left/right members.
  * Presence of joins triggers DuckDB path.
- * 
+ *
  * @example
  * { left: 'orders.user_id', right: 'users.id', type: 'inner' }
  */
 export interface JoinSpec {
   /** Left side: 'table.column' */
   readonly left: string;
-  
+
   /** Right side: 'table.column' */
   readonly right: string;
-  
+
   /** Join type */
   readonly type: JoinType;
-  
+
   /** Optional alias */
   readonly alias?: string;
 }
@@ -637,34 +637,34 @@ export interface OrderBySpec {
 export interface EnterpriseQuery {
   /** Operation type (default: 'list') */
   readonly operation?: QueryOperation;
-  
+
   /** Dimensions (columns to select) - TABLE INFERRED FROM HERE */
   readonly dimensions?: ReadonlyArray<DimensionSpec>;
-  
+
   /** Measures (aggregations) - Triggers DuckDB path */
   readonly measures?: ReadonlyArray<MeasureSpec>;
-  
+
   /** Filters */
   readonly filters?: ReadonlyArray<FilterExpression>;
-  
+
   /** Joins - Triggers DuckDB path */
   readonly joins?: ReadonlyArray<JoinSpec>;
-  
+
   /** Order by */
   readonly orderBy?: ReadonlyArray<OrderBySpec>;
-  
+
   /** Limit */
   readonly limit?: number;
-  
+
   /** Offset */
   readonly offset?: number;
-  
+
   /** Entity ID (for GET operation) */
   readonly entityId?: string;
-  
+
   /** Data payload (for CREATE/UPDATE) */
   readonly data?: Record<string, unknown>;
-  
+
   /** Enable/disable query */
   readonly enabled?: boolean;
 }
@@ -722,52 +722,52 @@ export interface ParquetFileInfo {
 export interface TableConfig {
   /** Table name (unique identifier) */
   readonly name: string;
-  
+
   /** Source: 'convex' or 'local' */
   readonly source: TableSource;
-  
+
   /** Convex API functions */
   readonly convex?: TableConvexFunctions;
-  
+
   /** Loading state */
   readonly loadState: TableLoadState;
-  
+
   /** Load error */
   readonly loadError?: Error;
-  
+
   /** Schema */
   readonly schema?: Record<string, string>;
-  
+
   /** Row count */
   readonly rowCount?: number;
-  
+
   /** Parquet files */
   readonly files?: ReadonlyArray<ParquetFileInfo>;
-  
+
   /** OPFS path */
   readonly opfsPath?: string;
-  
+
   /** File type for local files */
   readonly fileType?: 'parquet' | 'csv' | 'json';
-  
+
   /** Is user-uploaded */
   readonly isUserUploaded?: boolean;
-  
+
   /** When loaded (client timestamp) */
   readonly loadedAt?: number;
-  
+
   /** When backend last ingested (from API) */
   readonly lastIngestedAt?: number;
-  
+
   /** Registered timestamp */
   readonly registeredAt: number;
-  
+
   /** Stale time in ms (default: provider's defaultStaleTime) */
   readonly staleTime?: number;
-  
+
   /** Auto-refresh when new data available */
   readonly autoRefresh?: boolean;
-  
+
   /** Conflict resolution strategy */
   readonly conflictStrategy?: ConflictStrategy;
 }
@@ -788,25 +788,25 @@ export interface DataSourceFileInfo {
 export interface DataSourceTableInfo {
   /** Table name */
   readonly name: string;
-  
+
   /** Parquet files (can be multiple, partitioned) */
   readonly files: ReadonlyArray<DataSourceFileInfo>;
-  
-  /** 
+
+  /**
    * KEY FIELD: When backend last updated this table.
    * Client compares: lastIngestedAt > loadedAt → download new files
    */
   readonly lastIngestedAt: number;
-  
+
   /** Total rows */
   readonly totalRows: number;
-  
+
   /** Total size */
   readonly totalSize: number;
-  
+
   /** Schema */
   readonly schema: Record<string, string>;
-  
+
   /** URL expiration */
   readonly expiresAt?: number;
 }
@@ -880,12 +880,12 @@ export interface UseMutateQueryEngineResult<TData, TVariables> {
   readonly error: Error | null;
   readonly data: TData | undefined;
   readonly reset: () => void;
-  
+
   // === Offline ===
   readonly isOffline: boolean;
   readonly isPending: boolean;
   readonly pendingMutations: number;
-  
+
   // === Conflicts ===
   readonly conflicts: ReadonlyArray<ConflictInfo>;
   readonly resolveConflict: (conflictId: string, resolution: 'client' | 'server' | 'merge') => void;
@@ -897,8 +897,8 @@ export interface UseMutateQueryEngineResult<TData, TVariables> {
 ```typescript
 // libs/foundation/query-engine/src/types/config.ts
 
-import type { FunctionReference } from 'convex/server';
 import type { DataLayerConfig } from '@foundation/data-layer';
+import type { FunctionReference } from 'convex/server';
 
 export interface RegisterTableOptions {
   readonly name: string;
@@ -914,19 +914,19 @@ export interface RegisterTableOptions {
 export interface QueryEngineConfig {
   /** Tables to register */
   readonly tables?: ReadonlyArray<RegisterTableOptions>;
-  
+
   /** DataSource API (returns Parquet URLs with lastIngestedAt) */
   readonly dataSourceApi: FunctionReference<'query'>;
-  
+
   /** DataLayer config */
   readonly dataLayerConfig: DataLayerConfig;
-  
+
   /** Default stale time (default: 6 hours) */
   readonly defaultStaleTime?: number;
-  
+
   /** Auto-refresh on update (default: false) */
   readonly autoRefreshOnUpdate?: boolean;
-  
+
   /** Background poll interval (0 = disabled) */
   readonly backgroundPollInterval?: number;
 }
@@ -1050,12 +1050,12 @@ export interface DecisionContext {
 export class DecisionEngine {
   decide(query: EnterpriseQuery, context: DecisionContext): DecisionResult {
     const { tables, operation, tableConfigs } = context;
-    
+
     // Rule 1: Mutations → API
     if (operation === 'create' || operation === 'update' || operation === 'delete') {
       const primaryTable = tables[0];
       const config = tableConfigs.get(primaryTable);
-      
+
       if (!config?.convex?.[operation]) {
         return {
           path: 'api',
@@ -1064,7 +1064,7 @@ export class DecisionEngine {
           warnings: [`Cannot perform '${operation}' - no API defined`],
         };
       }
-      
+
       return {
         path: 'api',
         reason: `Mutation '${operation}' uses Convex API`,
@@ -1072,7 +1072,7 @@ export class DecisionEngine {
         apiFunction: operation,
       };
     }
-    
+
     // Rule 2: Has joins → DuckDB
     if (query.joins && query.joins.length > 0) {
       return {
@@ -1082,7 +1082,7 @@ export class DecisionEngine {
         tablesToLoad: [...tables],
       };
     }
-    
+
     // Rule 3: Has measures → DuckDB
     if (query.measures && query.measures.length > 0) {
       return {
@@ -1092,7 +1092,7 @@ export class DecisionEngine {
         tablesToLoad: [...tables],
       };
     }
-    
+
     // Rule 4: Multiple tables → DuckDB
     if (tables.length > 1) {
       return {
@@ -1102,11 +1102,11 @@ export class DecisionEngine {
         tablesToLoad: [...tables],
       };
     }
-    
+
     // Single table from here
     const primaryTable = tables[0];
     const config = tableConfigs.get(primaryTable);
-    
+
     // Rule 5: Local table → DuckDB
     if (config?.source === 'local') {
       return {
@@ -1116,12 +1116,12 @@ export class DecisionEngine {
         tablesToLoad: [],
       };
     }
-    
+
     // Rule 6: No API → DuckDB
     const hasListApi = !!config?.convex?.list;
     const hasGetApi = !!config?.convex?.get;
     const wantsGet = !!query.entityId || operation === 'get';
-    
+
     if (!wantsGet && !hasListApi) {
       return {
         path: 'duckdb',
@@ -1130,7 +1130,7 @@ export class DecisionEngine {
         tablesToLoad: [primaryTable],
       };
     }
-    
+
     // Rule 7: Simple query → API (real-time)
     return {
       path: 'api',
@@ -1283,7 +1283,8 @@ export class DecisionEngine {
 // libs/foundation/query-engine/src/registry/schema-registry.ts
 
 import { createLogger } from '@foundation/utils';
-import type { TableConfig, RegisterTableOptions, TableLoadState, ParquetFileInfo } from '../types';
+
+import type { ParquetFileInfo, RegisterTableOptions, TableConfig, TableLoadState } from '../types';
 
 const logger = createLogger('SchemaRegistry');
 
@@ -1292,7 +1293,13 @@ export type SchemaRegistryEvent =
   | { type: 'table-loading'; tableName: string; timestamp: number }
   | { type: 'table-loaded'; tableName: string; timestamp: number; lastIngestedAt?: number }
   | { type: 'table-load-error'; tableName: string; error: Error; timestamp: number }
-  | { type: 'table-updated'; tableName: string; timestamp: number; previousLoadedAt?: number; newLoadedAt: number }
+  | {
+      type: 'table-updated';
+      tableName: string;
+      timestamp: number;
+      previousLoadedAt?: number;
+      newLoadedAt: number;
+    }
   | { type: 'table-unregistered'; tableName: string; timestamp: number };
 
 export type SchemaRegistryListener = (event: SchemaRegistryEvent) => void;
@@ -1351,7 +1358,7 @@ export class SchemaRegistry {
   isTableStale(name: string, defaultStaleTime: number): boolean {
     const table = this.tables.get(name);
     if (!table || !table.loadedAt) return true;
-    
+
     const staleTime = table.staleTime ?? defaultStaleTime;
     const age = Date.now() - table.loadedAt;
     return age > staleTime;
@@ -1364,7 +1371,12 @@ export class SchemaRegistry {
 
   markTableLoaded(
     name: string,
-    info: { files?: ParquetFileInfo[]; rowCount?: number; schema?: Record<string, string>; lastIngestedAt?: number }
+    info: {
+      files?: ParquetFileInfo[];
+      rowCount?: number;
+      schema?: Record<string, string>;
+      lastIngestedAt?: number;
+    },
   ): void {
     this.updateTable(name, {
       loadState: 'loaded',
@@ -1375,18 +1387,23 @@ export class SchemaRegistry {
       schema: info.schema,
       loadError: undefined,
     });
-    this.emit({ type: 'table-loaded', tableName: name, timestamp: Date.now(), lastIngestedAt: info.lastIngestedAt });
+    this.emit({
+      type: 'table-loaded',
+      tableName: name,
+      timestamp: Date.now(),
+      lastIngestedAt: info.lastIngestedAt,
+    });
     logger.info('Table loaded', { name, rowCount: info.rowCount });
   }
 
   updateTableLoadedAt(name: string, lastIngestedAt: number): void {
     const table = this.tables.get(name);
     const previousLoadedAt = table?.loadedAt;
-    
+
     this.updateTable(name, { loadedAt: Date.now(), lastIngestedAt });
-    this.emit({ 
-      type: 'table-updated', 
-      tableName: name, 
+    this.emit({
+      type: 'table-updated',
+      tableName: name,
       timestamp: Date.now(),
       previousLoadedAt,
       newLoadedAt: lastIngestedAt,
@@ -1455,8 +1472,9 @@ export class SchemaRegistry {
 ```typescript
 // libs/foundation/query-engine/src/files/file-manager.ts
 
+import type { AnalyticsOpfsManager, DuckDBRouter } from '@foundation/bridge';
 import { createLogger, Mutex } from '@foundation/utils';
-import type { DuckDBRouter, AnalyticsOpfsManager } from '@foundation/bridge';
+
 import type { SchemaRegistry } from '../registry/schema-registry';
 import type { DataSourceResponse, DataSourceTableInfo, ParquetFileInfo } from '../types';
 
@@ -1491,7 +1509,7 @@ export class FileManager {
 
   async downloadFiles(
     response: DataSourceResponse,
-    onProgress?: DownloadProgressHandler
+    onProgress?: DownloadProgressHandler,
   ): Promise<void> {
     if (!this.opfsManager || !this.duckdbRouter) {
       throw new Error('OPFS or DuckDB not available');
@@ -1516,7 +1534,7 @@ export class FileManager {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           const fetchResponse = await fetch(file.url);
-          
+
           if (!fetchResponse.ok) {
             throw new Error(`Failed to download ${file.filename}: ${fetchResponse.status}`);
           }
@@ -1576,27 +1594,27 @@ export class FileManager {
    */
   async downloadIfNewer(
     response: DataSourceResponse,
-    onProgress?: DownloadProgressHandler
+    onProgress?: DownloadProgressHandler,
   ): Promise<{ downloaded: string[]; skipped: string[] }> {
     const downloaded: string[] = [];
     const skipped: string[] = [];
-    
+
     for (const tableInfo of response.tables) {
       const { name: tableName, lastIngestedAt } = tableInfo;
-      
+
       const cachedTable = this.schemaRegistry.getTable(tableName);
       const cachedLastIngestedAt = cachedTable?.lastIngestedAt ?? 0;
-      
+
       // KEY COMPARISON
       const needsDownload = lastIngestedAt > cachedLastIngestedAt;
-      
+
       if (needsDownload) {
         logger.info('Newer data available', {
           tableName,
           cached: new Date(cachedLastIngestedAt).toISOString(),
           server: new Date(lastIngestedAt).toISOString(),
         });
-        
+
         await this.downloadFiles({ tables: [tableInfo], metadata: response.metadata }, onProgress);
         downloaded.push(tableName);
       } else {
@@ -1604,7 +1622,7 @@ export class FileManager {
         skipped.push(tableName);
       }
     }
-    
+
     return { downloaded, skipped };
   }
 
@@ -1625,7 +1643,7 @@ export class FileManager {
   async saveLocalFile(
     tableName: string,
     file: File,
-    fileType: 'parquet' | 'csv' | 'json'
+    fileType: 'parquet' | 'csv' | 'json',
   ): Promise<{ opfsPath: string; schema: Record<string, string> }> {
     if (!this.opfsManager || !this.duckdbRouter) {
       throw new Error('OPFS or DuckDB not available');
@@ -1633,7 +1651,7 @@ export class FileManager {
 
     const arrayBuffer = await file.arrayBuffer();
     const opfsPath = `/local/${tableName}.${fileType}`;
-    
+
     await this.opfsManager.writeFile(opfsPath, new Uint8Array(arrayBuffer), {
       tableName,
       fileType,
@@ -1657,7 +1675,9 @@ export class FileManager {
     await this.duckdbRouter.execute(sql);
 
     // Infer schema
-    const schemaResult = await this.duckdbRouter.query(`DESCRIBE SELECT * FROM "${tableName}" LIMIT 1`);
+    const schemaResult = await this.duckdbRouter.query(
+      `DESCRIBE SELECT * FROM "${tableName}" LIMIT 1`,
+    );
     const schema: Record<string, string> = {};
     for (const row of schemaResult as Array<{ column_name: string; column_type: string }>) {
       schema[row.column_name] = row.column_type;
@@ -1693,14 +1713,14 @@ Reference: https://docs.convex.dev/client/tanstack/tanstack-query/
 ```typescript
 // From useDataLayerInternals() hook:
 interface DataLayerInternals {
-  queryClient: QueryClient;           // TanStack Query client (already wired to Convex)
-  convexClient: ConvexReactClient;    // Convex React client
+  queryClient: QueryClient; // TanStack Query client (already wired to Convex)
+  convexClient: ConvexReactClient; // Convex React client
   convexQueryClient: ConvexQueryClient; // Convex Query client (for reactive subscriptions)
-  database: DatabaseFacade;            // IndexedDB cache
-  syncCoordinator: SyncCoordinator;    // Offline sync from sync-engine
-  duckdbRouter: DuckDBRouter | null;   // DuckDB from bridge
-  isOnline: boolean;                   // Network status
-  cacheConfig: ResolvedCacheConfig;    // Cache settings
+  database: DatabaseFacade; // IndexedDB cache
+  syncCoordinator: SyncCoordinator; // Offline sync from sync-engine
+  duckdbRouter: DuckDBRouter | null; // DuckDB from bridge
+  isOnline: boolean; // Network status
+  cacheConfig: ResolvedCacheConfig; // Cache settings
 }
 ```
 
@@ -1716,19 +1736,19 @@ interface DataLayerInternals {
 ```typescript
 // libs/foundation/query-engine/src/hooks/use-query-engine.ts
 
-import { useQuery } from '@tanstack/react-query';
 import { convexQuery } from '@convex-dev/react-query';
 import { useDataLayerInternals } from '@foundation/data-layer';
+import { useQuery } from '@tanstack/react-query';
 
 export const useQueryEngine = <TData>(options: UseQueryEngineOptions<TData>) => {
   // Get everything from data-layer - NO need to create new clients!
-  const { 
-    convexQueryClient,  // Already wired to QueryClient
-    duckdbRouter,       // For DuckDB queries
-    syncCoordinator,    // For offline mutations
+  const {
+    convexQueryClient, // Already wired to QueryClient
+    duckdbRouter, // For DuckDB queries
+    syncCoordinator, // For offline mutations
     isOnline,
   } = useDataLayerInternals();
-  
+
   // For API path: use convexQuery() which creates reactive subscription
   if (decision.path === 'api') {
     // convexQuery() creates TanStack Query options with:
@@ -1738,11 +1758,11 @@ export const useQueryEngine = <TData>(options: UseQueryEngineOptions<TData>) => 
     const result = useQuery({
       ...convexQuery(apiRef, apiArgs),
       // Can spread additional options
-      gcTime: 10000,  // Stay subscribed 10s after unmount
+      gcTime: 10000, // Stay subscribed 10s after unmount
     });
     return result;
   }
-  
+
   // For DuckDB path: use regular useQuery
   // (no real-time, use stale-while-revalidate)
 };
@@ -1897,33 +1917,30 @@ export const useQueryEngine = <TData>(options: UseQueryEngineOptions<TData>) => 
     tables: [
       {
         name: 'orders',
-        conflictStrategy: 'last-write-wins',  // Compare timestamps
+        conflictStrategy: 'last-write-wins', // Compare timestamps
       },
       {
         name: 'user_preferences',
-        conflictStrategy: 'client-wins',  // Always use client data
+        conflictStrategy: 'client-wins', // Always use client data
       },
       {
         name: 'inventory',
-        conflictStrategy: 'server-wins',  // Always use server data
+        conflictStrategy: 'server-wins', // Always use server data
       },
       {
         name: 'documents',
-        conflictStrategy: 'manual',  // Show UI to user
+        conflictStrategy: 'manual', // Show UI to user
       },
     ],
   }}
-/>
+/>;
 
 // In hook
 const { conflicts, resolveConflict } = useMutateQueryEngine();
 
 if (conflicts.length > 0) {
   return (
-    <ConflictDialog
-      conflicts={conflicts}
-      onResolve={(id, choice) => resolveConflict(id, choice)}
-    />
+    <ConflictDialog conflicts={conflicts} onResolve={(id, choice) => resolveConflict(id, choice)} />
   );
 }
 ```
@@ -1937,38 +1954,38 @@ if (conflicts.length > 0) {
 ```typescript
 // libs/foundation/query-engine/src/hooks/use-query-engine.ts
 
-import { useQuery } from '@tanstack/react-query';
-import { convexQuery } from '@convex-dev/react-query';  // Official helper!
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { convexQuery } from '@convex-dev/react-query'; // Official helper!
+
 import { useDataLayerInternals } from '@foundation/data-layer';
-import { useQueryEngineContext } from '../context/query-engine-context';
-import type { EnterpriseQuery, UseQueryEngineResult, QueryOperation } from '../types';
 import { hashPayloadSync } from '@foundation/utils';
+import { useQuery } from '@tanstack/react-query';
+
+import { useQueryEngineContext } from '../context/query-engine-context';
+import type { EnterpriseQuery, QueryOperation, UseQueryEngineResult } from '../types';
 
 export interface UseQueryEngineOptions<TData = unknown> {
   readonly query: EnterpriseQuery;
   readonly operation?: QueryOperation;
   readonly enabled?: boolean;
   readonly staleTime?: number;
-  readonly gcTime?: number;  // For Convex subscriptions
+  readonly gcTime?: number; // For Convex subscriptions
   readonly select?: (data: unknown) => TData;
 }
 
 export const useQueryEngine = <TData = unknown>(
-  options: UseQueryEngineOptions<TData>
+  options: UseQueryEngineOptions<TData>,
 ): UseQueryEngineResult<TData> => {
   const { query, operation = 'list', enabled = true, staleTime, gcTime, select } = options;
-  
+
   // Get from data-layer (already wired up!)
-  const { 
-    syncCoordinator,
-    isOnline,
-  } = useDataLayerInternals();
-  
+  const { syncCoordinator, isOnline } = useDataLayerInternals();
+
   // Get from query-engine context
-  const { 
-    orchestrator, 
-    schemaRegistry, 
+  const {
+    orchestrator,
+    schemaRegistry,
     defaultStaleTime,
     decisionEngine,
     tableExtractor,
@@ -1988,14 +2005,12 @@ export const useQueryEngine = <TData = unknown>(
   // Extract tables and make routing decision
   const tables = useMemo(() => tableExtractor.extract(query), [query, tableExtractor]);
   const primaryTable = tables[0] ?? null;
-  
+
   const decision = useMemo(() => {
     if (!primaryTable || !enabled) return null;
-    
-    const tableConfigs = new Map(
-      tables.map((name) => [name, schemaRegistry.getTable(name)!])
-    );
-    
+
+    const tableConfigs = new Map(tables.map((name) => [name, schemaRegistry.getTable(name)!]));
+
     return decisionEngine.decide(query, {
       tables,
       operation,
@@ -2005,7 +2020,7 @@ export const useQueryEngine = <TData = unknown>(
   }, [query, tables, operation, primaryTable, enabled, schemaRegistry, decisionEngine, isOnline]);
 
   const isApiPath = decision?.path === 'api';
-  
+
   // For API path: get the Convex function reference
   const apiRef = useMemo(() => {
     if (!isApiPath || !primaryTable) return null;
@@ -2029,11 +2044,11 @@ export const useQueryEngine = <TData = unknown>(
     // - Auto-updates when data changes (no polling!)
     // - isStale is ALWAYS false
     ...convexQuery(apiRef!, apiArgs),
-    
+
     // Additional options
     enabled: enabled && isApiPath && apiRef !== null,
-    gcTime: gcTime ?? 5 * 60 * 1000,  // Stay subscribed 5 min after unmount
-    
+    gcTime: gcTime ?? 5 * 60 * 1000, // Stay subscribed 5 min after unmount
+
     // select can transform data
     select: select ? (data: unknown) => select(data) as TData : undefined,
   });
@@ -2043,15 +2058,15 @@ export const useQueryEngine = <TData = unknown>(
   // Uses stale-while-revalidate (not real-time)
   // =========================================================================
   const queryKey = useMemo(
-    () => ['query-engine', 'duckdb', hashPayloadSync(query), operation], 
-    [query, operation]
+    () => ['query-engine', 'duckdb', hashPayloadSync(query), operation],
+    [query, operation],
   );
-  
+
   const duckdbResult = useQuery({
     queryKey,
     queryFn: async ({ signal }) => {
       setIsRevalidating(true);
-      
+
       const result = await orchestrator.execute({
         query,
         operation,
@@ -2078,8 +2093,8 @@ export const useQueryEngine = <TData = unknown>(
 
   // Subscribe to table updates (for DuckDB path - stale-while-revalidate)
   useEffect(() => {
-    if (isApiPath) return;  // Not needed for API path (Convex handles it)
-    
+    if (isApiPath) return; // Not needed for API path (Convex handles it)
+
     const unsubscribe = schemaRegistry.subscribe((event) => {
       if (event.type === 'table-updated' && tables.includes(event.tableName)) {
         setHasNewerData(true);
@@ -2091,8 +2106,8 @@ export const useQueryEngine = <TData = unknown>(
 
   // Subscribe to cross-tab updates via sync coordinator
   useEffect(() => {
-    if (isApiPath) return;  // Convex handles cross-tab for API path
-    
+    if (isApiPath) return; // Convex handles cross-tab for API path
+
     const unsubscribe = syncCoordinator.subscribe((event) => {
       if (event.type === 'mutation-synced' && tables.includes(event.table)) {
         setHasNewerData(true);
@@ -2109,7 +2124,7 @@ export const useQueryEngine = <TData = unknown>(
     const rawData = duckdbResult.data?.data;
     return (select ? select(rawData) : rawData) as TData | undefined;
   }, [isApiPath, apiResult.data, duckdbResult.data, select]);
-  
+
   const isLoading = isApiPath ? apiResult.isLoading : duckdbResult.isLoading;
   const isFetching = isApiPath ? apiResult.isFetching : duckdbResult.isFetching;
 
@@ -2131,16 +2146,16 @@ export const useQueryEngine = <TData = unknown>(
     error: isApiPath ? (apiResult.error as Error | null) : (duckdbResult.error as Error | null),
     ...downloadState,
     // API path: isStale is ALWAYS false (Convex data is always fresh)
-    isStale: isApiPath ? false : (duckdbResult.data?.isStale ?? false),
+    isStale: isApiPath ? false : duckdbResult.data?.isStale ?? false,
     isRevalidating,
     hasNewerData,
-    lastUpdatedAt: isApiPath ? (apiResult.dataUpdatedAt ?? null) : (duckdbResult.dataUpdatedAt ?? null),
+    lastUpdatedAt: isApiPath ? apiResult.dataUpdatedAt ?? null : duckdbResult.dataUpdatedAt ?? null,
     refetch: handleRefetch,
     tables,
     primaryTable,
     executionPath: decision?.path ?? null,
-    sql: isApiPath ? null : (duckdbResult.data?.sql ?? null),
-    executionTimeMs: isApiPath ? null : (duckdbResult.data?.executionTimeMs ?? null),
+    sql: isApiPath ? null : duckdbResult.data?.sql ?? null,
+    executionTimeMs: isApiPath ? null : duckdbResult.data?.executionTimeMs ?? null,
     isOffline: !isOnline,
     dataSource: decision?.path ?? null,
   };
@@ -2152,12 +2167,15 @@ export const useQueryEngine = <TData = unknown>(
 ```typescript
 // libs/foundation/query-engine/src/hooks/use-mutate-query-engine.ts
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useConvexMutation } from '@convex-dev/react-query';  // Official helper!
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { useConvexMutation } from '@convex-dev/react-query'; // Official helper!
+
 import { useDataLayerInternals } from '@foundation/data-layer';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { useQueryEngineContext } from '../context/query-engine-context';
-import type { EnterpriseQuery, UseMutateQueryEngineResult, ConflictInfo } from '../types';
+import type { ConflictInfo, EnterpriseQuery, UseMutateQueryEngineResult } from '../types';
 
 export interface MutationVariables {
   readonly operation: 'create' | 'update' | 'delete';
@@ -2167,21 +2185,16 @@ export interface MutationVariables {
   readonly filters?: EnterpriseQuery['filters'];
 }
 
-export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineResult<TData, MutationVariables> => {
+export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineResult<
+  TData,
+  MutationVariables
+> => {
   // Get from data-layer
-  const { 
-    queryClient,
-    syncCoordinator,
-    isOnline,
-  } = useDataLayerInternals();
-  
+  const { queryClient, syncCoordinator, isOnline } = useDataLayerInternals();
+
   // Get from query-engine context
-  const { 
-    schemaRegistry, 
-    tableExtractor, 
-    optimisticUpdater,
-    rollbackManager,
-  } = useQueryEngineContext();
+  const { schemaRegistry, tableExtractor, optimisticUpdater, rollbackManager } =
+    useQueryEngineContext();
 
   const [pendingMutations, setPendingMutations] = useState(0);
   const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
@@ -2195,31 +2208,31 @@ export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineRes
           optimisticUpdater.confirm(event.optimisticId, event.serverId, event.serverData);
           setPendingMutations((prev) => Math.max(0, prev - 1));
           break;
-          
+
         case 'mutation-failed':
           // Offline mutation failed during sync
           rollbackManager.revert(event.optimisticId, event.previousState);
           setPendingMutations((prev) => Math.max(0, prev - 1));
           break;
-          
+
         case 'conflict-detected':
           // Conflict detected during sync - check strategy
           const tableConfig = schemaRegistry.getTable(event.table);
           const strategy = tableConfig?.conflictStrategy ?? 'server-wins';
-          
+
           if (strategy === 'manual') {
             // Manual resolution - add to conflicts array
             setConflicts((prev) => [...prev, event.conflict as ConflictInfo]);
           }
           // Other strategies are handled automatically by sync coordinator
           break;
-          
+
         case 'queue-processed':
           setPendingMutations(0);
           break;
       }
     });
-    
+
     return unsubscribe;
   }, [syncCoordinator, optimisticUpdater, rollbackManager, schemaRegistry]);
 
@@ -2276,9 +2289,9 @@ export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineRes
 
         setPendingMutations((prev) => prev + 1);
 
-        return { 
-          id: optimisticId, 
-          _pending: true, 
+        return {
+          id: optimisticId,
+          _pending: true,
           _offline: true,
           ...data,
         } as unknown as TData;
@@ -2315,8 +2328,8 @@ export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineRes
         await queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey;
-            return (key as unknown[]).some((k) => 
-              typeof k === 'string' && k.includes(primaryTable)
+            return (key as unknown[]).some(
+              (k) => typeof k === 'string' && k.includes(primaryTable),
             );
           },
         });
@@ -2336,10 +2349,13 @@ export const useMutateQueryEngine = <TData = unknown>(): UseMutateQueryEngineRes
     setConflicts([]);
   }, [mutation]);
 
-  const handleResolveConflict = useCallback((conflictId: string, resolution: 'client' | 'server' | 'merge') => {
-    syncCoordinator.resolveConflict(conflictId, resolution);
-    setConflicts((prev) => prev.filter((c) => c.id !== conflictId));
-  }, [syncCoordinator]);
+  const handleResolveConflict = useCallback(
+    (conflictId: string, resolution: 'client' | 'server' | 'merge') => {
+      syncCoordinator.resolveConflict(conflictId, resolution);
+      setConflicts((prev) => prev.filter((c) => c.id !== conflictId));
+    },
+    [syncCoordinator],
+  );
 
   return {
     mutate: mutation.mutateAsync,
@@ -2364,9 +2380,10 @@ Per the official docs (https://docs.convex.dev/client/tanstack/tanstack-query/):
 
 ```typescript
 // For mutations, use useConvexMutation with TanStack's useMutation
-import { useMutation } from "@tanstack/react-query";
-import { useConvexMutation } from "@convex-dev/react-query";
-import { api } from "../convex/_generated/api";
+import { useConvexMutation } from '@convex-dev/react-query';
+import { useMutation } from '@tanstack/react-query';
+
+import { api } from '../convex/_generated/api';
 
 // useConvexMutation is just a re-export of useMutation from convex/react
 const { mutate, isPending } = useMutation({
@@ -2377,7 +2394,7 @@ const { mutate, isPending } = useMutation({
 In our implementation, we handle the mutation execution inside the `useMutation` hook to support:
 
 - Optimistic updates
-- Offline queueing via sync-engine  
+- Offline queueing via sync-engine
 - Conflict resolution
 - Cross-tab sync
 
@@ -2386,7 +2403,8 @@ In our implementation, we handle the mutation execution inside the `useMutation`
 ```typescript
 // libs/foundation/query-engine/src/hooks/use-upload-file.ts
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+
 import { useQueryEngineContext } from '../context/query-engine-context';
 
 export interface UseUploadFileOptions {
@@ -2424,26 +2442,29 @@ export const useUploadFile = (options: UseUploadFileOptions): UseUploadFileResul
   const [error, setError] = useState<Error | null>(null);
   const [schema, setSchema] = useState<Record<string, string> | null>(null);
 
-  const handleUpload = useCallback(async (file: File) => {
-    setIsUploading(true);
-    setProgress(0);
-    setError(null);
-    setSchema(null);
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setIsUploading(true);
+      setProgress(0);
+      setError(null);
+      setSchema(null);
 
-    try {
-      const fileType = defaultFileType ?? inferFileType(file.name);
-      setProgress(25);
+      try {
+        const fileType = defaultFileType ?? inferFileType(file.name);
+        setProgress(25);
 
-      const result = await fileManager.saveLocalFile(tableName, file, fileType);
+        const result = await fileManager.saveLocalFile(tableName, file, fileType);
 
-      setProgress(100);
-      setSchema(result.schema);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      setIsUploading(false);
-    }
-  }, [tableName, defaultFileType, fileManager]);
+        setProgress(100);
+        setSchema(result.schema);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [tableName, defaultFileType, fileManager],
+  );
 
   const handleReset = useCallback(() => {
     setIsUploading(false);
@@ -2503,23 +2524,22 @@ export const useUploadFile = (options: UseUploadFileOptions): UseUploadFileResul
 ```typescript
 // libs/foundation/query-engine/src/hooks/context/query-engine-provider.tsx
 
-import React, { createContext, useContext, useMemo, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+
 import { useDataLayerInternals } from '@foundation/data-layer';
 import { createLogger } from '@foundation/utils';
 
+import { SqlCompiler } from '../../compiler/sql-compiler';
 // Import existing components from query-engine
 import { DecisionEngine } from '../../decision/decision-engine';
-import { SqlCompiler } from '../../compiler/sql-compiler';
-import { SchemaRegistry } from '../../schema/registry';
-
+import { ApiExecutor } from '../../engine/api-executor';
+import { QueryOrchestrator } from '../../engine/query-orchestrator';
 // New components for enterprise features
 import { TableExtractor } from '../../engine/table-extractor';
 import { FileManager } from '../../files/file-manager';
-import { ApiExecutor } from '../../engine/api-executor';
-import { QueryOrchestrator } from '../../engine/query-orchestrator';
+import { SchemaRegistry } from '../../schema/registry';
 import { OptimisticUpdater } from '../../sync/optimistic-updater';
 import { RollbackManager } from '../../sync/rollback-manager';
-
 import type { QueryEngineConfig, RegisterTableOptions } from '../../types';
 
 const logger = createLogger('QueryEngineProvider');
@@ -2531,7 +2551,7 @@ interface QueryEngineContextValue {
   readonly decisionEngine: DecisionEngine;
   readonly sqlCompiler: SqlCompiler;
   readonly schemaRegistry: SchemaRegistry;
-  
+
   // New enterprise components
   readonly tableExtractor: TableExtractor;
   readonly fileManager: FileManager;
@@ -2539,11 +2559,11 @@ interface QueryEngineContextValue {
   readonly orchestrator: QueryOrchestrator;
   readonly optimisticUpdater: OptimisticUpdater;
   readonly rollbackManager: RollbackManager;
-  
+
   // Config
   readonly defaultStaleTime: number;
   readonly dataSourceApi: QueryEngineConfig['dataSourceApi'];
-  
+
   // From data-layer (pass through for convenience)
   readonly isOnline: boolean;
 }
@@ -2565,7 +2585,7 @@ interface QueryEngineProviderProps {
 
 export const QueryEngineProvider: React.FC<QueryEngineProviderProps> = ({ config, children }) => {
   // Get EVERYTHING from data-layer - no need to create new clients!
-  const { 
+  const {
     queryClient,
     convexClient,
     convexQueryClient,
@@ -2581,7 +2601,7 @@ export const QueryEngineProvider: React.FC<QueryEngineProviderProps> = ({ config
   const contextValue = useMemo(() => {
     // 1. Schema Registry (can use existing or create new)
     const schemaRegistry = new SchemaRegistry();
-    
+
     // Register tables from config
     for (const table of config.tables ?? []) {
       schemaRegistry.registerTable(table);
@@ -2665,11 +2685,7 @@ export const QueryEngineProvider: React.FC<QueryEngineProviderProps> = ({ config
     });
   }, [config.tables?.length, defaultStaleTime, isOnline]);
 
-  return (
-    <QueryEngineContext.Provider value={contextValue}>
-      {children}
-    </QueryEngineContext.Provider>
-  );
+  return <QueryEngineContext.Provider value={contextValue}>{children}</QueryEngineContext.Provider>;
 };
 ```
 
@@ -2681,6 +2697,7 @@ export const QueryEngineProvider: React.FC<QueryEngineProviderProps> = ({ config
 
 import { DataLayerProvider } from '@foundation/data-layer';
 import { QueryEngineProvider } from '@foundation/query-engine';
+
 import { api } from '../convex/_generated/api';
 
 const App = () => {
@@ -2689,7 +2706,7 @@ const App = () => {
     <DataLayerProvider
       config={{
         convexUrl: import.meta.env.VITE_CONVEX_URL,
-        
+
         // Unified table registry - used by DataLayer, SyncEngine, AND QueryEngine
         tables: [
           {
@@ -2701,10 +2718,10 @@ const App = () => {
               update: api.users.update,
               delete: api.users.delete,
             },
-            staleTime: 5 * 60 * 1000,              // 5 minutes
+            staleTime: 5 * 60 * 1000, // 5 minutes
             conflictStrategy: 'last-write-wins',
             analytics: {
-              enabled: true,                        // Enable DuckDB for complex queries
+              enabled: true, // Enable DuckDB for complex queries
               freshness: 'near-realtime',
             },
           },
@@ -2716,22 +2733,22 @@ const App = () => {
               create: api.orders.create,
               update: api.orders.update,
             },
-            staleTime: 1 * 60 * 1000,              // 1 minute (fresher data needed)
+            staleTime: 1 * 60 * 1000, // 1 minute (fresher data needed)
             conflictStrategy: 'server-wins',
             analytics: {
               enabled: true,
               freshness: 'eventual',
-              staleTime: 10 * 60 * 1000,            // Analytics can be 10 min stale
+              staleTime: 10 * 60 * 1000, // Analytics can be 10 min stale
             },
           },
           {
             name: 'products',
             convex: { list: api.products.list },
-            staleTime: 60 * 60 * 1000,             // 1 hour (rarely changes)
-            analytics: { enabled: false },          // No DuckDB for this table
+            staleTime: 60 * 60 * 1000, // 1 hour (rarely changes)
+            analytics: { enabled: false }, // No DuckDB for this table
           },
         ],
-        
+
         // Global defaults (tables override these)
         defaultStaleTime: 5 * 60 * 1000,
         conflictStrategy: 'last-write-wins',
@@ -2758,15 +2775,15 @@ const App = () => {
 ```typescript
 // DataLayer hooks (useDLGet, useDLCreate, etc.)
 const { tableRegistry } = useDataLayerInternals();
-const staleTime = tableRegistry.getStaleTime('users');      // Cache config
-const createRef = tableRegistry.getConvexRef('users', 'create');  // Mutation ref
+const staleTime = tableRegistry.getStaleTime('users'); // Cache config
+const createRef = tableRegistry.getConvexRef('users', 'create'); // Mutation ref
 
 // SyncEngine (via DataLayerContainer)
-const strategies = tableRegistry.getTableStrategies();      // For ConflictResolver
-const mergeConfigs = tableRegistry.getTableMergeConfigs();  // For merge strategy
+const strategies = tableRegistry.getTableStrategies(); // For ConflictResolver
+const mergeConfigs = tableRegistry.getTableMergeConfigs(); // For merge strategy
 
 // QueryEngine (useQueryEngine)
-const listRef = tableRegistry.getConvexRef('users', 'list');  // For API path
+const listRef = tableRegistry.getConvexRef('users', 'list'); // For API path
 const canUseDuckDB = tableRegistry.isAnalyticsEnabled('users'); // For routing
 const freshness = tableRegistry.getAnalyticsFreshness('users'); // For decisions
 ```

@@ -8,9 +8,9 @@ import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import { useTabsContext } from './tabs.context';
 import type { TabTriggerProps } from './tabs';
 import { tabsDefaultTheme } from './tabs';
+import { useTabsContext } from './tabs.context';
 
 /**
  * Tabs.Trigger component

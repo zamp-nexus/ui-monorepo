@@ -7,9 +7,11 @@
  * @module hooks/use-sync-status
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-insights-web/foundation-data-model';
 import { useCallbackRef } from '@open-insights-web/foundation-hooks';
+
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';
 
@@ -93,7 +95,7 @@ export const useSyncStatus = (): SyncStatus => {
   // Update status from sync events - wrapped in mounted check via closure
   const handleSyncEvent = useCallback((event: SyncEvent, mounted: boolean) => {
     if (!mounted) return;
-    
+
     switch (event.type) {
       case SYNC_EVENT_TYPE.ONLINE:
         setStatus((prev) => ({ ...prev, isOnline: true }));
@@ -135,10 +137,10 @@ export const useSyncStatus = (): SyncStatus => {
     const loadInitialState = async () => {
       try {
         const state = await syncCoordinator.getState();
-        
+
         // Only update state if component is still mounted
         if (!mounted) return;
-        
+
         setStatus({
           isOnline: state.isOnline,
           isSyncing: state.isSyncing,
@@ -196,10 +198,10 @@ export const useSyncTrigger = (): {
 } => {
   const { syncCoordinator } = useDataLayerInternals();
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   // Track mounted state for async cleanup
   const mountedRef = useRef(true);
-  
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -237,10 +239,10 @@ export const useSyncTrigger = (): {
  */
 export const useSyncEventListener = (
   eventType: SyncEvent['type'],
-  callback: (event: SyncEvent) => void
+  callback: (event: SyncEvent) => void,
 ): void => {
   const { syncCoordinator } = useDataLayerInternals();
-  
+
   // Use stable callback ref to avoid re-subscription when callback changes
   // This prevents memory leaks from rapid re-subscriptions
   const stableCallback = useCallbackRef(callback);

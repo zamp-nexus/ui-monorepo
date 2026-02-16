@@ -6,9 +6,9 @@
  * @module convex/identity-helpers
  */
 
+import { AUTH_ERROR_CODE, type AuthErrorCode } from '../core/constants';
 import type { UserRole } from '../core/types';
 import { AuthError } from '../errors/auth-errors';
-import { AUTH_ERROR_CODE, type AuthErrorCode } from '../core/constants';
 
 // =============================================================================
 // Types
@@ -100,11 +100,7 @@ export class ForbiddenError extends AuthError {
 
   readonly requiredRoles?: UserRole[];
 
-  constructor(
-    message = 'Permission denied',
-    requiredRoles?: UserRole[],
-    cause?: Error,
-  ) {
+  constructor(message = 'Permission denied', requiredRoles?: UserRole[], cause?: Error) {
     super(message, { requiredRoles }, cause);
     this.name = 'ForbiddenError';
     this.requiredRoles = requiredRoles;
@@ -214,7 +210,7 @@ export const requireAuthUser = async (ctx: ConvexAuthContext): Promise<ConvexAut
  */
 export const requireRole = async (
   ctx: ConvexAuthContext,
-  allowedRoles: UserRole[]
+  allowedRoles: UserRole[],
 ): Promise<ConvexUserIdentity> => {
   const identity = await requireAuth(ctx);
 
@@ -222,10 +218,7 @@ export const requireRole = async (
   const userRole = (identity.role as UserRole) ?? DEFAULT_ROLE;
 
   if (!allowedRoles.includes(userRole)) {
-    throw new ForbiddenError(
-      `Requires one of: ${allowedRoles.join(', ')}`,
-      allowedRoles
-    );
+    throw new ForbiddenError(`Requires one of: ${allowedRoles.join(', ')}`, allowedRoles);
   }
 
   return identity;
@@ -283,7 +276,7 @@ export const requireOwner = async (ctx: ConvexAuthContext): Promise<ConvexUserId
  * ```
  */
 export const getOptionalAuth = async (
-  ctx: ConvexAuthContext
+  ctx: ConvexAuthContext,
 ): Promise<ConvexUserIdentity | null> => {
   return ctx.auth.getUserIdentity();
 };
@@ -310,7 +303,7 @@ export const getOptionalAuth = async (
  */
 export const hasRole = async (
   ctx: ConvexAuthContext,
-  allowedRoles: UserRole[]
+  allowedRoles: UserRole[],
 ): Promise<boolean> => {
   const identity = await getOptionalAuth(ctx);
   if (!identity) return false;
@@ -341,7 +334,7 @@ export const hasRole = async (
  */
 export const requireTenant = async (
   ctx: ConvexAuthContext,
-  tenantId: string
+  tenantId: string,
 ): Promise<ConvexUserIdentity> => {
   const identity = await requireAuth(ctx);
 

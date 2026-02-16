@@ -117,10 +117,7 @@ export const cloneJsonSerializable = <T extends JsonSerializable>(value: T): T =
  * Error thrown when a value cannot be converted to JsonSerializable
  */
 export class JsonSerializationError extends Error {
-  constructor(
-    public readonly value: unknown,
-    public readonly reason: string
-  ) {
+  constructor(public readonly value: unknown, public readonly reason: string) {
     super(`Value is not JSON-serializable: ${reason}`);
     this.name = 'JsonSerializationError';
   }
@@ -168,11 +165,17 @@ export const toJsonSerializable = <T>(value: T): JsonSerializable => {
   }
 
   if (typeof value === 'bigint') {
-    throw new JsonSerializationError(value, 'BigInt cannot be serialized (convert to string first)');
+    throw new JsonSerializationError(
+      value,
+      'BigInt cannot be serialized (convert to string first)',
+    );
   }
 
   if (value instanceof Date) {
-    throw new JsonSerializationError(value, 'Date objects cannot be serialized (use .toISOString())');
+    throw new JsonSerializationError(
+      value,
+      'Date objects cannot be serialized (use .toISOString())',
+    );
   }
 
   if (value instanceof Map) {

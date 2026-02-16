@@ -8,12 +8,12 @@ import { Icon } from '@open-insights-web/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
+import type { ToastComponent, ToastProps } from './toast';
+import { toastDefaultTheme } from './toast';
 import { ToastActions } from './toast-actions';
 import { ToastBody } from './toast-body';
 import { ToastDescription } from './toast-description';
 import { ToastTitle } from './toast-title';
-import type { ToastComponent, ToastProps } from './toast';
-import { toastDefaultTheme } from './toast';
 
 /**
  * Default feedback icons
@@ -104,9 +104,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
       )}
 
       {/* Main content */}
-      <div className={theme.content?.({}) ?? 'flex-1 min-w-0'}>
-        {children}
-      </div>
+      <div className={theme.content?.({}) ?? 'flex-1 min-w-0'}>{children}</div>
 
       {/* End slot */}
       {end && (

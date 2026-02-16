@@ -8,18 +8,19 @@
  * @module interceptors/response/error-normalizer
  */
 
-import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { isAxiosError } from 'axios';
-import { HTTP_STATUS, AXIOS_ERROR_CODE } from '../../core/constants';
+
+import { AXIOS_ERROR_CODE, HTTP_STATUS } from '../../core/constants';
 import {
-  HttpRequestError,
-  HttpTimeoutError,
-  HttpNetworkError,
   HttpCancelledError,
-  HttpUnauthorizedError,
   HttpForbiddenError,
+  HttpNetworkError,
   HttpNotFoundError,
+  HttpRequestError,
   HttpServerError,
+  HttpTimeoutError,
+  HttpUnauthorizedError,
 } from '../../errors/http-errors';
 
 // =============================================================================

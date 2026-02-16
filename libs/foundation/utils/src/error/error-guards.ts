@@ -131,9 +131,7 @@ export const isTimeoutError = (error: unknown): boolean => {
 
   const message = error.message.toLowerCase();
   return (
-    error.name === 'TimeoutError' ||
-    message.includes('timeout') ||
-    message.includes('timed out')
+    error.name === 'TimeoutError' || message.includes('timeout') || message.includes('timed out')
   );
 };
 

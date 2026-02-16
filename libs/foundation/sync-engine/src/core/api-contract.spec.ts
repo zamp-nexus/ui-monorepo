@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { SyncEngineContainer, SyncEngineFactory } from './container';
-import { NETWORK_STATUS_EVENT } from '../network/index';
 import { CRUD_OPERATION } from '../convex/functions';
+import { NETWORK_STATUS_EVENT } from '../network/index';
+import { SyncEngineContainer, SyncEngineFactory } from './container';
 
 describe('sync-engine api contract', () => {
   it('removes deprecated synchronous disposal APIs', () => {

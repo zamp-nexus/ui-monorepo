@@ -6,26 +6,12 @@
  * @module builder/presets
  */
 
-import type {
-  DateRangeSpec,
-  TimeGranularity,
-} from '../types/time';
-import {
-  PRESET_DATE_RANGES,
-  TIME_GRANULARITIES,
-} from '../types/time';
+import type { FilterExpression, FilterOperator, FilterPrimitive } from '../types/filter';
+import { isFilterAndGroup, isFilterCondition, isFilterOrGroup } from '../types/filter';
 import type { Query } from '../types/query';
 import { FRESHNESS_REQUIREMENTS } from '../types/query';
-import type {
-  FilterExpression,
-  FilterOperator,
-  FilterPrimitive,
-} from '../types/filter';
-import {
-  isFilterCondition,
-  isFilterAndGroup,
-  isFilterOrGroup,
-} from '../types/filter';
+import type { DateRangeSpec, TimeGranularity } from '../types/time';
+import { PRESET_DATE_RANGES, TIME_GRANULARITIES } from '../types/time';
 import { QueryBuilder } from './query-builder';
 
 // =============================================================================
@@ -96,10 +82,7 @@ const addFilterExpression = (builder: QueryBuilder, expression: FilterExpression
 /**
  * Create a simple count query
  */
-export const countQuery = (
-  countAlias = 'total_count',
-  options?: PresetOptions
-): Query => {
+export const countQuery = (countAlias = 'total_count', options?: PresetOptions): Query => {
   const builder = new QueryBuilder().count(countAlias);
   applyCommonOptions(builder, options);
   return builder.build();
@@ -111,7 +94,7 @@ export const countQuery = (
 export const countByDimension = (
   dimension: string,
   countAlias = 'count',
-  options?: PresetOptions
+  options?: PresetOptions,
 ): Query => {
   const builder = new QueryBuilder().count(countAlias).dimension(dimension).desc(countAlias);
   applyCommonOptions(builder, options);
@@ -125,7 +108,7 @@ export const sumByDimension = (
   sumColumn: string,
   dimension: string,
   sumAlias = 'total',
-  options?: PresetOptions
+  options?: PresetOptions,
 ): Query => {
   const builder = new QueryBuilder().sum(sumColumn, sumAlias).dimension(dimension).desc(sumAlias);
   applyCommonOptions(builder, options);
@@ -138,13 +121,13 @@ export const sumByDimension = (
 
 const createTimeSeriesBuilder = (
   timeDimension: string,
-  options?: TimeSeriesPresetOptions
+  options?: TimeSeriesPresetOptions,
 ): QueryBuilder =>
   new QueryBuilder()
     .timeDimension(
       timeDimension,
       options?.granularity ?? TIME_GRANULARITIES.DAY,
-      options?.dateRange ?? PRESET_DATE_RANGES.LAST_30_DAYS
+      options?.dateRange ?? PRESET_DATE_RANGES.LAST_30_DAYS,
     )
     .asc(timeDimension);
 
@@ -153,7 +136,7 @@ const createTimeSeriesBuilder = (
  */
 export const timeSeriesCount = (
   timeDimension: string,
-  options?: TimeSeriesPresetOptions
+  options?: TimeSeriesPresetOptions,
 ): Query => {
   const builder = createTimeSeriesBuilder(timeDimension, options).count('count');
   applyCommonOptions(builder, options);
@@ -167,7 +150,7 @@ export const timeSeriesSum = (
   sumColumn: string,
   timeDimension: string,
   sumAlias = 'total',
-  options?: TimeSeriesPresetOptions
+  options?: TimeSeriesPresetOptions,
 ): Query => {
   const builder = createTimeSeriesBuilder(timeDimension, options).sum(sumColumn, sumAlias);
   applyCommonOptions(builder, options);
@@ -180,13 +163,13 @@ export const timeSeriesSum = (
 export const timeSeriesMetrics = (
   measures: ReadonlyArray<string>,
   timeDimension: string,
-  options?: TimeSeriesPresetOptions
+  options?: TimeSeriesPresetOptions,
 ): Query => {
   const builder = new QueryBuilder()
     .timeDimension(
       timeDimension,
       options?.granularity ?? TIME_GRANULARITIES.DAY,
-      options?.dateRange ?? PRESET_DATE_RANGES.LAST_30_DAYS
+      options?.dateRange ?? PRESET_DATE_RANGES.LAST_30_DAYS,
     )
     .asc(timeDimension);
 
@@ -208,7 +191,7 @@ export const timeSeriesMetrics = (
 export const kpiQuery = (
   measure: string,
   dateRange?: DateRangeSpec,
-  timeDimension?: string
+  timeDimension?: string,
 ): Query => {
   const builder = new QueryBuilder().measure(measure);
 
@@ -226,16 +209,11 @@ export const comparisonKpiQuery = (
   measure: string,
   timeDimension: string,
   currentRange: DateRangeSpec,
-  previousRange: DateRangeSpec
+  previousRange: DateRangeSpec,
 ): Query => {
   return new QueryBuilder()
     .measure(measure)
-    .timeDimensionWithComparison(
-      timeDimension,
-      TIME_GRANULARITIES.DAY,
-      currentRange,
-      previousRange
-    )
+    .timeDimensionWithComparison(timeDimension, TIME_GRANULARITIES.DAY, currentRange, previousRange)
     .build();
 };
 
@@ -246,7 +224,7 @@ export const topNQuery = (
   measure: string,
   dimension: string,
   n: number,
-  options?: PresetOptions
+  options?: PresetOptions,
 ): Query => {
   const builder = new QueryBuilder()
     .measure(measure)
@@ -269,7 +247,7 @@ export const filteredCount = (
   filterMember: string,
   filterOperator: FilterOperator,
   filterValues: ReadonlyArray<FilterPrimitive>,
-  countAlias = 'filtered_count'
+  countAlias = 'filtered_count',
 ): Query => {
   return new QueryBuilder()
     .count(countAlias)
@@ -284,7 +262,7 @@ export const filteredAggregation = (
   measure: string,
   filterMember: string,
   filterOperator: FilterOperator,
-  filterValues: ReadonlyArray<FilterPrimitive>
+  filterValues: ReadonlyArray<FilterPrimitive>,
 ): Query => {
   return new QueryBuilder()
     .measure(measure)
@@ -301,7 +279,7 @@ export const filteredAggregation = (
  */
 export const realtimeQuery = (
   measures: ReadonlyArray<string>,
-  dimensions?: ReadonlyArray<string>
+  dimensions?: ReadonlyArray<string>,
 ): Query => {
   const builder = new QueryBuilder().subscribe().freshness(FRESHNESS_REQUIREMENTS.REALTIME);
 
@@ -323,10 +301,7 @@ export const realtimeQuery = (
 /**
  * Extend a preset with additional configuration
  */
-export const extendPreset = (
-  preset: Query,
-  configure: (builder: QueryBuilder) => void
-): Query => {
+export const extendPreset = (preset: Query, configure: (builder: QueryBuilder) => void): Query => {
   const builder = new QueryBuilder();
 
   if (preset.queryId !== undefined) {
@@ -361,7 +336,7 @@ export const extendPreset = (
         timeDimension.dimension,
         timeDimension.granularity ?? TIME_GRANULARITIES.DAY,
         timeDimension.dateRange ?? PRESET_DATE_RANGES.TODAY,
-        timeDimension.compareTo ?? PRESET_DATE_RANGES.TODAY
+        timeDimension.compareTo ?? PRESET_DATE_RANGES.TODAY,
       );
     }
   }

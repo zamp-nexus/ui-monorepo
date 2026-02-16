@@ -38,9 +38,7 @@ export const Default: Story = {
       <Drawer.Content>
         <Drawer.Header>
           <Drawer.Title>Settings</Drawer.Title>
-          <Drawer.Description>
-            Manage your account settings and preferences.
-          </Drawer.Description>
+          <Drawer.Description>Manage your account settings and preferences.</Drawer.Description>
           <Drawer.Close />
         </Drawer.Header>
         <Drawer.Body>
@@ -83,11 +81,7 @@ export const LeftDrawer: Story = {
         <Drawer.Body>
           <nav className="space-y-2">
             {['Dashboard', 'Projects', 'Team', 'Settings'].map((item) => (
-              <a
-                key={item}
-                href="#"
-                className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-              >
+              <a key={item} href="#" className="block rounded-md px-3 py-2 text-sm hover:bg-muted">
                 {item}
               </a>
             ))}
@@ -136,13 +130,11 @@ export const BottomDrawer: Story = {
         </Drawer.Header>
         <Drawer.Body>
           <div className="grid grid-cols-3 gap-4">
-            {['Share', 'Copy', 'Download', 'Edit', 'Delete', 'Archive'].map(
-              (action) => (
-                <Button key={action} intent="secondary" className="h-20">
-                  {action}
-                </Button>
-              ),
-            )}
+            {['Share', 'Copy', 'Download', 'Edit', 'Delete', 'Archive'].map((action) => (
+              <Button key={action} intent="secondary" className="h-20">
+                {action}
+              </Button>
+            ))}
           </div>
         </Drawer.Body>
       </Drawer.Content>
@@ -162,15 +154,11 @@ export const HalfWidth: Story = {
       <Drawer.Content>
         <Drawer.Header>
           <Drawer.Title>Details Panel</Drawer.Title>
-          <Drawer.Description>
-            View and edit item details.
-          </Drawer.Description>
+          <Drawer.Description>View and edit item details.</Drawer.Description>
           <Drawer.Close />
         </Drawer.Header>
         <Drawer.Body>
-          <p className="text-muted-foreground">
-            This drawer takes up half the screen width.
-          </p>
+          <p className="text-muted-foreground">This drawer takes up half the screen width.</p>
         </Drawer.Body>
         <Drawer.Footer>
           <Drawer.Close>

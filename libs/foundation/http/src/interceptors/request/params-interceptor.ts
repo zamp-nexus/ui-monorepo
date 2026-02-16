@@ -7,6 +7,7 @@
  */
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+
 import type { ParamsArrayFormat } from '../../core/constants';
 
 // =============================================================================
@@ -55,20 +56,14 @@ const serializeArrayParam = (
 
   switch (format) {
     case 'brackets':
-      return values
-        .map((v) => `${encodedKey}[]=${encodeURIComponent(String(v))}`)
-        .join('&');
+      return values.map((v) => `${encodedKey}[]=${encodeURIComponent(String(v))}`).join('&');
     case 'indices':
-      return values
-        .map((v, i) => `${encodedKey}[${i}]=${encodeURIComponent(String(v))}`)
-        .join('&');
+      return values.map((v, i) => `${encodedKey}[${i}]=${encodeURIComponent(String(v))}`).join('&');
     case 'comma':
       return `${encodedKey}=${values.map((v) => encodeURIComponent(String(v))).join(',')}`;
     case 'repeat':
     default:
-      return values
-        .map((v) => `${encodedKey}=${encodeURIComponent(String(v))}`)
-        .join('&');
+      return values.map((v) => `${encodedKey}=${encodeURIComponent(String(v))}`).join('&');
   }
 };
 
@@ -97,9 +92,7 @@ export const createParamsSerializer = (
       }
 
       if (typeof value === 'object') {
-        parts.push(
-          `${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`,
-        );
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`);
         continue;
       }
 
@@ -147,5 +140,4 @@ export const createParamsInterceptor = (options: ParamsInterceptorOptions = {}) 
 export const setupParamsInterceptor = (
   instance: AxiosInstance,
   options: ParamsInterceptorOptions = {},
-): number =>
-  instance.interceptors.request.use(createParamsInterceptor(options), undefined);
+): number => instance.interceptors.request.use(createParamsInterceptor(options), undefined);

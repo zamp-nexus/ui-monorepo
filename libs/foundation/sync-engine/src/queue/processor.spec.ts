@@ -1,15 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
+
+import '@open-insights-web/foundation-database';
+
 import {
-} from '@open-insights-web/foundation-database';
-import {
+  generateProvisionalId,
   MUTATION_STATUS,
   MUTATION_TYPE,
   type MutationQueueEntry,
-  generateProvisionalId,
 } from '@open-insights-web/foundation-data-model';
-import { QueueProcessor, type MutationExecutorResult } from './processor';
-import type { OfflineQueueManager } from './manager';
+
 import type { ConflictResolver } from '../conflicts/resolver';
+import type { OfflineQueueManager } from './manager';
+import { QueueProcessor, type MutationExecutorResult } from './processor';
 
 const createMutation = (overrides: Partial<MutationQueueEntry> = {}): MutationQueueEntry => ({
   id: 'mutation-1',
@@ -60,7 +62,9 @@ describe('QueueProcessor', () => {
       1,
       'a',
       MUTATION_STATUS.FAILED,
-      expect.objectContaining({ lastError: expect.stringContaining('Cyclic mutation dependencies detected') })
+      expect.objectContaining({
+        lastError: expect.stringContaining('Cyclic mutation dependencies detected'),
+      }),
     );
   });
 

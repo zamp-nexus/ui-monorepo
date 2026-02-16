@@ -4,18 +4,20 @@
  */
 
 import type { SpanContext } from '@opentelemetry/api';
+
 import type { HttpMethod } from '@open-insights-web/foundation-data-model';
+
 import type {
+  BreadcrumbCategory,
   ErrorType,
+  InteractionType,
+  MetricsLogLevel,
+  NavigationType,
+  SessionState,
+  SpaNavigationType,
+  SpanKindValue,
   WebVitalName,
   WebVitalRating,
-  InteractionType,
-  SessionState,
-  BreadcrumbCategory,
-  MetricsLogLevel,
-  SpanKindValue,
-  NavigationType,
-  SpaNavigationType,
 } from './constants';
 
 // ==========================================

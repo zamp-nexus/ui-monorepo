@@ -2,21 +2,23 @@
  * SQL utilities tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
+import type { SqlIdentifier } from '@open-insights-web/foundation-data-model';
+
+import { SqlValidationError } from '../errors/query-errors';
 import {
-  validateIdentifier,
-  validateTableName,
-  isValidIdentifier,
-  quoteIdentifier,
+  applyLimitOffset,
   buildCreateViewSql,
   buildDropViewSql,
-  escapeString,
-  applyLimitOffset,
   buildParameterizedSql,
+  escapeString,
+  isValidIdentifier,
+  quoteIdentifier,
+  validateIdentifier,
+  validateTableName,
   validateViewSql,
 } from './sql';
-import { SqlValidationError } from '../errors/query-errors';
-import type { SqlIdentifier } from '@open-insights-web/foundation-data-model';
 
 describe('validateIdentifier', () => {
   it('should accept valid identifiers', () => {
@@ -109,10 +111,10 @@ describe('buildCreateViewSql', () => {
   it('should build CREATE OR REPLACE VIEW by default', () => {
     const sql = buildCreateViewSql(
       'active_users' as SqlIdentifier,
-      'SELECT * FROM users WHERE active = true'
+      'SELECT * FROM users WHERE active = true',
     );
     expect(sql).toBe(
-      'CREATE OR REPLACE VIEW "active_users" AS SELECT * FROM users WHERE active = true'
+      'CREATE OR REPLACE VIEW "active_users" AS SELECT * FROM users WHERE active = true',
     );
   });
 
@@ -120,11 +122,9 @@ describe('buildCreateViewSql', () => {
     const sql = buildCreateViewSql(
       'active_users' as SqlIdentifier,
       'SELECT * FROM users WHERE active = true',
-      false
+      false,
     );
-    expect(sql).toBe(
-      'CREATE VIEW "active_users" AS SELECT * FROM users WHERE active = true'
-    );
+    expect(sql).toBe('CREATE VIEW "active_users" AS SELECT * FROM users WHERE active = true');
   });
 });
 
@@ -156,15 +156,17 @@ describe('escapeString', () => {
 describe('buildParameterizedSql', () => {
   it('should validate placeholder count', () => {
     expect(() => buildParameterizedSql('SELECT * FROM users WHERE id = ?', 1)).not.toThrow();
-    expect(() => buildParameterizedSql('SELECT * FROM users WHERE id = ? AND name = ?', 2)).not.toThrow();
+    expect(() =>
+      buildParameterizedSql('SELECT * FROM users WHERE id = ? AND name = ?', 2),
+    ).not.toThrow();
   });
 
   it('should throw on placeholder mismatch', () => {
     expect(() => buildParameterizedSql('SELECT * FROM users WHERE id = ?', 2)).toThrow(
-      SqlValidationError
+      SqlValidationError,
     );
     expect(() => buildParameterizedSql('SELECT * FROM users WHERE id = ? AND name = ?', 1)).toThrow(
-      SqlValidationError
+      SqlValidationError,
     );
   });
 });
@@ -208,11 +210,17 @@ describe('validateViewSql', () => {
   it('should accept valid SELECT statements', () => {
     expect(() => validateViewSql('SELECT * FROM users')).not.toThrow();
     expect(() => validateViewSql('SELECT id, name FROM users WHERE active = true')).not.toThrow();
-    expect(() => validateViewSql('SELECT u.id FROM users u JOIN orders o ON u.id = o.user_id')).not.toThrow();
+    expect(() =>
+      validateViewSql('SELECT u.id FROM users u JOIN orders o ON u.id = o.user_id'),
+    ).not.toThrow();
   });
 
   it('should accept WITH (CTE) statements', () => {
-    expect(() => validateViewSql('WITH active AS (SELECT * FROM users WHERE active = true) SELECT * FROM active')).not.toThrow();
+    expect(() =>
+      validateViewSql(
+        'WITH active AS (SELECT * FROM users WHERE active = true) SELECT * FROM active',
+      ),
+    ).not.toThrow();
   });
 
   it('should reject empty SQL', () => {
@@ -236,7 +244,7 @@ describe('validateViewSql', () => {
 
   it('should not reject keywords inside quoted strings', () => {
     expect(() => validateViewSql("SELECT * FROM users WHERE name = 'DROP TABLE'")).not.toThrow();
-    expect(() => validateViewSql('SELECT * FROM users WHERE name = \'DELETE FROM\'')) .not.toThrow();
+    expect(() => validateViewSql("SELECT * FROM users WHERE name = 'DELETE FROM'")).not.toThrow();
   });
 
   it('should not reject partial keyword matches in identifiers', () => {

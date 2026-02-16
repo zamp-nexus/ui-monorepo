@@ -1,7 +1,7 @@
 /**
  * MultiSelect component
  * @module components/multi-select
- * 
+ *
  * A dropdown that allows selecting multiple options.
  * Uses CheckboxGroup internally for selection state management.
  */
@@ -27,7 +27,7 @@ import { multiSelectDefaultTheme } from './multi-select';
  *
  * @example
  * const [selected, setSelected] = useState<string[]>([]);
- * 
+ *
  * <MultiSelect
  *   options={[
  *     { value: 'react', label: 'React' },
@@ -87,9 +87,7 @@ export const MultiSelect: MultiSelectComponent = ({
   const filteredOptions = useMemo(() => {
     if (!searchQuery) return options;
     const query = searchQuery.toLowerCase();
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(query),
-    );
+    return options.filter((option) => option.label.toLowerCase().includes(query));
   }, [options, searchQuery]);
 
   // Get display text
@@ -131,7 +129,10 @@ export const MultiSelect: MultiSelectComponent = ({
     <CheckboxGroupContext.Provider value={checkboxGroupContext}>
       <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
         <div
-          className={theme.root?.({ className, size, feedback, disabled, readOnly, showCounter }) ?? className}
+          className={
+            theme.root?.({ className, size, feedback, disabled, readOnly, showCounter }) ??
+            className
+          }
           data-oiid={oiid}
         >
           <PopoverPrimitive.Trigger
@@ -170,27 +171,16 @@ export const MultiSelect: MultiSelectComponent = ({
 
             {/* Counter badge */}
             {showCounter && value.length > 0 && (
-              <span className={theme.counter?.({ size }) ?? ''}>
-                {value.length}
-              </span>
+              <span className={theme.counter?.({ size }) ?? ''}>{value.length}</span>
             )}
 
             {/* End slot / chevron */}
             {end ? (
-              <Slot
-                baseOiid={oiid}
-                slotName="end"
-                slot={end}
-                component="span"
-                aria-hidden="true"
-              />
+              <Slot baseOiid={oiid} slotName="end" slot={end} component="span" aria-hidden="true" />
             ) : (
               <Icon
                 name="chevron-down"
-                className={cn(
-                  theme.icon?.({}) ?? '',
-                  open && 'rotate-180',
-                )}
+                className={cn(theme.icon?.({}) ?? '', open && 'rotate-180')}
               />
             )}
           </PopoverPrimitive.Trigger>
@@ -218,11 +208,13 @@ export const MultiSelect: MultiSelectComponent = ({
 
                 {/* Options list */}
                 <ScrollArea maxHeight={maxHeight}>
-                  <div className={theme.list?.({}) ?? ''} role="listbox" aria-multiselectable="true">
+                  <div
+                    className={theme.list?.({}) ?? ''}
+                    role="listbox"
+                    aria-multiselectable="true"
+                  >
                     {filteredOptions.length === 0 ? (
-                      <div className={theme.empty?.({}) ?? ''}>
-                        No options found
-                      </div>
+                      <div className={theme.empty?.({}) ?? ''}>No options found</div>
                     ) : (
                       filteredOptions.map((option) => {
                         const isSelected = value.includes(option.value);

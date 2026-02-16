@@ -8,33 +8,36 @@
  */
 
 import { useCallback } from 'react';
-import { useMutation, type QueryKey } from '@tanstack/react-query';
+
 import { useConvexMutation } from '@convex-dev/react-query';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
+import { useMutation, type QueryKey } from '@tanstack/react-query';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
 import { toJsonSerializable } from '@open-insights-web/foundation-data-model';
+import type { WithId } from '@open-insights-web/foundation-data-model';
+
+import type { BaseMutationOptions, DLMutationResult } from '../core/types';
+import { createScopedErrorHandler } from '../utils/error-handler';
 import {
-  rollbackOptimisticUpdate,
-  optimisticUpdateInList,
-  optimisticUpdateItem,
-} from '../utils/optimistic-updates';
-import {
-  persistToCache,
   buildMutationResult,
   executeLocalFirstMutation,
+  persistToCache,
 } from '../utils/mutation-helpers';
 import {
-  useMutationInternals,
-  useQueueState,
-  useOptimisticContextRefs,
-  createOnSuccessCallback,
-  createOnSettledCallback,
+  optimisticUpdateInList,
+  optimisticUpdateItem,
+  rollbackOptimisticUpdate,
+} from '../utils/optimistic-updates';
+import {
   createOnErrorCallback,
-  resolveEntityId,
+  createOnSettledCallback,
+  createOnSuccessCallback,
   prepareResolvedVariables,
+  resolveEntityId,
+  useMutationInternals,
+  useOptimisticContextRefs,
+  useQueueState,
 } from '../utils/use-mutation-internals';
-import { createScopedErrorHandler } from '../utils/error-handler';
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import type { BaseMutationOptions, DLMutationResult } from '../core/types';
 
 // Scoped error handler for this hook
 const handleUpdateError = createScopedErrorHandler('useDLUpdate');
@@ -88,7 +91,7 @@ export const useDLUpdate = <
   TData = FunctionReturnType<TMutation>,
   TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
 >(
-  options: UseDLUpdateOptions<TMutation, TData, TVariables>
+  options: UseDLUpdateOptions<TMutation, TData, TVariables>,
 ): DLMutationResult<TData, TVariables> => {
   // Use shared mutation internals
   const internals = useMutationInternals();
@@ -96,8 +99,10 @@ export const useDLUpdate = <
 
   // Use shared state and refs
   const { isQueued, setIsQueued } = useQueueState();
-  const { listContextRef, itemContextRef, entityIdRef, clearRefs } =
-    useOptimisticContextRefs<WithId, TData>();
+  const { listContextRef, itemContextRef, entityIdRef, clearRefs } = useOptimisticContextRefs<
+    WithId,
+    TData
+  >();
 
   const {
     mutation,
@@ -140,7 +145,7 @@ export const useDLUpdate = <
           queryClient,
           listQueryKey,
           resolvedId,
-          (item) => ({ ...item, ...optimisticData })
+          (item) => ({ ...item, ...optimisticData }),
         );
       }
 
@@ -149,7 +154,7 @@ export const useDLUpdate = <
         itemContextRef.current = optimisticUpdateItem<TData>(
           queryClient,
           currentItemKey,
-          () => optimisticData
+          () => optimisticData,
         );
       }
 
@@ -192,7 +197,7 @@ export const useDLUpdate = <
       queueManager,
       setIsQueued,
       table,
-    ]
+    ],
   );
 
   // Create shared callbacks

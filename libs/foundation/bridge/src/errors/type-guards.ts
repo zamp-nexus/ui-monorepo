@@ -7,28 +7,26 @@
  */
 
 import {
-  QueryTimeoutError,
-  QueryCancelledError,
-  QueryExecutionError,
-  SqlValidationError,
-} from './query-errors';
-
-import {
-  PoolShutdownError,
-  WorkerError,
-  WorkerInitializationError,
-  NoAvailableWorkersError,
-  PoolCapacityError,
-} from './pool-errors';
-
-import {
-  BridgeNotInitializedError,
   BridgeInitializationError,
+  BridgeNotInitializedError,
+  ConfigurationError,
   OpfsNotFoundError,
   OpfsPermissionError,
   OpfsWriteError,
-  ConfigurationError,
 } from './bridge-errors';
+import {
+  NoAvailableWorkersError,
+  PoolCapacityError,
+  PoolShutdownError,
+  WorkerError,
+  WorkerInitializationError,
+} from './pool-errors';
+import {
+  QueryCancelledError,
+  QueryExecutionError,
+  QueryTimeoutError,
+  SqlValidationError,
+} from './query-errors';
 
 // NOTE: OpfsNotSupportedError and isOpfsNotSupportedError - import from '@open-insights-web/foundation-database'
 
@@ -73,8 +71,7 @@ export const isPoolShutdownError = (error: unknown): error is PoolShutdownError 
 /**
  * Type guard to check if an error is a WorkerError
  */
-export const isWorkerError = (error: unknown): error is WorkerError =>
-  error instanceof WorkerError;
+export const isWorkerError = (error: unknown): error is WorkerError => error instanceof WorkerError;
 
 /**
  * Type guard to check if an error is a WorkerInitializationError

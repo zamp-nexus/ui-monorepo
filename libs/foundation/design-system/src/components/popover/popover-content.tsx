@@ -7,9 +7,9 @@ import React from 'react';
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
 import { useTheme } from '../../theme';
-import { usePopoverContext } from './popover.context';
 import type { PopoverContentProps } from './popover';
 import { popoverDefaultTheme } from './popover';
+import { usePopoverContext } from './popover.context';
 
 /**
  * Arrow SVG component
@@ -25,21 +25,13 @@ const ArrowSvg = (props: React.ComponentProps<'svg'>) => (
  *
  * Container for the popover content.
  */
-export const PopoverContent: React.FC<PopoverContentProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const PopoverContent: React.FC<PopoverContentProps> = ({ children, className, oiid }) => {
   const theme = useTheme('popover', popoverDefaultTheme);
   const { maxWidth, arrow, side, align, sideOffset } = usePopoverContext();
 
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Positioner
-        side={side}
-        align={align}
-        sideOffset={sideOffset}
-      >
+      <PopoverPrimitive.Positioner side={side} align={align} sideOffset={sideOffset}>
         <PopoverPrimitive.Popup
           className={theme.popup?.({ className, maxWidth }) ?? className}
           data-oiid={oiid}

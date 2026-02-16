@@ -4,6 +4,7 @@
  */
 
 import type { FunctionReference } from 'convex/server';
+
 import { getErrorMessage } from '@open-insights-web/foundation-utils';
 
 /**
@@ -22,8 +23,7 @@ export type CrudOperation = (typeof CRUD_OPERATION)[keyof typeof CRUD_OPERATION]
 /**
  * Convex function path builder
  */
-export const buildFunctionPath = (module: string, fn: string): string =>
-  `${module}:${fn}`;
+export const buildFunctionPath = (module: string, fn: string): string => `${module}:${fn}`;
 
 /**
  * Standard query function names by operation
@@ -73,7 +73,7 @@ export const DEFAULT_TABLE_MODULE_MAP: TableModuleMap = {
 export const buildQueryPath = (
   tableName: string,
   operation: typeof CRUD_OPERATION.LIST | typeof CRUD_OPERATION.GET,
-  moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP
+  moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP,
 ): string => {
   const module = moduleMap[tableName] ?? tableName;
   const fn = QUERY_FN_NAMES[operation];
@@ -85,8 +85,11 @@ export const buildQueryPath = (
  */
 export const buildMutationPath = (
   tableName: string,
-  operation: typeof CRUD_OPERATION.CREATE | typeof CRUD_OPERATION.UPDATE | typeof CRUD_OPERATION.DELETE,
-  moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP
+  operation:
+    | typeof CRUD_OPERATION.CREATE
+    | typeof CRUD_OPERATION.UPDATE
+    | typeof CRUD_OPERATION.DELETE,
+  moduleMap: TableModuleMap = DEFAULT_TABLE_MODULE_MAP,
 ): string => {
   const module = moduleMap[tableName] ?? tableName;
   const fn = MUTATION_FN_NAMES[operation];
@@ -106,7 +109,7 @@ export interface ConvexFunctionRegistry {
  */
 export const createFunctionRegistry = (
   queries: Record<string, FunctionReference<'query'>>,
-  mutations: Record<string, FunctionReference<'mutation'>>
+  mutations: Record<string, FunctionReference<'mutation'>>,
 ): ConvexFunctionRegistry => ({ queries, mutations });
 
 /**
@@ -126,7 +129,9 @@ export type ConvexErrorType = (typeof CONVEX_ERROR_TYPE)[keyof typeof CONVEX_ERR
 /**
  * Parse Convex error to get error type
  */
-export const parseConvexError = (error: unknown): {
+export const parseConvexError = (
+  error: unknown,
+): {
   type: ConvexErrorType;
   message: string;
   isRetryable: boolean;

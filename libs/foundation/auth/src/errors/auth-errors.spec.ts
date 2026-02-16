@@ -4,31 +4,32 @@
  * Custom error classes and type guards.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { AUTH_ERROR_CODE } from '../core/constants';
 import {
+  AuthNetworkError,
   AuthNotInitializedError,
-  SessionCheckError,
-  SessionRefreshError,
-  SessionExpiredError,
-  LogoutError,
+  ClientConfigError,
   FlowCreationError,
+  FlowExpiredError,
   FlowNotFoundError,
   FlowSubmissionError,
-  FlowExpiredError,
-  InvalidCredentialsError,
-  UserNotFoundError,
-  PermissionDeniedError,
-  TokenRetrievalError,
-  TokenExpiredError,
-  ClientConfigError,
-  AuthNetworkError,
-  isAuthError,
   hasAuthErrorCode,
-  isSessionError,
+  InvalidCredentialsError,
+  isAuthError,
   isFlowError,
-  isTokenError,
   isRetryableAuthError,
+  isSessionError,
+  isTokenError,
+  LogoutError,
+  PermissionDeniedError,
+  SessionCheckError,
+  SessionExpiredError,
+  SessionRefreshError,
+  TokenExpiredError,
+  TokenRetrievalError,
+  UserNotFoundError,
 } from './auth-errors';
 
 // =============================================================================

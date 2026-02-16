@@ -1,20 +1,20 @@
 /**
  * Motion Primitives - Tier 1 Tokens
  * Duration, easing, and animation tokens
- * 
+ *
  * Accessibility-first approach:
  * - All durations can be disabled via prefers-reduced-motion
  * - Easing functions are designed for comfortable transitions
  * - No disorienting animations
- * 
+ *
  * @module tokens/primitives/motion
  */
 
-import type { DurationToken, CubicBezierToken, DesignToken } from '../types';
+import type { CubicBezierToken, DesignToken, DurationToken } from '../types';
 
 /**
  * Duration tokens for animations and transitions
- * 
+ *
  * Usage guidelines:
  * - instant: State changes that should feel immediate
  * - fast: Micro-interactions (button press, hover)
@@ -57,7 +57,7 @@ export const durations = {
 
 /**
  * Easing functions for animations
- * 
+ *
  * Easing philosophy:
  * - linear: Constant speed, use sparingly
  * - easeIn: Starts slow, accelerates (exits)
@@ -257,7 +257,7 @@ export function easingVar(key: EasingKey): string {
 export function createTransition(
   property: string,
   duration: DurationKey = 'normal',
-  easing: EasingKey = 'easeInOut'
+  easing: EasingKey = 'easeInOut',
 ): string {
   return `${property} var(--duration-${duration}) var(--ease-${easing})`;
 }
@@ -268,9 +268,7 @@ export function createTransition(
 export function createTransitions(
   properties: string[],
   duration: DurationKey = 'normal',
-  easing: EasingKey = 'easeInOut'
+  easing: EasingKey = 'easeInOut',
 ): string {
-  return properties
-    .map(prop => createTransition(prop, duration, easing))
-    .join(', ');
+  return properties.map((prop) => createTransition(prop, duration, easing)).join(', ');
 }

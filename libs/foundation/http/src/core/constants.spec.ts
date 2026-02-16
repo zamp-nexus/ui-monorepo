@@ -4,21 +4,22 @@
  * Validates constant values, structure, and immutability.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  DEFAULT_TIMEOUT_MS,
-  UPLOAD_TIMEOUT_MS,
-  DOWNLOAD_TIMEOUT_MS,
-  DEFAULT_HTTP_RETRY_CONFIG,
-  DEFAULT_AUTH_CONFIG,
-  HTTP_HEADERS,
+  AXIOS_ERROR_CODE,
   CLIENT_HEADERS,
   CONTENT_TYPES,
-  HTTP_STATUS,
+  DEFAULT_AUTH_CONFIG,
+  DEFAULT_HTTP_RETRY_CONFIG,
+  DEFAULT_TIMEOUT_MS,
+  DOWNLOAD_TIMEOUT_MS,
   HTTP_ERROR_CODE,
+  HTTP_HEADERS,
+  HTTP_STATUS,
   PARAMS_ARRAY_FORMAT,
   SERIALIZATION_OPERATION,
-  AXIOS_ERROR_CODE,
+  UPLOAD_TIMEOUT_MS,
 } from './constants';
 
 describe('HTTP constants', () => {
@@ -51,7 +52,9 @@ describe('HTTP constants', () => {
       expect(DEFAULT_HTTP_RETRY_CONFIG.initialDelayMs).toBe(1000);
       expect(DEFAULT_HTTP_RETRY_CONFIG.maxDelayMs).toBe(30_000);
       expect(DEFAULT_HTTP_RETRY_CONFIG.backoffMultiplier).toBe(2);
-      expect(DEFAULT_HTTP_RETRY_CONFIG.retryableStatusCodes).toEqual([408, 429, 500, 502, 503, 504]);
+      expect(DEFAULT_HTTP_RETRY_CONFIG.retryableStatusCodes).toEqual([
+        408, 429, 500, 502, 503, 504,
+      ]);
       expect(DEFAULT_HTTP_RETRY_CONFIG.retryOnNetworkError).toBe(true);
     });
 

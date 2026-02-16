@@ -1,16 +1,16 @@
 /**
  * Semantic Text Tokens - Tier 2
  * Usage-based text colors with accessibility considerations
- * 
+ *
  * Color hierarchy designed for WCAG AA compliance
  * against both dark and light backgrounds.
- * 
+ *
  * @module tokens/semantic/text
  */
 
 /**
  * Text color hierarchy
- * 
+ *
  * Following Linear's text hierarchy:
  * - highlight: Maximum emphasis (100% contrast)
  * - primary: Default text (high contrast)

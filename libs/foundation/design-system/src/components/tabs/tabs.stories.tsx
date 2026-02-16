@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Icon } from '@open-insights-web/foundation-icons';
 
@@ -60,9 +61,7 @@ export const Default: Story = {
         </p>
       </Tabs.Content>
       <Tabs.Content value="notifications">
-        <p className="text-sm text-muted-foreground">
-          Manage your notification preferences here.
-        </p>
+        <p className="text-sm text-muted-foreground">Manage your notification preferences here.</p>
       </Tabs.Content>
     </Tabs>
   ),
@@ -80,19 +79,13 @@ export const Pills: Story = {
         <Tabs.Trigger value="reports">Reports</Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="overview">
-        <p className="text-sm text-muted-foreground">
-          Overview content goes here.
-        </p>
+        <p className="text-sm text-muted-foreground">Overview content goes here.</p>
       </Tabs.Content>
       <Tabs.Content value="analytics">
-        <p className="text-sm text-muted-foreground">
-          Analytics content goes here.
-        </p>
+        <p className="text-sm text-muted-foreground">Analytics content goes here.</p>
       </Tabs.Content>
       <Tabs.Content value="reports">
-        <p className="text-sm text-muted-foreground">
-          Reports content goes here.
-        </p>
+        <p className="text-sm text-muted-foreground">Reports content goes here.</p>
       </Tabs.Content>
     </Tabs>
   ),
@@ -110,19 +103,13 @@ export const Underline: Story = {
         <Tabs.Trigger value="billing">Billing</Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="profile">
-        <p className="text-sm text-muted-foreground">
-          Your profile information.
-        </p>
+        <p className="text-sm text-muted-foreground">Your profile information.</p>
       </Tabs.Content>
       <Tabs.Content value="settings">
-        <p className="text-sm text-muted-foreground">
-          Application settings.
-        </p>
+        <p className="text-sm text-muted-foreground">Application settings.</p>
       </Tabs.Content>
       <Tabs.Content value="billing">
-        <p className="text-sm text-muted-foreground">
-          Billing and subscription.
-        </p>
+        <p className="text-sm text-muted-foreground">Billing and subscription.</p>
       </Tabs.Content>
     </Tabs>
   ),

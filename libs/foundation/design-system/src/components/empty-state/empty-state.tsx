@@ -6,11 +6,11 @@ import React from 'react';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
+import type { EmptyStateComponent, EmptyStateProps } from './empty-state';
+import { emptyStateDefaultTheme } from './empty-state';
 import { EmptyStateActions } from './empty-state-actions';
 import { EmptyStateDescription } from './empty-state-description';
 import { EmptyStateTitle } from './empty-state-title';
-import type { EmptyStateComponent, EmptyStateProps } from './empty-state';
-import { emptyStateDefaultTheme } from './empty-state';
 
 /**
  * EmptyState component
@@ -30,16 +30,7 @@ import { emptyStateDefaultTheme } from './empty-state';
  * </EmptyState>
  */
 const EmptyStateRoot = React.forwardRef(function EmptyState<T extends React.ElementType = 'div'>(
-  {
-    component,
-    className,
-    children,
-    oiid,
-    size = 'md',
-    compact,
-    icon,
-    ...rest
-  }: EmptyStateProps<T>,
+  { component, className, children, oiid, size = 'md', compact, icon, ...rest }: EmptyStateProps<T>,
   ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);

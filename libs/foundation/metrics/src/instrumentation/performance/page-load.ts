@@ -5,10 +5,11 @@
 
 import { SpanKind } from '@opentelemetry/api';
 
-import type { PerformanceSignalConfig, PageLoadTiming } from '../../types';
-import { getTracer, getMeter } from '../../core/otel-provider';
+import { getCurrentPageUrl, getCurrentRoute } from '@open-insights-web/foundation-utils';
+
 import { getSpanAttributes } from '../../core/context-manager';
-import { getCurrentRoute, getCurrentPageUrl } from '@open-insights-web/foundation-utils';
+import { getMeter, getTracer } from '../../core/otel-provider';
+import type { PageLoadTiming, PerformanceSignalConfig } from '../../types';
 
 /**
  * Page load instrumentation state
@@ -27,7 +28,7 @@ let state: PageLoadState | null = null;
  */
 export function installPageLoadInstrumentation(
   config: PerformanceSignalConfig,
-  callback?: (timing: PageLoadTiming) => void
+  callback?: (timing: PageLoadTiming) => void,
 ): void {
   if (typeof window === 'undefined' || typeof performance === 'undefined') {
     return;
@@ -116,9 +117,7 @@ function getPageLoadTiming(): PageLoadTiming | null {
   return {
     dnsLookup: nav.domainLookupEnd - nav.domainLookupStart,
     tcpConnection: nav.connectEnd - nav.connectStart,
-    tlsNegotiation: nav.secureConnectionStart > 0
-      ? nav.connectEnd - nav.secureConnectionStart
-      : 0,
+    tlsNegotiation: nav.secureConnectionStart > 0 ? nav.connectEnd - nav.secureConnectionStart : 0,
     ttfb: nav.responseStart - nav.requestStart,
     contentDownload: nav.responseEnd - nav.responseStart,
     domInteractive: nav.domInteractive - nav.startTime,

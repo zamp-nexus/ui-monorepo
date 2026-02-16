@@ -7,22 +7,17 @@
  * @module analytics-sync/file-download-service
  */
 
-import axios, {
-  type AxiosInstance,
-  type AxiosProgressEvent,
-  type AxiosRequestConfig,
-} from 'axios';
+import axios, { type AxiosInstance, type AxiosProgressEvent, type AxiosRequestConfig } from 'axios';
+
 import {
-  type OpfsManager,
-} from '@open-insights-web/foundation-database';
-import {
-  FoundationError,
   FOUNDATION_ERROR_CODE,
+  FoundationError,
   OPFS_FILE_TYPE,
   type OpfsFileType,
 } from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, Semaphore, type Logger } from '@open-insights-web/foundation-utils';
 import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
+import { type OpfsManager } from '@open-insights-web/foundation-database';
+import { createDebugLogger, Semaphore, type Logger } from '@open-insights-web/foundation-utils';
 
 /**
  * Download progress state
@@ -185,7 +180,8 @@ export class FileDownloadService {
    * Calculate backoff delay for retry
    */
   private getRetryDelay(attempt: number): number {
-    const delay = this.retryConfig.initialDelayMs * Math.pow(this.retryConfig.backoffMultiplier, attempt);
+    const delay =
+      this.retryConfig.initialDelayMs * Math.pow(this.retryConfig.backoffMultiplier, attempt);
     return Math.min(delay, this.retryConfig.maxDelayMs);
   }
 
@@ -195,7 +191,7 @@ export class FileDownloadService {
   async downloadFile(
     file: DataSourceFileInfo,
     onProgress?: (bytesLoaded: number, totalBytes: number) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ArrayBuffer> {
     this.logger.debug(`Downloading file: ${file.filename} (${file.size} bytes)`);
 
@@ -223,14 +219,14 @@ export class FileDownloadService {
           `Download failed: HTTP ${res?.status ?? ''} ${res?.statusText ?? ''}`.trim(),
           file.filename,
           res?.status,
-          err instanceof Error ? err : new Error(String(err))
+          err instanceof Error ? err : new Error(String(err)),
         );
       }
       throw new DownloadError(
         err instanceof Error ? err.message : 'Download failed',
         file.filename,
         undefined,
-        err instanceof Error ? err : new Error(String(err))
+        err instanceof Error ? err : new Error(String(err)),
       );
     }
   }
@@ -241,7 +237,7 @@ export class FileDownloadService {
   async downloadFileWithRetry(
     file: DataSourceFileInfo,
     onProgress?: (bytesLoaded: number, totalBytes: number) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ArrayBuffer> {
     let lastError: Error | undefined;
 
@@ -254,7 +250,7 @@ export class FileDownloadService {
             'Download aborted',
             file.filename,
             undefined,
-            error instanceof Error ? error : new Error(String(error))
+            error instanceof Error ? error : new Error(String(error)),
           );
         }
         lastError = error instanceof Error ? error : new Error(String(error));
@@ -269,8 +265,10 @@ export class FileDownloadService {
         if (attempt < this.retryConfig.maxRetries) {
           const delay = this.getRetryDelay(attempt);
           this.logger.debug(
-            `Download failed for ${file.filename}, retrying in ${delay}ms (attempt ${attempt + 1}/${this.retryConfig.maxRetries}):`,
-            lastError.message
+            `Download failed for ${file.filename}, retrying in ${delay}ms (attempt ${attempt + 1}/${
+              this.retryConfig.maxRetries
+            }):`,
+            lastError.message,
           );
           await this.sleep(delay);
         }
@@ -281,7 +279,7 @@ export class FileDownloadService {
       `Download failed after ${this.retryConfig.maxRetries + 1} attempts: ${lastError?.message}`,
       file.filename,
       undefined,
-      lastError
+      lastError,
     );
   }
 
@@ -292,7 +290,7 @@ export class FileDownloadService {
     tableName: string,
     files: ReadonlyArray<DataSourceFileInfo>,
     onProgress?: (state: DownloadProgressState) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<void> {
     const total = files.length;
     const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -302,7 +300,9 @@ export class FileDownloadService {
       return;
     }
 
-    this.logger.debug(`Downloading ${total} files for table ${tableName} (concurrency: ${this.concurrency})`);
+    this.logger.debug(
+      `Downloading ${total} files for table ${tableName} (concurrency: ${this.concurrency})`,
+    );
 
     let filesCompleted = 0;
     let totalBytesLoaded = 0;
@@ -327,17 +327,21 @@ export class FileDownloadService {
           bytesTotal: totalBytes,
         });
 
-        const data = await this.downloadFileWithRetry(file, (bytesLoaded) => {
-          onProgress?.({
-            isDownloading: true,
-            progress: ((filesCompleted + bytesLoaded / file.size) / total) * 100,
-            filesTotal: total,
-            filesCompleted,
-            currentFile: file.filename,
-            bytesLoaded: totalBytesLoaded + bytesLoaded,
-            bytesTotal: totalBytes,
-          });
-        }, signal);
+        const data = await this.downloadFileWithRetry(
+          file,
+          (bytesLoaded) => {
+            onProgress?.({
+              isDownloading: true,
+              progress: ((filesCompleted + bytesLoaded / file.size) / total) * 100,
+              filesTotal: total,
+              filesCompleted,
+              currentFile: file.filename,
+              bytesLoaded: totalBytesLoaded + bytesLoaded,
+              bytesTotal: totalBytes,
+            });
+          },
+          signal,
+        );
 
         // OPFS writes are serialized to avoid file handle conflicts.
         const releaseWrite = await writeSemaphore.acquire();

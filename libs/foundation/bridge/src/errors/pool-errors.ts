@@ -6,6 +6,7 @@
 
 import type { WorkerId } from '@open-insights-web/foundation-data-model';
 import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+
 import { BridgeError } from './base-error';
 
 // =============================================================================
@@ -35,11 +36,7 @@ export class PoolShutdownError extends BridgeError {
 export class WorkerError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_ERROR;
 
-  constructor(
-    readonly workerId: WorkerId,
-    message: string,
-    cause?: Error
-  ) {
+  constructor(readonly workerId: WorkerId, message: string, cause?: Error) {
     super(`Worker ${workerId}: ${message}`, { workerId }, cause);
   }
 }
@@ -54,10 +51,7 @@ export class WorkerError extends BridgeError {
 export class WorkerInitializationError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_INIT_FAILED;
 
-  constructor(
-    readonly workerId: WorkerId,
-    cause: Error
-  ) {
+  constructor(readonly workerId: WorkerId, cause: Error) {
     super(`Failed to initialize worker ${workerId}`, { workerId }, cause);
   }
 }
@@ -72,10 +66,7 @@ export class WorkerInitializationError extends BridgeError {
 export class NoAvailableWorkersError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_WORKER_POOL_EXHAUSTED;
 
-  constructor(
-    readonly totalWorkers: number,
-    readonly busyWorkers: number
-  ) {
+  constructor(readonly totalWorkers: number, readonly busyWorkers: number) {
     super(`No workers available (${busyWorkers}/${totalWorkers} busy)`, {
       totalWorkers,
       busyWorkers,
@@ -93,10 +84,7 @@ export class NoAvailableWorkersError extends BridgeError {
 export class PoolCapacityError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_POOL_AT_CAPACITY;
 
-  constructor(
-    readonly maxCapacity: number,
-    readonly currentSize: number
-  ) {
+  constructor(readonly maxCapacity: number, readonly currentSize: number) {
     super(`Pool at capacity (${currentSize}/${maxCapacity})`, {
       maxCapacity,
       currentSize,

@@ -3,6 +3,8 @@
  * @module core/config-resolver
  */
 
+import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-insights-web/foundation-data-model';
+
 import type {
   ErrorSignalConfig,
   FoundationMetricsConfig,
@@ -11,7 +13,6 @@ import type {
   ResolvedConfig,
   UserBehaviorSignalConfig,
 } from '../types';
-import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-insights-web/foundation-data-model';
 import { resolveTransportConfig } from './transport';
 
 /**
@@ -41,6 +42,7 @@ const DEFAULT_NETWORK_CONFIG: NetworkSignalConfig = {
   trackRetries: true,
   ignoreUrls: [],
   propagateTraceContextTo: [],
+  axiosInstance: undefined,
 };
 
 const DEFAULT_USER_BEHAVIOR_CONFIG: UserBehaviorSignalConfig = {
@@ -180,7 +182,7 @@ export function validateConfig(config: FoundationMetricsConfig): string[] {
   // Validate sampling rates
   if (config.sampling) {
     const { defaultRate, errorRate, traceRate, userBehaviorRate } = config.sampling;
-    
+
     if (defaultRate !== undefined && (defaultRate < 0 || defaultRate > 1)) {
       errors.push('sampling.defaultRate must be between 0 and 1');
     }
@@ -196,7 +198,10 @@ export function validateConfig(config: FoundationMetricsConfig): string[] {
   }
 
   // Validate compliance region
-  if (config.compliance?.region && !Object.values(COMPLIANCE_REGION).includes(config.compliance.region)) {
+  if (
+    config.compliance?.region &&
+    !Object.values(COMPLIANCE_REGION).includes(config.compliance.region)
+  ) {
     errors.push('compliance.region must be one of: us, eu, india');
   }
 
@@ -241,10 +246,8 @@ export function mergeConfigs(
 
   if (base.compliance !== undefined || override.compliance !== undefined) {
     result.compliance = {
-      piiFields:
-        override.compliance?.piiFields ??
-        base.compliance?.piiFields ??
-        ['email', 'password', 'ssn', 'creditCard', 'phone'],
+      piiFields: override.compliance?.piiFields ??
+        base.compliance?.piiFields ?? ['email', 'password', 'ssn', 'creditCard', 'phone'],
       allowedFields: override.compliance?.allowedFields ?? base.compliance?.allowedFields ?? [],
       tenantHashSalt: override.compliance?.tenantHashSalt ?? base.compliance?.tenantHashSalt,
       region: override.compliance?.region ?? base.compliance?.region ?? COMPLIANCE_REGION.US,

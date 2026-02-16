@@ -29,5 +29,8 @@ export {
 export { randomString, randomNumber, randomElement, randomBoolean } from './random';
 
 // Theme-aware render
-export { renderWithTheme, createThemeRenderer, type RenderWithThemeOptions } from './render-with-theme';
-
+export {
+  renderWithTheme,
+  createThemeRenderer,
+  type RenderWithThemeOptions,
+} from './render-with-theme';

@@ -5,9 +5,4 @@
 
 export { Chip } from './chip';
 export type { ChipProps, ChipComponent, ChipOwnProps } from './chip';
-export {
-  ChipVariants,
-  ChipModifiers,
-  ChipSlots,
-  chipDefaultTheme,
-} from './chip';
+export { ChipVariants, ChipModifiers, ChipSlots, chipDefaultTheme } from './chip';

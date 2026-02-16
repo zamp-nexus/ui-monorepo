@@ -23,9 +23,4 @@ export type {
   MenuSubContentProps,
   MenuContextValue,
 } from './menu';
-export {
-  MenuVariants,
-  MenuModifiers,
-  MenuSlots,
-  menuDefaultTheme,
-} from './menu';
+export { MenuVariants, MenuModifiers, MenuSlots, menuDefaultTheme } from './menu';

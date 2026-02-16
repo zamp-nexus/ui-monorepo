@@ -18,31 +18,19 @@
  * @module provider/data-layer-provider
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ConvexProvider } from 'convex/react';
 
 import type { SyncEvent } from '@open-insights-web/foundation-data-model';
 import { SYNC_EVENT_TYPE } from '@open-insights-web/foundation-data-model';
-import { hashPayloadSync, createLogger, type Logger } from '@open-insights-web/foundation-utils';
+import { createLogger, hashPayloadSync, type Logger } from '@open-insights-web/foundation-utils';
 
+import { DataLayerContainer, type DataLayerDependencies } from '../core/container';
 import type { DataLayerConfig, DataLayerContextValue } from '../core/types';
-import {
-  DataLayerContainer,
-  type DataLayerDependencies,
-} from '../core/container';
 import { DataLayerContext } from './data-layer-context';
-import {
-  DataLayerInternalsContext,
-  type DataLayerInternals,
-} from './data-layer-internals-context';
+import { DataLayerInternalsContext, type DataLayerInternals } from './data-layer-internals-context';
 
 // =============================================================================
 // Provider Props
@@ -60,7 +48,7 @@ export interface DataLayerProviderProps {
 }
 
 const getDatasourceApiFingerprint = (
-  datasourceApi: DataLayerConfig['datasourceApi']
+  datasourceApi: DataLayerConfig['datasourceApi'],
 ): Record<string, unknown> | null => {
   if (!datasourceApi || typeof datasourceApi !== 'object') {
     return null;
@@ -125,7 +113,9 @@ export const DataLayerProvider = ({
 
   // Create a logger for the provider. Uses 'warn' level by default so errors/warnings
   // are always visible; switches to 'debug' when debug config is enabled.
-  const loggerRef = useRef<Logger>(createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' }));
+  const loggerRef = useRef<Logger>(
+    createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' }),
+  );
   loggerRef.current = createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' });
 
   // Use ref for config values that shouldn't trigger re-initialization
@@ -145,6 +135,7 @@ export const DataLayerProvider = ({
       defaultStaleTime: config.defaultStaleTime,
       defaultGcTime: config.defaultGcTime,
       cache: config.cache,
+      axiosBaseUrl: config.axiosInstance?.defaults?.baseURL ?? null,
       debug: config.debug,
       datasourceApi: getDatasourceApiFingerprint(config.datasourceApi),
     };
@@ -181,8 +172,13 @@ export const DataLayerProvider = ({
       ...(currentConfig.defaultStaleTime !== undefined
         ? { defaultStaleTime: currentConfig.defaultStaleTime }
         : {}),
-      ...(currentConfig.defaultGcTime !== undefined ? { defaultGcTime: currentConfig.defaultGcTime } : {}),
+      ...(currentConfig.defaultGcTime !== undefined
+        ? { defaultGcTime: currentConfig.defaultGcTime }
+        : {}),
       ...(currentConfig.cache !== undefined ? { cache: currentConfig.cache } : {}),
+      ...(currentConfig.axiosInstance !== undefined
+        ? { axiosInstance: currentConfig.axiosInstance }
+        : {}),
       ...(currentConfig.debug !== undefined ? { debug: currentConfig.debug } : {}),
       ...(currentConfig.onSyncError !== undefined
         ? { onSyncError: currentConfig.onSyncError }
@@ -225,7 +221,8 @@ export const DataLayerProvider = ({
         case SYNC_EVENT_TYPE.QUEUE_PROCESSED:
           // Update pending count after queue processing
           // Properly handle the promise
-          dependencies.syncCoordinator.getState()
+          dependencies.syncCoordinator
+            .getState()
             .then((state) => {
               if (isMounted && !containerInstance.isDisposed) {
                 setPendingSyncCount(state.pendingMutations);
@@ -239,24 +236,23 @@ export const DataLayerProvider = ({
     };
 
     // Initialize
-    container.initialize()
+    container
+      .initialize()
       .then(async (dependencies) => {
         if (!mounted || container.isDisposed) return;
 
         // Subscribe to sync events (consolidated - handles both sync events and leader changes)
-        const unsubscribe = dependencies.syncCoordinator.subscribe(
-          (event: SyncEvent) => {
-            if (!mounted || container.isDisposed) return;
+        const unsubscribe = dependencies.syncCoordinator.subscribe((event: SyncEvent) => {
+          if (!mounted || container.isDisposed) return;
 
-            // Handle leader-changed events
-            if (event.type === SYNC_EVENT_TYPE.LEADER_CHANGED && event.data?.isLeader !== undefined) {
-              setIsLeader(event.data.isLeader);
-            }
-
-            // Handle other sync events
-            handleSyncEvent(event, dependencies, mounted, container);
+          // Handle leader-changed events
+          if (event.type === SYNC_EVENT_TYPE.LEADER_CHANGED && event.data?.isLeader !== undefined) {
+            setIsLeader(event.data.isLeader);
           }
-        );
+
+          // Handle other sync events
+          handleSyncEvent(event, dependencies, mounted, container);
+        });
         syncUnsubscribeRef.current = unsubscribe;
 
         // Get initial sync state
@@ -359,7 +355,7 @@ export const DataLayerProvider = ({
       syncState,
       syncNow,
       clearCache,
-    ]
+    ],
   );
 
   // Internal context value for hooks
@@ -403,9 +399,7 @@ export const DataLayerProvider = ({
     <DataLayerContext.Provider value={contextValue}>
       <DataLayerInternalsContext.Provider value={internalsValue}>
         <ConvexProvider client={deps.convexClient}>
-          <QueryClientProvider client={deps.queryClient}>
-            {children}
-          </QueryClientProvider>
+          <QueryClientProvider client={deps.queryClient}>{children}</QueryClientProvider>
         </ConvexProvider>
       </DataLayerInternalsContext.Provider>
     </DataLayerContext.Provider>

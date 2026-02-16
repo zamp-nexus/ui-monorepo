@@ -2,7 +2,7 @@
  * Theme Contract - Tier 3
  * Defines the structure all themes must implement
  * Enables type-safe multi-brand/white-label support
- * 
+ *
  * @module tokens/themes/theme-contract
  */
 
@@ -24,10 +24,10 @@ export type ThemeMode = 'light' | 'dark';
 
 /**
  * Theme Contract Interface
- * 
+ *
  * All themes must implement this interface to ensure
  * consistency and enable type-safe theme switching.
- * 
+ *
  * Structure:
  * - name: Human-readable theme name
  * - mode: 'light' | 'dark'
@@ -37,7 +37,7 @@ export type ThemeMode = 'light' | 'dark';
 export interface ThemeContract {
   /** Theme identifier/name */
   readonly name: string;
-  
+
   /** Theme mode (light/dark) */
   readonly mode: ThemeMode;
 
@@ -183,7 +183,7 @@ export type FocusKey = keyof ThemeContract['effects']['focus'];
 /**
  * Validates that an object implements the ThemeContract
  * Use at compile time for type safety
- * 
+ *
  * @param theme - Theme object to validate
  * @returns The same theme object with type assertion
  */
@@ -193,17 +193,17 @@ export function createTheme<T extends ThemeContract>(theme: T): T {
 
 /**
  * Gets a token value from a theme using a dot-notated path
- * 
+ *
  * @param theme - Theme object
  * @param path - Dot-notated path to token
  * @returns Token value or undefined
- * 
+ *
  * @example
  * const bgColor = getThemeToken(darkTheme, 'colors.background.layer01');
  */
 export function getThemeToken(
   theme: ThemeContract,
-  path: string
+  path: string,
 ): string | InteractiveState | undefined {
   const parts = path.split('.');
   let current: unknown = theme;
@@ -238,15 +238,12 @@ export interface BrandConfig {
 /**
  * Creates a branded theme by adjusting hue values
  * Useful for white-label implementations
- * 
+ *
  * @param baseTheme - Base theme to modify
  * @param brand - Brand configuration
  * @returns New theme with brand colors
  */
-export function createBrandedTheme(
-  baseTheme: ThemeContract,
-  brand: BrandConfig
-): ThemeContract {
+export function createBrandedTheme(baseTheme: ThemeContract, brand: BrandConfig): ThemeContract {
   // This is a placeholder - actual implementation would
   // modify the HSL values in all relevant tokens
   return {

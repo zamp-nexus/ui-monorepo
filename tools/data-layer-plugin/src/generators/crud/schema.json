@@ -37,7 +37,7 @@
     },
     "pagination": {
       "type": "boolean",
-      "description": "Generate infinite query for list (useDLInfiniteQuery)",
+      "description": "Include pagination-oriented list input helpers (current API uses useDLGetList)",
       "default": false
     },
     "skipList": {

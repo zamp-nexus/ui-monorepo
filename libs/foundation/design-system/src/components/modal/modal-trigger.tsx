@@ -20,12 +20,7 @@ export const ModalTrigger: React.FC<ModalTriggerProps> = ({
   ...rest
 }) => {
   return (
-    <Dialog.Trigger
-      className={className}
-      data-oiid={oiid}
-      data-slot="trigger"
-      {...rest}
-    >
+    <Dialog.Trigger className={className} data-oiid={oiid} data-slot="trigger" {...rest}>
       {children}
     </Dialog.Trigger>
   );

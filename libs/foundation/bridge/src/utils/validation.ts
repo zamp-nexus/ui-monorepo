@@ -13,9 +13,10 @@ import {
   ValidationResult,
   type ValidationResultData,
 } from '@open-insights-web/foundation-data-model';
-import type { DuckDBPoolConfig, ResolvedPoolConfig } from '../types/pool';
+
 import { BRIDGE_TYPE, DEFAULTS } from '../constants';
 import type { BridgeType } from '../constants';
+import type { DuckDBPoolConfig, ResolvedPoolConfig } from '../types/pool';
 
 // =============================================================================
 // Types
@@ -41,9 +42,7 @@ export interface RouterConfigForValidation {
  * @param config - Configuration to validate
  * @returns Validation result with any errors
  */
-export const validatePoolConfig = (
-  config: DuckDBPoolConfig
-): ValidationResultData => {
+export const validatePoolConfig = (config: DuckDBPoolConfig): ValidationResultData => {
   const errors: string[] = [];
 
   if (config.workerCount !== undefined) {
@@ -51,17 +50,12 @@ export const validatePoolConfig = (
       errors.push('workerCount must be a positive integer');
     }
     if (config.workerCount > 16) {
-      errors.push(
-        'workerCount should not exceed 16 (diminishing returns with more workers)'
-      );
+      errors.push('workerCount should not exceed 16 (diminishing returns with more workers)');
     }
   }
 
   if (config.maxQueuePerWorker !== undefined) {
-    if (
-      !Number.isInteger(config.maxQueuePerWorker) ||
-      config.maxQueuePerWorker < 1
-    ) {
+    if (!Number.isInteger(config.maxQueuePerWorker) || config.maxQueuePerWorker < 1) {
       errors.push('maxQueuePerWorker must be a positive integer');
     }
     if (config.maxQueuePerWorker > 100) {
@@ -70,10 +64,7 @@ export const validatePoolConfig = (
   }
 
   if (config.maxActiveQueries !== undefined) {
-    if (
-      !Number.isInteger(config.maxActiveQueries) ||
-      config.maxActiveQueries < 1
-    ) {
+    if (!Number.isInteger(config.maxActiveQueries) || config.maxActiveQueries < 1) {
       errors.push('maxActiveQueries must be a positive integer');
     }
     if (config.maxActiveQueries > 10000) {
@@ -82,10 +73,7 @@ export const validatePoolConfig = (
   }
 
   if (config.maxOverflowQueueSize !== undefined) {
-    if (
-      !Number.isInteger(config.maxOverflowQueueSize) ||
-      config.maxOverflowQueueSize < 1
-    ) {
+    if (!Number.isInteger(config.maxOverflowQueueSize) || config.maxOverflowQueueSize < 1) {
       errors.push('maxOverflowQueueSize must be a positive integer');
     }
     if (config.maxOverflowQueueSize > 10000) {
@@ -99,9 +87,7 @@ export const validatePoolConfig = (
       errors.push('defaultQueryTimeout must be non-negative');
     }
     if (ms > 300000) {
-      errors.push(
-        'defaultQueryTimeout should not exceed 300000ms (5 minutes)'
-      );
+      errors.push('defaultQueryTimeout should not exceed 300000ms (5 minutes)');
     }
   }
 
@@ -115,10 +101,7 @@ export const validatePoolConfig = (
     }
   }
 
-  if (
-    config.workerIdleTimeout !== undefined &&
-    config.workerIdleTimeout !== null
-  ) {
+  if (config.workerIdleTimeout !== undefined && config.workerIdleTimeout !== null) {
     if (Milliseconds.unwrap(config.workerIdleTimeout) < 0) {
       errors.push('workerIdleTimeout must be non-negative');
     }
@@ -133,9 +116,7 @@ export const validatePoolConfig = (
  * @param config - Configuration to validate
  * @returns Validation result with any errors
  */
-export const validateRouterConfig = (
-  config: RouterConfigForValidation
-): ValidationResultData => {
+export const validateRouterConfig = (config: RouterConfigForValidation): ValidationResultData => {
   const errors: string[] = [];
 
   if (config.forceBridgeType !== undefined) {
@@ -164,22 +145,15 @@ export const validateRouterConfig = (
 /**
  * Resolve pool config with defaults
  */
-export const resolvePoolConfig = (
-  config: DuckDBPoolConfig
-): ResolvedPoolConfig => {
+export const resolvePoolConfig = (config: DuckDBPoolConfig): ResolvedPoolConfig => {
   return {
     workerCount:
-      config.workerCount ??
-      (typeof navigator !== 'undefined'
-        ? DEFAULTS.WORKER_COUNT
-        : 2),
+      config.workerCount ?? (typeof navigator !== 'undefined' ? DEFAULTS.WORKER_COUNT : 2),
     maxQueuePerWorker: config.maxQueuePerWorker ?? DEFAULTS.MAX_QUEUE_PER_WORKER,
     maxActiveQueries: config.maxActiveQueries ?? 1000,
     maxOverflowQueueSize: config.maxOverflowQueueSize ?? 500,
-    defaultQueryTimeout:
-      config.defaultQueryTimeout ?? DEFAULTS.QUERY_TIMEOUT_MS,
-    workerInitTimeout:
-      config.workerInitTimeout ?? DEFAULTS.WORKER_INIT_TIMEOUT_MS,
+    defaultQueryTimeout: config.defaultQueryTimeout ?? DEFAULTS.QUERY_TIMEOUT_MS,
+    workerInitTimeout: config.workerInitTimeout ?? DEFAULTS.WORKER_INIT_TIMEOUT_MS,
     workerIdleTimeout: config.workerIdleTimeout ?? null,
     enableTableLocking: config.enableTableLocking ?? true,
     restartFailedWorkers: config.restartFailedWorkers ?? true,

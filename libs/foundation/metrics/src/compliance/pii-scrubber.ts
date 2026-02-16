@@ -3,13 +3,10 @@
  * @module compliance/pii-scrubber
  */
 
-import type {
-  PIIPattern,
-  PIIDetectionResult,
-  PiiFieldType,
-} from '../types';
-import { PII_FIELD_TYPE } from '../types/constants';
 import { isPlainObject } from '@open-insights-web/foundation-data-model';
+
+import type { PIIDetectionResult, PiiFieldType, PIIPattern } from '../types';
+import { PII_FIELD_TYPE } from '../types/constants';
 
 /**
  * Built-in PII patterns - single source of truth
@@ -53,7 +50,8 @@ export const BUILT_IN_PII_PATTERNS: PIIPattern[] = [
   {
     name: 'ip_address_v4',
     type: PII_FIELD_TYPE.IP_ADDRESS,
-    pattern: /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
+    pattern:
+      /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
     replacement: '[IP_REDACTED]',
     priority: 4,
   },
@@ -199,8 +197,8 @@ export const createPIIScrubber = (config: PIIScrubberConfig) => {
           typeof item === 'string'
             ? scrubString(item).redactedValue
             : isPlainObject(item)
-              ? scrubObject(item)
-              : item,
+            ? scrubObject(item)
+            : item,
         );
       } else if (isPlainObject(value)) {
         result[key] = scrubObject(value);

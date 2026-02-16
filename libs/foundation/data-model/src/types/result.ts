@@ -96,7 +96,7 @@ export const Result = {
    */
   fromPromise: async <T, E extends Error = Error>(
     promise: Promise<T>,
-    errorMapper?: (e: unknown) => E
+    errorMapper?: (e: unknown) => E,
   ): Promise<Result<T, E>> => {
     try {
       const value = await promise;
@@ -155,10 +155,7 @@ export const Result = {
    * const doubled = Result.map(result, (x) => x * 2);
    * ```
    */
-  map: <T, U, E extends Error>(
-    result: Result<T, E>,
-    fn: (value: T) => U
-  ): Result<U, E> => {
+  map: <T, U, E extends Error>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> => {
     if (result.ok) return { ok: true, value: fn(result.value) };
     return result;
   },
@@ -177,7 +174,7 @@ export const Result = {
    */
   mapError: <T, E extends Error, F extends Error>(
     result: Result<T, E>,
-    fn: (error: E) => F
+    fn: (error: E) => F,
   ): Result<T, F> => {
     if (result.ok) return result;
     return { ok: false, error: fn(result.error) };
@@ -197,7 +194,7 @@ export const Result = {
    */
   flatMap: <T, U, E extends Error>(
     result: Result<T, E>,
-    fn: (value: T) => Result<U, E>
+    fn: (value: T) => Result<U, E>,
   ): Result<U, E> => {
     if (result.ok) return fn(result.value);
     return result;
@@ -249,10 +246,7 @@ export const Result = {
    * const result = Result.tap(parseResult, (value) => console.log('Parsed:', value));
    * ```
    */
-  tap: <T, E extends Error>(
-    result: Result<T, E>,
-    fn: (value: T) => void
-  ): Result<T, E> => {
+  tap: <T, E extends Error>(result: Result<T, E>, fn: (value: T) => void): Result<T, E> => {
     if (result.ok) fn(result.value);
     return result;
   },
@@ -269,10 +263,7 @@ export const Result = {
    * const result = Result.tapError(parseResult, (err) => console.error('Error:', err));
    * ```
    */
-  tapError: <T, E extends Error>(
-    result: Result<T, E>,
-    fn: (error: E) => void
-  ): Result<T, E> => {
+  tapError: <T, E extends Error>(result: Result<T, E>, fn: (error: E) => void): Result<T, E> => {
     if (!result.ok) fn(result.error);
     return result;
   },

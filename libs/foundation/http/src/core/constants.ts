@@ -7,7 +7,7 @@
  * @module core/constants
  */
 
-import type { HttpRetryConfig, AuthConfig } from './types';
+import type { AuthConfig, HttpRetryConfig } from './types';
 
 // =============================================================================
 // Timeout Defaults

@@ -7,9 +7,11 @@
  */
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+
 import { generateId } from '@open-insights-web/foundation-utils';
-import type { ClientHeadersConfig } from '../../core/types';
+
 import { CLIENT_HEADERS, HTTP_HEADERS } from '../../core/constants';
+import type { ClientHeadersConfig } from '../../core/types';
 
 // =============================================================================
 // Types
@@ -83,5 +85,4 @@ export const createHeadersInterceptor = (options: HeadersInterceptorOptions) => 
 export const setupHeadersInterceptor = (
   instance: AxiosInstance,
   options: HeadersInterceptorOptions,
-): number =>
-  instance.interceptors.request.use(createHeadersInterceptor(options), undefined);
+): number => instance.interceptors.request.use(createHeadersInterceptor(options), undefined);

@@ -4,7 +4,9 @@
  */
 
 import type { ComplianceRegion, HashAlgorithm } from '@open-insights-web/foundation-data-model';
-import type { PiiFieldType, AuditLogAction } from './constants';
+import type { URLSanitizationOptions } from '@open-insights-web/foundation-utils';
+
+import type { AuditLogAction, PiiFieldType } from './constants';
 
 /**
  * PII detection result
@@ -40,17 +42,13 @@ export interface FieldListConfig {
 /**
  * Default URL sanitization options for metrics
  */
-export const DEFAULT_URL_SANITIZATION: import('@open-insights-web/foundation-utils').URLSanitizationOptions = {
+export const DEFAULT_URL_SANITIZATION: URLSanitizationOptions = {
   removeQueryParams: false,
   preserveQueryParams: ['page', 'tab', 'view', 'sort', 'filter'],
   removeHash: true,
   removeAuth: true,
   removePort: false,
-  maskPathPatterns: [
-    /\/users\/[^/]+/g,
-    /\/orders\/[^/]+/g,
-    /\/accounts\/[^/]+/g,
-  ],
+  maskPathPatterns: [/\/users\/[^/]+/g, /\/orders\/[^/]+/g, /\/accounts\/[^/]+/g],
 };
 
 /**

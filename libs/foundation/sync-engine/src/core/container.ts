@@ -4,27 +4,28 @@
  */
 
 import { getDatabase } from '@open-insights-web/foundation-database';
+import {
+  CompositeDisposable,
+  createDebugLogger,
+  normalizeError,
+  type IAsyncDisposable,
+} from '@open-insights-web/foundation-utils';
+
+import { ConflictResolver } from '../conflicts/resolver';
+import { SyncCoordinator } from '../coordinator';
+import { CrossTabManager } from '../cross-tab/manager';
 import { NetworkStatusMonitor } from '../network/index';
 import { OfflineQueueManager } from '../queue/manager';
-import { ConflictResolver } from '../conflicts/resolver';
-import { CrossTabManager } from '../cross-tab/manager';
-import { SyncCoordinator } from '../coordinator';
+import { DEFAULT_CONFLICT_STRATEGY } from './defaults';
 import type {
-  ISyncCoordinator,
-  INetworkMonitor,
-  IQueueManager,
   IConflictResolver,
   ICrossTabManager,
+  INetworkMonitor,
+  IQueueManager,
+  ISyncCoordinator,
   ISyncEngineFactory,
   SyncEngineConfig,
 } from './interfaces';
-import {
-  CompositeDisposable,
-  type IAsyncDisposable,
-  createDebugLogger,
-  normalizeError,
-} from '@open-insights-web/foundation-utils';
-import { DEFAULT_CONFLICT_STRATEGY } from './defaults';
 
 /**
  * Container configuration
@@ -129,24 +130,25 @@ const defaultFactories = {
       database: config.database,
       healthCheckUrl: config.healthCheckUrl,
       healthCheckInterval: config.healthCheckInterval,
+      axiosInstance: config.axiosInstance,
       debug: config.debug,
     });
   },
-  
+
   queueManager: (config: SyncEngineConfig): IQueueManager => {
     return new OfflineQueueManager({
       database: config.database,
       debug: config.debug,
     });
   },
-  
+
   conflictResolver: (config: SyncEngineConfig): IConflictResolver => {
     return new ConflictResolver({
       defaultStrategy: config.conflictStrategy ?? DEFAULT_CONFLICT_STRATEGY,
       debug: config.debug,
     });
   },
-  
+
   crossTabManager: (config: SyncEngineConfig): ICrossTabManager => {
     return new CrossTabManager({
       debug: config.debug,
@@ -192,21 +194,21 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   getNetworkMonitor(): INetworkMonitor {
     this.ensureNotDisposed();
-    
+
     const key: ComponentKey = 'networkMonitor';
     if (!this.registry[key]) {
       const factory = this.config.factories?.networkMonitor;
-      const instance = factory 
+      const instance = factory
         ? factory(this.config)
         : defaultFactories.networkMonitor(this.config);
-      
+
       // Validate instance type at runtime
       if (!isNetworkMonitor(instance)) {
         throw new Error('Factory returned invalid INetworkMonitor implementation');
       }
-      
+
       this.registry[key] = instance;
-      
+
       // Register disposal only once (idempotent)
       if (!this.registeredDisposableKeys.has(key)) {
         this.registeredDisposableKeys.add(key);
@@ -220,7 +222,7 @@ export class SyncEngineContainer implements IAsyncDisposable {
         });
       }
     }
-    
+
     return this.registry[key]!;
   }
 
@@ -229,28 +231,26 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   getQueueManager(): IQueueManager {
     this.ensureNotDisposed();
-    
+
     const key: ComponentKey = 'queueManager';
     if (!this.registry[key]) {
       const factory = this.config.factories?.queueManager;
-      const instance = factory
-        ? factory(this.config)
-        : defaultFactories.queueManager(this.config);
-      
+      const instance = factory ? factory(this.config) : defaultFactories.queueManager(this.config);
+
       // Validate instance type at runtime
       if (!isQueueManager(instance)) {
         throw new Error('Factory returned invalid IQueueManager implementation');
       }
-      
+
       this.registry[key] = instance;
-      
+
       // Register disposal only once (idempotent)
       if (!this.registeredDisposableKeys.has(key)) {
         this.registeredDisposableKeys.add(key);
         this.disposables.add(instance);
       }
     }
-    
+
     return this.registry[key]!;
   }
 
@@ -259,28 +259,28 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   getConflictResolver(): IConflictResolver {
     this.ensureNotDisposed();
-    
+
     const key: ComponentKey = 'conflictResolver';
     if (!this.registry[key]) {
       const factory = this.config.factories?.conflictResolver;
       const instance = factory
         ? factory(this.config)
         : defaultFactories.conflictResolver(this.config);
-      
+
       // Validate instance type at runtime
       if (!isConflictResolver(instance)) {
         throw new Error('Factory returned invalid IConflictResolver implementation');
       }
-      
+
       this.registry[key] = instance;
-      
+
       // Register disposal only once (idempotent)
       if (!this.registeredDisposableKeys.has(key)) {
         this.registeredDisposableKeys.add(key);
         this.disposables.add(instance);
       }
     }
-    
+
     return this.registry[key]!;
   }
 
@@ -289,7 +289,7 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   getCrossTabManager(): ICrossTabManager | null {
     this.ensureNotDisposed();
-    
+
     if (!this.config.enableCrossTab) {
       return null;
     }
@@ -300,21 +300,21 @@ export class SyncEngineContainer implements IAsyncDisposable {
       const instance = factory
         ? factory(this.config)
         : defaultFactories.crossTabManager(this.config);
-      
+
       // Validate instance type at runtime
       if (!isCrossTabManager(instance)) {
         throw new Error('Factory returned invalid ICrossTabManager implementation');
       }
-      
+
       this.registry[key] = instance;
-      
+
       // Register disposal only once (idempotent)
       if (!this.registeredDisposableKeys.has(key)) {
         this.registeredDisposableKeys.add(key);
         this.disposables.add(instance);
       }
     }
-    
+
     return this.registry[key]!;
   }
 
@@ -323,23 +323,23 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   getSyncCoordinator(): ISyncCoordinator {
     this.ensureNotDisposed();
-    
+
     const key: ComponentKey = 'syncCoordinator';
     if (!this.registry[key]) {
       const instance = new SyncCoordinator({
         ...this.config,
         autoStart: false, // We'll manage lifecycle
       });
-      
+
       // Validate instance type at runtime
       if (!isSyncCoordinator(instance)) {
         throw new Error('Created invalid ISyncCoordinator implementation');
       }
-      
+
       this.registry[key] = instance;
       // Note: SyncCoordinator disposal is handled separately in disposeAsync
     }
-    
+
     return this.registry[key]!;
   }
 
@@ -348,7 +348,7 @@ export class SyncEngineContainer implements IAsyncDisposable {
    */
   async start(): Promise<void> {
     this.ensureNotDisposed();
-    
+
     try {
       const networkMonitor = this.getNetworkMonitor();
       await networkMonitor.start();
@@ -387,7 +387,7 @@ export class SyncEngineContainer implements IAsyncDisposable {
     this._isDisposed = true;
 
     this.stop();
-    
+
     // Dispose coordinator with proper awaiting
     if (this.registry.syncCoordinator) {
       try {
@@ -396,7 +396,7 @@ export class SyncEngineContainer implements IAsyncDisposable {
         this.handleError(error, 'SyncCoordinator async disposal');
       }
     }
-    
+
     // Dispose network monitor with proper awaiting
     if (isAsyncDisposable(this.registry.networkMonitor)) {
       try {
@@ -405,12 +405,12 @@ export class SyncEngineContainer implements IAsyncDisposable {
         this.handleError(error, 'NetworkMonitor async disposal');
       }
     }
-    
+
     // Dispose sync disposables
     this.disposables.dispose();
     this.registry = {};
     this.registeredDisposableKeys.clear();
-    
+
     this.logger.debug('Container disposed');
   }
 
@@ -458,6 +458,7 @@ export class SyncEngineFactory implements ISyncEngineFactory {
       database: config?.database,
       healthCheckUrl: config?.healthCheckUrl,
       healthCheckInterval: config?.healthCheckInterval,
+      axiosInstance: config?.axiosInstance,
       debug: config?.debug,
     });
   }
@@ -527,7 +528,6 @@ export class SyncEngineFactory implements ISyncEngineFactory {
     await Promise.all(disposalPromises);
     this.containers.clear();
   }
-
 }
 
 /**
@@ -539,7 +539,7 @@ export const syncEngineFactory = new SyncEngineFactory();
  * Create a scoped container for the sync engine
  */
 export const createSyncEngineContainer = (
-  config: SyncEngineContainerConfig
+  config: SyncEngineContainerConfig,
 ): SyncEngineContainer => {
   return new SyncEngineContainer(config);
 };

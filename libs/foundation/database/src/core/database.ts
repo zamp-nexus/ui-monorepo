@@ -13,21 +13,23 @@
 
 import Dexie, { type Table } from 'dexie';
 import isEqual from 'fast-deep-equal';
+
+import { MUTATION_STATUS } from '@open-insights-web/foundation-data-model';
 import {
-  createSingletonFactory,
-  createDeepEqualComparison,
   createDebugLogger,
+  createDeepEqualComparison,
+  createSingletonFactory,
   ManagedInterval,
   type Logger,
 } from '@open-insights-web/foundation-utils';
-import { MUTATION_STATUS } from '@open-insights-web/foundation-data-model';
-import type { DatabaseConfig } from './config';
-import { mergeConfig } from './config';
-import type { QueryCacheEntry } from '../tables/query-cache';
+
 import type { MutationQueueEntry } from '../tables/mutation-queue';
 import type { OpfsMetadataEntry } from '../tables/opfs-metadata';
+import type { QueryCacheEntry } from '../tables/query-cache';
 import type { SyncStateEntry } from '../tables/sync-state';
 import type { TableSyncMetadataEntry } from '../tables/table-sync-metadata';
+import type { DatabaseConfig } from './config';
+import { mergeConfig } from './config';
 
 /**
  * Main database class extending Dexie
@@ -155,16 +157,11 @@ export class InsightsDatabase extends Dexie {
    */
   private getTerminalMutationIdsBefore = async (
     status: typeof MUTATION_STATUS.COMPLETED | typeof MUTATION_STATUS.FAILED,
-    cutoffTimestamp: number
+    cutoffTimestamp: number,
   ): Promise<string[]> => {
     const primaryKeys = await this.mutations
       .where('[status+timestamp]')
-      .between(
-        [status, Dexie.minKey],
-        [status, cutoffTimestamp],
-        true,
-        true
-      )
+      .between([status, Dexie.minKey], [status, cutoffTimestamp], true, true)
       .primaryKeys();
 
     return primaryKeys.map((key) => String(key));
@@ -254,10 +251,7 @@ export class InsightsDatabase extends Dexie {
     const now = Date.now();
 
     // Stage 1: Delete expired entries (TTL-based)
-    const expiredCount = await this.queries
-      .where('expiresAt')
-      .below(now)
-      .delete();
+    const expiredCount = await this.queries.where('expiresAt').below(now).delete();
 
     totalDeleted += expiredCount;
     if (expiredCount > 0) {
@@ -322,7 +316,7 @@ export class InsightsDatabase extends Dexie {
           this.syncState.clear(),
           this.tableSyncMetadata.clear(),
         ]);
-      }
+      },
     );
 
     this.log('All data cleared');
@@ -341,11 +335,21 @@ export class InsightsDatabase extends Dexie {
     const [pendingCount, offlineQueuedCount] = await Promise.all([
       this.mutations
         .where('[status+timestamp]')
-        .between([MUTATION_STATUS.PENDING, Dexie.minKey], [MUTATION_STATUS.PENDING, Dexie.maxKey], true, true)
+        .between(
+          [MUTATION_STATUS.PENDING, Dexie.minKey],
+          [MUTATION_STATUS.PENDING, Dexie.maxKey],
+          true,
+          true,
+        )
         .count(),
       this.mutations
         .where('[status+timestamp]')
-        .between([MUTATION_STATUS.OFFLINE_QUEUED, Dexie.minKey], [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.maxKey], true, true)
+        .between(
+          [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.minKey],
+          [MUTATION_STATUS.OFFLINE_QUEUED, Dexie.maxKey],
+          true,
+          true,
+        )
         .count(),
     ]);
     const pendingMutations = pendingCount + offlineQueuedCount;
@@ -401,7 +405,7 @@ const databaseFactory = createSingletonFactory(
         instance.close();
       }
     },
-  }
+  },
 );
 
 /**
@@ -412,9 +416,7 @@ const databaseFactory = createSingletonFactory(
  * Note: If an instance already exists, the config parameter is ignored.
  * Call resetDatabase() first to change configuration.
  */
-export const getDatabase = (
-  config?: Partial<DatabaseConfig>
-): InsightsDatabase => {
+export const getDatabase = (config?: Partial<DatabaseConfig>): InsightsDatabase => {
   return databaseFactory.getInstance(config);
 };
 
@@ -422,7 +424,7 @@ export const getDatabase = (
  * Reset database instance
  *
  * Closes the current instance and clears the singleton.
- * 
+ *
  * @returns Promise that resolves when reset is complete
  */
 export const resetDatabase = async (): Promise<void> => {

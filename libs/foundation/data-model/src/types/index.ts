@@ -23,10 +23,7 @@ export type {
   WithOfflineMetadata,
   IdMapping,
 } from './base';
-export {
-  DATA_SOURCE,
-  OFFLINE_DATA_SOURCE,
-} from './base';
+export { DATA_SOURCE, OFFLINE_DATA_SOURCE } from './base';
 
 // User types
 export type {
@@ -111,28 +108,15 @@ export type { Brand } from './branded';
 export { Milliseconds, Timestamp, BrandedTypeValidationError } from './branded';
 
 // ID branded types for sync-engine (value exports include type)
-export {
-  MutationId,
-  EntityId,
-  TabId,
-  ProvisionalId,
-} from './branded';
+export { MutationId, EntityId, TabId, ProvisionalId } from './branded';
 
 // Bridge branded types (centralized from foundation-bridge)
 // Value exports include their types automatically
-export {
-  QueryId,
-  WorkerId,
-  SqlTableName,
-  SqlIdentifier,
-} from './branded';
+export { QueryId, WorkerId, SqlTableName, SqlIdentifier } from './branded';
 
 // Query engine branded types (centralized from foundation-query-engine)
 // Value exports include their types automatically
-export {
-  MemberRef,
-  ExecutionId,
-} from './branded';
+export { MemberRef, ExecutionId } from './branded';
 
 // Sync-related types (type exports)
 export type {
@@ -226,11 +210,7 @@ export type {
 } from './utility';
 
 // Validation types
-export type {
-  ValidationSeverity,
-  ValidationIssue,
-  ValidationResultData,
-} from './validation';
+export type { ValidationSeverity, ValidationIssue, ValidationResultData } from './validation';
 export { VALIDATION_SEVERITY, ValidationResult } from './validation';
 
 // Type guards and safe conversions

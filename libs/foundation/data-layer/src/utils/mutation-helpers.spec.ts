@@ -2,14 +2,15 @@
  * Tests for mutation-helpers utilities
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { DEFAULT_CACHE_TTL } from '../core/constants';
 import {
-  invalidateQueries,
+  buildMutationResult,
   collectInvalidationKeys,
   createCacheEntryWithDefaults,
-  buildMutationResult,
+  invalidateQueries,
 } from './mutation-helpers';
-import { DEFAULT_CACHE_TTL } from '../core/constants';
 
 // Mock the external dependencies
 vi.mock('@open-insights-web/foundation-data-model', () => ({
@@ -27,17 +28,12 @@ vi.mock('@open-insights-web/foundation-utils', () => ({
 
 vi.mock('@open-insights-web/foundation-database', () => ({
   createCacheEntry: vi.fn(
-    (
-      cacheKey: string,
-      queryKey: unknown[],
-      data: unknown,
-      options: Record<string, unknown>
-    ) => ({
+    (cacheKey: string, queryKey: unknown[], data: unknown, options: Record<string, unknown>) => ({
       cacheKey,
       queryKey,
       data,
       ...options,
-    })
+    }),
   ),
 }));
 
@@ -49,11 +45,7 @@ describe('mutation-helpers utilities', () => {
         invalidateQueries: mockInvalidate,
       };
 
-      await invalidateQueries(mockQueryClient as never, [
-        ['users'],
-        ['users', '123'],
-        ['posts'],
-      ]);
+      await invalidateQueries(mockQueryClient as never, [['users'], ['users', '123'], ['posts']]);
 
       expect(mockInvalidate).toHaveBeenCalledTimes(3);
       expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ['users'] });
@@ -81,11 +73,7 @@ describe('mutation-helpers utilities', () => {
         invalidateQueries: mockInvalidate,
       };
 
-      await invalidateQueries(mockQueryClient as never, [
-        ['a'],
-        ['b'],
-        ['c'],
-      ]);
+      await invalidateQueries(mockQueryClient as never, [['a'], ['b'], ['c']]);
 
       // All should be called before any resolves (parallel execution)
       expect(mockInvalidate).toHaveBeenCalledTimes(3);
@@ -111,12 +99,7 @@ describe('mutation-helpers utilities', () => {
 
     it('should combine all key sources', () => {
       const itemKeyFn = (id: string) => ['users', id];
-      const keys = collectInvalidationKeys(
-        [['extra']],
-        ['users'],
-        itemKeyFn,
-        '456'
-      );
+      const keys = collectInvalidationKeys([['extra']], ['users'], itemKeyFn, '456');
       expect(keys).toEqual([['extra'], ['users'], ['users', '456']]);
     });
 
@@ -139,10 +122,15 @@ describe('mutation-helpers utilities', () => {
 
   describe('createCacheEntryWithDefaults', () => {
     it('should create cache entry with default TTL', () => {
-      const entry = createCacheEntryWithDefaults('users', '123', { name: 'John' }, {
-        tableName: 'users',
-        isOfflineData: false,
-      });
+      const entry = createCacheEntryWithDefaults(
+        'users',
+        '123',
+        { name: 'John' },
+        {
+          tableName: 'users',
+          isOfflineData: false,
+        },
+      );
 
       expect(entry).toMatchObject({
         cacheKey: 'hash_users_123',
@@ -157,25 +145,40 @@ describe('mutation-helpers utilities', () => {
 
     it('should allow custom TTL', () => {
       const customTtl = 1000 * 60 * 5; // 5 minutes
-      const entry = createCacheEntryWithDefaults('posts', '456', { title: 'Test' }, {
-        tableName: 'posts',
-        isOfflineData: true,
-        ttl: customTtl,
-      });
+      const entry = createCacheEntryWithDefaults(
+        'posts',
+        '456',
+        { title: 'Test' },
+        {
+          tableName: 'posts',
+          isOfflineData: true,
+          ttl: customTtl,
+        },
+      );
 
       expect(entry).toHaveProperty('ttl', customTtl);
     });
 
     it('should set isOfflineData flag', () => {
-      const offlineEntry = createCacheEntryWithDefaults('users', '1', {}, {
-        tableName: 'users',
-        isOfflineData: true,
-      });
+      const offlineEntry = createCacheEntryWithDefaults(
+        'users',
+        '1',
+        {},
+        {
+          tableName: 'users',
+          isOfflineData: true,
+        },
+      );
 
-      const onlineEntry = createCacheEntryWithDefaults('users', '2', {}, {
-        tableName: 'users',
-        isOfflineData: false,
-      });
+      const onlineEntry = createCacheEntryWithDefaults(
+        'users',
+        '2',
+        {},
+        {
+          tableName: 'users',
+          isOfflineData: false,
+        },
+      );
 
       expect(offlineEntry.isOfflineData).toBe(true);
       expect(onlineEntry.isOfflineData).toBe(false);

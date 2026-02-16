@@ -136,4 +136,3 @@ export function getSlotClassName(slotProp: unknown): string | undefined {
   }
   return undefined;
 }
-

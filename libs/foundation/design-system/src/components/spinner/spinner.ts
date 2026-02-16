@@ -4,11 +4,11 @@
  */
 
 import type {
-  OIDefaultProps,
+  ComponentThemeConfigStructure,
   OIComponentOwnProps,
   OIComponentProps,
   OIComponentRef,
-  ComponentThemeConfigStructure,
+  OIDefaultProps,
 } from '../../types';
 
 /**
@@ -32,7 +32,11 @@ export const SpinnerSlots = [] as const;
  * Spinner's own props
  */
 export interface SpinnerOwnProps
-  extends OIComponentOwnProps<typeof SpinnerVariants, typeof SpinnerModifiers, typeof SpinnerSlots> {
+  extends OIComponentOwnProps<
+    typeof SpinnerVariants,
+    typeof SpinnerModifiers,
+    typeof SpinnerSlots
+  > {
   /** Accessible label for screen readers */
   'aria-label'?: string;
 }
@@ -73,4 +77,3 @@ export const spinnerDefaultTheme: ComponentThemeConfigStructure = {
     size: 'md',
   },
 };
-

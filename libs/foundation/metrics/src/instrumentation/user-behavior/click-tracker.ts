@@ -3,10 +3,11 @@
  * @module instrumentation/user-behavior/click-tracker
  */
 
-import type { UserBehaviorSignalConfig, InteractionEvent } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { InteractionEvent, UserBehaviorSignalConfig } from '../../types';
 
 /**
  * Click tracker state
@@ -24,7 +25,7 @@ let state: ClickTrackerState | null = null;
  */
 export function installClickTracking(
   config: UserBehaviorSignalConfig,
-  callback?: (event: InteractionEvent) => void
+  callback?: (event: InteractionEvent) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -207,7 +208,7 @@ export function trackClick(
     targetId?: string;
     targetOiid?: string;
     metadata?: Record<string, unknown>;
-  }
+  },
 ): void {
   if (!state?.config.enabled) {
     return;

@@ -3,6 +3,8 @@
  * @module types/context
  */
 
+import type { BrowserInfo } from '@open-insights-web/foundation-utils';
+
 import type { EnricherSignalType } from './constants';
 
 /**
@@ -81,7 +83,7 @@ export interface ReleaseContext {
  * Full telemetry context
  */
 export interface TelemetryContext {
-  browser: import('@open-insights-web/foundation-utils').BrowserInfo;
+  browser: BrowserInfo;
   page: PageContext;
   app: AppContext;
   tenant?: TenantContext;
@@ -151,7 +153,7 @@ export interface CommonSpanAttributes {
   'user.id'?: string;
   'session.id'?: string;
   'tenant.id'?: string;
-  'error'?: boolean;
+  error?: boolean;
   'error.type'?: string;
   'error.message'?: string;
 }

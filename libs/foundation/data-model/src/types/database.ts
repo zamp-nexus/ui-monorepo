@@ -119,8 +119,7 @@ export const DATABASE_TRANSACTION_MODE = {
   READ_WRITE: 'read_write',
 } as const;
 
-export type DatabaseTransactionMode =
-  ValueOf<typeof DATABASE_TRANSACTION_MODE>;
+export type DatabaseTransactionMode = ValueOf<typeof DATABASE_TRANSACTION_MODE>;
 
 /**
  * Logical table names used by the database facade transaction helper.
@@ -133,8 +132,7 @@ export const DATABASE_TRANSACTION_TABLE = {
   TABLE_SYNC_METADATA: 'table_sync_metadata',
 } as const;
 
-export type DatabaseTransactionTable =
-  ValueOf<typeof DATABASE_TRANSACTION_TABLE>;
+export type DatabaseTransactionTable = ValueOf<typeof DATABASE_TRANSACTION_TABLE>;
 
 /**
  * Stored DuckDB view definition.
@@ -183,7 +181,7 @@ export const createTableSyncMetadataEntry = (
   options?: {
     totalSize?: number;
     totalRows?: number;
-  }
+  },
 ): TableSyncMetadataEntry => ({
   name,
   lastIngestedAt,
@@ -198,7 +196,7 @@ export const createTableSyncMetadataEntry = (
  */
 export const needsTableUpdate = (
   entry: TableSyncMetadataEntry | null | undefined,
-  remoteLastIngestedAt: number
+  remoteLastIngestedAt: number,
 ): boolean => {
   if (!entry) {
     return true;
@@ -210,10 +208,10 @@ export const needsTableUpdate = (
  * Select files that need to be downloaded by comparing remote and local hashes.
  */
 export const getFilesNeedingDownload = <
-  TFile extends { filename: string; hash?: string } = DataSourceFileInfo
+  TFile extends { filename: string; hash?: string } = DataSourceFileInfo,
 >(
   localHashes: Record<string, string>,
-  remoteFiles: readonly TFile[]
+  remoteFiles: readonly TFile[],
 ): TFile[] =>
   remoteFiles.filter((file) => {
     const localHash = localHashes[file.filename];

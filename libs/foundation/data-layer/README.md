@@ -57,6 +57,7 @@ Minimal provider setup:
 ```tsx
 import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
 import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
+
 import { api } from '../convex/_generated/api';
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (

@@ -5,14 +5,11 @@
 
 import { SpanKind } from '@opentelemetry/api';
 
-import type {
-  PerformanceSignalConfig,
-  SPANavigationEvent,
-  SpaNavigationType,
-} from '../../types';
-import { getTracer, getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter, getTracer } from '../../core/otel-provider';
+import type { PerformanceSignalConfig, SPANavigationEvent, SpaNavigationType } from '../../types';
 import { SPA_NAVIGATION_TYPE } from '../../types/constants';
 
 /**
@@ -33,7 +30,7 @@ let state: SPANavigationState | null = null;
  */
 export function installSPANavigationInstrumentation(
   config: PerformanceSignalConfig,
-  callback?: (event: SPANavigationEvent) => void
+  callback?: (event: SPANavigationEvent) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -72,10 +69,10 @@ export function uninstallSPANavigationInstrumentation(): void {
   if (typeof window !== 'undefined') {
     window.removeEventListener('popstate', handlePopState);
   }
-  
+
   // Note: We don't restore the original History API methods
   // as other code may depend on our patched versions
-  
+
   state = null;
 }
 
@@ -83,27 +80,20 @@ export function uninstallSPANavigationInstrumentation(): void {
  * Patch the History API to intercept navigation
  */
 function patchHistoryAPI(): void {
-  if (typeof history === 'undefined') {
+  if (typeof window === 'undefined' || typeof window.history === 'undefined') {
     return;
   }
 
-  const originalPushState = history.pushState.bind(history);
-  const originalReplaceState = history.replaceState.bind(history);
+  const historyApi = window.history;
+  const originalPushState = historyApi.pushState.bind(historyApi);
+  const originalReplaceState = historyApi.replaceState.bind(historyApi);
 
-  history.pushState = function (
-    data: unknown,
-    unused: string,
-    url?: string | URL | null
-  ) {
+  historyApi.pushState = function (data: unknown, unused: string, url?: string | URL | null) {
     handleNavigation(SPA_NAVIGATION_TYPE.PUSH, url);
     return originalPushState(data, unused, url);
   };
 
-  history.replaceState = function (
-    data: unknown,
-    unused: string,
-    url?: string | URL | null
-  ) {
+  historyApi.replaceState = function (data: unknown, unused: string, url?: string | URL | null) {
     handleNavigation(SPA_NAVIGATION_TYPE.REPLACE, url);
     return originalReplaceState(data, unused, url);
   };
@@ -129,7 +119,9 @@ function handleNavigation(type: SpaNavigationType, url?: string | URL | null): v
   const duration = now - state.navigationStartTime;
 
   // Update state
-  const newRoute = url ? new URL(url.toString(), window.location.origin).pathname : getCurrentRoute();
+  const newRoute = url
+    ? new URL(url.toString(), window.location.origin).pathname
+    : getCurrentRoute();
   state.currentRoute = newRoute;
   state.navigationStartTime = now;
 

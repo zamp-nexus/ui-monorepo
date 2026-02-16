@@ -12,20 +12,13 @@
 // DuckDB Router (used by data-layer)
 // ============================================================================
 
-export {
-  DuckDBRouter,
-  getDuckDBRouter,
-  resetDuckDBRouter,
-} from './duckdb/router';
+export { DuckDBRouter, getDuckDBRouter, resetDuckDBRouter } from './duckdb/router';
 
 // ============================================================================
 // DuckDB Types (used by data-layer)
 // ============================================================================
 
-export type {
-  DuckDBRow,
-  DuckDBResult,
-} from './duckdb/types';
+export type { DuckDBRow, DuckDBResult } from './duckdb/types';
 
 // ============================================================================
 // SQL Utilities (used by query-engine, data-layer)

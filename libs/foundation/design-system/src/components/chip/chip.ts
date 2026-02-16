@@ -33,11 +33,7 @@ export const ChipSlots = ['start', 'close'] as const;
  * Chip's own props
  */
 export interface ChipOwnProps
-  extends OIComponentOwnProps<
-    typeof ChipVariants,
-    typeof ChipModifiers,
-    typeof ChipSlots
-  > {
+  extends OIComponentOwnProps<typeof ChipVariants, typeof ChipModifiers, typeof ChipSlots> {
   /** Visual variant */
   variant?: (typeof ChipVariants.variant)[number];
   /** Size of the chip */

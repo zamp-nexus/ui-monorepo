@@ -1,12 +1,12 @@
 /**
  * Light Theme - Secondary Theme
  * Linear-inspired light theme implementation
- * 
+ *
  * Design principles:
  * - Inverted layer values (lighter = deeper)
  * - Adjusted interactive states for light backgrounds
  * - Maintained color semantics
- * 
+ *
  * @module tokens/themes/light
  */
 
@@ -23,35 +23,35 @@ export const lightTheme = createTheme({
   colors: {
     background: {
       // Layer system: lighter = deeper (inverted)
-      layer00: 'hsl(228 6% 98%)',   // Deepest - canvas
-      layer01: 'hsl(228 6% 100%)',  // Default surface (white)
-      layer02: 'hsl(228 6% 100%)',  // Elevated (same as layer01)
-      layer03: 'hsl(228 6% 100%)',  // Highest - modals
+      layer00: 'hsl(228 6% 98%)', // Deepest - canvas
+      layer01: 'hsl(228 6% 100%)', // Default surface (white)
+      layer02: 'hsl(228 6% 100%)', // Elevated (same as layer01)
+      layer03: 'hsl(228 6% 100%)', // Highest - modals
       overlay: 'hsla(228 6% 8% / 0.4)', // Backdrop (semi-transparent)
     },
 
     text: {
       // Text hierarchy: darker = more emphasis
-      highlight: 'hsl(228 6% 8%)',   // Maximum emphasis
-      primary: 'hsl(228 6% 12%)',    // High contrast
-      secondary: 'hsl(228 6% 36%)',  // Reduced
-      tertiary: 'hsl(228 6% 48%)',   // Placeholders
-      muted: 'hsl(228 6% 62%)',      // Disabled
-      inverted: 'hsl(228 6% 96%)',   // On colored BG
+      highlight: 'hsl(228 6% 8%)', // Maximum emphasis
+      primary: 'hsl(228 6% 12%)', // High contrast
+      secondary: 'hsl(228 6% 36%)', // Reduced
+      tertiary: 'hsl(228 6% 48%)', // Placeholders
+      muted: 'hsl(228 6% 62%)', // Disabled
+      inverted: 'hsl(228 6% 96%)', // On colored BG
     },
 
     interactive: {
       primary: {
-        resting: 'hsl(235 56% 56%)',  // Slightly darker for light mode
-        hovered: 'hsl(235 56% 50%)',  // Darker on hover
-        pressed: 'hsl(235 56% 45%)',  // Even darker on press
+        resting: 'hsl(235 56% 56%)', // Slightly darker for light mode
+        hovered: 'hsl(235 56% 50%)', // Darker on hover
+        pressed: 'hsl(235 56% 45%)', // Even darker on press
         disabled: 'hsl(235 20% 70%)', // Desaturated, lighter
       },
       secondary: {
-        resting: 'hsl(228 6% 100%)',  // White
-        hovered: 'hsl(228 6% 96%)',   // Light gray
-        pressed: 'hsl(228 6% 92%)',   // Darker gray
-        disabled: 'hsl(228 6% 96%)',  // Light gray
+        resting: 'hsl(228 6% 100%)', // White
+        hovered: 'hsl(228 6% 96%)', // Light gray
+        pressed: 'hsl(228 6% 92%)', // Darker gray
+        disabled: 'hsl(228 6% 96%)', // Light gray
       },
       tertiary: {
         resting: 'transparent',
@@ -81,7 +81,7 @@ export const lightTheme = createTheme({
     },
 
     feedback: {
-      success: 'hsl(142 55% 47%)',  // Darker for light mode
+      success: 'hsl(142 55% 47%)', // Darker for light mode
       warning: 'hsl(45 74% 47%)',
       error: 'hsl(0 72% 52%)',
       info: 'hsl(210 80% 55%)',

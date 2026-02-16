@@ -1,7 +1,9 @@
 import React, { type PropsWithChildren } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { FunctionReference } from 'convex/server';
+
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useDLCreate } from './use-dl-create';
@@ -82,7 +84,7 @@ describe('useDLCreate', () => {
           listQueryKey: ['events'],
           onOptimistic: (variables: { name: string }) => ({ name: variables.name }),
         }),
-      { wrapper: createWrapper(internals) }
+      { wrapper: createWrapper(internals) },
     );
 
     let response: { id: string; name: string } | undefined;

@@ -23,7 +23,4 @@ export {
   isRetriableHttpStatus,
 } from './error-guards';
 
-export {
-  createErrorHandler,
-  type ErrorHandlerConfig,
-} from './error-handler';
+export { createErrorHandler, type ErrorHandlerConfig } from './error-handler';

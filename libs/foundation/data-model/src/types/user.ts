@@ -4,14 +4,15 @@
  */
 
 import type { z } from 'zod';
+
 import type {
-  UserSchema,
-  UserRoleSchema,
-  UserStatusSchema,
-  UserPreferencesSchema,
   CreateUserSchema,
   UpdateUserSchema,
   UserFiltersSchema,
+  UserPreferencesSchema,
+  UserRoleSchema,
+  UserSchema,
+  UserStatusSchema,
 } from '../schemas/user.schema';
 
 /**

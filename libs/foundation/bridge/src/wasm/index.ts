@@ -3,15 +3,9 @@
  * @module wasm
  */
 
-export {
-  WasmDuckDBBridge,
-  type WasmDuckDBBridgeConfig,
-} from './wasm-bridge';
+export { WasmDuckDBBridge, type WasmDuckDBBridgeConfig } from './wasm-bridge';
 
-export {
-  createDuckDBInstance,
-  type DuckDBInstance,
-} from './duckdb-init';
+export { createDuckDBInstance, type DuckDBInstance } from './duckdb-init';
 
 // Worker Pool exports
 export {

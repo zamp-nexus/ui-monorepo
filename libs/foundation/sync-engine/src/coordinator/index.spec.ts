@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SyncCoordinator } from './index';
+
 const networkUnsubscribers: Array<() => void> = [];
 const crossTabUnsubscribers: Array<() => void> = [];
 
@@ -76,8 +78,6 @@ vi.mock('../cross-tab/manager', () => ({
 vi.mock('../convex/adapter', () => ({
   createConvexAdapter: vi.fn(() => mockConvexAdapter),
 }));
-
-import { SyncCoordinator } from './index';
 
 describe('SyncCoordinator lifecycle', () => {
   beforeEach(() => {

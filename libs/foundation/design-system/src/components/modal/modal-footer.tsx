@@ -13,19 +13,11 @@ import { modalDefaultTheme } from './modal';
  *
  * Container for action buttons at the bottom of the modal.
  */
-export const ModalFooter: React.FC<ModalFooterProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const ModalFooter: React.FC<ModalFooterProps> = ({ children, className, oiid }) => {
   const theme = useTheme('modal', modalDefaultTheme);
 
   return (
-    <div
-      className={theme.footer?.({ className }) ?? className}
-      data-oiid={oiid}
-      data-slot="footer"
-    >
+    <div className={theme.footer?.({ className }) ?? className} data-oiid={oiid} data-slot="footer">
       {children}
     </div>
   );

@@ -17,9 +17,4 @@ export type {
   TabContentProps,
   TabsContextValue,
 } from './tabs';
-export {
-  TabsVariants,
-  TabsModifiers,
-  TabsSlots,
-  tabsDefaultTheme,
-} from './tabs';
+export { TabsVariants, TabsModifiers, TabsSlots, tabsDefaultTheme } from './tabs';

@@ -14,18 +14,10 @@ import { loaderDefaultTheme } from './loader';
 /**
  * Dots loading animation component
  */
-const DotsIndicator = ({ 
-  dotClassName,
-}: { 
-  dotClassName: string;
-}) => (
+const DotsIndicator = ({ dotClassName }: { dotClassName: string }) => (
   <div className="flex items-center gap-1">
     {[0, 1, 2].map((i) => (
-      <span
-        key={i}
-        className={dotClassName}
-        style={{ animationDelay: `${i * 0.15}s` }}
-      />
+      <span key={i} className={dotClassName} style={{ animationDelay: `${i * 0.15}s` }} />
     ))}
   </div>
 );

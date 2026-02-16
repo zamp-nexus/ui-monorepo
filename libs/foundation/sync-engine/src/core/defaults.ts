@@ -5,14 +5,11 @@
  * This module contains all default configuration values used throughout the sync engine.
  * Centralizing defaults ensures consistency and makes it easier to maintain and document
  * the configuration options.
- * 
+ *
  * NOTE: For retry configuration, use DEFAULT_RETRY_CONFIG from @foundation/utils
  */
 
-import {
-  CONFLICT_STRATEGY,
-  type ConflictStrategy,
-} from '@open-insights-web/foundation-data-model';
+import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
 
 // ============================================================================
 // Network Monitor Defaults

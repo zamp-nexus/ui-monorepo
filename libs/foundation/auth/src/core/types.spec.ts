@@ -4,7 +4,8 @@
  * Tests the getUserPermissions function.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { getUserPermissions, type UserRole } from './types';
 
 describe('getUserPermissions', () => {

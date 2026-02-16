@@ -15,15 +15,13 @@
  * @module interceptors/response/retry-interceptor
  */
 
-import type {
-  AxiosInstance,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from 'axios';
+import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
+
 import { sleep } from '@open-insights-web/foundation-utils';
-import type { HttpRetryConfig } from '../../core/types';
+
 import { AXIOS_ERROR_CODE } from '../../core/constants';
+import type { HttpRetryConfig } from '../../core/types';
 
 // =============================================================================
 // Types
@@ -86,9 +84,7 @@ const executeRetry = async (
 
   if (retryCount >= retry.maxRetries) {
     if (debug) {
-      console.log(
-        `[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`,
-      );
+      console.log(`[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`);
     }
     return Promise.reject(new Error(`Max retries (${retry.maxRetries}) exceeded`));
   }
@@ -162,9 +158,7 @@ export const createRetryInterceptor = (
     const retryCount = config.__retryCount ?? 0;
     if (retryCount >= retry.maxRetries) {
       if (debug) {
-        console.log(
-          `[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`,
-        );
+        console.log(`[HttpClient] Max retries (${retry.maxRetries}) exceeded for ${config.url}`);
       }
       throw error;
     }

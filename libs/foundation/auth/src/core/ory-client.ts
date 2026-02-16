@@ -7,11 +7,13 @@
  */
 
 import { Configuration, FrontendApi, OAuth2Api } from '@ory/client-fetch';
-import {
-  createSingletonFactory,
-  createDeepEqualComparison,
-} from '@open-insights-web/foundation-utils';
 import isEqual from 'react-fast-compare';
+
+import {
+  createDeepEqualComparison,
+  createSingletonFactory,
+} from '@open-insights-web/foundation-utils';
+
 import type { OryConfig } from './types';
 
 // =============================================================================
@@ -92,7 +94,7 @@ const oryClientFactory = createSingletonFactory(
     name: 'OryClient',
     warnOnConfigOverride: true,
     compareConfig: createDeepEqualComparison(isEqual, 'OryClient'),
-  }
+  },
 );
 
 // =============================================================================

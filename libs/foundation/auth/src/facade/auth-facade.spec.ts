@@ -4,12 +4,13 @@
  * Tests the identity-to-user mapping and facade lifecycle.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Identity } from '@ory/client-fetch';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type {
   AuthConfig,
-  SessionServiceInterface,
   FlowServiceInterface,
+  SessionServiceInterface,
   UserServiceInterface,
 } from '../core/types';
 import { AuthFacade } from './auth-facade';
@@ -59,34 +60,35 @@ const createMockUserService = (): UserServiceInterface => ({
   dispose: vi.fn().mockResolvedValue(undefined),
 });
 
-const createIdentity = (overrides: Partial<Identity> = {}): Identity => ({
-  id: 'identity-123',
-  schema_id: 'default',
-  schema_url: 'https://kratos.example.com/schemas/default',
-  state: 'active',
-  traits: {
-    email: 'test@example.com',
-    name: 'Test User',
-    role: 'member',
-  },
-  verifiable_addresses: [
-    {
-      id: 'addr-1',
-      value: 'test@example.com',
-      verified: true,
-      via: 'email',
-      status: 'completed',
+const createIdentity = (overrides: Partial<Identity> = {}): Identity =>
+  ({
+    id: 'identity-123',
+    schema_id: 'default',
+    schema_url: 'https://kratos.example.com/schemas/default',
+    state: 'active',
+    traits: {
+      email: 'test@example.com',
+      name: 'Test User',
+      role: 'member',
     },
-  ],
-  recovery_addresses: [
-    {
-      id: 'recovery-1',
-      value: 'test@example.com',
-      via: 'email',
-    },
-  ],
-  ...overrides,
-} as Identity);
+    verifiable_addresses: [
+      {
+        id: 'addr-1',
+        value: 'test@example.com',
+        verified: true,
+        via: 'email',
+        status: 'completed',
+      },
+    ],
+    recovery_addresses: [
+      {
+        id: 'recovery-1',
+        value: 'test@example.com',
+        via: 'email',
+      },
+    ],
+    ...overrides,
+  } as Identity);
 
 // =============================================================================
 // Tests
@@ -186,7 +188,13 @@ describe('AuthFacade', () => {
       const identity = createIdentity({
         traits: {},
         verifiable_addresses: [
-          { id: 'a1', value: 'verified@example.com', verified: true, via: 'email', status: 'completed' },
+          {
+            id: 'a1',
+            value: 'verified@example.com',
+            verified: true,
+            via: 'email',
+            status: 'completed',
+          },
         ],
       });
       const user = facade.mapIdentityToUser(identity);
@@ -198,7 +206,13 @@ describe('AuthFacade', () => {
         traits: {},
         verifiable_addresses: [
           { id: 'a1', value: '+1234567890', verified: true, via: 'phone', status: 'completed' },
-          { id: 'a2', value: 'email@example.com', verified: true, via: 'email', status: 'completed' },
+          {
+            id: 'a2',
+            value: 'email@example.com',
+            verified: true,
+            via: 'email',
+            status: 'completed',
+          },
         ],
       });
       const user = facade.mapIdentityToUser(identity);
@@ -333,7 +347,13 @@ describe('AuthFacade', () => {
       const identity = createIdentity({
         traits: { email: 'test@example.com' },
         verifiable_addresses: [
-          { id: 'a1', value: 'test@example.com', verified: true, via: 'email', status: 'completed' },
+          {
+            id: 'a1',
+            value: 'test@example.com',
+            verified: true,
+            via: 'email',
+            status: 'completed',
+          },
         ],
       });
       const user = facade.mapIdentityToUser(identity);
@@ -355,7 +375,13 @@ describe('AuthFacade', () => {
       const identity = createIdentity({
         traits: { email: 'TEST@Example.COM' },
         verifiable_addresses: [
-          { id: 'a1', value: 'test@example.com', verified: true, via: 'email', status: 'completed' },
+          {
+            id: 'a1',
+            value: 'test@example.com',
+            verified: true,
+            via: 'email',
+            status: 'completed',
+          },
         ],
       });
       const user = facade.mapIdentityToUser(identity);

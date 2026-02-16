@@ -1,10 +1,11 @@
-import type { Preview } from '@storybook/react';
-import type { ReactRenderer } from '@storybook/react';
-import type { DecoratorFunction } from 'storybook/internal/types';
 import React, { useEffect } from 'react';
 
-import { ThemeProvider, defaultTheme } from '../src/theme';
+import type { Preview, ReactRenderer } from '@storybook/react';
+import type { DecoratorFunction } from 'storybook/internal/types';
+
+import { defaultTheme, ThemeProvider } from '../src/theme';
 import { openInsightsDarkTheme, openInsightsLightTheme } from './theme';
+
 import '../src/tokens/tokens.scss';
 
 /**
@@ -96,7 +97,7 @@ const BACKGROUND_VALUES = {
 const ThemeModeDecorator: DecoratorFunction<ReactRenderer> = (Story, context) => {
   const background = context.globals?.backgrounds?.value;
   const isLightMode = background === '#FAFAFA' || background === '#FFFFFF';
-  
+
   useEffect(() => {
     // Apply theme class to document for CSS variable scoping
     const root = document.documentElement;
@@ -108,13 +109,13 @@ const ThemeModeDecorator: DecoratorFunction<ReactRenderer> = (Story, context) =>
       root.classList.remove('light');
       root.setAttribute('data-theme', 'dark');
     }
-    
+
     return () => {
       root.classList.remove('light');
       root.removeAttribute('data-theme');
     };
   }, [isLightMode]);
-  
+
   return <Story />;
 };
 

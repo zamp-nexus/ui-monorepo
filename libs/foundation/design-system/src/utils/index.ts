@@ -56,4 +56,3 @@ export {
   type ExtractPolymorphicProps,
   type ExtractPolymorphicRef,
 } from './polymorphic';
-

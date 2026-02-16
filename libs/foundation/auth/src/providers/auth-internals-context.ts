@@ -7,8 +7,9 @@
  */
 
 import { createContext, useContext } from 'react';
+
 import { AUTH_STATE } from '../core/constants';
-import type { AuthInternals, AuthConfig } from '../core/types';
+import type { AuthConfig, AuthInternals } from '../core/types';
 import { AuthNotInitializedError } from '../errors/auth-errors';
 
 // =============================================================================
@@ -53,9 +54,7 @@ const createDefaultInternalsValue = (): AuthInternals => ({
  * Provides internal access to auth services for hooks.
  * NOT for use in app components - use AuthContext instead.
  */
-export const AuthInternalsContext = createContext<AuthInternals>(
-  createDefaultInternalsValue()
-);
+export const AuthInternalsContext = createContext<AuthInternals>(createDefaultInternalsValue());
 
 AuthInternalsContext.displayName = 'AuthInternalsContext';
 

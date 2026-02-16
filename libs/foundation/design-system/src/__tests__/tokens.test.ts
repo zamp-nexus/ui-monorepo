@@ -1,27 +1,28 @@
 /**
  * Token System Tests
  * Validates token integrity, contrast ratios, and theme compliance
- * 
+ *
  * @module __tests__/tokens
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-  validateContrast,
-  calculateContrastRatio,
-  isLightColor,
-  getOptimalTextColor,
-} from '../tokens/utils/contrast-checker';
-import {
-  createColorToken,
-  generateColorScale,
-  hslToHex,
-  hexToHsl,
-} from '../tokens/utils/color-utils';
+import { describe, expect, it } from 'vitest';
+
 import { darkTheme } from '../tokens/themes/dark';
 import { lightTheme } from '../tokens/themes/light';
 import type { ThemeContract } from '../tokens/themes/theme-contract';
 import type { HSLColor } from '../tokens/types';
+import {
+  createColorToken,
+  generateColorScale,
+  hexToHsl,
+  hslToHex,
+} from '../tokens/utils/color-utils';
+import {
+  calculateContrastRatio,
+  getOptimalTextColor,
+  isLightColor,
+  validateContrast,
+} from '../tokens/utils/contrast-checker';
 
 // =============================================================================
 // COLOR UTILITIES TESTS
@@ -31,7 +32,7 @@ describe('Color Utilities', () => {
   describe('createColorToken', () => {
     it('creates a valid color token', () => {
       const token = createColorToken(235, 56, 60);
-      
+
       expect(token.$type).toBe('color');
       expect(token.$value).toBe('hsl(235 56% 60%)');
       expect(token.$hsl).toEqual({ h: 235, s: 56, l: 60 });
@@ -39,7 +40,7 @@ describe('Color Utilities', () => {
 
     it('includes description when provided', () => {
       const token = createColorToken(235, 56, 60, 'Test color');
-      
+
       expect(token.$description).toBe('Test color');
     });
   });
@@ -47,7 +48,7 @@ describe('Color Utilities', () => {
   describe('generateColorScale', () => {
     it('generates a color scale with correct steps', () => {
       const scale = generateColorScale('test', 228, 6);
-      
+
       expect(Object.keys(scale)).toContain('test-80');
       expect(Object.keys(scale)).toContain('test-500');
       expect(Object.keys(scale)).toContain('test-1000');
@@ -55,7 +56,7 @@ describe('Color Utilities', () => {
 
     it('generates colors with correct HSL values', () => {
       const scale = generateColorScale('neutral', 228, 6);
-      
+
       // Check that scale-80 is the lightest
       expect(scale['neutral-80'].$hsl.l).toBeGreaterThan(scale['neutral-1000'].$hsl.l);
     });
@@ -65,10 +66,10 @@ describe('Color Utilities', () => {
     it('converts HSL to hex correctly', () => {
       // Pure white
       expect(hslToHex({ h: 0, s: 0, l: 100 })).toBe('#FFFFFF');
-      
+
       // Pure black
       expect(hslToHex({ h: 0, s: 0, l: 0 })).toBe('#000000');
-      
+
       // Pure red
       expect(hslToHex({ h: 0, s: 100, l: 50 })).toBe('#FF0000');
     });
@@ -78,7 +79,7 @@ describe('Color Utilities', () => {
     it('converts hex to HSL correctly', () => {
       const white = hexToHsl('#FFFFFF');
       expect(white?.l).toBe(100);
-      
+
       const black = hexToHsl('#000000');
       expect(black?.l).toBe(0);
     });
@@ -99,9 +100,9 @@ describe('Contrast Checker', () => {
     it('calculates correct contrast between black and white', () => {
       const white: HSLColor = { h: 0, s: 0, l: 100 };
       const black: HSLColor = { h: 0, s: 0, l: 0 };
-      
+
       const ratio = calculateContrastRatio(white, black);
-      
+
       // Black and white should have 21:1 contrast
       expect(ratio).toBeCloseTo(21, 0);
     });
@@ -109,10 +110,10 @@ describe('Contrast Checker', () => {
     it('calculates symmetric contrast', () => {
       const color1: HSLColor = { h: 228, s: 6, l: 94 };
       const color2: HSLColor = { h: 228, s: 6, l: 12 };
-      
+
       const ratio1 = calculateContrastRatio(color1, color2);
       const ratio2 = calculateContrastRatio(color2, color1);
-      
+
       expect(ratio1).toBeCloseTo(ratio2, 2);
     });
   });
@@ -123,9 +124,9 @@ describe('Contrast Checker', () => {
       const result = validateContrast(
         { h: 228, s: 6, l: 94 }, // Light text
         { h: 228, s: 6, l: 12 }, // Dark background
-        { level: 'AA' }
+        { level: 'AA' },
       );
-      
+
       expect(result.passes).toBe(true);
       expect(result.ratio).toBeGreaterThanOrEqual(4.5);
     });
@@ -134,9 +135,9 @@ describe('Contrast Checker', () => {
       const result = validateContrast(
         { h: 228, s: 6, l: 74 }, // Secondary text
         { h: 228, s: 6, l: 12 }, // Dark background
-        { level: 'AA', isLargeText: true }
+        { level: 'AA', isLargeText: true },
       );
-      
+
       expect(result.required).toBe(3);
     });
 
@@ -144,9 +145,9 @@ describe('Contrast Checker', () => {
       const result = validateContrast(
         { h: 0, s: 0, l: 100 },
         { h: 0, s: 0, l: 0 },
-        { level: 'AAA' }
+        { level: 'AAA' },
       );
-      
+
       expect(result.passes).toBe(true);
       expect(result.required).toBe(7);
     });
@@ -260,7 +261,7 @@ describe('Dark Theme Accessibility', () => {
   it('primary text has sufficient contrast on layer01', () => {
     const text = parseHsl(darkTheme.colors.text.primary);
     const bg = parseHsl(darkTheme.colors.background.layer01);
-    
+
     const result = validateContrast(text, bg, { level: 'AA' });
     expect(result.passes).toBe(true);
     expect(result.ratio).toBeGreaterThanOrEqual(4.5);
@@ -269,7 +270,7 @@ describe('Dark Theme Accessibility', () => {
   it('secondary text has sufficient contrast for large text', () => {
     const text = parseHsl(darkTheme.colors.text.secondary);
     const bg = parseHsl(darkTheme.colors.background.layer01);
-    
+
     const result = validateContrast(text, bg, { level: 'AA', isLargeText: true });
     expect(result.passes).toBe(true);
   });
@@ -278,10 +279,10 @@ describe('Dark Theme Accessibility', () => {
     const highlight = parseHsl(darkTheme.colors.text.highlight);
     const primary = parseHsl(darkTheme.colors.text.primary);
     const bg = parseHsl(darkTheme.colors.background.layer01);
-    
+
     const highlightRatio = calculateContrastRatio(highlight, bg);
     const primaryRatio = calculateContrastRatio(primary, bg);
-    
+
     expect(highlightRatio).toBeGreaterThanOrEqual(primaryRatio);
   });
 });
@@ -304,7 +305,7 @@ describe('Light Theme Accessibility', () => {
   it('primary text has sufficient contrast on layer01', () => {
     const text = parseHsl(lightTheme.colors.text.primary);
     const bg = parseHsl(lightTheme.colors.background.layer01);
-    
+
     const result = validateContrast(text, bg, { level: 'AA' });
     expect(result.passes).toBe(true);
     expect(result.ratio).toBeGreaterThanOrEqual(4.5);
@@ -313,7 +314,7 @@ describe('Light Theme Accessibility', () => {
   it('text hierarchy is inverted from dark theme', () => {
     const darkHighlight = parseHsl(darkTheme.colors.text.highlight);
     const lightHighlight = parseHsl(lightTheme.colors.text.highlight);
-    
+
     // In dark theme, highlight should be light; in light theme, highlight should be dark
     expect(darkHighlight.l).toBeGreaterThan(50);
     expect(lightHighlight.l).toBeLessThan(50);

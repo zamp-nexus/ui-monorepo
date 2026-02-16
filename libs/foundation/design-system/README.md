@@ -20,7 +20,8 @@ npm install @open-insights-web/foundation-design-system
 ## Quick Start
 
 ```tsx
-import { ThemeProvider, Button } from '@open-insights-web/foundation-design-system';
+import { Button, ThemeProvider } from '@open-insights-web/foundation-design-system';
+
 import '@open-insights-web/foundation-design-system/tokens/tokens.scss';
 
 const theme = {
@@ -62,6 +63,7 @@ function App() {
 ## Components
 
 ### Form Components
+
 - `Button` - Versatile button with loading states and icons
 - `IconButton` - Icon-only button (requires aria-label)
 - `Input` - Text input with adornments and validation
@@ -72,6 +74,7 @@ function App() {
 - `Select` - Base UI dropdown select (compound)
 
 ### Feedback Components
+
 - `Badge` - Status labels
 - `Tag` - Dismissible tags
 - `Spinner` - Loading indicator

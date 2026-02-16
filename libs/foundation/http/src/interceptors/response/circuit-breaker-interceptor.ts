@@ -13,12 +13,9 @@
  * @module interceptors/response/circuit-breaker-interceptor
  */
 
-import type {
-  AxiosInstance,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from 'axios';
+import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
+
 import { AXIOS_ERROR_CODE } from '../../core/constants';
 
 // =============================================================================
@@ -243,9 +240,7 @@ export interface CircuitBreakerInterceptorOptions {
  * Must be registered BEFORE the retry interceptor so that the circuit
  * breaker can reject requests before retries are attempted.
  */
-export const createCircuitBreakerInterceptor = (
-  options: CircuitBreakerInterceptorOptions,
-) => {
+export const createCircuitBreakerInterceptor = (options: CircuitBreakerInterceptorOptions) => {
   const { circuitBreaker, config } = options;
 
   const onFulfilled = (response: AxiosResponse): AxiosResponse => {
@@ -262,7 +257,8 @@ export const createCircuitBreakerInterceptor = (
 
   const onRejected = async (error: unknown): Promise<never> => {
     if (config.countNetworkErrors && isNetworkFailure(error)) {
-      const url = (error as { config?: InternalAxiosRequestConfig }).config?.url ??
+      const url =
+        (error as { config?: InternalAxiosRequestConfig }).config?.url ??
         (error as { config?: InternalAxiosRequestConfig }).config?.baseURL;
       const host = circuitBreaker.getHostKey(url);
       circuitBreaker.recordFailure(host);
@@ -277,9 +273,7 @@ export const createCircuitBreakerInterceptor = (
  * Creates a request interceptor that rejects requests when the circuit
  * for the target host is open.
  */
-export const createCircuitBreakerRequestInterceptor = (
-  circuitBreaker: CircuitBreaker,
-) => {
+export const createCircuitBreakerRequestInterceptor = (circuitBreaker: CircuitBreaker) => {
   const onFulfilled = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     const host = circuitBreaker.getHostKey(config.url ?? config.baseURL);
 
@@ -306,7 +300,11 @@ export const createCircuitBreakerRequestInterceptor = (
 export const setupCircuitBreakerInterceptor = (
   instance: AxiosInstance,
   config: Partial<CircuitBreakerConfig> = {},
-): { circuitBreaker: CircuitBreaker; requestInterceptorId: number; responseInterceptorId: number } => {
+): {
+  circuitBreaker: CircuitBreaker;
+  requestInterceptorId: number;
+  responseInterceptorId: number;
+} => {
   const resolvedConfig: CircuitBreakerConfig = { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...config };
   const circuitBreaker = new CircuitBreaker(resolvedConfig);
 

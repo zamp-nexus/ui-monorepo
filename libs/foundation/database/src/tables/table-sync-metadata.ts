@@ -10,11 +10,7 @@ import {
   type TableSyncMetadataEntry,
 } from '@open-insights-web/foundation-data-model';
 
-export {
-  createTableSyncMetadataEntry,
-  getFilesNeedingDownload,
-  needsTableUpdate,
-};
+export { createTableSyncMetadataEntry, getFilesNeedingDownload, needsTableUpdate };
 
 export type { TableSyncMetadataEntry };
 

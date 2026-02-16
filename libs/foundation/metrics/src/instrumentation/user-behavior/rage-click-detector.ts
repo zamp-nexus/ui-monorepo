@@ -3,10 +3,11 @@
  * @module instrumentation/user-behavior/rage-click-detector
  */
 
-import type { UserBehaviorSignalConfig, RageClickEvent } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { RageClickEvent, UserBehaviorSignalConfig } from '../../types';
 
 /**
  * Click record for rage detection
@@ -40,7 +41,7 @@ const CLICK_DISTANCE_THRESHOLD = 50;
  */
 export function installRageClickDetection(
   config: UserBehaviorSignalConfig,
-  callback?: (event: RageClickEvent) => void
+  callback?: (event: RageClickEvent) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -109,13 +110,13 @@ function handleClickForRageDetection(event: MouseEvent): void {
 
   // Remove old clicks outside the window
   state.clickHistory = state.clickHistory.filter(
-    (click) => now - click.timestamp <= rageClickWindow
+    (click) => now - click.timestamp <= rageClickWindow,
   );
 
   // Check for rage click
   const nearbyClicks = state.clickHistory.filter((click) => {
     const distance = Math.sqrt(
-      Math.pow(click.x - event.clientX, 2) + Math.pow(click.y - event.clientY, 2)
+      Math.pow(click.x - event.clientX, 2) + Math.pow(click.y - event.clientY, 2),
     );
     return distance <= CLICK_DISTANCE_THRESHOLD;
   });
@@ -212,7 +213,7 @@ function recordRageClick(event: RageClickEvent): void {
 export function reportRageClick(
   targetSelector: string,
   clickCount: number,
-  targetOiid?: string
+  targetOiid?: string,
 ): void {
   if (!state?.config.enabled) {
     return;

@@ -3,42 +3,41 @@
  * @module queue/processor
  */
 
-import {
-  canProcessMutation,
-} from '@open-insights-web/foundation-database';
 import type {
-  IdMapping,
-  ProcessingResult,
   ConflictContext,
   ConflictResult,
+  IdMapping,
   MutationQueueEntry,
+  ProcessingResult,
 } from '@open-insights-web/foundation-data-model';
 import {
+  isPlainObject,
+  isProvisionalId,
   MUTATION_STATUS,
   MUTATION_TYPE,
-  isProvisionalId,
-  isPlainObject,
   Timestamp,
   tryToJsonSerializable,
 } from '@open-insights-web/foundation-data-model';
-import type { OfflineQueueManager } from './manager';
-import type { ConflictResolver } from '../conflicts/resolver';
+import { canProcessMutation } from '@open-insights-web/foundation-database';
 import {
-  Disposable,
   createDebugLogger,
+  Disposable,
   getErrorMessage,
+  hasCircularDependency,
+  isNetworkError as isNetworkErrorUtil,
+  Mutex,
   normalizeError,
   sleep,
-  Mutex,
-  hasCircularDependency,
   topologicalSort,
-  isNetworkError as isNetworkErrorUtil,
 } from '@open-insights-web/foundation-utils';
+
+import type { ConflictResolver } from '../conflicts/resolver';
 import {
   DEFAULT_AUTO_CLEANUP,
   DEFAULT_BATCH_SIZE,
   DEFAULT_DELAY_BETWEEN_MUTATIONS_MS,
 } from '../core/defaults';
+import type { OfflineQueueManager } from './manager';
 
 // =============================================================================
 // Local Retry Configuration
@@ -79,7 +78,7 @@ const DEFAULT_QUEUE_RETRY_CONFIG: Readonly<QueueRetryConfig> = Object.freeze({
  */
 const calculateBackoffDelay = (
   attempt: number,
-  config: Pick<QueueRetryConfig, 'initialDelayMs' | 'maxDelayMs' | 'backoffMultiplier' | 'jitter'>
+  config: Pick<QueueRetryConfig, 'initialDelayMs' | 'maxDelayMs' | 'backoffMultiplier' | 'jitter'>,
 ): number => {
   const exponentialDelay = config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt);
   const cappedDelay = Math.min(exponentialDelay, config.maxDelayMs);
@@ -104,9 +103,7 @@ const isRecordPayload = (value: unknown): value is Record<string, unknown> => is
 /**
  * Mutation executor function type
  */
-export type MutationExecutor = (
-  mutation: MutationQueueEntry
-) => Promise<MutationExecutorResult>;
+export type MutationExecutor = (mutation: MutationQueueEntry) => Promise<MutationExecutorResult>;
 
 /**
  * Mutation executor result
@@ -151,16 +148,29 @@ export interface QueueProcessorConfig {
   autoCleanup?: boolean;
 }
 
-
 /**
  * Mutation queue processor with proper disposal, retry logic, and conflict resolution
  */
 export class QueueProcessor extends Disposable {
   private queueManager: OfflineQueueManager;
   private conflictResolver: ConflictResolver;
-  private config: Required<Omit<QueueProcessorConfig, 'queueManager' | 'conflictResolver' | 'onSuccess' | 'onFailure' | 'onConflict' | 'onError' | 'retryConfig'>>;
+  private config: Required<
+    Omit<
+      QueueProcessorConfig,
+      | 'queueManager'
+      | 'conflictResolver'
+      | 'onSuccess'
+      | 'onFailure'
+      | 'onConflict'
+      | 'onError'
+      | 'retryConfig'
+    >
+  >;
   private retryConfig: QueueRetryConfig;
-  private callbacks: Pick<QueueProcessorConfig, 'onSuccess' | 'onFailure' | 'onConflict' | 'onError'>;
+  private callbacks: Pick<
+    QueueProcessorConfig,
+    'onSuccess' | 'onFailure' | 'onConflict' | 'onError'
+  >;
   private isProcessing = false;
   private shouldStop = false;
   private processingMutex = new Mutex();
@@ -238,7 +248,7 @@ export class QueueProcessor extends Disposable {
         const orderedPending = topologicalSort(
           pending,
           (mutation) => mutation.id,
-          (mutation) => mutation.dependsOn ?? []
+          (mutation) => mutation.dependsOn ?? [],
         );
         const batch = orderedPending.slice(0, this.config.batchSize);
         let processableCount = 0;
@@ -301,12 +311,12 @@ export class QueueProcessor extends Disposable {
    */
   private async failUnprocessableMutations(
     pending: MutationQueueEntry[],
-    result: ProcessingResult
+    result: ProcessingResult,
   ): Promise<void> {
     const cyclic = hasCircularDependency(
       pending,
       (mutation) => mutation.id,
-      (mutation) => mutation.dependsOn ?? []
+      (mutation) => mutation.dependsOn ?? [],
     );
 
     const reason = cyclic
@@ -322,10 +332,10 @@ export class QueueProcessor extends Disposable {
       this.callbacks.onFailure?.(mutation, reason);
     }
 
-    this.logger.warn(
-      'Marked pending mutations as failed due to dependency deadlock',
-      { count: pending.length, cyclic }
-    );
+    this.logger.warn('Marked pending mutations as failed due to dependency deadlock', {
+      count: pending.length,
+      cyclic,
+    });
   }
 
   /**
@@ -351,7 +361,7 @@ export class QueueProcessor extends Disposable {
    */
   private async processMutationWithRetry(
     mutation: MutationQueueEntry,
-    result: ProcessingResult
+    result: ProcessingResult,
   ): Promise<boolean> {
     let lastError: string | undefined;
 
@@ -361,15 +371,15 @@ export class QueueProcessor extends Disposable {
       try {
         const success = await this.processMutation(mutation, result);
         if (success) return true;
-        
+
         // If not successful but no error thrown, don't retry
         return false;
       } catch (error) {
         lastError = getErrorMessage(error);
-        
+
         // Check if error is retryable
         const isRetryable = this.retryConfig.isRetryable?.(error) ?? isNetworkErrorUtil(error);
-        
+
         if (!isRetryable || attempt >= this.retryConfig.maxAttempts - 1) {
           // Mark as failed
           await this.queueManager.markFailed(mutation.id, lastError);
@@ -381,7 +391,11 @@ export class QueueProcessor extends Disposable {
 
         // Wait before retrying with exponential backoff
         const backoffDelay = calculateBackoffDelay(attempt, this.retryConfig);
-        this.logger.debug(`Retry ${attempt + 1}/${this.retryConfig.maxAttempts} for mutation ${mutation.id} after ${backoffDelay}ms`);
+        this.logger.debug(
+          `Retry ${attempt + 1}/${this.retryConfig.maxAttempts} for mutation ${
+            mutation.id
+          } after ${backoffDelay}ms`,
+        );
         this.retryConfig.onRetry?.(attempt + 1, error, backoffDelay);
         await sleep(backoffDelay);
       }
@@ -395,7 +409,7 @@ export class QueueProcessor extends Disposable {
    */
   private async processMutation(
     mutation: MutationQueueEntry,
-    result: ProcessingResult
+    result: ProcessingResult,
   ): Promise<boolean> {
     this.logger.debug('Processing mutation:', mutation.id, mutation.type, mutation.tableName);
 
@@ -447,7 +461,7 @@ export class QueueProcessor extends Disposable {
           const conflictResolution = this.detectAndResolveConflict(
             mutation,
             execResult.serverData,
-            execResult.serverTimestamp ?? Timestamp.now()
+            execResult.serverTimestamp ?? Timestamp.now(),
           );
 
           if (conflictResolution) {
@@ -458,7 +472,7 @@ export class QueueProcessor extends Disposable {
             if (!resolvedPayload) {
               await this.queueManager.markFailed(
                 mutation.id,
-                'Conflict resolution produced non-record payload'
+                'Conflict resolution produced non-record payload',
               );
               result.failed++;
               return false;
@@ -467,7 +481,7 @@ export class QueueProcessor extends Disposable {
             if (!serializableResolvedPayload) {
               await this.queueManager.markFailed(
                 mutation.id,
-                'Conflict resolution produced non-serializable payload'
+                'Conflict resolution produced non-serializable payload',
               );
               result.failed++;
               return false;
@@ -483,10 +497,7 @@ export class QueueProcessor extends Disposable {
         }
 
         // Mark as failed
-        await this.queueManager.markFailed(
-          mutation.id,
-          execResult.error ?? 'Unknown error'
-        );
+        await this.queueManager.markFailed(mutation.id, execResult.error ?? 'Unknown error');
 
         result.failed++;
         this.callbacks.onFailure?.(mutation, execResult.error ?? 'Unknown error');
@@ -509,7 +520,7 @@ export class QueueProcessor extends Disposable {
   private detectAndResolveConflict(
     mutation: MutationQueueEntry,
     serverData: unknown,
-    serverTimestamp: number
+    serverTimestamp: number,
   ): ConflictResult | null {
     const clientData = mutation.payload;
     const clientTimestamp = mutation.timestamp;
@@ -519,7 +530,7 @@ export class QueueProcessor extends Disposable {
       serverData,
       clientData,
       serverTimestamp,
-      clientTimestamp
+      clientTimestamp,
     );
 
     if (!hasConflict) {
@@ -561,7 +572,7 @@ export class QueueProcessor extends Disposable {
     if (retryCount === 0) {
       return this.config.baseDelayBetweenMutations;
     }
-    
+
     // Use exponential backoff for retried mutations
     return calculateBackoffDelay(retryCount - 1, {
       initialDelayMs: this.config.baseDelayBetweenMutations,

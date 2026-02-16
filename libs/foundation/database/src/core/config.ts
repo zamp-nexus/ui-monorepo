@@ -3,13 +3,13 @@
  * @module core/config
  */
 
-import { TIME_MS } from '@open-insights-web/foundation-utils';
 import {
   MUTATION_STATUS,
   QUERY_CACHE_STATUS,
   SYNC_STATE_KEY,
 } from '@open-insights-web/foundation-data-model';
 import type { SyncStateKey as DataModelSyncStateKey } from '@open-insights-web/foundation-data-model';
+import { TIME_MS } from '@open-insights-web/foundation-utils';
 
 /**
  * Database configuration options
@@ -70,9 +70,7 @@ export const DEFAULT_DATABASE_CONFIG: DatabaseConfig = {
 /**
  * Merge user config with defaults
  */
-export const mergeConfig = (
-  userConfig: Partial<DatabaseConfig> = {}
-): DatabaseConfig => ({
+export const mergeConfig = (userConfig: Partial<DatabaseConfig> = {}): DatabaseConfig => ({
   ...DEFAULT_DATABASE_CONFIG,
   ...userConfig,
 });

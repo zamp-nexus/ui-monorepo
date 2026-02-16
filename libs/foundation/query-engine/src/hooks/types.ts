@@ -8,17 +8,14 @@
  */
 
 import type { QueryKey } from '@tanstack/react-query';
-import {
-  QUERY_DATA_SOURCES,
-  type DataSource as QueryDataSource,
-  type Query,
-} from '../types/query';
+
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import {
   isMutationOperation as isCoreMutationOperation,
   WRITE_OPERATIONS,
   type WriteOperation,
 } from '../types/operations';
-import { QUERY_ENGINE_PATHS } from '../internal/constants';
+import { QUERY_DATA_SOURCES, type Query, type DataSource as QueryDataSource } from '../types/query';
 
 // =============================================================================
 // EXECUTION PATH & DATA SOURCE
@@ -32,8 +29,7 @@ export const EXECUTION_PATHS = {
   TRANSACTIONAL: QUERY_ENGINE_PATHS.TRANSACTIONAL,
 } as const;
 
-export type HookExecutionPath =
-  (typeof EXECUTION_PATHS)[keyof typeof EXECUTION_PATHS];
+export type HookExecutionPath = (typeof EXECUTION_PATHS)[keyof typeof EXECUTION_PATHS];
 
 export type ExecutionPath = HookExecutionPath;
 
@@ -269,10 +265,7 @@ export interface UseDLMutateQueryEngineOptions<TData = unknown, TVariables = unk
    * For create: Return full item shape with provisional ID.
    * For update: Return merged item (receives previous data as second arg).
    */
-  readonly onOptimistic?: (
-    variables: TVariables,
-    previousData?: TData
-  ) => Partial<TData>;
+  readonly onOptimistic?: (variables: TVariables, previousData?: TData) => Partial<TData>;
 
   /**
    * Extract entity ID from variables (for update/delete).
@@ -300,7 +293,7 @@ export interface UseDLMutateQueryEngineOptions<TData = unknown, TVariables = unk
   readonly onSettled?: (
     data: TData | undefined,
     error: Error | null,
-    variables: TVariables
+    variables: TVariables,
   ) => void | Promise<void>;
 }
 
@@ -341,23 +334,20 @@ export interface UseDLMutateQueryEngineResult<TData = unknown, TVariables = unkn
 /**
  * Check if result is analytics path
  */
-export const isAnalyticsResult = <TData,>(
-  result: UseDLQueryEngineResult<TData>
-): result is AnalyticsResult<TData> =>
-  result.executionPath === EXECUTION_PATHS.ANALYTICS;
+export const isAnalyticsResult = <TData>(
+  result: UseDLQueryEngineResult<TData>,
+): result is AnalyticsResult<TData> => result.executionPath === EXECUTION_PATHS.ANALYTICS;
 
 /**
  * Check if result is transactional path
  */
-export const isTransactionalResult = <TData,>(
-  result: UseDLQueryEngineResult<TData>
-): result is TransactionalResult<TData> =>
-  result.executionPath === EXECUTION_PATHS.TRANSACTIONAL;
+export const isTransactionalResult = <TData>(
+  result: UseDLQueryEngineResult<TData>,
+): result is TransactionalResult<TData> => result.executionPath === EXECUTION_PATHS.TRANSACTIONAL;
 
 /**
  * Check if result is pending (no decision yet)
  */
-export const isPendingResult = <TData,>(
-  result: UseDLQueryEngineResult<TData>
-): result is PendingResult<TData> =>
-  result.executionPath === null;
+export const isPendingResult = <TData>(
+  result: UseDLQueryEngineResult<TData>,
+): result is PendingResult<TData> => result.executionPath === null;

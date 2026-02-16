@@ -2,7 +2,8 @@
  * Tests for PriorityQueue
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { PriorityQueue } from './priority-queue';
 
 describe('PriorityQueue', () => {

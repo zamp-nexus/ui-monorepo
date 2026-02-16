@@ -17,22 +17,16 @@
 // Coordinator (used by data-layer)
 // ============================================================================
 
-export {
-  SyncCoordinator,
-  createSyncCoordinator,
-} from './coordinator';
+export { SyncCoordinator, createSyncCoordinator } from './coordinator';
 
 // ============================================================================
 // Core Types (used by data-layer, query-engine)
 // ============================================================================
 
-export {
-  type IQueueManager,
-} from './core';
+export { type IQueueManager } from './core';
 
 // ============================================================================
 // Conflict Resolution (used by query-engine)
 // ============================================================================
 
 export { DEFAULT_MERGE_CONFIG } from './conflicts';
-

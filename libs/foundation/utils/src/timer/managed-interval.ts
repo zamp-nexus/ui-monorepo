@@ -5,8 +5,8 @@
 
 import { Disposable } from '../disposable/disposable';
 import { createDebugLogger, type Logger } from '../logger';
-import { TIMER_STATE, TIMER_DEFAULTS, type TimerState } from './constants';
-import type { ManagedIntervalConfig, IntervalStats, ITimer } from './types';
+import { TIMER_DEFAULTS, TIMER_STATE, type TimerState } from './constants';
+import type { IntervalStats, ITimer, ManagedIntervalConfig } from './types';
 
 /**
  * ManagedInterval - An interval that extends Disposable for automatic cleanup

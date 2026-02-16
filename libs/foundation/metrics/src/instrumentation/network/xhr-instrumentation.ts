@@ -4,6 +4,7 @@
  */
 
 import { context, propagation, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
+
 import type { HttpMethod } from '@open-insights-web/foundation-data-model';
 import {
   extractRoute,
@@ -15,7 +16,7 @@ import {
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter, getTracer } from '../../core/otel-provider';
 import type { NetworkRequest, NetworkSignalConfig } from '../../types';
-import { toHttpMethod, recordNetworkMetrics } from '../../utils/http-utils';
+import { recordNetworkMetrics, toHttpMethod } from '../../utils/http-utils';
 
 /**
  * XHR instrumentation state
@@ -293,5 +294,4 @@ export const uninstallXHRInstrumentation = (): void => {
 /**
  * Check if XHR instrumentation is installed
  */
-export const isXHRInstrumentationInstalled = (): boolean =>
-  state?.isInstalled ?? false;
+export const isXHRInstrumentationInstalled = (): boolean => state?.isInstalled ?? false;

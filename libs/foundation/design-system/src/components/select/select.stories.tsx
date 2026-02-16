@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Select } from './select';
 
@@ -178,9 +179,7 @@ export const Controlled: Story = {
             <Select.Item value="grape">Grape</Select.Item>
           </Select.Content>
         </Select>
-        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-          Selected: {value || '(none)'}
-        </p>
+        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Selected: {value || '(none)'}</p>
       </div>
     );
   },
@@ -213,4 +212,3 @@ export const AllSizes: Story = {
     </div>
   ),
 };
-

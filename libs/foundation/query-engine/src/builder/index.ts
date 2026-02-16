@@ -10,11 +10,7 @@
 // Query Builder
 // =============================================================================
 
-export {
-  QueryBuilder,
-  createQueryBuilder,
-  filterCondition,
-} from './query-builder';
+export { QueryBuilder, createQueryBuilder, filterCondition } from './query-builder';
 
 // =============================================================================
 // Presets

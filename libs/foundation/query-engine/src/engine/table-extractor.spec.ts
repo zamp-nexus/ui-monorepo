@@ -1,12 +1,13 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
 import type { Query } from '../types/query';
 import {
-  TableExtractor,
   createTableExtractor,
-  getTableExtractor,
-  resetTableExtractor,
   extractTables,
   getPrimaryTable,
+  getTableExtractor,
+  resetTableExtractor,
+  TableExtractor,
 } from './table-extractor';
 
 // =============================================================================
@@ -211,9 +212,7 @@ describe('TableExtractor', () => {
           left: 'orders.user_id',
           right: 'users.id',
           type: 'inner',
-          additionalConditions: [
-            { left: 'orders.company_id', right: 'companies.id' },
-          ],
+          additionalConditions: [{ left: 'orders.company_id', right: 'companies.id' }],
         },
       ]);
       expect(tables).toContain('orders');

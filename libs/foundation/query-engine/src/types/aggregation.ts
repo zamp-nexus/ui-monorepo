@@ -71,7 +71,8 @@ export const DISTINCT_AGGREGATIONS = {
   AVG_DISTINCT: AGGREGATIONS.AVG_DISTINCT,
 } as const;
 
-export type DistinctAggregation = (typeof DISTINCT_AGGREGATIONS)[keyof typeof DISTINCT_AGGREGATIONS];
+export type DistinctAggregation =
+  (typeof DISTINCT_AGGREGATIONS)[keyof typeof DISTINCT_AGGREGATIONS];
 
 // =============================================================================
 // TYPE GUARDS
@@ -81,10 +82,7 @@ export type DistinctAggregation = (typeof DISTINCT_AGGREGATIONS)[keyof typeof DI
  * Check if value is a valid aggregation function.
  */
 export const isAggregation = (value: unknown): value is Aggregation => {
-  return (
-    typeof value === 'string' &&
-    Object.values(AGGREGATIONS).includes(value as Aggregation)
-  );
+  return typeof value === 'string' && Object.values(AGGREGATIONS).includes(value as Aggregation);
 };
 
 /**

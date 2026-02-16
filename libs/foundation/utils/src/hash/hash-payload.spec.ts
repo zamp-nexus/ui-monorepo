@@ -2,11 +2,9 @@
  * Tests for payload hashing utilities
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-  hashPayloadSync,
-  hashPayloadAsync,
-} from './hash-payload';
+import { describe, expect, it } from 'vitest';
+
+import { hashPayloadAsync, hashPayloadSync } from './hash-payload';
 
 describe('hashPayloadSync', () => {
   it('should hash objects consistently', () => {
@@ -89,4 +87,3 @@ describe('hashPayloadAsync', () => {
     expect(hash).toMatch(/^[0-9a-f]+$/);
   });
 });
-

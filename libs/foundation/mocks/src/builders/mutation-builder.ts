@@ -7,8 +7,8 @@
  */
 
 import {
-  MutationId,
   EntityId,
+  MutationId,
   ProvisionalId,
   Timestamp,
   type JsonSerializable,
@@ -40,8 +40,7 @@ export const MUTATION_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-export type MutationStatus =
-  (typeof MUTATION_STATUS)[keyof typeof MUTATION_STATUS];
+export type MutationStatus = (typeof MUTATION_STATUS)[keyof typeof MUTATION_STATUS];
 
 /**
  * Test mutation object
@@ -276,7 +275,7 @@ export class MutationBuilder<TData = JsonSerializable> {
  * ```
  */
 export function quickMutation<TData = JsonSerializable>(
-  overrides: Partial<TestMutation<TData>> = {}
+  overrides: Partial<TestMutation<TData>> = {},
 ): TestMutation<TData> {
   const now = Timestamp.now();
   return {

@@ -84,10 +84,7 @@ export {
 // ============================================
 // Plugins
 // ============================================
-export {
-  createPluginManager,
-  getPluginManager,
-} from './plugins';
+export { createPluginManager, getPluginManager } from './plugins';
 
 // ============================================
 // Feature Flags (Metrics-specific)

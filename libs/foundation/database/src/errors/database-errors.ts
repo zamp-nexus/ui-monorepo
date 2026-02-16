@@ -29,7 +29,7 @@ export class DatabaseError extends FoundationError {
     code: FoundationErrorCode,
     message: string,
     context: ErrorContext = {},
-    cause?: Error
+    cause?: Error,
   ) {
     super(message, { source: 'database', ...context }, cause);
     this.code = code;
@@ -41,13 +41,12 @@ export class DatabaseError extends FoundationError {
  */
 export class QuotaExceededError extends DatabaseError {
   constructor(requestedBytes: number, availableBytes?: number, cause?: Error) {
-    const availableMsg =
-      availableBytes !== undefined ? `. Available: ${availableBytes} bytes` : '';
+    const availableMsg = availableBytes !== undefined ? `. Available: ${availableBytes} bytes` : '';
     super(
       FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED,
       `Storage quota exceeded. Requested: ${requestedBytes} bytes${availableMsg}`,
       { requestedBytes, availableBytes },
-      cause
+      cause,
     );
   }
 }
@@ -59,7 +58,7 @@ export class OpfsNotSupportedError extends DatabaseError {
   constructor() {
     super(
       FOUNDATION_ERROR_CODE.DATABASE_OPFS_NOT_SUPPORTED,
-      'OPFS is not supported in this environment'
+      'OPFS is not supported in this environment',
     );
   }
 }
@@ -73,7 +72,7 @@ export class OpfsInitFailedError extends DatabaseError {
       FOUNDATION_ERROR_CODE.DATABASE_OPFS_INIT_FAILED,
       `Failed to initialize OPFS: ${reason}`,
       { reason },
-      cause
+      cause,
     );
   }
 }
@@ -107,7 +106,7 @@ export class NotInitializedError extends DatabaseError {
     super(
       FOUNDATION_ERROR_CODE.DATABASE_NOT_INITIALIZED,
       `${component} is not initialized. Call initialize() first.`,
-      { component }
+      { component },
     );
   }
 }
@@ -117,10 +116,14 @@ export class NotInitializedError extends DatabaseError {
  */
 export class DuplicateEntryError extends DatabaseError {
   constructor(key: string, type: string) {
-    super(FOUNDATION_ERROR_CODE.DATABASE_DUPLICATE_ENTRY, `Duplicate ${type} entry with key: ${key}`, {
-      key,
-      entryType: type,
-    });
+    super(
+      FOUNDATION_ERROR_CODE.DATABASE_DUPLICATE_ENTRY,
+      `Duplicate ${type} entry with key: ${key}`,
+      {
+        key,
+        entryType: type,
+      },
+    );
   }
 }
 
@@ -133,7 +136,7 @@ export class DuplicateEntryError extends DatabaseError {
  */
 export const createQuotaExceededError = (
   requestedBytes: number,
-  availableBytes?: number
+  availableBytes?: number,
 ): QuotaExceededError => {
   return new QuotaExceededError(requestedBytes, availableBytes);
 };
@@ -199,7 +202,8 @@ export const isDatabaseError = (error: unknown): error is DatabaseError => {
  */
 export const isQuotaExceededError = (error: unknown): boolean => {
   // Check for DatabaseError using hasErrorCode from foundation-data-model
-  if (isFoundationError(error) && error.code === FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED) return true;
+  if (isFoundationError(error) && error.code === FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED)
+    return true;
 
   // Check for native DOMException
   if (error instanceof DOMException && error.name === 'QuotaExceededError') {

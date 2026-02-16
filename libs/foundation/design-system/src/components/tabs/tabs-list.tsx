@@ -7,20 +7,16 @@ import React from 'react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { useTheme } from '../../theme';
-import { useTabsContext } from './tabs.context';
 import type { TabsListProps } from './tabs';
 import { tabsDefaultTheme } from './tabs';
+import { useTabsContext } from './tabs.context';
 
 /**
  * Tabs.List component
  *
  * Container for tab triggers.
  */
-export const TabsList: React.FC<TabsListProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const TabsList: React.FC<TabsListProps> = ({ children, className, oiid }) => {
   const theme = useTheme('tabs', tabsDefaultTheme);
   const { variant, fullWidth } = useTabsContext();
 

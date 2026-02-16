@@ -7,19 +7,15 @@
  * @module types/query
  */
 
-import {
-  type Operation,
-  OPERATIONS,
-  isMutationOperation,
-  isReadOperation,
-} from './operations';
+import type { QueryId } from '@open-insights-web/foundation-data-model';
+
 import type { DimensionSpec } from './dimension';
-import type { MeasureSpec } from './measure';
 import type { FilterExpression } from './filter';
 import type { JoinSpec } from './join';
+import type { MeasureSpec } from './measure';
+import { isMutationOperation, isReadOperation, OPERATIONS, type Operation } from './operations';
 import type { OrderBySpec } from './order';
 import type { TimeDimensionSpec } from './time';
-import type { QueryId } from '@open-insights-web/foundation-data-model';
 
 // =============================================================================
 // QUERY BACKENDS
@@ -441,10 +437,7 @@ export const getQueryOperation = (query: Query): Operation => {
  * @example
  * createListQuery('users', ['name', 'email'])
  */
-export const createListQuery = (
-  table: string,
-  columns: ReadonlyArray<string>
-): Query => ({
+export const createListQuery = (table: string, columns: ReadonlyArray<string>): Query => ({
   dimensions: columns.map((col) => ({ member: `${table}.${col}` })),
 });
 

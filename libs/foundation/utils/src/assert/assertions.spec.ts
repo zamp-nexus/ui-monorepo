@@ -2,15 +2,16 @@
  * Tests for assertion utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   assert,
   assertDefined,
-  assertNotNull,
-  assertType,
+  assertInRange,
   assertNever,
   assertNonEmpty,
-  assertInRange,
+  assertNotNull,
+  assertType,
 } from './assertions';
 
 describe('assert', () => {
@@ -44,7 +45,9 @@ describe('assertDefined', () => {
   });
 
   it('should throw for undefined', () => {
-    expect(() => assertDefined(undefined, 'testValue')).toThrow('testValue is required but was undefined');
+    expect(() => assertDefined(undefined, 'testValue')).toThrow(
+      'testValue is required but was undefined',
+    );
   });
 });
 
@@ -108,13 +111,13 @@ describe('assertInRange', () => {
 
   it('should throw if below minimum', () => {
     expect(() => assertInRange(-1, 0, 10, 'testValue')).toThrow(
-      'testValue must be between 0 and 10, got -1'
+      'testValue must be between 0 and 10, got -1',
     );
   });
 
   it('should throw if above maximum', () => {
     expect(() => assertInRange(11, 0, 10, 'testValue')).toThrow(
-      'testValue must be between 0 and 10, got 11'
+      'testValue must be between 0 and 10, got 11',
     );
   });
 });

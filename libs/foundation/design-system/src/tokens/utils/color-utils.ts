@@ -4,29 +4,28 @@
  * @module tokens/utils/color-utils
  */
 
-import type { HSLColor, RGBColor, ColorToken } from '../types';
+import type { ColorToken, HSLColor, RGBColor } from '../types';
 
 /**
  * Default color scale steps following DevRev/Linear pattern
  * 80 (lightest) to 1000 (darkest) for fine-grained control
  */
 export const DEFAULT_COLOR_STEPS = [
-  80, 100, 120, 140, 160, 180, 200, 220, 240, 280,
-  320, 360, 400, 480, 560, 620, 700, 740, 780,
-  820, 860, 880, 900, 920, 940, 960, 980, 1000,
+  80, 100, 120, 140, 160, 180, 200, 220, 240, 280, 320, 360, 400, 480, 560, 620, 700, 740, 780, 820,
+  860, 880, 900, 920, 940, 960, 980, 1000,
 ] as const;
 
 export type ColorStep = (typeof DEFAULT_COLOR_STEPS)[number];
 
 /**
  * Creates a type-safe color token from HSL values
- * 
+ *
  * @param h - Hue (0-360)
  * @param s - Saturation (0-100)
  * @param l - Lightness (0-100)
  * @param description - Optional description for documentation
  * @returns ColorToken with HSL metadata
- * 
+ *
  * @example
  * const primaryColor = createColorToken(235, 56, 60, 'Primary accent');
  */
@@ -34,7 +33,7 @@ export function createColorToken(
   h: number,
   s: number,
   l: number,
-  description?: string
+  description?: string,
 ): ColorToken {
   return {
     $type: 'color',
@@ -46,7 +45,7 @@ export function createColorToken(
 
 /**
  * Creates a color token with alpha channel
- * 
+ *
  * @param h - Hue (0-360)
  * @param s - Saturation (0-100)
  * @param l - Lightness (0-100)
@@ -59,7 +58,7 @@ export function createColorTokenWithAlpha(
   s: number,
   l: number,
   a: number,
-  description?: string
+  description?: string,
 ): ColorToken {
   return {
     $type: 'color',
@@ -72,13 +71,13 @@ export function createColorTokenWithAlpha(
 /**
  * Generates a complete color scale from HSL base values
  * Scale: 80 (lightest) to 1000 (darkest)
- * 
+ *
  * @param name - Color name for the scale (e.g., 'neutral', 'accent')
  * @param hue - Base hue value (0-360)
  * @param saturation - Base saturation value (0-100)
  * @param options - Configuration options
  * @returns Record of step-keyed ColorTokens
- * 
+ *
  * @example
  * const neutralScale = generateColorScale('neutral', 228, 6);
  * // neutralScale['neutral-100'], neutralScale['neutral-200'], etc.
@@ -90,7 +89,7 @@ export function generateColorScale(
   options?: {
     steps?: readonly number[];
     lightnessRange?: { min: number; max: number };
-  }
+  },
 ): Record<string, ColorToken> {
   const steps = options?.steps ?? DEFAULT_COLOR_STEPS;
   const { min: minL = 0, max: maxL = 92 } = options?.lightnessRange ?? {};
@@ -104,20 +103,15 @@ export function generateColorScale(
 
       return [
         `${name}-${step}`,
-        createColorToken(
-          hue,
-          saturation,
-          lightness,
-          `${name} at step ${step} (L: ${lightness}%)`
-        ),
+        createColorToken(hue, saturation, lightness, `${name} at step ${step} (L: ${lightness}%)`),
       ];
-    })
+    }),
   );
 }
 
 /**
  * Converts HSL to RGB color values
- * 
+ *
  * @param hsl - HSL color object
  * @returns RGB color object with values 0-255
  */
@@ -170,7 +164,7 @@ export function hslToRgb(hsl: HSLColor): RGBColor {
 
 /**
  * Converts RGB to HSL color values
- * 
+ *
  * @param rgb - RGB color object
  * @returns HSL color object
  */
@@ -213,7 +207,7 @@ export function rgbToHsl(rgb: RGBColor): HSLColor {
 
 /**
  * Converts HSL color to hexadecimal string
- * 
+ *
  * @param hsl - HSL color object
  * @returns Hex color string (e.g., '#5E6AD2')
  */
@@ -225,13 +219,13 @@ export function hslToHex(hsl: HSLColor): string {
 
 /**
  * Parses a hex color string to HSL
- * 
+ *
  * @param hex - Hex color string (with or without #)
  * @returns HSL color object or null if invalid
  */
 export function hexToHsl(hex: string): HSLColor | null {
   const cleanHex = hex.replace('#', '');
-  
+
   if (!/^[0-9A-Fa-f]{6}$/.test(cleanHex)) {
     return null;
   }
@@ -245,7 +239,7 @@ export function hexToHsl(hex: string): HSLColor | null {
 
 /**
  * Adjusts the lightness of an HSL color
- * 
+ *
  * @param hsl - Original HSL color
  * @param amount - Amount to adjust (-100 to 100)
  * @returns New HSL color with adjusted lightness
@@ -259,7 +253,7 @@ export function adjustLightness(hsl: HSLColor, amount: number): HSLColor {
 
 /**
  * Adjusts the saturation of an HSL color
- * 
+ *
  * @param hsl - Original HSL color
  * @param amount - Amount to adjust (-100 to 100)
  * @returns New HSL color with adjusted saturation
@@ -273,7 +267,7 @@ export function adjustSaturation(hsl: HSLColor, amount: number): HSLColor {
 
 /**
  * Creates a CSS HSL string from HSL values
- * 
+ *
  * @param hsl - HSL color object
  * @returns CSS hsl() or hsla() string
  */
@@ -287,19 +281,15 @@ export function toHslString(hsl: HSLColor): string {
 
 /**
  * Mixes two HSL colors
- * 
+ *
  * @param color1 - First color
  * @param color2 - Second color
  * @param weight - Weight of first color (0-1, default 0.5)
  * @returns Mixed HSL color
  */
-export function mixColors(
-  color1: HSLColor,
-  color2: HSLColor,
-  weight = 0.5
-): HSLColor {
+export function mixColors(color1: HSLColor, color2: HSLColor, weight = 0.5): HSLColor {
   const w = Math.max(0, Math.min(1, weight));
-  
+
   return {
     h: Math.round(color1.h * w + color2.h * (1 - w)),
     s: Math.round(color1.s * w + color2.s * (1 - w)),

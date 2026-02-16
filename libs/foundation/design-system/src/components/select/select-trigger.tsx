@@ -9,9 +9,9 @@ import { Select as SelectPrimitive } from '@base-ui/react/select';
 import { Icon } from '@open-insights-web/foundation-icons';
 
 import { useTheme } from '../../theme';
-import { useSelectContext } from './select.context';
 import type { SelectTriggerComponent, SelectTriggerProps } from './select';
 import { selectDefaultTheme } from './select';
+import { useSelectContext } from './select.context';
 
 /**
  * SelectTrigger component

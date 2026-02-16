@@ -40,9 +40,7 @@ export const Default: Story = {
   render: () => (
     <Toast feedback="info" closable>
       <Toast.Title>Information</Toast.Title>
-      <Toast.Description>
-        This is an informational message for the user.
-      </Toast.Description>
+      <Toast.Description>This is an informational message for the user.</Toast.Description>
     </Toast>
   ),
 };
@@ -54,9 +52,7 @@ export const Success: Story = {
   render: () => (
     <Toast feedback="success" closable>
       <Toast.Title>Success!</Toast.Title>
-      <Toast.Description>
-        Your changes have been saved successfully.
-      </Toast.Description>
+      <Toast.Description>Your changes have been saved successfully.</Toast.Description>
     </Toast>
   ),
 };
@@ -68,9 +64,7 @@ export const Warning: Story = {
   render: () => (
     <Toast feedback="warning" closable>
       <Toast.Title>Warning</Toast.Title>
-      <Toast.Description>
-        Your session will expire in 5 minutes.
-      </Toast.Description>
+      <Toast.Description>Your session will expire in 5 minutes.</Toast.Description>
     </Toast>
   ),
 };
@@ -82,9 +76,7 @@ export const Error: Story = {
   render: () => (
     <Toast feedback="error" closable>
       <Toast.Title>Error</Toast.Title>
-      <Toast.Description>
-        Failed to save changes. Please try again.
-      </Toast.Description>
+      <Toast.Description>Failed to save changes. Please try again.</Toast.Description>
     </Toast>
   ),
 };
@@ -118,9 +110,7 @@ export const NotClosable: Story = {
   render: () => (
     <Toast feedback="success">
       <Toast.Title>Auto-dismissing toast</Toast.Title>
-      <Toast.Description>
-        This toast will auto-dismiss after a few seconds.
-      </Toast.Description>
+      <Toast.Description>This toast will auto-dismiss after a few seconds.</Toast.Description>
     </Toast>
   ),
 };
@@ -130,15 +120,9 @@ export const NotClosable: Story = {
  */
 export const CustomIcon: Story = {
   render: () => (
-    <Toast
-      feedback="info"
-      closable
-      start={<Icon name="bell" />}
-    >
+    <Toast feedback="info" closable start={<Icon name="bell" />}>
       <Toast.Title>New notification</Toast.Title>
-      <Toast.Description>
-        You have 3 new messages in your inbox.
-      </Toast.Description>
+      <Toast.Description>You have 3 new messages in your inbox.</Toast.Description>
     </Toast>
   ),
 };
@@ -150,9 +134,7 @@ export const WithBody: Story = {
   render: () => (
     <Toast feedback="info" closable>
       <Toast.Title>Update available</Toast.Title>
-      <Toast.Description>
-        A new version is ready to install.
-      </Toast.Description>
+      <Toast.Description>A new version is ready to install.</Toast.Description>
       <Toast.Body>
         <div className="mt-2 rounded border bg-muted/50 p-2 text-xs">
           <div>Version: 2.0.0</div>
@@ -213,9 +195,7 @@ export const UndoPattern: Story = {
   render: () => (
     <Toast feedback="info" closable>
       <Toast.Title>Item deleted</Toast.Title>
-      <Toast.Description>
-        The item has been moved to trash.
-      </Toast.Description>
+      <Toast.Description>The item has been moved to trash.</Toast.Description>
       <Toast.Actions>
         <Button size="sm" intent="secondary">
           Undo

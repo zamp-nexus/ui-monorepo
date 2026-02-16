@@ -6,9 +6,11 @@
  * @module utils/http-utils
  */
 
-import { HTTP_METHOD, type HttpMethod } from '@open-insights-web/foundation-data-model';
 import type { Attributes } from '@opentelemetry/api';
+
+import { HTTP_METHOD, type HttpMethod } from '@open-insights-web/foundation-data-model';
 import { extractRoute } from '@open-insights-web/foundation-utils';
+
 import type { NetworkRequest } from '../types';
 
 /**
@@ -44,10 +46,16 @@ export const toHttpMethod = (method: unknown): HttpMethod => {
  * Meter-like interface for recording metrics (avoids coupling to OTel types)
  */
 interface MetricsRecorder {
-  createHistogram: (name: string, opts?: { description?: string; unit?: string }) => {
+  createHistogram: (
+    name: string,
+    opts?: { description?: string; unit?: string },
+  ) => {
     record: (value: number, attrs?: Attributes) => void;
   };
-  createCounter: (name: string, opts?: { description?: string }) => {
+  createCounter: (
+    name: string,
+    opts?: { description?: string },
+  ) => {
     add: (value: number, attrs?: Attributes) => void;
   };
 }

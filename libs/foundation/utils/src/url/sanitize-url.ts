@@ -12,10 +12,7 @@ import { DEFAULT_SANITIZATION_OPTIONS, type URLSanitizationOptions } from './typ
  * @param options - Sanitization options
  * @returns Sanitized URL string
  */
-export const sanitizeUrl = (
-  url: string,
-  options: Partial<URLSanitizationOptions> = {},
-): string => {
+export const sanitizeUrl = (url: string, options: Partial<URLSanitizationOptions> = {}): string => {
   const opts = { ...DEFAULT_SANITIZATION_OPTIONS, ...options };
 
   try {

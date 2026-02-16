@@ -5,9 +5,9 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import { useBannerContext } from './banner.context';
 import type { BannerDescriptionProps } from './banner';
 import { bannerDefaultTheme } from './banner';
+import { useBannerContext } from './banner.context';
 
 /**
  * Banner.Description component

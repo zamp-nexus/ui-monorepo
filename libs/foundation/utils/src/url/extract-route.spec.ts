@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { extractRoute } from './extract-route';
 
 describe('extractRoute', () => {
   it('should replace UUID with {id}', () => {
-    const result = extractRoute('https://example.com/users/550e8400-e29b-41d4-a716-446655440000/profile');
+    const result = extractRoute(
+      'https://example.com/users/550e8400-e29b-41d4-a716-446655440000/profile',
+    );
     expect(result).toBe('/users/{id}/profile');
   });
 

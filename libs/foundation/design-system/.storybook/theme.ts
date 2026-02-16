@@ -1,9 +1,9 @@
-import { create } from 'storybook/theming/create';
 import type { ThemeVars } from 'storybook/theming';
+import { create } from 'storybook/theming/create';
 
 /**
  * Linear-inspired dark theme for Storybook
- * 
+ *
  * Design philosophy:
  * - Dark-first aesthetic matching the design system
  * - Mercury White (#F4F5F8) for highlights
@@ -20,7 +20,8 @@ export const openInsightsDarkTheme: ThemeVars = create({
   brandTarget: '_self',
 
   // Typography - Inter variable font like Linear
-  fontBase: '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+  fontBase:
+    '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
   fontCode: '"JetBrains Mono", "SF Mono", "Fira Code", Consolas, monospace',
 
   // Linear accent colors
@@ -28,14 +29,14 @@ export const openInsightsDarkTheme: ThemeVars = create({
   colorSecondary: '#8B8FE8',
 
   // UI backgrounds - layered system
-  appBg: '#131316',         // layer00
-  appContentBg: '#1A1A1E',  // layer01
-  appPreviewBg: '#1A1A1E',  // layer01
+  appBg: '#131316', // layer00
+  appContentBg: '#1A1A1E', // layer01
+  appPreviewBg: '#1A1A1E', // layer01
   appBorderColor: '#2D2D32',
   appBorderRadius: 8,
 
   // Text hierarchy
-  textColor: '#F4F5F8',      // Mercury White - highlight
+  textColor: '#F4F5F8', // Mercury White - highlight
   textInverseColor: '#131316',
   textMutedColor: '#8B8D98', // secondary text
 
@@ -62,7 +63,7 @@ export const openInsightsDarkTheme: ThemeVars = create({
 
 /**
  * Linear-inspired light theme for Storybook
- * 
+ *
  * Secondary theme with inverted color values
  * maintaining the same design principles.
  */
@@ -75,7 +76,8 @@ export const openInsightsLightTheme: ThemeVars = create({
   brandTarget: '_self',
 
   // Typography
-  fontBase: '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+  fontBase:
+    '"Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
   fontCode: '"JetBrains Mono", "SF Mono", "Fira Code", Consolas, monospace',
 
   // Accent colors (slightly darker for light mode)

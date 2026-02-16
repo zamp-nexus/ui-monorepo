@@ -15,11 +15,7 @@ export {
 export { HistoryManager, type HistoryCallback } from './history-manager';
 
 // HTTP utilities for network instrumentation
-export {
-  isValidHttpMethod,
-  toHttpMethod,
-  recordNetworkMetrics,
-} from './http-utils';
+export { isValidHttpMethod, toHttpMethod, recordNetworkMetrics } from './http-utils';
 
 // Stack trace utilities
 export { sanitizeStackTrace } from './stack-utils';

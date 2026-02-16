@@ -34,11 +34,7 @@ export const BannerSlots = ['icon'] as const;
  * Banner's own props
  */
 export interface BannerOwnProps
-  extends OIComponentOwnProps<
-    typeof BannerVariants,
-    typeof BannerModifiers,
-    typeof BannerSlots
-  > {
+  extends OIComponentOwnProps<typeof BannerVariants, typeof BannerModifiers, typeof BannerSlots> {
   /** Feedback variant */
   variant?: (typeof BannerVariants.variant)[number];
   /** Banner type */

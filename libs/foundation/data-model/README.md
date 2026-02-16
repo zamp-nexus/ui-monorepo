@@ -3,7 +3,9 @@
 Canonical contract package for Open Insights foundation libraries.
 
 ## Purpose
+
 `foundation-data-model` is the single source of truth for:
+
 - Shared runtime constants and derived type aliases
 - Cross-library contracts for sync and database domains
 - Branded primitives and IDs
@@ -14,14 +16,17 @@ Canonical contract package for Open Insights foundation libraries.
 Consumers include `foundation-database`, `foundation-sync-engine`, `foundation-data-layer`, `foundation-query-engine`, `foundation-bridge`, `foundation-http`, `foundation-auth`, and `foundation-mocks`.
 
 ## Installation
+
 ```bash
 npm i @open-insights-web/foundation-data-model
 ```
 
 ## Constants-Only Contract Model
+
 Fixed-option domains are expressed with `UPPER_SNAKE_CASE` `as const` objects and PascalCase type aliases derived from them.
 
 Examples:
+
 - `CONFLICT_STRATEGY` + `type ConflictStrategy`
 - `SYNC_EVENT_TYPE` + `type SyncEventType`
 - `QUERY_CACHE_STATUS` + `type QueryCacheStatus`
@@ -29,6 +34,7 @@ Examples:
 - `FOUNDATION_ERROR_CODE` + `type FoundationErrorCode`
 
 Pattern:
+
 ```ts
 import type { ValueOf } from '@open-insights-web/foundation-data-model';
 
@@ -41,9 +47,11 @@ export type MyDomain = ValueOf<typeof MY_DOMAIN>;
 ```
 
 ## Shared Database Contracts
+
 Location: `src/types/database.ts`
 
 Value constants:
+
 - `QUERY_CACHE_STATUS`
 - `MUTATION_STATUS`
 - `MUTATION_TYPE`
@@ -51,6 +59,7 @@ Value constants:
 - `SYNC_STATE_KEY`
 
 Derived types:
+
 - `QueryCacheStatus`
 - `MutationStatus`
 - `MutationType`
@@ -58,6 +67,7 @@ Derived types:
 - `SyncStateKey`
 
 Interfaces/helpers:
+
 - `DuckDBViewDefinition`
 - `DuckDBViewsValue`
 - `LastSyncValue`
@@ -67,13 +77,14 @@ Interfaces/helpers:
 - `getFilesNeedingDownload(...)`
 
 Usage:
+
 ```ts
 import {
-  MUTATION_TYPE,
+  createTableSyncMetadataEntry,
   MUTATION_STATUS,
+  MUTATION_TYPE,
   OPFS_FILE_TYPE,
   SYNC_STATE_KEY,
-  createTableSyncMetadataEntry,
 } from '@open-insights-web/foundation-data-model';
 
 const entry = createTableSyncMetadataEntry('events', Date.now(), {
@@ -92,9 +103,11 @@ void mutation;
 ```
 
 ## Shared Sync Contracts
+
 Location: `src/types/sync.ts`
 
 Value constants:
+
 - `CONFLICT_STRATEGY`
 - `CONFLICT_WINNER`
 - `SYNC_EVENT_TYPE`
@@ -102,6 +115,7 @@ Value constants:
 - `OFFLINE_QUERY_SOURCE`
 
 Derived types:
+
 - `ConflictStrategy`
 - `ConflictWinner`
 - `SyncEventType`
@@ -109,10 +123,12 @@ Derived types:
 - `OfflineQuerySource`
 
 Key interface bindings:
+
 - `ConflictResult.winner: ConflictWinner`
 - `OfflineQueryContext.source: OfflineQuerySource`
 
 Usage:
+
 ```ts
 import {
   CONFLICT_STRATEGY,
@@ -141,41 +157,53 @@ void context;
 ```
 
 ## Error Contracts
+
 Value constants:
+
 - `FOUNDATION_ERROR_CODE`
 - `ERROR_CATEGORY`
 
 Derived types:
+
 - `FoundationErrorCode`
 - `ErrorCategory`
 
 Utilities:
+
 - `getErrorCategory(code)`
 - `isRetryableErrorCode(code)`
 - `FoundationError` and related guards/helpers
 
 ## Query-Key Contracts
+
 `QUERY_SCOPE` is the canonical fixed-option contract for query-scope metadata.
 
 Provided helpers:
+
 - `createQueryKeys(...)`
 - `createAnalyticsQueryKey(...)`
 - `extractQueryKeyMeta(...)`
 - `hashQueryKey(...)`
 
 ## Validation Contracts
+
 Value constant:
+
 - `VALIDATION_SEVERITY`
 
 Derived type:
+
 - `ValidationSeverity`
 
 Result model:
+
 - `ValidationResultData` (`valid` + structured `issues`)
 - `ValidationResult` utility constructors (`success`, `failure`, `fromErrors`, `merge`, ...)
 
 ## Architecture
+
 Top-level modules:
+
 - `src/types/*`: contracts and shared constants
 - `src/errors/*`: foundation error model
 - `src/query-keys/*`: query key contracts and hashing
@@ -183,23 +211,28 @@ Top-level modules:
 - `src/datasource/*`: datasource shape helpers
 
 Design rules:
+
 1. No `enum` exports for fixed options.
 2. No fixed-option string-literal unions hand-written in consumers.
 3. No constant/type name collisions for fixed-option domains.
 4. Shared contracts live here first, then are consumed by other foundation libraries.
 
 ## Migration Notes
+
 If you previously imported fixed-option values by PascalCase names, migrate to constants:
+
 - `ConflictStrategy.SERVER_WINS` -> `CONFLICT_STRATEGY.SERVER_WINS`
 - `MutationType.CREATE` -> `MUTATION_TYPE.CREATE`
 - `FoundationErrorCode.CONFIG_INVALID` -> `FOUNDATION_ERROR_CODE.CONFIG_INVALID`
 
 Keep PascalCase type annotations:
+
 - `conflictStrategy: ConflictStrategy`
 - `type: MutationType`
 - `code: FoundationErrorCode`
 
 ## Verification
+
 ```bash
 npx tsc -p libs/foundation/data-model/tsconfig.lib.json --pretty false
 npx vitest run libs/foundation/data-model/src/**/*.spec.ts
@@ -209,6 +242,7 @@ rg "export enum" libs/foundation/data-model/src
 `rg "export enum"` should return no matches.
 
 ## Contribution Guidance
+
 1. Add shared cross-library contracts here before adding local copies elsewhere.
 2. Prefer direct imports from concrete modules inside implementations; use barrels for package surface only.
 3. Keep runtime string values stable for backward wire compatibility unless an explicit migration is planned.

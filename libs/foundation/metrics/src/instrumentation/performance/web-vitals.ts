@@ -3,17 +3,18 @@
  * @module instrumentation/performance/web-vitals
  */
 
-import { onLCP, onCLS, onINP, onFCP, onTTFB, type Metric } from 'web-vitals';
+import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals';
 
+import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
 import type {
   PerformanceSignalConfig,
   WebVitalMetric,
   WebVitalName,
   WebVitalRating,
 } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
-import { getCurrentRoute } from '@open-insights-web/foundation-utils';
 
 /**
  * Web vitals instrumentation state
@@ -79,7 +80,7 @@ const getCombinedHistogram = () => {
  */
 export function installWebVitalsInstrumentation(
   config: PerformanceSignalConfig,
-  callback?: (metric: WebVitalMetric) => void
+  callback?: (metric: WebVitalMetric) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -139,9 +140,7 @@ function isWebVitalRating(rating: string): rating is WebVitalRating {
   return VALID_RATINGS.has(rating);
 }
 
-function isNavigationType(
-  type: string | undefined,
-): type is WebVitalMetric['navigationType'] {
+function isNavigationType(type: string | undefined): type is WebVitalMetric['navigationType'] {
   return type === undefined || VALID_NAV_TYPES.has(type);
 }
 
@@ -186,9 +185,7 @@ function handleMetric(metric: Metric): void {
     rating: metric.rating,
     delta: metric.delta,
     id: metric.id,
-    navigationType: isNavigationType(metric.navigationType)
-      ? metric.navigationType
-      : undefined,
+    navigationType: isNavigationType(metric.navigationType) ? metric.navigationType : undefined,
     attribution,
   };
 

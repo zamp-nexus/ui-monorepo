@@ -3,7 +3,7 @@
  * @module logger/logger
  */
 
-import type { LogLevel, LoggerConfig, LogHandler } from './types';
+import type { LoggerConfig, LogHandler, LogLevel } from './types';
 import { LOG_LEVEL, LOG_LEVEL_PRIORITY } from './types';
 
 /**
@@ -126,7 +126,7 @@ export class Logger {
  */
 export const createLogger = (
   prefix: string,
-  options?: Partial<Omit<LoggerConfig, 'prefix'>>
+  options?: Partial<Omit<LoggerConfig, 'prefix'>>,
 ): Logger => new Logger({ prefix, ...options });
 
 /**
@@ -135,10 +135,7 @@ export const createLogger = (
  * @param debug - Whether debug logging is enabled
  * @returns Logger instance
  */
-export const createDebugLogger = (
-  prefix: string,
-  debug: boolean
-): Logger =>
+export const createDebugLogger = (prefix: string, debug: boolean): Logger =>
   new Logger({
     prefix,
     level: debug ? LOG_LEVEL.DEBUG : LOG_LEVEL.NONE,

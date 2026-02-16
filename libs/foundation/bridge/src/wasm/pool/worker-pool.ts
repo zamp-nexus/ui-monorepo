@@ -11,17 +11,17 @@
  */
 
 import { WorkerId } from '@open-insights-web/foundation-data-model';
-import type { WorkerInfo, ResolvedPoolConfig } from '../../types';
-import { WorkerInstance } from './worker-instance';
-import type {
-  Logger} from '@open-insights-web/foundation-utils';
+import type { Logger } from '@open-insights-web/foundation-utils';
 import {
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   withTimeout,
 } from '@open-insights-web/foundation-utils';
+
 import { WorkerInitializationError } from '../../errors/pool-errors';
+import type { ResolvedPoolConfig, WorkerInfo } from '../../types';
+import { WorkerInstance } from './worker-instance';
 
 // =============================================================================
 // Circuit Breaker Constants
@@ -88,7 +88,7 @@ export class WorkerPoolManager {
       await withTimeout(
         Promise.all(initPromises),
         this.config.workerInitTimeout,
-        `Worker pool initialization timed out after ${this.config.workerInitTimeout}ms`
+        `Worker pool initialization timed out after ${this.config.workerInitTimeout}ms`,
       );
       this.initialized = true;
       this.logger.info('Pool initialized successfully', {

@@ -111,7 +111,7 @@ interface BrandedStringIdConstructor<B extends Brand<string, string>> {
  * ```
  */
 const createBrandedStringId = <B extends Brand<string, string>>(
-  options: BrandedStringIdFactoryOptions<B>
+  options: BrandedStringIdFactoryOptions<B>,
 ): BrandedStringIdConstructor<B> => {
   const { typeName, validate, generate } = options;
 
@@ -128,7 +128,7 @@ const createBrandedStringId = <B extends Brand<string, string>>(
     parse: (value: unknown): Result<B, BrandedTypeValidationError> => {
       if (typeof value !== 'string') {
         return Result.err(
-          new BrandedTypeValidationError(typeName, value, 'Value must be a string')
+          new BrandedTypeValidationError(typeName, value, 'Value must be a string'),
         );
       }
       const error = validatorFn(value);
@@ -222,10 +222,14 @@ export const Milliseconds = {
    */
   parse: (value: unknown): Result<Milliseconds, BrandedTypeValidationError> => {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return Result.err(new BrandedTypeValidationError('Milliseconds', value, 'Value must be a finite number'));
+      return Result.err(
+        new BrandedTypeValidationError('Milliseconds', value, 'Value must be a finite number'),
+      );
     }
     if (value < 0) {
-      return Result.err(new BrandedTypeValidationError('Milliseconds', value, 'Milliseconds cannot be negative'));
+      return Result.err(
+        new BrandedTypeValidationError('Milliseconds', value, 'Milliseconds cannot be negative'),
+      );
     }
     return Result.ok(value as Milliseconds);
   },
@@ -328,10 +332,14 @@ export const Timestamp = {
    */
   parse: (value: unknown): Result<Timestamp, BrandedTypeValidationError> => {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return Result.err(new BrandedTypeValidationError('Timestamp', value, 'Value must be a finite number'));
+      return Result.err(
+        new BrandedTypeValidationError('Timestamp', value, 'Value must be a finite number'),
+      );
     }
     if (value < 0) {
-      return Result.err(new BrandedTypeValidationError('Timestamp', value, 'Timestamp cannot be negative'));
+      return Result.err(
+        new BrandedTypeValidationError('Timestamp', value, 'Timestamp cannot be negative'),
+      );
     }
     return Result.ok(value as Timestamp);
   },
@@ -467,10 +475,14 @@ export const MutationId = {
    */
   parse: (value: unknown): Result<MutationId, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('MutationId', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('MutationId', value, 'Value must be a string'),
+      );
     }
     if (value.length === 0) {
-      return Result.err(new BrandedTypeValidationError('MutationId', value, 'MutationId cannot be empty'));
+      return Result.err(
+        new BrandedTypeValidationError('MutationId', value, 'MutationId cannot be empty'),
+      );
     }
     return Result.ok(value as MutationId);
   },
@@ -510,10 +522,14 @@ export const EntityId = {
    */
   parse: (value: unknown): Result<EntityId, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('EntityId', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('EntityId', value, 'Value must be a string'),
+      );
     }
     if (value.length === 0) {
-      return Result.err(new BrandedTypeValidationError('EntityId', value, 'EntityId cannot be empty'));
+      return Result.err(
+        new BrandedTypeValidationError('EntityId', value, 'EntityId cannot be empty'),
+      );
     }
     return Result.ok(value as EntityId);
   },
@@ -591,10 +607,18 @@ export const ProvisionalId = {
    */
   parse: (value: unknown): Result<ProvisionalId, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('ProvisionalId', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('ProvisionalId', value, 'Value must be a string'),
+      );
     }
     if (!value.startsWith(PROVISIONAL_ID_PREFIX)) {
-      return Result.err(new BrandedTypeValidationError('ProvisionalId', value, `ProvisionalId must start with "${PROVISIONAL_ID_PREFIX}"`));
+      return Result.err(
+        new BrandedTypeValidationError(
+          'ProvisionalId',
+          value,
+          `ProvisionalId must start with "${PROVISIONAL_ID_PREFIX}"`,
+        ),
+      );
     }
     return Result.ok(value as ProvisionalId);
   },
@@ -708,8 +732,7 @@ export const QueryId = {
    * const id2 = QueryId.generate();    // 'q_<uuid>'
    * ```
    */
-  create: (prefix = 'q'): QueryId =>
-    `${prefix}_${crypto.randomUUID()}` as QueryId,
+  create: (prefix = 'q'): QueryId => `${prefix}_${crypto.randomUUID()}` as QueryId,
 };
 
 /**
@@ -745,10 +768,14 @@ export const WorkerId = {
    */
   parse: (value: unknown): Result<WorkerId, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('WorkerId', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('WorkerId', value, 'Value must be a string'),
+      );
     }
     if (!value.startsWith('worker_')) {
-      return Result.err(new BrandedTypeValidationError('WorkerId', value, 'WorkerId must start with "worker_"'));
+      return Result.err(
+        new BrandedTypeValidationError('WorkerId', value, 'WorkerId must start with "worker_"'),
+      );
     }
     return Result.ok(value as WorkerId);
   },
@@ -802,13 +829,23 @@ export const SqlTableName = {
    */
   parse: (value: unknown): Result<SqlTableName, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('SqlTableName', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('SqlTableName', value, 'Value must be a string'),
+      );
     }
     if (value.length === 0) {
-      return Result.err(new BrandedTypeValidationError('SqlTableName', value, 'SqlTableName cannot be empty'));
+      return Result.err(
+        new BrandedTypeValidationError('SqlTableName', value, 'SqlTableName cannot be empty'),
+      );
     }
     if (!SQL_IDENTIFIER_PATTERN.test(value)) {
-      return Result.err(new BrandedTypeValidationError('SqlTableName', value, 'SqlTableName must be a valid SQL identifier (alphanumeric and underscore, not starting with number)'));
+      return Result.err(
+        new BrandedTypeValidationError(
+          'SqlTableName',
+          value,
+          'SqlTableName must be a valid SQL identifier (alphanumeric and underscore, not starting with number)',
+        ),
+      );
     }
     return Result.ok(value as SqlTableName);
   },
@@ -851,13 +888,23 @@ export const SqlIdentifier = {
    */
   parse: (value: unknown): Result<SqlIdentifier, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('SqlIdentifier', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('SqlIdentifier', value, 'Value must be a string'),
+      );
     }
     if (value.length === 0) {
-      return Result.err(new BrandedTypeValidationError('SqlIdentifier', value, 'SqlIdentifier cannot be empty'));
+      return Result.err(
+        new BrandedTypeValidationError('SqlIdentifier', value, 'SqlIdentifier cannot be empty'),
+      );
     }
     if (!SQL_IDENTIFIER_PATTERN.test(value)) {
-      return Result.err(new BrandedTypeValidationError('SqlIdentifier', value, 'SqlIdentifier must be a valid SQL identifier (alphanumeric and underscore, not starting with number)'));
+      return Result.err(
+        new BrandedTypeValidationError(
+          'SqlIdentifier',
+          value,
+          'SqlIdentifier must be a valid SQL identifier (alphanumeric and underscore, not starting with number)',
+        ),
+      );
     }
     return Result.ok(value as SqlIdentifier);
   },
@@ -969,10 +1016,18 @@ export const MemberRef = {
    */
   tryParse: (value: unknown): Result<MemberRef, BrandedTypeValidationError> => {
     if (typeof value !== 'string') {
-      return Result.err(new BrandedTypeValidationError('MemberRef', value, 'Value must be a string'));
+      return Result.err(
+        new BrandedTypeValidationError('MemberRef', value, 'Value must be a string'),
+      );
     }
     if (!MemberRef.isValid(value)) {
-      return Result.err(new BrandedTypeValidationError('MemberRef', value, 'MemberRef must be in format "table.member"'));
+      return Result.err(
+        new BrandedTypeValidationError(
+          'MemberRef',
+          value,
+          'MemberRef must be in format "table.member"',
+        ),
+      );
     }
     return Result.ok(value as MemberRef);
   },
@@ -1030,6 +1085,5 @@ export const ExecutionId = {
    * const id2 = ExecutionId.generate(); // 'exec_<uuid>'
    * ```
    */
-  create: (): ExecutionId =>
-    `exec_${crypto.randomUUID()}` as ExecutionId,
+  create: (): ExecutionId => `exec_${crypto.randomUUID()}` as ExecutionId,
 };

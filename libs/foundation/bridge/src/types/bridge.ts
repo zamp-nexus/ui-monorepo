@@ -6,7 +6,12 @@
  * @module types/bridge
  */
 
-import type { Milliseconds, SqlIdentifier, Timestamp } from '@open-insights-web/foundation-data-model';
+import type {
+  Milliseconds,
+  SqlIdentifier,
+  Timestamp,
+} from '@open-insights-web/foundation-data-model';
+
 import type { BridgeType } from '../constants';
 
 // =============================================================================
@@ -137,7 +142,7 @@ export interface DuckDBBridge {
   /** Execute a query and return results */
   query<T extends Record<string, unknown> = Record<string, unknown>>(
     sql: string,
-    options?: QueryOptions
+    options?: QueryOptions,
   ): Promise<QueryResult<T>>;
 
   /** Execute a statement without results */

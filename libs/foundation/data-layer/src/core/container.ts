@@ -13,34 +13,22 @@
  * @module core/container
  */
 
-import { QueryClient } from '@tanstack/react-query';
 import { ConvexQueryClient } from '@convex-dev/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import type { AxiosInstance } from 'axios';
 import { ConvexReactClient } from 'convex/react';
 
-import {
-  DatabaseFacade,
-  OpfsManager,
-} from '@open-insights-web/foundation-database';
+import { DuckDBRouter } from '@open-insights-web/foundation-bridge';
+import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
 import {
   createSyncCoordinator,
   type SyncCoordinator,
 } from '@open-insights-web/foundation-sync-engine';
-import {
-  CONFLICT_STRATEGY,
-  type ConflictStrategy,
-} from '@open-insights-web/foundation-data-model';
-import { Mutex, createLogger, type Logger } from '@open-insights-web/foundation-utils';
-import {
-  DuckDBRouter,
-} from '@open-insights-web/foundation-bridge';
-import {
-  FileDownloadService,
-} from '../analytics-sync/file-download-service';
-import {
-  TableSyncService,
-} from '../analytics-sync/table-sync-service';
+import { createLogger, Mutex, type Logger } from '@open-insights-web/foundation-utils';
 
-import type { CacheConfig, ConvexQueryReference, ResolvedCacheConfig, UnifiedTableConfig } from './types';
+import { FileDownloadService } from '../analytics-sync/file-download-service';
+import { TableSyncService } from '../analytics-sync/table-sync-service';
 import {
   DEFAULT_CACHE_CONFIG,
   OFFLINE_NETWORK_MODE,
@@ -49,7 +37,13 @@ import {
   QUERY_RETRY_MAX,
   resolveCacheConfig,
 } from './constants';
-import { type TableRegistry, createTableRegistry } from './table-registry';
+import { createTableRegistry, type TableRegistry } from './table-registry';
+import type {
+  CacheConfig,
+  ConvexQueryReference,
+  ResolvedCacheConfig,
+  UnifiedTableConfig,
+} from './types';
 
 /**
  * Dependencies managed by the container
@@ -106,6 +100,7 @@ export interface DependencyFactories {
     enableCrossTab: boolean;
     autoStart: boolean;
     debug: boolean;
+    axiosInstance?: AxiosInstance;
     onError?: (error: Error, context?: string) => void;
   }) => SyncCoordinator;
   /** Create DuckDB router */
@@ -142,6 +137,8 @@ export interface ContainerConfig {
   readonly defaultGcTime?: number;
   /** Cache configuration */
   readonly cache?: CacheConfig;
+  /** Optional shared Axios instance for transport-dependent components */
+  readonly axiosInstance?: AxiosInstance;
   /** Enable debug logging */
   readonly debug?: boolean;
   /** Sync error callback */
@@ -165,12 +162,10 @@ export class DataLayerContainer {
   private initPromise: Promise<DataLayerDependencies> | null = null;
   private readonly disposeMutex = new Mutex();
   private readonly analyticsInitMutex = new Mutex();
-  private analyticsRuntime:
-    | {
-        readonly duckdbRouter: DuckDBRouter;
-        readonly opfsManager: OpfsManager | null;
-      }
-    | null = null;
+  private analyticsRuntime: {
+    readonly duckdbRouter: DuckDBRouter;
+    readonly opfsManager: OpfsManager | null;
+  } | null = null;
   private tableSyncService: TableSyncService | null = null;
   private fileDownloadService: FileDownloadService | null = null;
   private fileDownloadServiceOpfsManager: OpfsManager | null = null;
@@ -263,9 +258,9 @@ export class DataLayerContainer {
     const queryClient = this.createQueryClient(convexQueryClient, cacheConfig);
 
     // Create database facade - instance scoped (no shared singleton reset hazards)
-    const databaseConfig = this.config.debug === undefined ? undefined : { debug: this.config.debug };
-    const database =
-      this.config.factories?.database?.() ?? DatabaseFacade.create(databaseConfig);
+    const databaseConfig =
+      this.config.debug === undefined ? undefined : { debug: this.config.debug };
+    const database = this.config.factories?.database?.() ?? DatabaseFacade.create(databaseConfig);
 
     // Create sync coordinator using SAME database instance
     // Pass the underlying InsightsDatabase from facade to prevent duplicate instances
@@ -277,6 +272,7 @@ export class DataLayerContainer {
       enableCrossTab: boolean;
       autoStart: boolean;
       debug: boolean;
+      axiosInstance?: AxiosInstance;
       onError?: (error: Error, context?: string) => void;
     } = {
       queryClient,
@@ -287,6 +283,9 @@ export class DataLayerContainer {
       autoStart: true,
       debug: this.config.debug ?? false,
     };
+    if (this.config.axiosInstance !== undefined) {
+      syncCoordinatorFactoryConfig.axiosInstance = this.config.axiosInstance;
+    }
     if (this.config.onSyncError) {
       syncCoordinatorFactoryConfig.onError = this.config.onSyncError;
     }
@@ -298,6 +297,7 @@ export class DataLayerContainer {
       conflictStrategy: ConflictStrategy;
       enableCrossTab: boolean;
       autoStart: boolean;
+      axiosInstance?: AxiosInstance;
       debug?: boolean;
       onError?: (error: Error, context?: string) => void;
     } = {
@@ -308,6 +308,9 @@ export class DataLayerContainer {
       enableCrossTab: this.config.enableCrossTab ?? true,
       autoStart: true,
     };
+    if (this.config.axiosInstance !== undefined) {
+      syncCoordinatorConfig.axiosInstance = this.config.axiosInstance;
+    }
     if (this.config.debug !== undefined) {
       syncCoordinatorConfig.debug = this.config.debug;
     }
@@ -344,7 +347,7 @@ export class DataLayerContainer {
 
   private getOrCreateTableSyncService = (
     database: DatabaseFacade,
-    convexClient: ConvexReactClient
+    convexClient: ConvexReactClient,
   ): TableSyncService => {
     if (!this.tableSyncService) {
       const tableSyncConfig: {
@@ -366,7 +369,7 @@ export class DataLayerContainer {
   };
 
   private getOrCreateFileDownloadService = async (
-    database: DatabaseFacade
+    database: DatabaseFacade,
   ): Promise<FileDownloadService | null> => {
     const runtime = await this.ensureAnalyticsRuntime(database);
     const runtimeOpfsManager = runtime?.opfsManager ?? null;
@@ -374,16 +377,17 @@ export class DataLayerContainer {
       return null;
     }
 
-    if (
-      !this.fileDownloadService ||
-      this.fileDownloadServiceOpfsManager !== runtimeOpfsManager
-    ) {
+    if (!this.fileDownloadService || this.fileDownloadServiceOpfsManager !== runtimeOpfsManager) {
       const fileDownloadConfig: {
         opfsManager: OpfsManager;
+        axiosInstance?: AxiosInstance;
         debug?: boolean;
       } = {
         opfsManager: runtimeOpfsManager,
       };
+      if (this.config.axiosInstance !== undefined) {
+        fileDownloadConfig.axiosInstance = this.config.axiosInstance;
+      }
       if (this.config.debug !== undefined) {
         fileDownloadConfig.debug = this.config.debug;
       }
@@ -401,7 +405,7 @@ export class DataLayerContainer {
    * until the first analytics hook actually needs them.
    */
   private ensureAnalyticsRuntime = async (
-    database: DatabaseFacade
+    database: DatabaseFacade,
   ): Promise<{
     readonly duckdbRouter: DuckDBRouter;
     readonly opfsManager: OpfsManager | null;
@@ -436,8 +440,7 @@ export class DataLayerContainer {
           opfsManagerConfig.debug = this.config.debug;
         }
         const opfsManager =
-          this.config.factories?.opfsManager?.(database) ??
-          new OpfsManager(opfsManagerConfig);
+          this.config.factories?.opfsManager?.(database) ?? new OpfsManager(opfsManagerConfig);
 
         this.analyticsRuntime = { duckdbRouter, opfsManager };
         this.log('Analytics runtime initialized lazily');
@@ -455,7 +458,7 @@ export class DataLayerContainer {
    */
   private createQueryClient = (
     convexQueryClient: ConvexQueryClient,
-    cacheConfig: ResolvedCacheConfig
+    cacheConfig: ResolvedCacheConfig,
   ): QueryClient => {
     const client = new QueryClient({
       defaultOptions: {

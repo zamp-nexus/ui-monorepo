@@ -1,7 +1,7 @@
 /**
  * CheckboxGroup component exports
  * @module components/checkbox-group
- * 
+ *
  * CheckboxGroup is a standalone primitive for managing multi-selection state.
  * It is designed to be reused by MultiSelect and Menu components.
  */

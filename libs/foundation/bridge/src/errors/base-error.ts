@@ -52,5 +52,4 @@ export abstract class BridgeError extends FoundationError {
 /**
  * Type guard to check if an error is a BridgeError
  */
-export const isBridgeError = (error: unknown): error is BridgeError =>
-  error instanceof BridgeError;
+export const isBridgeError = (error: unknown): error is BridgeError => error instanceof BridgeError;

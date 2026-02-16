@@ -75,8 +75,7 @@ export interface OrderBySpec {
  */
 export const isOrderDirection = (value: unknown): value is OrderDirection => {
   return (
-    typeof value === 'string' &&
-    Object.values(ORDER_DIRECTIONS).includes(value as OrderDirection)
+    typeof value === 'string' && Object.values(ORDER_DIRECTIONS).includes(value as OrderDirection)
   );
 };
 
@@ -131,7 +130,7 @@ export const extractColumnFromOrderBy = (orderBy: OrderBySpec): string => {
 export const createOrderBy = (
   member: string,
   direction: OrderDirection = 'asc',
-  nulls?: NullsHandling
+  nulls?: NullsHandling,
 ): OrderBySpec => {
   const spec: OrderBySpec = { member, direction };
   if (nulls) {

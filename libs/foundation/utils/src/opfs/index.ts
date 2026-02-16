@@ -98,7 +98,7 @@ export const getOpfsRootDirectory = async (): Promise<FileSystemDirectoryHandle>
  */
 export const createDirectoryPath = async (
   root: FileSystemDirectoryHandle,
-  path: string
+  path: string,
 ): Promise<FileSystemDirectoryHandle> => {
   const parts = path.split('/').filter(Boolean);
   let current = root;
@@ -129,7 +129,7 @@ export const createDirectoryPath = async (
 export const getDirectoryAtPath = async (
   root: FileSystemDirectoryHandle,
   path: string,
-  options: { create?: boolean } = {}
+  options: { create?: boolean } = {},
 ): Promise<FileSystemDirectoryHandle | null> => {
   const parts = path.split('/').filter(Boolean);
   let current = root;
@@ -165,7 +165,7 @@ export const getDirectoryAtPath = async (
  */
 export const fileExistsInOpfs = async (
   directory: FileSystemDirectoryHandle,
-  fileName: string
+  fileName: string,
 ): Promise<boolean> => {
   try {
     await directory.getFileHandle(fileName);
@@ -190,7 +190,7 @@ export const fileExistsInOpfs = async (
  * ```
  */
 export const listDirectoryEntries = async (
-  directory: FileSystemDirectoryHandle
+  directory: FileSystemDirectoryHandle,
 ): Promise<Array<[string, FileSystemHandle]>> => {
   const entries: Array<[string, FileSystemHandle]> = [];
   for await (const entry of directory.entries()) {
@@ -209,9 +209,7 @@ export const listDirectoryEntries = async (
  * await clearDirectory(cacheDir);
  * ```
  */
-export const clearDirectory = async (
-  directory: FileSystemDirectoryHandle
-): Promise<void> => {
+export const clearDirectory = async (directory: FileSystemDirectoryHandle): Promise<void> => {
   for await (const [name] of directory.entries()) {
     await directory.removeEntry(name, { recursive: true });
   }

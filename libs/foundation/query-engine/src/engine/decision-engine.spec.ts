@@ -1,23 +1,17 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import type { Query } from '../types/query';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import type { DecisionContext, DecisionTableConfig } from '../types/decision';
 import { DECISION_REASONS } from '../types/decision';
 import { OPERATIONS } from '../types/operations';
-import type {
-  DecisionEngine} from './decision-engine';
-import {
-  createDecisionEngine,
-  getDecisionEngine,
-  resetDecisionEngine,
-} from './decision-engine';
+import type { Query } from '../types/query';
+import type { DecisionEngine } from './decision-engine';
+import { createDecisionEngine, getDecisionEngine, resetDecisionEngine } from './decision-engine';
 
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-const makeContext = (
-  overrides: Partial<DecisionContext> = {}
-): DecisionContext => ({
+const makeContext = (overrides: Partial<DecisionContext> = {}): DecisionContext => ({
   tables: ['users'],
   operation: OPERATIONS.LIST,
   tableConfigs: new Map<string, DecisionTableConfig>([
@@ -75,9 +69,7 @@ describe('DecisionEngine', () => {
   it('warns when mutation API is not defined', () => {
     const ctx = makeContext({
       operation: OPERATIONS.DELETE,
-      tableConfigs: new Map([
-        ['users', { source: 'convex', convex: { list: {} as unknown } }],
-      ]),
+      tableConfigs: new Map([['users', { source: 'convex', convex: { list: {} as unknown } }]]),
     });
 
     const result = engine.decide(simpleQuery, ctx);

@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+
 import type { RegisterIconOptions } from '../types';
 
 /**
@@ -122,7 +123,6 @@ export const ICON_NAMES = {
   ARCHIVE: 'archive',
   INBOX: 'inbox',
 } as const;
-
 
 /**
  * Union type of all available icon names.

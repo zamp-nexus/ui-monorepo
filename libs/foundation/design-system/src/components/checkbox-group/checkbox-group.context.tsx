@@ -8,7 +8,7 @@ import type { CheckboxGroupContextValue } from './checkbox-group';
 
 /**
  * CheckboxGroup context
- * 
+ *
  * Provides selection state and handlers to CheckboxGroup.Item components.
  * Can also be consumed by external components (MultiSelect, Menu) for custom integrations.
  */
@@ -16,10 +16,10 @@ export const CheckboxGroupContext = createContext<CheckboxGroupContextValue | nu
 
 /**
  * Hook to consume CheckboxGroup context
- * 
+ *
  * @throws Error if used outside of CheckboxGroup.Root
  * @returns The CheckboxGroup context value
- * 
+ *
  * @example
  * // Inside a custom checkbox item
  * const { value, onValueChange, disabled, size } = useCheckboxGroupContext();
@@ -30,7 +30,7 @@ export function useCheckboxGroupContext(): CheckboxGroupContextValue {
   if (!context) {
     throw new Error(
       'CheckboxGroup compound components must be used within a CheckboxGroup component. ' +
-      'Wrap your items with <CheckboxGroup> or <CheckboxGroup.Root>.'
+        'Wrap your items with <CheckboxGroup> or <CheckboxGroup.Root>.',
     );
   }
   return context;
@@ -38,7 +38,7 @@ export function useCheckboxGroupContext(): CheckboxGroupContextValue {
 
 /**
  * Optional hook that returns null instead of throwing if used outside context
- * 
+ *
  * Useful for components that can optionally be used inside a CheckboxGroup
  */
 export function useOptionalCheckboxGroupContext(): CheckboxGroupContextValue | null {

@@ -35,4 +35,3 @@ export type {
   PoolStatus,
   TableLockStatus,
 } from './pool';
-

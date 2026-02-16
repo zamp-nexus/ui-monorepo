@@ -8,35 +8,42 @@
  */
 
 import { useCallback } from 'react';
-import { useMutation, type QueryKey } from '@tanstack/react-query';
+
 import { useConvexMutation } from '@convex-dev/react-query';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
-import { hashQueryKey, SCHEMA_VERSION, toJsonSerializable } from '@open-insights-web/foundation-data-model';
+import { useMutation, type QueryKey } from '@tanstack/react-query';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
+import {
+  hashQueryKey,
+  SCHEMA_VERSION,
+  toJsonSerializable,
+} from '@open-insights-web/foundation-data-model';
+import type { WithId } from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
+
+import { DEFAULT_CACHE_TTL } from '../core/constants';
+import type { BaseMutationOptions, DLMutationResult } from '../core/types';
+import { createScopedErrorHandler } from '../utils/error-handler';
 import {
-  createOptimisticContext,
-  rollbackOptimisticUpdate,
-  optimisticRemoveFromList,
-} from '../utils/optimistic-updates';
-import {
-  deleteFromCache,
   buildMutationResult,
+  deleteFromCache,
   executeLocalFirstMutation,
 } from '../utils/mutation-helpers';
-import { DEFAULT_CACHE_TTL } from '../core/constants';
 import {
-  useMutationInternals,
-  useQueueState,
-  useOptimisticContextRefs,
-  createOnSuccessCallback,
-  createOnSettledCallback,
+  createOptimisticContext,
+  optimisticRemoveFromList,
+  rollbackOptimisticUpdate,
+} from '../utils/optimistic-updates';
+import {
   createOnErrorCallback,
-  resolveEntityId,
+  createOnSettledCallback,
+  createOnSuccessCallback,
   prepareResolvedVariables,
+  resolveEntityId,
+  useMutationInternals,
+  useOptimisticContextRefs,
+  useQueueState,
 } from '../utils/use-mutation-internals';
-import { createScopedErrorHandler } from '../utils/error-handler';
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import type { BaseMutationOptions, DLMutationResult } from '../core/types';
 
 // Scoped error handler for this hook
 const handleDeleteError = createScopedErrorHandler('useDLDelete');
@@ -83,7 +90,7 @@ export const useDLDelete = <
   TData = FunctionReturnType<TMutation>,
   TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
 >(
-  options: UseDLDeleteOptions<TMutation, TData, TVariables>
+  options: UseDLDeleteOptions<TMutation, TData, TVariables>,
 ): DLMutationResult<TData | undefined, TVariables> => {
   // Use shared mutation internals
   const internals = useMutationInternals();
@@ -91,8 +98,10 @@ export const useDLDelete = <
 
   // Use shared state and refs
   const { isQueued, setIsQueued } = useQueueState();
-  const { listContextRef, itemContextRef, entityIdRef, clearRefs } =
-    useOptimisticContextRefs<WithId, TData>();
+  const { listContextRef, itemContextRef, entityIdRef, clearRefs } = useOptimisticContextRefs<
+    WithId,
+    TData
+  >();
 
   const {
     mutation,
@@ -124,7 +133,7 @@ export const useDLDelete = <
         listContextRef.current = optimisticRemoveFromList<WithId>(
           queryClient,
           listQueryKey,
-          resolvedId
+          resolvedId,
         );
       }
 
@@ -172,7 +181,7 @@ export const useDLDelete = <
       queueManager,
       setIsQueued,
       table,
-    ]
+    ],
   );
 
   // Create shared callbacks
@@ -203,7 +212,7 @@ export const useDLDelete = <
           ttl: DEFAULT_CACHE_TTL,
           schemaVersion: SCHEMA_VERSION,
           isOfflineData: true,
-        }
+        },
       );
       await database.queries.set(entry);
     }

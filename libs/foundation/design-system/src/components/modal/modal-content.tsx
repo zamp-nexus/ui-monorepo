@@ -7,20 +7,16 @@ import React from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 
 import { useTheme } from '../../theme';
-import { useModalContext } from './modal.context';
 import type { ModalContentProps } from './modal';
 import { modalDefaultTheme } from './modal';
+import { useModalContext } from './modal.context';
 
 /**
  * Modal.Content component
  *
  * Container for the modal content. Renders backdrop and popup.
  */
-export const ModalContent: React.FC<ModalContentProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const ModalContent: React.FC<ModalContentProps> = ({ children, className, oiid }) => {
   const theme = useTheme('modal', modalDefaultTheme);
   const { size, fillContainer, fitContent, titleId, descriptionId } = useModalContext();
 
@@ -37,9 +33,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
       >
-        <div className="flex h-full flex-col">
-          {children}
-        </div>
+        <div className="flex h-full flex-col">{children}</div>
       </Dialog.Popup>
     </Dialog.Portal>
   );

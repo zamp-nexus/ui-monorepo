@@ -1,8 +1,8 @@
 /**
  * Error exports
- * 
+ *
  * NOTE: For FoundationErrorCode, import from @open-insights-web/foundation-data-model
- * 
+ *
  * @module errors
  */
 

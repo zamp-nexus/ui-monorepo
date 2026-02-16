@@ -28,9 +28,7 @@ export const AccordionContent: React.FC<AccordionContentProps> = ({
       data-oiid={oiid}
       data-slot="content"
     >
-      <div className={theme.contentInner?.({}) ?? ''}>
-        {children}
-      </div>
+      <div className={theme.contentInner?.({}) ?? ''}>{children}</div>
     </AccordionPrimitive.Panel>
   );
 };

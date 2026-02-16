@@ -3,8 +3,8 @@ import React from 'react';
 import clsx from 'clsx';
 
 import { ICON_SIZE_MAPPER } from './constants';
-import type { IconProps } from './types';
 import { getAllIconNames, getIcon } from './registry/registry';
+import type { IconProps } from './types';
 
 /**
  * Icon component that wraps lucide-react icons with Tailwind-driven sizing and styling

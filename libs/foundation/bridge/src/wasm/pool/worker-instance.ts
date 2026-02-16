@@ -11,21 +11,21 @@ import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
 import type { QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
 import { Timestamp } from '@open-insights-web/foundation-data-model';
-import { WORKER_STATUS } from '../../types';
-import type { WorkerStatus , QueryResult, WorkerInfo } from '../../types';
-import { convertArrowToQueryResult } from '../../duckdb/arrow-converter';
-import { createDuckDBInstance } from '../duckdb-init';
-import type {
-  Logger} from '@open-insights-web/foundation-utils';
+import type { Logger } from '@open-insights-web/foundation-utils';
 import {
   createDebugLogger,
+  createDeferred,
   getErrorMessage,
   normalizeError,
-  createDeferred,
   type Deferred,
 } from '@open-insights-web/foundation-utils';
-import { QueryCancelledError, QueryExecutionError } from '../../errors/query-errors';
+
+import { convertArrowToQueryResult } from '../../duckdb/arrow-converter';
 import { WorkerError, WorkerInitializationError } from '../../errors/pool-errors';
+import { QueryCancelledError, QueryExecutionError } from '../../errors/query-errors';
+import { WORKER_STATUS } from '../../types';
+import type { QueryResult, WorkerInfo, WorkerStatus } from '../../types';
+import { createDuckDBInstance } from '../duckdb-init';
 
 // =============================================================================
 // Types
@@ -134,10 +134,7 @@ export class WorkerInstance {
    */
   async initialize(): Promise<void> {
     if (this._status !== 'initializing') {
-      throw new WorkerError(
-        this.id,
-        `Cannot initialize worker in status: ${this._status}`
-      );
+      throw new WorkerError(this.id, `Cannot initialize worker in status: ${this._status}`);
     }
 
     this.logger.info('Initializing worker');
@@ -171,9 +168,7 @@ export class WorkerInstance {
     // Reject all queued queries
     for (const queuedQuery of this.queue) {
       this.cleanupAbortHandler(queuedQuery);
-      queuedQuery.deferred.reject(
-        new QueryCancelledError(queuedQuery.queryId, 'shutdown')
-      );
+      queuedQuery.deferred.reject(new QueryCancelledError(queuedQuery.queryId, 'shutdown'));
     }
     this.queue.length = 0;
 
@@ -181,7 +176,7 @@ export class WorkerInstance {
     if (this.currentQuery) {
       this.cleanupAbortHandler(this.currentQuery);
       this.currentQuery.deferred.reject(
-        new QueryCancelledError(this.currentQuery.queryId, 'shutdown')
+        new QueryCancelledError(this.currentQuery.queryId, 'shutdown'),
       );
       this.currentQuery = null;
     }
@@ -223,18 +218,14 @@ export class WorkerInstance {
    *
    * @throws WorkerError if worker is in invalid state
    */
-  execute(
-    queryId: QueryId,
-    sql: string,
-    signal?: AbortSignal
-  ): Promise<QueryResult> {
+  execute(queryId: QueryId, sql: string, signal?: AbortSignal): Promise<QueryResult> {
     if (this._status === WORKER_STATUS.SHUTDOWN) {
       return Promise.reject(new WorkerError(this.id, 'Worker is shut down'));
     }
 
     if (this._status === WORKER_STATUS.ERROR) {
       return Promise.reject(
-        new WorkerError(this.id, `Worker is in error state: ${this.lastError}`)
+        new WorkerError(this.id, `Worker is in error state: ${this.lastError}`),
       );
     }
 
@@ -366,9 +357,7 @@ export class WorkerInstance {
       this.totalExecuted++;
     }
 
-    this._status = this.isShutdownStatus()
-      ? WORKER_STATUS.SHUTDOWN
-      : WORKER_STATUS.IDLE;
+    this._status = this.isShutdownStatus() ? WORKER_STATUS.SHUTDOWN : WORKER_STATUS.IDLE;
     this.isProcessing = false;
     this.lastActivityAt = Timestamp.now();
   }

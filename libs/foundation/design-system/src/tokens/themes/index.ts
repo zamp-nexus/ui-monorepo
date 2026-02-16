@@ -8,11 +8,7 @@ import { darkTheme } from './dark';
 import { lightTheme } from './light';
 
 // Theme contract
-export {
-  createTheme,
-  getThemeToken,
-  createBrandedTheme,
-} from './theme-contract';
+export { createTheme, getThemeToken, createBrandedTheme } from './theme-contract';
 export type {
   ThemeContract,
   ThemeMode,

@@ -4,35 +4,30 @@
  * @module builder/query-builder.spec
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  QueryBuilder,
-  createQueryBuilder,
-  filterCondition,
-} from './query-builder';
-import {
-  countQuery,
-  countByDimension,
-  sumByDimension,
-  timeSeriesCount,
-  timeSeriesSum,
-  timeSeriesMetrics,
-  kpiQuery,
-  comparisonKpiQuery,
-  topNQuery,
-  filteredCount,
-  filteredAggregation,
-  realtimeQuery,
-  extendPreset,
-} from './presets';
-import {
-  AGGREGATIONS,
-} from '../types/aggregation';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { AGGREGATIONS } from '../types/aggregation';
 import { FILTER_OPERATORS } from '../types/filter';
 import { JOIN_TYPES } from '../types/join';
 import { ORDER_DIRECTIONS } from '../types/order';
 import { FRESHNESS_REQUIREMENTS, QUERY_BACKENDS } from '../types/query';
 import { PRESET_DATE_RANGES, TIME_GRANULARITIES } from '../types/time';
+import {
+  comparisonKpiQuery,
+  countByDimension,
+  countQuery,
+  extendPreset,
+  filteredAggregation,
+  filteredCount,
+  kpiQuery,
+  realtimeQuery,
+  sumByDimension,
+  timeSeriesCount,
+  timeSeriesMetrics,
+  timeSeriesSum,
+  topNQuery,
+} from './presets';
+import { createQueryBuilder, filterCondition, QueryBuilder } from './query-builder';
 
 describe('QueryBuilder', () => {
   let builder: QueryBuilder;
@@ -72,7 +67,7 @@ describe('QueryBuilder', () => {
       const query = builder
         .measures(
           { member: 'orders.total', aggregation: 'sum' },
-          { member: 'orders.count', aggregation: 'count' }
+          { member: 'orders.count', aggregation: 'count' },
         )
         .build();
       expect(query.measures).toHaveLength(2);
@@ -132,15 +127,15 @@ describe('QueryBuilder', () => {
     });
 
     it('should add dimension with options', () => {
-      const query = builder.dimension('orders.status', { alias: 'status', format: 'uppercase' }).build();
+      const query = builder
+        .dimension('orders.status', { alias: 'status', format: 'uppercase' })
+        .build();
       expect(query.dimensions![0].alias).toBe('status');
       expect(query.dimensions![0].format).toBe('uppercase');
     });
 
     it('should add multiple dimensions via groupBy', () => {
-      const query = builder
-        .groupBy('orders.status', 'orders.region')
-        .build();
+      const query = builder.groupBy('orders.status', 'orders.region').build();
 
       expect(query.dimensions).toHaveLength(2);
       expect(query.dimensions![0].member).toBe('orders.status');
@@ -150,9 +145,7 @@ describe('QueryBuilder', () => {
 
   describe('time dimensions', () => {
     it('should add time dimension with granularity', () => {
-      const query = builder
-        .timeDimension('orders.created_at', TIME_GRANULARITIES.DAY)
-        .build();
+      const query = builder.timeDimension('orders.created_at', TIME_GRANULARITIES.DAY).build();
 
       expect(query.timeDimensions).toHaveLength(1);
       expect(query.timeDimensions![0].granularity).toBe(TIME_GRANULARITIES.DAY);
@@ -163,7 +156,7 @@ describe('QueryBuilder', () => {
         .timeDimension(
           'orders.created_at',
           TIME_GRANULARITIES.MONTH,
-          PRESET_DATE_RANGES.LAST_30_DAYS
+          PRESET_DATE_RANGES.LAST_30_DAYS,
         )
         .build();
 
@@ -176,7 +169,7 @@ describe('QueryBuilder', () => {
           'orders.created_at',
           TIME_GRANULARITIES.DAY,
           PRESET_DATE_RANGES.LAST_7_DAYS,
-          PRESET_DATE_RANGES.LAST_30_DAYS
+          PRESET_DATE_RANGES.LAST_30_DAYS,
         )
         .build();
 
@@ -186,9 +179,7 @@ describe('QueryBuilder', () => {
 
   describe('filters', () => {
     it('should add filter condition', () => {
-      const query = builder
-        .filter('orders.status', FILTER_OPERATORS.EQUALS, 'completed')
-        .build();
+      const query = builder.filter('orders.status', FILTER_OPERATORS.EQUALS, 'completed').build();
 
       expect(query.filters).toHaveLength(1);
       const filter = query.filters![0] as any;
@@ -280,7 +271,7 @@ describe('QueryBuilder', () => {
       const query = builder
         .and(
           filterCondition('orders.status', FILTER_OPERATORS.EQUALS, 'completed'),
-          filterCondition('orders.amount', FILTER_OPERATORS.GT, 100)
+          filterCondition('orders.amount', FILTER_OPERATORS.GT, 100),
         )
         .build();
 
@@ -292,7 +283,7 @@ describe('QueryBuilder', () => {
       const query = builder
         .or(
           filterCondition('orders.status', FILTER_OPERATORS.EQUALS, 'pending'),
-          filterCondition('orders.status', FILTER_OPERATORS.EQUALS, 'processing')
+          filterCondition('orders.status', FILTER_OPERATORS.EQUALS, 'processing'),
         )
         .build();
 
@@ -303,9 +294,7 @@ describe('QueryBuilder', () => {
 
   describe('joins', () => {
     it('should add inner join with JoinSpec format', () => {
-      const query = builder
-        .innerJoin('orders.user_id', 'users.id')
-        .build();
+      const query = builder.innerJoin('orders.user_id', 'users.id').build();
 
       expect(query.joins).toHaveLength(1);
       expect(query.joins![0].type).toBe(JOIN_TYPES.INNER);
@@ -314,17 +303,13 @@ describe('QueryBuilder', () => {
     });
 
     it('should add left join', () => {
-      const query = builder
-        .leftJoin('orders.user_id', 'users.id')
-        .build();
+      const query = builder.leftJoin('orders.user_id', 'users.id').build();
 
       expect(query.joins![0].type).toBe(JOIN_TYPES.LEFT);
     });
 
     it('should add join with alias', () => {
-      const query = builder
-        .innerJoin('orders.user_id', 'users.id', 'u')
-        .build();
+      const query = builder.innerJoin('orders.user_id', 'users.id', 'u').build();
 
       expect(query.joins![0].alias).toBe('u');
     });
@@ -425,10 +410,7 @@ describe('QueryBuilder', () => {
 
   describe('clone', () => {
     it('should create independent copy', () => {
-      const original = builder
-        .measure('orders.total', 'sum')
-        .dimension('orders.status')
-        .limit(100);
+      const original = builder.measure('orders.total', 'sum').dimension('orders.status').limit(100);
 
       const cloned = original.clone();
       cloned.measure('orders.count', 'count').limit(50);
@@ -491,7 +473,11 @@ describe('QueryBuilder', () => {
         .count('order_count')
         .dimension('orders.status')
         .groupBy('orders.region')
-        .timeDimension('orders.created_at', TIME_GRANULARITIES.MONTH, PRESET_DATE_RANGES.LAST_30_DAYS)
+        .timeDimension(
+          'orders.created_at',
+          TIME_GRANULARITIES.MONTH,
+          PRESET_DATE_RANGES.LAST_30_DAYS,
+        )
         .filter('orders.status', FILTER_OPERATORS.NOT_EQUALS, 'cancelled')
         .gt('orders.amount', 0)
         .leftJoin('orders.user_id', 'users.id', 'u')
@@ -526,7 +512,12 @@ describe('filterCondition helper', () => {
   });
 
   it('should create condition with multiple values', () => {
-    const condition = filterCondition('orders.status', FILTER_OPERATORS.IN, 'pending', 'processing');
+    const condition = filterCondition(
+      'orders.status',
+      FILTER_OPERATORS.IN,
+      'pending',
+      'processing',
+    );
 
     expect(condition.values).toHaveLength(2);
   });
@@ -610,10 +601,7 @@ describe('Query Presets', () => {
 
   describe('timeSeriesMetrics', () => {
     it('should create time series with multiple metrics', () => {
-      const query = timeSeriesMetrics(
-        ['orders.total_amount', 'orders.count'],
-        'orders.created_at'
-      );
+      const query = timeSeriesMetrics(['orders.total_amount', 'orders.count'], 'orders.created_at');
 
       expect(query.measures).toHaveLength(2);
       expect(query.timeDimensions).toHaveLength(1);
@@ -630,7 +618,7 @@ describe('Query Presets', () => {
       const query = kpiQuery(
         'orders.total_amount',
         PRESET_DATE_RANGES.LAST_30_DAYS,
-        'orders.created_at'
+        'orders.created_at',
       );
 
       expect(query.timeDimensions).toHaveLength(1);
@@ -643,7 +631,7 @@ describe('Query Presets', () => {
         'orders.total_amount',
         'orders.created_at',
         PRESET_DATE_RANGES.LAST_7_DAYS,
-        PRESET_DATE_RANGES.LAST_30_DAYS
+        PRESET_DATE_RANGES.LAST_30_DAYS,
       );
 
       expect(query.measures![0].member).toBe('orders.total_amount');
@@ -664,11 +652,7 @@ describe('Query Presets', () => {
 
   describe('filteredCount', () => {
     it('should create filtered count query', () => {
-      const query = filteredCount(
-        'orders.status',
-        FILTER_OPERATORS.EQUALS,
-        ['completed']
-      );
+      const query = filteredCount('orders.status', FILTER_OPERATORS.EQUALS, ['completed']);
 
       expect(query.measures).toHaveLength(1);
       expect(query.filters).toHaveLength(1);
@@ -681,7 +665,7 @@ describe('Query Presets', () => {
         'orders.total_amount',
         'orders.status',
         FILTER_OPERATORS.EQUALS,
-        ['completed']
+        ['completed'],
       );
 
       expect(query.measures![0].member).toBe('orders.total_amount');

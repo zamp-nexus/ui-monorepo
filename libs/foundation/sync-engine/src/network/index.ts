@@ -3,17 +3,15 @@
  * @module network
  */
 
-import axios from 'axios';
+import axios, { type AxiosInstance } from 'axios';
+
 import {
   SYNC_STATE_KEY,
   type NetworkStatus,
   type NetworkStatusListener,
 } from '@open-insights-web/foundation-data-model';
 import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import {
-  getDatabase,
-  DEFAULT_NETWORK_STATUS,
-} from '@open-insights-web/foundation-database';
+import { DEFAULT_NETWORK_STATUS, getDatabase } from '@open-insights-web/foundation-database';
 import {
   AsyncDisposable,
   createDebugLogger,
@@ -21,12 +19,13 @@ import {
   ManagedInterval,
   normalizeError,
 } from '@open-insights-web/foundation-utils';
-import type { INetworkMonitor } from '../core/interfaces';
+
 import {
   DEFAULT_HEALTH_CHECK_INTERVAL_MS,
   DEFAULT_HEALTH_CHECK_TIMEOUT_MS,
   DEFAULT_HEALTH_CHECK_URL,
 } from '../core/defaults';
+import type { INetworkMonitor } from '../core/interfaces';
 
 /**
  * Network status event values.
@@ -37,8 +36,7 @@ export const NETWORK_STATUS_EVENT = {
   CONNECTIVITY_CHECK: 'connectivity_check',
 } as const;
 
-export type NetworkStatusEvent =
-  (typeof NETWORK_STATUS_EVENT)[keyof typeof NETWORK_STATUS_EVENT];
+export type NetworkStatusEvent = (typeof NETWORK_STATUS_EVENT)[keyof typeof NETWORK_STATUS_EVENT];
 
 /**
  * Network monitor configuration
@@ -52,16 +50,22 @@ export interface NetworkMonitorConfig {
   healthCheckInterval?: number;
   /** Timeout for health check requests */
   healthCheckTimeout?: number;
+  /** Optional shared Axios instance for connectivity checks */
+  axiosInstance?: AxiosInstance;
   /** Enable debug logging */
   debug?: boolean;
   /** Error callback for centralized error handling */
   onError?: (error: Error, context?: string) => void;
 }
 
+type ResolvedNetworkMonitorConfig = Required<
+  Omit<NetworkMonitorConfig, 'database' | 'onError' | 'axiosInstance'>
+>;
+
 /**
  * Default network monitor configuration
  */
-const DEFAULT_CONFIG: Required<Omit<NetworkMonitorConfig, 'database' | 'onError'>> = {
+const DEFAULT_CONFIG: ResolvedNetworkMonitorConfig = {
   healthCheckUrl: DEFAULT_HEALTH_CHECK_URL,
   healthCheckInterval: DEFAULT_HEALTH_CHECK_INTERVAL_MS,
   healthCheckTimeout: DEFAULT_HEALTH_CHECK_TIMEOUT_MS,
@@ -82,7 +86,8 @@ const isValidNetworkStatusValue = (value: unknown): value is NetworkStatus =>
  */
 export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMonitor {
   private db: InsightsDatabase;
-  private config: Required<Omit<NetworkMonitorConfig, 'database' | 'onError'>>;
+  private config: ResolvedNetworkMonitorConfig;
+  private axiosInstance: AxiosInstance;
   private onError?: (error: Error, context?: string) => void;
   private listeners: Set<NetworkStatusListener> = new Set();
   private currentStatus: NetworkStatus;
@@ -94,9 +99,11 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
 
   constructor(config: NetworkMonitorConfig = {}) {
     super();
-    this.config = { ...DEFAULT_CONFIG, ...config };
-    this.onError = config.onError;
-    this.db = config.database ?? getDatabase();
+    const { database, onError, axiosInstance, ...resolvedConfig } = config;
+    this.config = { ...DEFAULT_CONFIG, ...resolvedConfig };
+    this.onError = onError;
+    this.db = database ?? getDatabase();
+    this.axiosInstance = axiosInstance ?? axios;
     this.currentStatus = { ...DEFAULT_NETWORK_STATUS };
     this.logger = createDebugLogger('NetworkStatusMonitor', this.config.debug);
   }
@@ -204,7 +211,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
    */
   async checkConnectivity(): Promise<boolean> {
     this.ensureNotDisposed();
-    
+
     // First check navigator.onLine
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       this.setOffline();
@@ -224,7 +231,7 @@ export class NetworkStatusMonitor extends AsyncDisposable implements INetworkMon
       // works correctly in all environments (browser, SSR, tests).
       const healthCheckUrl = this.resolveHealthCheckUrl(this.config.healthCheckUrl);
 
-      const response = await axios.head(healthCheckUrl, {
+      const response = await this.axiosInstance.head(healthCheckUrl, {
         signal: timeoutSignal,
         timeout: this.config.healthCheckTimeout,
         headers: {
@@ -462,7 +469,7 @@ const networkMonitorFactory = createSingletonFactory(
         await instance.disposeAsync();
       }
     },
-  }
+  },
 );
 
 /**

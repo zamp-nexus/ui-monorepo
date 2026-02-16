@@ -17,21 +17,21 @@ export type QueryKeyBase = readonly unknown[];
 export type EntityQueryKey<
   TEntity extends string = string,
   TScope extends string | undefined = string | undefined,
-  TFilters extends Record<string, unknown> | undefined = Record<string, unknown> | undefined
+  TFilters extends Record<string, unknown> | undefined = Record<string, unknown> | undefined,
 > = TScope extends undefined
   ? TFilters extends undefined
     ? readonly [TEntity]
     : readonly [TEntity, TFilters]
   : TFilters extends undefined
-    ? readonly [TEntity, TScope]
-    : readonly [TEntity, TScope, TFilters];
+  ? readonly [TEntity, TScope]
+  : readonly [TEntity, TScope, TFilters];
 
 /**
  * Analytics query key structure
  * Format: ['analytics', tables, queryName, params?]
  */
 export type AnalyticsQueryKey<
-  TParams extends Record<string, unknown> | undefined = Record<string, unknown> | undefined
+  TParams extends Record<string, unknown> | undefined = Record<string, unknown> | undefined,
 > = TParams extends undefined
   ? readonly ['analytics', string, string]
   : readonly ['analytics', string, string, TParams];
@@ -52,14 +52,14 @@ export type QueryScope = ValueOf<typeof QUERY_SCOPE>;
  */
 export interface EntityQueryKeyFactory<
   TEntity extends string,
-  TFilters extends Record<string, unknown> = Record<string, unknown>
+  TFilters extends Record<string, unknown> = Record<string, unknown>,
 > {
   /** All queries for this entity - ['entity'] */
   all: readonly [TEntity];
 
   /** List queries - ['entity', 'list'] or ['entity', 'list', filters] */
   list: (
-    filters?: TFilters
+    filters?: TFilters,
   ) =>
     | readonly [TEntity, typeof QUERY_SCOPE.LIST]
     | readonly [TEntity, typeof QUERY_SCOPE.LIST, TFilters];
@@ -69,7 +69,7 @@ export interface EntityQueryKeyFactory<
 
   /** Infinite query - ['entity', 'infinite'] or ['entity', 'infinite', filters] */
   infinite: (
-    filters?: TFilters
+    filters?: TFilters,
   ) =>
     | readonly [TEntity, typeof QUERY_SCOPE.INFINITE]
     | readonly [TEntity, typeof QUERY_SCOPE.INFINITE, TFilters];

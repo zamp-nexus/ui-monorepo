@@ -47,10 +47,9 @@ export type PolymorphicProps<
 /**
  * Type for a polymorphic component that can be rendered as different elements
  */
-export type PolymorphicComponent<
-  TDefaultElement extends React.ElementType,
-  TProps = object,
-> = <T extends React.ElementType = TDefaultElement>(
+export type PolymorphicComponent<TDefaultElement extends React.ElementType, TProps = object> = <
+  T extends React.ElementType = TDefaultElement,
+>(
   props: PolymorphicProps<T, TProps>,
 ) => React.ReactNode;
 

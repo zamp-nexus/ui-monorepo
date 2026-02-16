@@ -18,20 +18,16 @@
  * @module engine/table-extractor
  */
 
-import type {
-  DimensionSpec,
-} from '../types/dimension';
-import type {
-  FilterCondition,
-  FilterExpression,
-} from '../types/filter';
+import { createSingletonFactory } from '@open-insights-web/foundation-utils';
+
+import { mapFilterExpression } from '../internal/filter-recursion';
+import type { DimensionSpec } from '../types/dimension';
+import type { FilterCondition, FilterExpression } from '../types/filter';
 import type { JoinSpec } from '../types/join';
 import type { MeasureSpec } from '../types/measure';
 import type { OrderBySpec } from '../types/order';
 import type { Query } from '../types/query';
-import { createSingletonFactory } from '@open-insights-web/foundation-utils';
 import { parseMemberRef } from '../utils/member-ref';
-import { mapFilterExpression } from '../internal/filter-recursion';
 
 // =============================================================================
 // MEMBER PARSING
@@ -55,9 +51,7 @@ const extractTableFromMember = (member: string): string | null => {
 /**
  * Extract tables from a filter condition.
  */
-const extractTablesFromCondition = (
-  condition: FilterCondition
-): string[] => {
+const extractTablesFromCondition = (condition: FilterCondition): string[] => {
   const table = extractTableFromMember(condition.member);
   return table ? [table] : [];
 };
@@ -245,9 +239,7 @@ export class TableExtractor {
   /**
    * Extract tables from filters.
    */
-  extractFromFilters(
-    filters: ReadonlyArray<FilterExpression>
-  ): string[] {
+  extractFromFilters(filters: ReadonlyArray<FilterExpression>): string[] {
     const tables: string[] = [];
 
     for (const filter of filters) {
@@ -360,7 +352,7 @@ const tableExtractorFactory = createSingletonFactory<TableExtractor, void>(
   {
     name: 'TableExtractor',
     warnOnConfigOverride: false, // No config
-  }
+  },
 );
 
 /**
@@ -400,8 +392,6 @@ export const extractTables = (query: Partial<Query>): string[] => {
  *
  * @see extractTables for note on avoiding redundant calls
  */
-export const getPrimaryTable = (
-  query: Partial<Query>
-): string | null => {
+export const getPrimaryTable = (query: Partial<Query>): string | null => {
   return getTableExtractor().getPrimaryTable(query);
 };

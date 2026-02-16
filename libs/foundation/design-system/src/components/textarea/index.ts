@@ -11,4 +11,3 @@ export {
   TextareaSlots,
   textareaDefaultTheme,
 } from './textarea';
-

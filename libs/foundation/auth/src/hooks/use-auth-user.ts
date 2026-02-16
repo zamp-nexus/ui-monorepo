@@ -7,9 +7,10 @@
  */
 
 import { useMemo } from 'react';
-import { useAuthContext } from '../providers/auth-context';
+
+import type { AuthUser, UseAuthUserResult, UseRequiredAuthUserResult } from '../core/types';
 import { AuthNotInitializedError } from '../errors/auth-errors';
-import type { UseAuthUserResult, UseRequiredAuthUserResult, AuthUser } from '../core/types';
+import { useAuthContext } from '../providers/auth-context';
 
 /**
  * Get current authenticated user
@@ -42,7 +43,7 @@ export const useAuthUser = (): UseAuthUserResult => {
       isLoading,
       isAuthenticated,
     }),
-    [user, isLoading, isAuthenticated]
+    [user, isLoading, isAuthenticated],
   );
 };
 

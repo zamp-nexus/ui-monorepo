@@ -8,29 +8,30 @@
 
 import type { Mutable } from '@open-insights-web/foundation-data-model';
 import {
-  type SchemaDefinition,
-  type TableDefinition,
-  type MeasureDefinition,
-  type DimensionDefinition,
-  type TimeDimensionDefinition,
-  type RelationshipDefinition,
-  type JoinDefinition,
-  type PreAggregationDefinition,
-  type MeasureDataType,
-  type DimensionType,
-  type MemberVisibility,
-  DIMENSION_TYPES,
-  MEMBER_VISIBILITY,
-  CARDINALITY_TO_JOIN_CARDINALITY,
-} from '../types/schema-definition';
-import { type MeasureFormatType } from '../types/measure';
-import { type TimeGranularity } from '../types/time';
-import { type JoinType, JOIN_TYPES } from '../types/join';
-import { type Aggregation, AGGREGATIONS } from '../types/aggregation';
-import {
   MemberRef as MemberRefUtil,
   SqlTableName as TableNameUtil,
 } from '@open-insights-web/foundation-data-model';
+
+import { AGGREGATIONS, type Aggregation } from '../types/aggregation';
+import { JOIN_TYPES, type JoinType } from '../types/join';
+import { type MeasureFormatType } from '../types/measure';
+import {
+  CARDINALITY_TO_JOIN_CARDINALITY,
+  DIMENSION_TYPES,
+  MEMBER_VISIBILITY,
+  type DimensionDefinition,
+  type DimensionType,
+  type JoinDefinition,
+  type MeasureDataType,
+  type MeasureDefinition,
+  type MemberVisibility,
+  type PreAggregationDefinition,
+  type RelationshipDefinition,
+  type SchemaDefinition,
+  type TableDefinition,
+  type TimeDimensionDefinition,
+} from '../types/schema-definition';
+import { type TimeGranularity } from '../types/time';
 
 // =============================================================================
 // MEASURE BUILDER
@@ -279,7 +280,8 @@ export class TimeDimensionBuilder {
 export class TableBuilder {
   private readonly definition: Mutable<Partial<TableDefinition>> = {};
   private readonly measuresMap: Record<string, MeasureDefinition> = {};
-  private readonly dimensionsMap: Record<string, DimensionDefinition | TimeDimensionDefinition> = {};
+  private readonly dimensionsMap: Record<string, DimensionDefinition | TimeDimensionDefinition> =
+    {};
   private readonly joinsMap: Record<string, JoinDefinition> = {};
   private readonly preAggregationsMap: Record<string, PreAggregationDefinition> = {};
 
@@ -345,7 +347,11 @@ export class TableBuilder {
   /** Add a dimension definition. */
   addDimension = (
     name: string,
-    builder: DimensionBuilder | TimeDimensionBuilder | DimensionDefinition | TimeDimensionDefinition
+    builder:
+      | DimensionBuilder
+      | TimeDimensionBuilder
+      | DimensionDefinition
+      | TimeDimensionDefinition,
   ): TableBuilder => {
     this.dimensionsMap[name] = 'build' in builder ? builder.build() : builder;
     return this;
@@ -397,7 +403,7 @@ export class TableBuilder {
     targetTable: string,
     sql: string,
     relationship: RelationshipDefinition['relationship'],
-    joinType: JoinType = JOIN_TYPES.LEFT
+    joinType: JoinType = JOIN_TYPES.LEFT,
   ): TableBuilder => {
     this.joinsMap[name] = {
       table: TableNameUtil.from(targetTable),
@@ -487,7 +493,11 @@ export class SchemaBuilder {
   };
 
   /** Create and add an inline table. */
-  table = (name: string, sql: string, configure: (builder: TableBuilder) => void): SchemaBuilder => {
+  table = (
+    name: string,
+    sql: string,
+    configure: (builder: TableBuilder) => void,
+  ): SchemaBuilder => {
     const tableBuilder = new TableBuilder(name, sql);
     configure(tableBuilder);
     this.tablesMap[name] = tableBuilder.build();
@@ -530,12 +540,10 @@ export const dimension = (type: DimensionType, sql: string): DimensionBuilder =>
   new DimensionBuilder(type, sql);
 
 /** Create a time dimension builder. */
-export const timeDimension = (sql: string): TimeDimensionBuilder =>
-  new TimeDimensionBuilder(sql);
+export const timeDimension = (sql: string): TimeDimensionBuilder => new TimeDimensionBuilder(sql);
 
 /** Create a table builder. */
-export const table = (name: string, sql: string): TableBuilder =>
-  new TableBuilder(name, sql);
+export const table = (name: string, sql: string): TableBuilder => new TableBuilder(name, sql);
 
 /** Create a schema builder. */
 export const schema = (name: string, version?: string): SchemaBuilder =>
@@ -545,7 +553,8 @@ export const schema = (name: string, version?: string): SchemaBuilder =>
 // SHORTHAND MEASURE CREATORS
 // =============================================================================
 
-const createMeasureFactory = (aggregation: Aggregation) =>
+const createMeasureFactory =
+  (aggregation: Aggregation) =>
   (column: string, title?: string): MeasureDefinition => {
     const builder = new MeasureBuilder(aggregation, column);
     if (title) builder.title(title);

@@ -4,17 +4,19 @@
  */
 
 import { z } from 'zod';
-import { TenantScopedSchema, DateRangeSchema } from './base.schema';
-import { BrowserInfoSchema, DeviceInfoSchema, GeoLocationSchema, UtmParamsSchema } from './event.schema';
+
+import { DateRangeSchema, TenantScopedSchema } from './base.schema';
+import {
+  BrowserInfoSchema,
+  DeviceInfoSchema,
+  GeoLocationSchema,
+  UtmParamsSchema,
+} from './event.schema';
 
 /**
  * Session status enum
  */
-export const SessionStatusSchema = z.enum([
-  'active',
-  'ended',
-  'expired',
-]);
+export const SessionStatusSchema = z.enum(['active', 'ended', 'expired']);
 
 /**
  * Landing page schema

@@ -58,10 +58,9 @@ export function generateProvisionalId(): string {
 /**
  * Convex document ID schema
  */
-export const ConvexIdSchema = z.string().refine(
-  (val) => val.length > 0,
-  { message: 'Convex ID cannot be empty' }
-);
+export const ConvexIdSchema = z
+  .string()
+  .refine((val) => val.length > 0, { message: 'Convex ID cannot be empty' });
 
 /**
  * Pagination params schema

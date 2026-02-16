@@ -31,11 +31,7 @@ export {
   isLightColor,
   getOptimalTextColor,
 } from './contrast-checker';
-export type {
-  WCAGLevel,
-  ContrastResult,
-  ContrastOptions,
-} from './contrast-checker';
+export type { WCAGLevel, ContrastResult, ContrastOptions } from './contrast-checker';
 
 // CSS generator utilities
 export {

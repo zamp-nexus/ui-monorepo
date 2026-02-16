@@ -7,9 +7,9 @@
  * @module types/result
  */
 
-import type { QueryId, ExecutionId } from '@open-insights-web/foundation-data-model';
-import type { JsonValue } from '@open-insights-web/foundation-data-model';
-import type { QueryBackend, DataSource } from './query';
+import type { ExecutionId, JsonValue, QueryId } from '@open-insights-web/foundation-data-model';
+
+import type { DataSource, QueryBackend } from './query';
 
 // =============================================================================
 // EXECUTION STATUS - Const object pattern
@@ -172,8 +172,7 @@ export interface AggregationResult<TRow = ResultRow> extends QueryResult<TRow> {
  * Check if a value is a valid execution status
  */
 export const isExecutionStatus = (value: unknown): value is ExecutionStatus =>
-  typeof value === 'string' &&
-  Object.values(EXECUTION_STATUS).includes(value as ExecutionStatus);
+  typeof value === 'string' && Object.values(EXECUTION_STATUS).includes(value as ExecutionStatus);
 
 /**
  * Check if an execution completed successfully
@@ -210,7 +209,7 @@ export const createExecutionMetadata = (
   options?: {
     queryId?: QueryId;
     sql?: string;
-  }
+  },
 ): ExecutionMetadata => ({
   executionId: `exec_${Date.now()}_${Math.random().toString(36).slice(2, 9)}` as ExecutionId,
   queryId: options?.queryId,
@@ -231,7 +230,7 @@ export const completeExecution = (
     rowCount?: number;
     fromCache?: boolean;
     error?: ExecutionError;
-  }
+  },
 ): ExecutionMetadata => {
   const completedAt = Date.now();
   return {
@@ -253,7 +252,7 @@ export const completeExecution = (
  */
 export const transformResult = <TIn extends ResultRow, TOut>(
   result: QueryResult<TIn>,
-  transform: (row: TIn, index: number) => TOut
+  transform: (row: TIn, index: number) => TOut,
 ): QueryResult<TOut> => ({
   ...result,
   data: result.data.map(transform),
@@ -265,7 +264,7 @@ export const transformResult = <TIn extends ResultRow, TOut>(
 export const paginateResult = <TRow extends ResultRow>(
   result: QueryResult<TRow>,
   offset: number,
-  limit: number
+  limit: number,
 ): QueryResult<TRow> => ({
   ...result,
   data: result.data.slice(offset, offset + limit),

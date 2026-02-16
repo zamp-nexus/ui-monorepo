@@ -19,9 +19,9 @@
  */
 
 import {
-  normalizeError,
-  formatErrorMessage,
   createLogger,
+  formatErrorMessage,
+  normalizeError,
 } from '@open-insights-web/foundation-utils';
 
 // =============================================================================
@@ -119,16 +119,8 @@ export interface ErrorHandlerOptions {
  * handleError(err, { context: HOOK_CONTEXT.USE_DL_DELETE, rethrow: true });
  * ```
  */
-export const handleError = (
-  error: unknown,
-  options: ErrorHandlerOptions
-): Error => {
-  const {
-    context,
-    severity = ERROR_SEVERITY.WARN,
-    data,
-    rethrow = false,
-  } = options;
+export const handleError = (error: unknown, options: ErrorHandlerOptions): Error => {
+  const { context, severity = ERROR_SEVERITY.WARN, data, rethrow = false } = options;
 
   const normalizedError = normalizeError(error);
   const message = formatErrorMessage(context, normalizedError.message);
@@ -178,12 +170,10 @@ export const handleError = (
  * }
  * ```
  */
-export const createScopedErrorHandler = (
-  context: HookContextValue | string
-) => (
-  error: unknown,
-  options?: Omit<ErrorHandlerOptions, 'context'>
-): Error => handleError(error, { ...options, context });
+export const createScopedErrorHandler =
+  (context: HookContextValue | string) =>
+  (error: unknown, options?: Omit<ErrorHandlerOptions, 'context'>): Error =>
+    handleError(error, { ...options, context });
 
 /**
  * Safe async error wrapper
@@ -207,17 +197,16 @@ export const createScopedErrorHandler = (
  * await safePersist();
  * ```
  */
-export const safeAsync = <T>(
-  fn: () => Promise<T>,
-  options: ErrorHandlerOptions
-): (() => Promise<T | undefined>) => async () => {
-  try {
-    return await fn();
-  } catch (error) {
-    handleError(error, options);
-    return undefined;
-  }
-};
+export const safeAsync =
+  <T>(fn: () => Promise<T>, options: ErrorHandlerOptions): (() => Promise<T | undefined>) =>
+  async () => {
+    try {
+      return await fn();
+    } catch (error) {
+      handleError(error, options);
+      return undefined;
+    }
+  };
 
 /**
  * Create a try-catch wrapper that handles errors
@@ -241,7 +230,7 @@ export const safeAsync = <T>(
 export const tryCatchAsync = async <T>(
   fn: () => Promise<T>,
   options: ErrorHandlerOptions,
-  defaultValue?: T
+  defaultValue?: T,
 ): Promise<T | undefined> => {
   try {
     return await fn();

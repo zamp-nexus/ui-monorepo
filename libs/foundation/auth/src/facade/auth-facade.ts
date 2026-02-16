@@ -7,20 +7,21 @@
  */
 
 import type { Identity } from '@ory/client-fetch';
+
+import { IDENTITY_TRAIT } from '../core/constants';
 import {
   getUserPermissions,
   isValidRole,
   type AuthConfig,
-  type SessionServiceInterface,
-  type FlowServiceInterface,
-  type UserServiceInterface,
   type AuthFacadeInterface,
   type AuthUser,
+  type FlowServiceInterface,
   type IdentityTraits,
-  type UserRole,
+  type SessionServiceInterface,
   type TypedIdentity,
+  type UserRole,
+  type UserServiceInterface,
 } from '../core/types';
-import { IDENTITY_TRAIT } from '../core/constants';
 
 // =============================================================================
 // Default Role
@@ -53,7 +54,7 @@ export class AuthFacade implements AuthFacadeInterface {
     sessionService: SessionServiceInterface,
     flowService: FlowServiceInterface,
     userService: UserServiceInterface,
-    config: AuthConfig
+    config: AuthConfig,
   ) {
     this.session = sessionService;
     this.flow = flowService;
@@ -137,21 +138,23 @@ export class AuthFacade implements AuthFacadeInterface {
     schema_id: identity.schema_id,
     schema_url: identity.schema_url,
     state: identity.state,
-    state_changed_at: identity.state_changed_at instanceof Date
-      ? identity.state_changed_at.toISOString()
-      : identity.state_changed_at,
+    state_changed_at:
+      identity.state_changed_at instanceof Date
+        ? identity.state_changed_at.toISOString()
+        : identity.state_changed_at,
     traits,
-    verifiable_addresses: identity.verifiable_addresses?.map(addr => ({
+    verifiable_addresses: identity.verifiable_addresses?.map((addr) => ({
       id: addr.id,
       value: addr.value,
       verified: addr.verified,
       via: addr.via,
       status: addr.status,
-      verified_at: addr.verified_at instanceof Date ? addr.verified_at.toISOString() : addr.verified_at,
+      verified_at:
+        addr.verified_at instanceof Date ? addr.verified_at.toISOString() : addr.verified_at,
       created_at: addr.created_at instanceof Date ? addr.created_at.toISOString() : addr.created_at,
       updated_at: addr.updated_at instanceof Date ? addr.updated_at.toISOString() : addr.updated_at,
     })),
-    recovery_addresses: identity.recovery_addresses?.map(addr => ({
+    recovery_addresses: identity.recovery_addresses?.map((addr) => ({
       id: addr.id,
       value: addr.value,
       via: addr.via,
@@ -160,8 +163,10 @@ export class AuthFacade implements AuthFacadeInterface {
     })),
     metadata_public: identity.metadata_public as Record<string, unknown> | undefined,
     metadata_admin: identity.metadata_admin as Record<string, unknown> | undefined,
-    created_at: identity.created_at instanceof Date ? identity.created_at.toISOString() : identity.created_at,
-    updated_at: identity.updated_at instanceof Date ? identity.updated_at.toISOString() : identity.updated_at,
+    created_at:
+      identity.created_at instanceof Date ? identity.created_at.toISOString() : identity.created_at,
+    updated_at:
+      identity.updated_at instanceof Date ? identity.updated_at.toISOString() : identity.updated_at,
   });
 
   // ==========================================================================
@@ -219,7 +224,9 @@ export class AuthFacade implements AuthFacadeInterface {
   /**
    * Extract first and last names from traits
    */
-  private extractNames = (traits: IdentityTraits): { firstName: string | null; lastName: string | null } => {
+  private extractNames = (
+    traits: IdentityTraits,
+  ): { firstName: string | null; lastName: string | null } => {
     let firstName: string | null = null;
     let lastName: string | null = null;
 
@@ -273,7 +280,7 @@ export class AuthFacade implements AuthFacadeInterface {
     }
 
     const emailAddress = identity.verifiable_addresses.find(
-      (addr) => addr.value.toLowerCase() === email.toLowerCase() && addr.via === 'email'
+      (addr) => addr.value.toLowerCase() === email.toLowerCase() && addr.via === 'email',
     );
 
     return emailAddress?.verified === true;

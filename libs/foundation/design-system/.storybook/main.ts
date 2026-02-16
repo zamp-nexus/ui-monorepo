@@ -1,8 +1,8 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { StorybookConfig } from '@storybook/react-vite';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
+import type { StorybookConfig } from '@storybook/react-vite';
 import { mergeConfig } from 'vite';
 
 /**
@@ -16,10 +16,7 @@ import { mergeConfig } from 'vite';
  * - TypeScript documentation generation
  */
 const config: StorybookConfig = {
-  stories: [
-    '../src/docs/**/*.mdx',
-    '../src/**/*.stories.@(js|jsx|ts|tsx)',
-  ],
+  stories: ['../src/docs/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
 
   addons: [
     '@storybook/addon-docs',

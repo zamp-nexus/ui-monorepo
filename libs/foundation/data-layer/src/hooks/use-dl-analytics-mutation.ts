@@ -8,17 +8,20 @@
  */
 
 import { useCallback } from 'react';
+
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
+
 import {
-  type DuckDBResult,
-  validateIdentifier,
   buildCreateViewSql,
   buildDropViewSql,
   escapeString,
+  validateIdentifier,
+  type DuckDBResult,
 } from '@open-insights-web/foundation-bridge';
+
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
-import { createScopedErrorHandler } from '../utils/error-handler';
 import { getAnalyticsRouterOrThrow } from '../utils/analytics-runtime';
+import { createScopedErrorHandler } from '../utils/error-handler';
 
 // =============================================================================
 // Error Handling
@@ -60,7 +63,7 @@ const validateFilePath = (filePath: string): string => {
 
   if (!FILE_PATH_PATTERN.test(filePath)) {
     throw new Error(
-      'Invalid file path: must contain only alphanumeric characters, underscores, hyphens, dots, and forward slashes. Path traversal (..) is not allowed.'
+      'Invalid file path: must contain only alphanumeric characters, underscores, hyphens, dots, and forward slashes. Path traversal (..) is not allowed.',
     );
   }
 
@@ -70,7 +73,7 @@ const validateFilePath = (filePath: string): string => {
   }
 
   return filePath;
-}
+};
 
 // =============================================================================
 // Types
@@ -146,7 +149,7 @@ export interface DLAnalyticsMutationResult<TVariables> {
  * ```
  */
 export const useDLAnalyticsMutation = <TVariables = void>(
-  options: UseDLAnalyticsMutationOptions<TVariables>
+  options: UseDLAnalyticsMutationOptions<TVariables>,
 ): DLAnalyticsMutationResult<TVariables> => {
   const queryClient = useQueryClient();
   const { duckdbRouter, analyticsEnabled, initializeAnalytics } = useDataLayerInternals();
@@ -168,7 +171,7 @@ export const useDLAnalyticsMutation = <TVariables = void>(
 
       return router.query(sqlToExecute);
     },
-    [duckdbRouter, initializeAnalytics, sql]
+    [duckdbRouter, initializeAnalytics, sql],
   );
 
   // TanStack mutation
@@ -179,7 +182,7 @@ export const useDLAnalyticsMutation = <TVariables = void>(
       // Invalidate related queries
       if (invalidateKeys.length > 0) {
         await Promise.all(
-          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
+          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })),
         );
       }
 
@@ -235,7 +238,11 @@ export const useDLAnalyticsMutation = <TVariables = void>(
  * mutate({ name: 'daily_stats', sql: 'SELECT * FROM events', replace: true });
  * ```
  */
-export const useCreateAnalyticsView = (): DLAnalyticsMutationResult<{ name: string; sql: string; replace?: boolean }> => {
+export const useCreateAnalyticsView = (): DLAnalyticsMutationResult<{
+  name: string;
+  sql: string;
+  replace?: boolean;
+}> => {
   return useDLAnalyticsMutation<{ name: string; sql: string; replace?: boolean }>({
     sql: (vars) => {
       // Validate view name to prevent SQL injection
@@ -257,7 +264,10 @@ export const useCreateAnalyticsView = (): DLAnalyticsMutationResult<{ name: stri
  * mutate({ name: 'daily_stats', ifExists: true });
  * ```
  */
-export const useDropAnalyticsView = (): DLAnalyticsMutationResult<{ name: string; ifExists?: boolean }> => {
+export const useDropAnalyticsView = (): DLAnalyticsMutationResult<{
+  name: string;
+  ifExists?: boolean;
+}> => {
   return useDLAnalyticsMutation<{ name: string; ifExists?: boolean }>({
     sql: (vars) => {
       // Validate view name to prevent SQL injection
@@ -298,21 +308,27 @@ export const useExecuteAnalyticsSql = (): DLAnalyticsMutationResult<{ sql: strin
  * mutate({ tableName: 'events', filePath: 'data/events.parquet', createOrReplace: true });
  * ```
  */
-export const useLoadParquetFile = (): DLAnalyticsMutationResult<{ tableName: string; filePath: string; createOrReplace?: boolean }> => {
-  return useDLAnalyticsMutation<{ tableName: string; filePath: string; createOrReplace?: boolean }>({
-    sql: (vars) => {
-      // Validate table name to prevent SQL injection
-      const validatedTableName = validateIdentifier(vars.tableName);
-      // Validate file path to prevent path traversal and injection
-      const validatedFilePath = validateFilePath(vars.filePath);
-      // Escape the file path for use in SQL string literal
-      const escapedFilePath = escapeString(validatedFilePath);
+export const useLoadParquetFile = (): DLAnalyticsMutationResult<{
+  tableName: string;
+  filePath: string;
+  createOrReplace?: boolean;
+}> => {
+  return useDLAnalyticsMutation<{ tableName: string; filePath: string; createOrReplace?: boolean }>(
+    {
+      sql: (vars) => {
+        // Validate table name to prevent SQL injection
+        const validatedTableName = validateIdentifier(vars.tableName);
+        // Validate file path to prevent path traversal and injection
+        const validatedFilePath = validateFilePath(vars.filePath);
+        // Escape the file path for use in SQL string literal
+        const escapedFilePath = escapeString(validatedFilePath);
 
-      const createOrReplace =
-        vars.createOrReplace !== false ? 'CREATE OR REPLACE TABLE' : 'CREATE TABLE';
-      return `${createOrReplace} "${validatedTableName}" AS SELECT * FROM read_parquet('${escapedFilePath}')`;
+        const createOrReplace =
+          vars.createOrReplace !== false ? 'CREATE OR REPLACE TABLE' : 'CREATE TABLE';
+        return `${createOrReplace} "${validatedTableName}" AS SELECT * FROM read_parquet('${escapedFilePath}')`;
+      },
     },
-  });
+  );
 };
 
 /**
@@ -328,7 +344,10 @@ export const useLoadParquetFile = (): DLAnalyticsMutationResult<{ tableName: str
  * mutate({ query: 'SELECT * FROM events WHERE date > ?', filePath: 'exports/events.parquet' });
  * ```
  */
-export const useCopyToParquet = (): DLAnalyticsMutationResult<{ query: string; filePath: string }> => {
+export const useCopyToParquet = (): DLAnalyticsMutationResult<{
+  query: string;
+  filePath: string;
+}> => {
   return useDLAnalyticsMutation<{ query: string; filePath: string }>({
     sql: (vars) => {
       // Validate file path to prevent path traversal and injection

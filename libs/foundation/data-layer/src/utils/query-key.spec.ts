@@ -2,7 +2,8 @@
  * Tests for query-key utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { buildQueryKey, getDataSource } from './query-key';
 
 describe('query-key utilities', () => {

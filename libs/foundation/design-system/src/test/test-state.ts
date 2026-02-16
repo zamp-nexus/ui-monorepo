@@ -51,4 +51,3 @@ export function getTestingComponentState(): ComponentTestState {
 export function resetTestingComponentState(): void {
   expect.setState({ component: undefined });
 }
-

@@ -80,9 +80,7 @@ const ProfilePage = () => {
       <h1>Welcome, {user?.name || user?.email}</h1>
       <p>Role: {user?.role}</p>
 
-      {hasPermission('canManageUsers') && (
-        <AdminPanel />
-      )}
+      {hasPermission('canManageUsers') && <AdminPanel />}
 
       <button onClick={() => logout()}>Logout</button>
     </div>
@@ -94,16 +92,16 @@ const ProfilePage = () => {
 
 ### AuthConfig
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `ory.kratosUrl` | `string` | Yes | Ory Kratos public URL |
-| `ory.hydraUrl` | `string` | No | Ory Hydra public URL (for OAuth2) |
-| `ory.projectSlug` | `string` | No | Ory Network project slug |
-| `convex.issuer` | `string` | No | OIDC issuer URL for Convex |
-| `convex.applicationId` | `string` | No | Convex application ID |
-| `sessionRefreshIntervalMs` | `number` | No | Session refresh interval (default: 5 min) |
-| `autoRefreshSession` | `boolean` | No | Enable auto-refresh (default: true) |
-| `debug` | `boolean` | No | Enable debug logging |
+| Property                   | Type      | Required | Description                               |
+| -------------------------- | --------- | -------- | ----------------------------------------- |
+| `ory.kratosUrl`            | `string`  | Yes      | Ory Kratos public URL                     |
+| `ory.hydraUrl`             | `string`  | No       | Ory Hydra public URL (for OAuth2)         |
+| `ory.projectSlug`          | `string`  | No       | Ory Network project slug                  |
+| `convex.issuer`            | `string`  | No       | OIDC issuer URL for Convex                |
+| `convex.applicationId`     | `string`  | No       | Convex application ID                     |
+| `sessionRefreshIntervalMs` | `number`  | No       | Session refresh interval (default: 5 min) |
+| `autoRefreshSession`       | `boolean` | No       | Enable auto-refresh (default: true)       |
+| `debug`                    | `boolean` | No       | Enable debug logging                      |
 
 ## Hooks API Reference
 
@@ -114,23 +112,23 @@ Main authentication hook providing state and actions.
 ```tsx
 const {
   // State
-  isInitializing,   // boolean - Initial auth check in progress
-  isLoading,        // boolean - Any auth operation in progress
-  isAuthenticated,  // boolean - User is authenticated
-  user,             // AuthUser | null - Current user
-  error,            // Error | null - Last error
-  state,            // AuthStateType - Raw state enum
+  isInitializing, // boolean - Initial auth check in progress
+  isLoading, // boolean - Any auth operation in progress
+  isAuthenticated, // boolean - User is authenticated
+  user, // AuthUser | null - Current user
+  error, // Error | null - Last error
+  state, // AuthStateType - Raw state enum
 
   // Actions
-  login,            // (returnTo?: string) => Promise<void>
-  register,         // (returnTo?: string) => Promise<void>
-  logout,           // (returnTo?: string) => Promise<void>
-  recoverPassword,  // (email: string) => Promise<void>
+  login, // (returnTo?: string) => Promise<void>
+  register, // (returnTo?: string) => Promise<void>
+  logout, // (returnTo?: string) => Promise<void>
+  recoverPassword, // (email: string) => Promise<void>
 
   // Permission checks
-  hasPermission,    // (permission: keyof UserPermissions) => boolean
-  hasRole,          // (role: UserRole | UserRole[]) => boolean
-  hasAnyRole,       // (roles: UserRole[]) => boolean
+  hasPermission, // (permission: keyof UserPermissions) => boolean
+  hasRole, // (role: UserRole | UserRole[]) => boolean
+  hasAnyRole, // (roles: UserRole[]) => boolean
 } = useAuth();
 ```
 
@@ -157,11 +155,11 @@ Access session management functions.
 
 ```tsx
 const {
-  session,         // AuthSession | null
-  sessionState,    // SessionStateType | null
-  isLoading,       // boolean
-  getAccessToken,  // () => Promise<string | null>
-  refresh,         // () => Promise<void>
+  session, // AuthSession | null
+  sessionState, // SessionStateType | null
+  isLoading, // boolean
+  getAccessToken, // () => Promise<string | null>
+  refresh, // () => Promise<void>
 } = useAuthSession();
 ```
 
@@ -171,12 +169,12 @@ Manage authentication flows.
 
 ```tsx
 const {
-  flowState,      // FlowState<LoginFlow>
-  createFlow,     // () => Promise<void>
-  submitFlow,     // (data: LoginSubmission) => Promise<void>
-  resetFlow,      // () => void
-  isLoading,      // boolean
-  isSubmitting,   // boolean
+  flowState, // FlowState<LoginFlow>
+  createFlow, // () => Promise<void>
+  submitFlow, // (data: LoginSubmission) => Promise<void>
+  resetFlow, // () => void
+  isLoading, // boolean
+  isSubmitting, // boolean
 } = useLoginFlow({ autoCreate: true });
 
 // Submit login
@@ -192,13 +190,14 @@ await submitFlow({
 
 ```typescript
 // convex/users.ts
-import { query, mutation } from './_generated/server';
 import {
+  hasRole,
+  requireAdmin,
   requireAuth,
   requireRole,
-  requireAdmin,
-  hasRole,
 } from '@open-insights-web/foundation-auth/convex';
+
+import { mutation, query } from './_generated/server';
 
 // Require any authenticated user
 export const getProfile = query({
@@ -257,8 +256,9 @@ export default {
 For pre-built UI components:
 
 ```tsx
-import { OryElementsProvider, useOryElementsConfig } from '@open-insights-web/foundation-auth';
 import { UserAuthCard } from '@ory/elements-react';
+
+import { OryElementsProvider, useOryElementsConfig } from '@open-insights-web/foundation-auth';
 
 const LoginPage = () => {
   const { flowState } = useLoginFlow({ autoCreate: true });
@@ -270,12 +270,7 @@ const LoginPage = () => {
         styling: { primaryColor: '#0066cc' },
       }}
     >
-      {flowState.flow && (
-        <UserAuthCard
-          flow={flowState.flow}
-          flowType="login"
-        />
-      )}
+      {flowState.flow && <UserAuthCard flow={flowState.flow} flowType="login" />}
     </OryElementsProvider>
   );
 };
@@ -288,11 +283,11 @@ All errors extend `FoundationError` for consistent handling:
 ```tsx
 import {
   AuthError,
-  SessionExpiredError,
-  PermissionDeniedError,
   isAuthError,
-  isSessionError,
   isRetryableAuthError,
+  isSessionError,
+  PermissionDeniedError,
+  SessionExpiredError,
 } from '@open-insights-web/foundation-auth';
 
 try {
@@ -313,30 +308,30 @@ try {
 
 ### Error Types
 
-| Error Class | Description |
-|-------------|-------------|
-| `AuthNotInitializedError` | Auth provider not initialized |
-| `SessionCheckError` | Session check failed |
-| `SessionRefreshError` | Session refresh failed |
-| `SessionExpiredError` | Session has expired |
-| `LogoutError` | Logout operation failed |
-| `FlowCreationError` | Failed to create auth flow |
-| `FlowNotFoundError` | Auth flow not found |
-| `FlowSubmissionError` | Failed to submit auth flow |
-| `FlowExpiredError` | Auth flow has expired |
-| `InvalidCredentialsError` | Invalid login credentials |
-| `PermissionDeniedError` | User lacks required permission |
-| `TokenRetrievalError` | Failed to get access token |
-| `TokenExpiredError` | Access token expired |
+| Error Class               | Description                    |
+| ------------------------- | ------------------------------ |
+| `AuthNotInitializedError` | Auth provider not initialized  |
+| `SessionCheckError`       | Session check failed           |
+| `SessionRefreshError`     | Session refresh failed         |
+| `SessionExpiredError`     | Session has expired            |
+| `LogoutError`             | Logout operation failed        |
+| `FlowCreationError`       | Failed to create auth flow     |
+| `FlowNotFoundError`       | Auth flow not found            |
+| `FlowSubmissionError`     | Failed to submit auth flow     |
+| `FlowExpiredError`        | Auth flow has expired          |
+| `InvalidCredentialsError` | Invalid login credentials      |
+| `PermissionDeniedError`   | User lacks required permission |
+| `TokenRetrievalError`     | Failed to get access token     |
+| `TokenExpiredError`       | Access token expired           |
 
 ## Token Utilities
 
 ```typescript
 import {
   decodeJwt,
-  isTokenExpired,
   getTimeUntilExpiration,
   getUserIdFromToken,
+  isTokenExpired,
 } from '@open-insights-web/foundation-auth';
 
 // Decode JWT (without verification)
@@ -379,13 +374,13 @@ const msRemaining = getTimeUntilExpiration(accessToken);
 
 ```typescript
 interface AuthUser {
-  id: string;              // Ory identity ID
-  email: string;           // User's email
-  name: string | null;     // Display name
+  id: string; // Ory identity ID
+  email: string; // User's email
+  name: string | null; // Display name
   firstName: string | null;
   lastName: string | null;
   avatarUrl: string | null;
-  role: UserRole;          // 'owner' | 'admin' | 'member' | 'viewer' | 'guest'
+  role: UserRole; // 'owner' | 'admin' | 'member' | 'viewer' | 'guest'
   tenantId: string | null;
   permissions: UserPermissions;
   emailVerified: boolean;

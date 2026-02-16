@@ -4,6 +4,8 @@
  * @module core/container.spec
  */
 
+import { createDataLayerContainer, DataLayerContainer } from './container';
+
 vi.mock('convex/react', () => {
   class MockConvexReactClient {
     readonly close = vi.fn();
@@ -21,8 +23,6 @@ vi.mock('@convex-dev/react-query', () => {
   }
   return { ConvexQueryClient: MockConvexQueryClient };
 });
-
-import { DataLayerContainer, createDataLayerContainer } from './container';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -179,10 +179,7 @@ describe('DataLayerContainer', () => {
       const { config, mocks } = createConfig();
       const container = new DataLayerContainer(config);
 
-      const [deps1, deps2] = await Promise.all([
-        container.initialize(),
-        container.initialize(),
-      ]);
+      const [deps1, deps2] = await Promise.all([container.initialize(), container.initialize()]);
 
       expect(deps1).toBe(deps2);
       // Factory should only have been called once
@@ -197,7 +194,7 @@ describe('DataLayerContainer', () => {
       const container = new DataLayerContainer(config);
 
       expect(() => container.getDependencies()).toThrow(
-        '[DataLayerContainer] Container not initialized'
+        '[DataLayerContainer] Container not initialized',
       );
     });
   });
@@ -212,7 +209,7 @@ describe('DataLayerContainer', () => {
       await container.dispose();
 
       expect(() => container.getDependencies()).toThrow(
-        '[DataLayerContainer] Container is disposed'
+        '[DataLayerContainer] Container is disposed',
       );
     });
   });
@@ -226,7 +223,7 @@ describe('DataLayerContainer', () => {
       await container.dispose();
 
       await expect(container.initialize()).rejects.toThrow(
-        '[DataLayerContainer] Container is disposed'
+        '[DataLayerContainer] Container is disposed',
       );
     });
   });

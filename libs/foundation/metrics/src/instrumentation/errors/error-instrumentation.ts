@@ -5,13 +5,9 @@
 
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
-import type {
-  ErrorSignalConfig,
-  CapturedError,
-  ErrorContext,
-} from '../../types';
-import { getTracer } from '../../core/otel-provider';
 import { getSpanAttributes } from '../../core/context-manager';
+import { getTracer } from '../../core/otel-provider';
+import type { CapturedError, ErrorContext, ErrorSignalConfig } from '../../types';
 
 /**
  * Error instrumentation state
@@ -45,9 +41,7 @@ function createUnhandledRejectionWrapper(
 /**
  * Wrapper for error event handler that accepts Event type
  */
-function createErrorEventWrapper(
-  handler: (event: ErrorEvent) => void,
-): (event: Event) => void {
+function createErrorEventWrapper(handler: (event: ErrorEvent) => void): (event: Event) => void {
   return (event: Event) => {
     if (event instanceof ErrorEvent) {
       handler(event);
@@ -129,7 +123,7 @@ function installGlobalErrorHandler(): void {
     filename?: string,
     lineno?: number,
     colno?: number,
-    error?: Error
+    error?: Error,
   ) => {
     handleGlobalError(message, filename, lineno, colno, error);
 
@@ -164,7 +158,7 @@ function handleGlobalError(
   filename?: string,
   lineno?: number,
   colno?: number,
-  error?: Error
+  error?: Error,
 ): void {
   if (!state?.config.enabled) {
     return;

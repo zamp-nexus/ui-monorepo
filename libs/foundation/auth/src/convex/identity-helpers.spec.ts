@@ -4,18 +4,19 @@
  * Server-side auth utilities.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import {
-  requireAuth,
-  requireAuthUser,
-  requireRole,
-  requireAdmin,
-  requireOwner,
+  ForbiddenError,
   getOptionalAuth,
   hasRole,
+  requireAdmin,
+  requireAuth,
+  requireAuthUser,
+  requireOwner,
+  requireRole,
   requireTenant,
   UnauthorizedError,
-  ForbiddenError,
   type ConvexAuthContext,
   type ConvexUserIdentity,
 } from './identity-helpers';

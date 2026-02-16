@@ -31,9 +31,7 @@ export function getInitials(name: string, maxLength = 2): string {
   }
 
   // Take first and last word's initials
-  const initials = [words[0].charAt(0), words[words.length - 1].charAt(0)]
-    .join('')
-    .toUpperCase();
+  const initials = [words[0].charAt(0), words[words.length - 1].charAt(0)].join('').toUpperCase();
 
   return initials.slice(0, maxLength);
 }

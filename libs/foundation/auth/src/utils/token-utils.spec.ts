@@ -4,18 +4,19 @@
  * JWT decoding and validation utilities.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   decodeJwt,
   decodeJwtPayload,
-  isTokenExpired,
-  getTokenExpiration,
-  getTimeUntilExpiration,
-  getUserIdFromToken,
-  getEmailFromToken,
   getClaimFromToken,
-  type JwtPayload,
+  getEmailFromToken,
+  getTimeUntilExpiration,
+  getTokenExpiration,
+  getUserIdFromToken,
+  isTokenExpired,
   type DecodedJwt,
+  type JwtPayload,
 } from './token-utils';
 
 // =============================================================================
@@ -28,15 +29,15 @@ import {
 const createJwt = (
   header: Record<string, unknown> = { alg: 'RS256', typ: 'JWT' },
   payload: Record<string, unknown> = {},
-  signature = 'test-signature'
+  signature = 'test-signature',
 ): string => {
   const encode = (obj: Record<string, unknown>): string => {
     const json = JSON.stringify(obj);
     // Base64url encode
     const base64 = btoa(
       encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-        String.fromCharCode(parseInt(p1 as string, 16))
-      )
+        String.fromCharCode(parseInt(p1 as string, 16)),
+      ),
     );
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   };
@@ -48,12 +49,15 @@ const createJwt = (
  * Create a JWT with standard claims.
  */
 const createStandardJwt = (claims: Partial<JwtPayload> = {}): string =>
-  createJwt({ alg: 'RS256', typ: 'JWT' }, {
-    sub: 'user-123',
-    iss: 'https://auth.example.com',
-    iat: Math.floor(Date.now() / 1000),
-    ...claims,
-  });
+  createJwt(
+    { alg: 'RS256', typ: 'JWT' },
+    {
+      sub: 'user-123',
+      iss: 'https://auth.example.com',
+      iat: Math.floor(Date.now() / 1000),
+      ...claims,
+    },
+  );
 
 // =============================================================================
 // Tests

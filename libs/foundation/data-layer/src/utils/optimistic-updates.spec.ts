@@ -2,15 +2,16 @@
  * Tests for optimistic-updates utilities
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   createOptimisticContext,
-  rollbackOptimisticUpdate,
   optimisticAddToList,
   optimisticRemoveFromList,
   optimisticUpdateInList,
   optimisticUpdateItem,
   replaceProvisionalId,
+  rollbackOptimisticUpdate,
 } from './optimistic-updates';
 
 describe('optimistic-updates utilities', () => {
@@ -33,10 +34,7 @@ describe('optimistic-updates utilities', () => {
       const previousData = [{ id: '1', name: 'User 1' }];
       mockQueryClient.getQueryData.mockReturnValue(previousData);
 
-      const context = createOptimisticContext(
-        mockQueryClient as never,
-        ['users']
-      );
+      const context = createOptimisticContext(mockQueryClient as never, ['users']);
 
       expect(context.queryKey).toEqual(['users']);
       expect(context.previousData).toBe(previousData);
@@ -46,10 +44,7 @@ describe('optimistic-updates utilities', () => {
     it('should capture undefined when no previous data', () => {
       mockQueryClient.getQueryData.mockReturnValue(undefined);
 
-      const context = createOptimisticContext(
-        mockQueryClient as never,
-        ['posts', '123']
-      );
+      const context = createOptimisticContext(mockQueryClient as never, ['posts', '123']);
 
       expect(context.queryKey).toEqual(['posts', '123']);
       expect(context.previousData).toBeUndefined();
@@ -66,10 +61,7 @@ describe('optimistic-updates utilities', () => {
 
       rollbackOptimisticUpdate(mockQueryClient as never, context);
 
-      expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(
-        ['users'],
-        previousData
-      );
+      expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(['users'], previousData);
       expect(mockQueryClient.removeQueries).not.toHaveBeenCalled();
     });
 
@@ -99,21 +91,17 @@ describe('optimistic-updates utilities', () => {
       });
 
       const newItem = { id: '2', name: 'User 2' };
-      const context = optimisticAddToList(
-        mockQueryClient as never,
-        ['users'],
-        newItem
-      );
+      const context = optimisticAddToList(mockQueryClient as never, ['users'], newItem);
 
       expect(context.previousData).toBe(existingData);
-      expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(
-        ['users'],
-        expect.any(Function)
-      );
+      expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(['users'], expect.any(Function));
 
       // Test the updater function
       const result = capturedUpdater?.(existingData);
-      expect(result).toEqual([{ id: '1', name: 'User 1' }, { id: '2', name: 'User 2' }]);
+      expect(result).toEqual([
+        { id: '1', name: 'User 1' },
+        { id: '2', name: 'User 2' },
+      ]);
     });
 
     it('should create list with item when no existing data', () => {
@@ -220,7 +208,7 @@ describe('optimistic-updates utilities', () => {
         mockQueryClient as never,
         ['users'],
         '1',
-        (user: { id: string; name: string }) => ({ ...user, name: 'Updated User 1' })
+        (user: { id: string; name: string }) => ({ ...user, name: 'Updated User 1' }),
       );
 
       const result = capturedUpdater?.(existingData) as { id: string; name: string }[];
@@ -244,7 +232,7 @@ describe('optimistic-updates utilities', () => {
         mockQueryClient as never,
         ['users'],
         'convex_2',
-        (user: { id: string; _id: string; name: string }) => ({ ...user, name: 'Updated via _id' })
+        (user: { id: string; _id: string; name: string }) => ({ ...user, name: 'Updated via _id' }),
       );
 
       const result = capturedUpdater?.(existingData) as { name: string }[];
@@ -264,7 +252,7 @@ describe('optimistic-updates utilities', () => {
         mockQueryClient as never,
         ['users'],
         '1',
-        (user: { id: string; name: string }) => user
+        (user: { id: string; name: string }) => user,
       );
 
       const result = capturedUpdater?.(undefined);
@@ -286,7 +274,7 @@ describe('optimistic-updates utilities', () => {
         mockQueryClient as never,
         ['users', '1'],
         (user: typeof existingData | undefined) =>
-          user ? { ...user, name: 'Updated Name' } : { id: '1', name: 'Updated Name', email: '' }
+          user ? { ...user, name: 'Updated Name' } : { id: '1', name: 'Updated Name', email: '' },
       );
 
       const result = capturedUpdater?.(existingData) as typeof existingData;
@@ -305,8 +293,7 @@ describe('optimistic-updates utilities', () => {
       optimisticUpdateItem(
         mockQueryClient as never,
         ['users', '1'],
-        (user: { id: string; name: string } | undefined) =>
-          user ?? { id: '1', name: 'New User' }
+        (user: { id: string; name: string } | undefined) => user ?? { id: '1', name: 'New User' },
       );
 
       const result = capturedUpdater?.(undefined);
@@ -320,7 +307,7 @@ describe('optimistic-updates utilities', () => {
       const context = optimisticUpdateItem(
         mockQueryClient as never,
         ['users', '1'],
-        (user: { id: string; name: string } | undefined) => user ?? { id: '1', name: 'User 1' }
+        (user: { id: string; name: string } | undefined) => user ?? { id: '1', name: 'User 1' },
       );
 
       expect(context.queryKey).toEqual(['users', '1']);
@@ -341,14 +328,13 @@ describe('optimistic-updates utilities', () => {
         capturedUpdater = updater;
       });
 
-      replaceProvisionalId(
-        mockQueryClient as never,
-        ['users'],
-        'prov_123',
-        'server_456'
-      );
+      replaceProvisionalId(mockQueryClient as never, ['users'], 'prov_123', 'server_456');
 
-      const result = capturedUpdater?.(existingData) as { id: string; _id?: string; name: string }[];
+      const result = capturedUpdater?.(existingData) as {
+        id: string;
+        _id?: string;
+        name: string;
+      }[];
       expect(result[0].id).toBe('server_456');
       expect(result[0]._id).toBe('server_456');
       expect(result[0].name).toBe('New User');
@@ -356,9 +342,7 @@ describe('optimistic-updates utilities', () => {
     });
 
     it('should replace provisional id matching _id', () => {
-      const existingData = [
-        { id: 'prov_123', _id: 'prov_123', name: 'New User' },
-      ];
+      const existingData = [{ id: 'prov_123', _id: 'prov_123', name: 'New User' }];
       mockQueryClient.getQueryData.mockReturnValue(existingData);
 
       let capturedUpdater: ((old: unknown[]) => unknown) | undefined;
@@ -366,12 +350,7 @@ describe('optimistic-updates utilities', () => {
         capturedUpdater = updater;
       });
 
-      replaceProvisionalId(
-        mockQueryClient as never,
-        ['users'],
-        'prov_123',
-        'server_789'
-      );
+      replaceProvisionalId(mockQueryClient as never, ['users'], 'prov_123', 'server_789');
 
       const result = capturedUpdater?.(existingData) as { id: string; _id: string }[];
       expect(result[0].id).toBe('server_789');
@@ -390,12 +369,7 @@ describe('optimistic-updates utilities', () => {
         capturedUpdater = updater;
       });
 
-      replaceProvisionalId(
-        mockQueryClient as never,
-        ['users'],
-        'nonexistent',
-        'server_999'
-      );
+      replaceProvisionalId(mockQueryClient as never, ['users'], 'nonexistent', 'server_999');
 
       const result = capturedUpdater?.(existingData);
       expect(result).toEqual(existingData);
@@ -409,12 +383,7 @@ describe('optimistic-updates utilities', () => {
         capturedUpdater = updater;
       });
 
-      replaceProvisionalId(
-        mockQueryClient as never,
-        ['users'],
-        'prov_123',
-        'server_456'
-      );
+      replaceProvisionalId(mockQueryClient as never, ['users'], 'prov_123', 'server_456');
 
       const result = capturedUpdater?.(undefined);
       expect(result).toBeUndefined();

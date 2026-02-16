@@ -24,12 +24,7 @@ export { PriorityQueue } from './priority-queue';
 export { TableLockManager } from './table-lock-manager';
 
 // Factory
-export {
-  createDuckDBPool,
-  getDuckDBPool,
-  resetDuckDBPool,
-  type DuckDBPool,
-} from './factory';
+export { createDuckDBPool, getDuckDBPool, resetDuckDBPool, type DuckDBPool } from './factory';
 
 // Types (re-exported for wasm/index and consumers)
 export type {

@@ -6,11 +6,11 @@ import { useMemo } from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
+import type { PopoverComponent, PopoverContextValue } from './popover';
 import { PopoverClose } from './popover-close';
 import { PopoverContent } from './popover-content';
 import { PopoverTrigger } from './popover-trigger';
 import { PopoverContext } from './popover.context';
-import type { PopoverComponent, PopoverContextValue } from './popover';
 
 /**
  * Popover component
@@ -41,7 +41,6 @@ const PopoverRoot: PopoverComponent = ({
   onOpenChange,
   children,
 }) => {
-
   // Context value for sub-components
   const contextValue: PopoverContextValue = useMemo(
     () => ({
@@ -56,11 +55,7 @@ const PopoverRoot: PopoverComponent = ({
 
   return (
     <PopoverContext.Provider value={contextValue}>
-      <PopoverPrimitive.Root
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={onOpenChange}
-      >
+      <PopoverPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
         {children}
       </PopoverPrimitive.Root>
     </PopoverContext.Provider>

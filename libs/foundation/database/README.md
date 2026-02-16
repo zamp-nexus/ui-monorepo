@@ -3,6 +3,7 @@
 Offline-first persistence for Open Insights. This library provides the Dexie/IndexedDB database, typed table contracts, service-layer operations, OPFS metadata coordination, and singleton lifecycle management used by foundation consumers.
 
 ## Table of Contents
+
 1. [Purpose](#purpose)
 2. [Installation](#installation)
 3. [Quick Start](#quick-start)
@@ -16,7 +17,9 @@ Offline-first persistence for Open Insights. This library provides the Dexie/Ind
 11. [Contributing](#contributing)
 
 ## Purpose
+
 Use this package when you need:
+
 - Persistent query cache with TTL + stale/fresh status
 - Durable offline mutation queue with idempotency protection
 - Typed sync-state storage for cross-session sync context
@@ -24,11 +27,13 @@ Use this package when you need:
 - A stable singleton lifecycle (`DatabaseFacade` + raw `InsightsDatabase`) backed by one shared singleton source
 
 ## Installation
+
 ```bash
 npm i @open-insights-web/foundation-database @open-insights-web/foundation-data-model
 ```
 
 Peer/runtime dependencies used internally:
+
 - `dexie`
 - `zod`
 - `@open-insights-web/foundation-utils`
@@ -36,13 +41,14 @@ Peer/runtime dependencies used internally:
 ## Quick Start
 
 ### Recommended: Facade API
+
 ```ts
 import {
-  getDatabaseFacade,
   DATABASE_TRANSACTION_MODE,
   DATABASE_TRANSACTION_TABLE,
-  MUTATION_TYPE,
+  getDatabaseFacade,
   MUTATION_STATUS,
+  MUTATION_TYPE,
 } from '@open-insights-web/foundation-database';
 
 const facade = getDatabaseFacade({ debug: true });
@@ -73,11 +79,12 @@ await facade.transaction(
       maxRetries: 3,
       idempotencyKey: 'users:u1:create',
     });
-  }
+  },
 );
 ```
 
 ### Raw database (internal foundation usage)
+
 ```ts
 import { getDatabase } from '@open-insights-web/foundation-database';
 
@@ -88,12 +95,14 @@ const count = await db.queries.count();
 ## Public API
 
 ### Facade and lifecycle
+
 - `getDatabaseFacade(config?)`
 - `resetDatabaseFacade()`
 - `hasDatabaseFacade()`
 - `DatabaseFacade`
 
 ### Transaction constants
+
 - `DATABASE_TRANSACTION_MODE`
   - `READ`
   - `READ_WRITE`
@@ -105,7 +114,9 @@ const count = await db.queries.count();
   - `TABLE_SYNC_METADATA`
 
 ### Shared database constants and helpers
+
 These are re-exported for compatibility, but canonical ownership is in `foundation-data-model`:
+
 - `QUERY_CACHE_STATUS`
 - `MUTATION_STATUS`
 - `MUTATION_TYPE`
@@ -118,6 +129,7 @@ These are re-exported for compatibility, but canonical ownership is in `foundati
 - `getFilesNeedingDownload`
 
 ### Services
+
 - `facade.queries`: query cache operations (`get`, `bulkGet`, `set`, `bulkSet`, `delete`, `deleteByTable`, `deleteExpired`, `clear`, ...)
 - `facade.mutations`: mutation queue operations (`add`, `addIfNotExists`, `getPending`, `updateStatus`, `findByIdempotencyKey`, ...)
 - `facade.syncState`: typed sync-state operations (`get`, `set`, `getLastSync`, `setLastSync`, `getDuckDBViews`, ...)
@@ -125,12 +137,14 @@ These are re-exported for compatibility, but canonical ownership is in `foundati
 - `facade.tableSyncMetadata`: table sync metadata CRUD and batch retrieval
 
 ### OPFS manager
+
 - `getOpfsManager(config?)`
 - `resetOpfsManager()`
 - `hasOpfsManager()`
 - `OpfsManager`
 
 ### Error utilities
+
 - `DatabaseError`
 - `isDatabaseError()`
 - `isQuotaExceededError()`
@@ -140,6 +154,7 @@ These are re-exported for compatibility, but canonical ownership is in `foundati
 ## Architecture
 
 ### Layers
+
 1. `core/`: Dexie database, config, singleton factory lifecycle
 2. `tables/`: table contracts + helpers
 3. `services/`: validation + data access logic
@@ -147,28 +162,34 @@ These are re-exported for compatibility, but canonical ownership is in `foundati
 5. `opfs/`: OPFS directory/file manager that delegates metadata persistence through services
 
 ### Shared contract ownership
+
 `foundation-database` consumes canonical shared contracts from `@open-insights-web/foundation-data-model` (`src/types/database.ts`) and re-exports compatibility symbols from its root entrypoint.
 
 ### Ownership matrix
-| Contract | Canonical owner | Compatibility export |
-|---|---|---|
-| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE` | `foundation-data-model` | `foundation-database` root |
-| `SYNC_STATE_KEY` | `foundation-data-model` | `SYNC_STATE_KEYS` alias in `foundation-database` |
-| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `foundation-database` facade/root |
-| `MutationQueueEntry`, `CreateMutationOptions` | `foundation-data-model` | `foundation-database` table exports |
+
+| Contract                                                  | Canonical owner         | Compatibility export                             |
+| --------------------------------------------------------- | ----------------------- | ------------------------------------------------ |
+| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `foundation-database` root                       |
+| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `SYNC_STATE_KEYS` alias in `foundation-database` |
+| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `foundation-database` facade/root                |
+| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `foundation-database` table exports              |
 
 ### Singleton safety
+
 - `getDatabase()` and `getDatabaseFacade()` resolve to the same `InsightsDatabase` singleton.
 - `resetDatabaseFacade()` resets both facade and database singletons for deterministic lifecycle behavior.
 - No registry callback layer is used, which removes cross-singleton drift vectors.
 
 ## Schema, Migrations, and Indexes
+
 Current Dexie schema versions in `src/core/database.ts`:
+
 - `v1`: `queries`, `mutations`, `opfsFiles`, `syncState`
 - `v2`: adds `tableSyncMetadata`
 - `v3`: adds hot-path indexes
 
 Hot-path indexes:
+
 - `mutations`: `[status+timestamp]`
 - `opfsFiles`: `isRegistered`, `fileType`
 - `tableSyncMetadata`: `lastIngestedAt`
@@ -176,22 +197,24 @@ Hot-path indexes:
 These indexes are used to reduce in-memory filtering and improve scan performance for queue/state synchronization flows.
 
 ## Configuration
+
 `DatabaseConfig` defaults are defined in `src/core/config.ts`.
 
-| Key | Default | Meaning |
-|---|---:|---|
-| `name` | `open-insights-db` | IndexedDB database name |
-| `version` | `1` | Config version marker |
-| `debug` | env-based | Enables debug logging |
-| `queryCacheTTL` | `5 * 60_000` | Query cache TTL |
-| `staleThreshold` | `60_000` | Fresh vs stale threshold |
-| `maxRetryAttempts` | `3` | Mutation retry cap |
-| `autoCleanup` | `true` | Enables interval cleanup |
-| `cleanupInterval` | `60_000` | Cleanup cadence |
-| `maxCacheEntries` | `1000` | LRU cap (0 disables) |
-| `mutationRetentionMs` | `60 * 60_000` | Retention for completed/failed mutations |
+| Key                   |            Default | Meaning                                  |
+| --------------------- | -----------------: | ---------------------------------------- |
+| `name`                | `open-insights-db` | IndexedDB database name                  |
+| `version`             |                `1` | Config version marker                    |
+| `debug`               |          env-based | Enables debug logging                    |
+| `queryCacheTTL`       |       `5 * 60_000` | Query cache TTL                          |
+| `staleThreshold`      |           `60_000` | Fresh vs stale threshold                 |
+| `maxRetryAttempts`    |                `3` | Mutation retry cap                       |
+| `autoCleanup`         |             `true` | Enables interval cleanup                 |
+| `cleanupInterval`     |           `60_000` | Cleanup cadence                          |
+| `maxCacheEntries`     |             `1000` | LRU cap (0 disables)                     |
+| `mutationRetentionMs` |      `60 * 60_000` | Retention for completed/failed mutations |
 
 Example:
+
 ```ts
 import { getDatabaseFacade } from '@open-insights-web/foundation-database';
 
@@ -203,14 +226,13 @@ const facade = getDatabaseFacade({
 ```
 
 ## Error Handling
+
 Database errors use `FOUNDATION_ERROR_CODE.DATABASE_*` codes from `foundation-data-model`.
 
 Example pattern:
+
 ```ts
-import {
-  getDatabaseFacade,
-  isQuotaExceededError,
-} from '@open-insights-web/foundation-database';
+import { getDatabaseFacade, isQuotaExceededError } from '@open-insights-web/foundation-database';
 
 try {
   await getDatabaseFacade().queries.clear();
@@ -225,13 +247,16 @@ try {
 For functional error flow, use the shared `Result` contract (`ok`/`error`) from `@open-insights-web/foundation-data-model`.
 
 ## Performance Notes
+
 - Query cache cleanup combines TTL deletion and optional LRU eviction.
 - Mutation cleanup removes terminal states after retention.
 - OPFS metadata lookups use indexed paths for `fileType` and schema-backed operations.
 - Services share a common validation helper to avoid duplicated parse/throw logic.
 
 ## Testing and Verification
+
 Typical local checks:
+
 ```bash
 npx tsc -p libs/foundation/data-model/tsconfig.lib.json --pretty false
 npx tsc -p libs/foundation/database/tsconfig.lib.json --pretty false
@@ -239,6 +264,7 @@ npx vitest run libs/foundation/database/src/**/*.spec.ts
 ```
 
 Consumer smoke checks:
+
 ```bash
 npx tsc -p libs/foundation/sync-engine/tsconfig.lib.json --pretty false
 npx tsc -p libs/foundation/data-layer/tsconfig.lib.json --pretty false
@@ -246,6 +272,7 @@ npx tsc -p libs/foundation/bridge/tsconfig.lib.json --pretty false
 ```
 
 ## Contributing
+
 1. Keep shared database contracts in `foundation-data-model` (`src/types/database.ts`), not local duplicates.
 2. Prefer direct imports internally; avoid unnecessary barrel dependency chains.
 3. Use enums/constants for fixed option sets; avoid string-literal union duplication.

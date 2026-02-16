@@ -1,8 +1,11 @@
 import React, { type PropsWithChildren } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, waitFor } from '@testing-library/react';
 import type { FunctionReference } from 'convex/server';
+
 import { DATA_SOURCE } from '@open-insights-web/foundation-data-model';
+
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useDLGet } from './use-dl-get';
@@ -72,7 +75,7 @@ describe('useDLGet', () => {
     const queryRef = {} as FunctionReference<'query'>;
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_1' } }),
-      { wrapper: createWrapper(internals) }
+      { wrapper: createWrapper(internals) },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -96,7 +99,7 @@ describe('useDLGet', () => {
     const queryRef = {} as FunctionReference<'query'>;
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_cached' } }),
-      { wrapper: createWrapper(internals) }
+      { wrapper: createWrapper(internals) },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

@@ -1,24 +1,25 @@
 /**
  * Table Lock Manager
- * 
+ *
  * Manages read/write locks on tables for coordinating access across
  * multiple DuckDB worker instances sharing OPFS files.
- * 
+ *
  * Lock semantics:
  * - Multiple readers can hold locks simultaneously
  * - Writers have exclusive access (no other readers or writers)
  * - Writers wait for all readers to finish
  * - Readers wait for writers to finish
- * 
+ *
  * Adapted from meerkat-dbm's TableLockManager.
- * 
+ *
  * @module wasm/pool/table-lock-manager
  */
 
 import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
-import type { TableLockStatus } from '../../types/pool';
+
 import { QUERY_MODE } from '../../constants';
 import type { QueryLockMode } from '../../constants';
+import type { TableLockStatus } from '../../types/pool';
 
 /**
  * Internal mutable table lock state
@@ -33,7 +34,7 @@ interface TableLock {
 
 /**
  * Table Lock Manager for cross-worker coordination
- * 
+ *
  * Implements a readers-writer lock pattern where:
  * - Multiple readers can access a table concurrently
  * - Writers get exclusive access
@@ -77,7 +78,7 @@ export class TableLockManager {
    */
   async acquireLocks(
     tableNames: readonly string[],
-    mode: QueryLockMode = QUERY_MODE.READ
+    mode: QueryLockMode = QUERY_MODE.READ,
   ): Promise<void> {
     if (tableNames.length === 0) return;
 
@@ -128,7 +129,7 @@ export class TableLockManager {
 
   /**
    * Release locks on multiple tables
-   * 
+   *
    * @param tableNames - Tables to unlock
    * @param mode - QUERY_MODE.READ or QUERY_MODE.WRITE (must match acquire mode)
    */
@@ -187,7 +188,7 @@ export class TableLockManager {
 
   /**
    * Check if a table is currently locked
-   * 
+   *
    * @param tableName - Table to check
    * @returns True if the table has any active locks
    */
@@ -198,7 +199,7 @@ export class TableLockManager {
 
   /**
    * Check if a table has a write lock
-   * 
+   *
    * @param tableName - Table to check
    * @returns True if the table has an active write lock
    */
@@ -209,7 +210,7 @@ export class TableLockManager {
 
   /**
    * Get the number of active readers on a table
-   * 
+   *
    * @param tableName - Table to check
    * @returns Number of active readers
    */
@@ -220,7 +221,7 @@ export class TableLockManager {
 
   /**
    * Get all currently locked tables
-   * 
+   *
    * @returns Array of locked table names
    */
   getLockedTables(): string[] {
@@ -256,13 +257,13 @@ export class TableLockManager {
    */
   clearAll(): void {
     this.logger.debug('Clearing all locks');
-    
+
     // Resolve all pending callbacks to unblock waiters
     for (const lock of this.tableLockRegistry.values()) {
-      lock.readersQueue.forEach(resolve => resolve());
-      lock.writersQueue.forEach(resolve => resolve());
+      lock.readersQueue.forEach((resolve) => resolve());
+      lock.writersQueue.forEach((resolve) => resolve());
     }
-    
+
     this.tableLockRegistry.clear();
   }
 }

@@ -7,15 +7,14 @@
  */
 
 import type { AxiosInstance } from 'axios';
-import type { ResolvedHttpConfig, ClientHeadersConfig } from '../core/types';
 
+import type { ClientHeadersConfig, ResolvedHttpConfig } from '../core/types';
 import { setupAuthInterceptor } from './request/auth-interceptor';
 import { setupHeadersInterceptor } from './request/headers-interceptor';
 import { setupParamsInterceptor } from './request/params-interceptor';
-
 import { setupErrorNormalizerInterceptor } from './response/error-normalizer';
-import { setupUnauthorizedHandlerInterceptor } from './response/unauthorized-handler';
 import { setupRetryInterceptor } from './response/retry-interceptor';
+import { setupUnauthorizedHandlerInterceptor } from './response/unauthorized-handler';
 
 // =============================================================================
 // Types
@@ -118,10 +117,7 @@ export const setupInterceptors = (
 /**
  * Removes all interceptors previously registered by `setupInterceptors`.
  */
-export const removeInterceptors = (
-  instance: AxiosInstance,
-  ids: InterceptorIds,
-): void => {
+export const removeInterceptors = (instance: AxiosInstance, ids: InterceptorIds): void => {
   instance.interceptors.request.eject(ids.request.headers);
   instance.interceptors.request.eject(ids.request.params);
   instance.interceptors.request.eject(ids.request.auth);

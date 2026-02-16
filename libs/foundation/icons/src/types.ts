@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 import type { IconSizeType } from './constants';
 import type { IconName } from './registry/registry';
 
@@ -73,6 +75,5 @@ export interface RegisterIconOptions {
   /**
    * React component for the icon (should be a Lucide icon or compatible component)
    */
-  component: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  component: LucideIcon;
 }
-

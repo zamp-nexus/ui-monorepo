@@ -9,20 +9,19 @@
 
 import { HTTP_ERROR_CODE, type HttpErrorCode } from '../core/constants';
 import type {
+  HttpCancelledError,
+  HttpConfigError,
+  HttpForbiddenError,
+  HttpNetworkError,
+  HttpNotFoundError,
   HttpNotInitializedError,
   HttpRequestError,
-  HttpTimeoutError,
-  HttpNetworkError,
-  HttpCancelledError,
-  HttpUnauthorizedError,
-  HttpForbiddenError,
-  HttpNotFoundError,
+  HttpSerializationError,
   HttpServerError,
-  HttpConfigError,
-  HttpSerializationError} from './http-errors';
-import {
-  HttpError
+  HttpTimeoutError,
+  HttpUnauthorizedError,
 } from './http-errors';
+import { HttpError } from './http-errors';
 
 // =============================================================================
 // Core Type Guards
@@ -45,19 +44,15 @@ export const isHttpError = (error: unknown): error is HttpError =>
     typeof (error as Record<string, unknown>).message === 'string');
 
 /** Check if an error has a specific HTTP error code */
-export const hasHttpErrorCode = (
-  error: unknown,
-  httpCode: HttpErrorCode,
-): error is HttpError => isHttpError(error) && error.httpCode === httpCode;
+export const hasHttpErrorCode = (error: unknown, httpCode: HttpErrorCode): error is HttpError =>
+  isHttpError(error) && error.httpCode === httpCode;
 
 // =============================================================================
 // Specific Error Type Guards
 // =============================================================================
 
 /** Check if error is HttpNotInitializedError */
-export const isHttpNotInitializedError = (
-  error: unknown,
-): error is HttpNotInitializedError =>
+export const isHttpNotInitializedError = (error: unknown): error is HttpNotInitializedError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.NOT_INITIALIZED);
 
 /** Check if error is HttpRequestError */
@@ -73,27 +68,19 @@ export const isHttpNetworkError = (error: unknown): error is HttpNetworkError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.NETWORK_ERROR);
 
 /** Check if error is HttpCancelledError */
-export const isHttpCancelledError = (
-  error: unknown,
-): error is HttpCancelledError =>
+export const isHttpCancelledError = (error: unknown): error is HttpCancelledError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.CANCELLED);
 
 /** Check if error is HttpUnauthorizedError */
-export const isHttpUnauthorizedError = (
-  error: unknown,
-): error is HttpUnauthorizedError =>
+export const isHttpUnauthorizedError = (error: unknown): error is HttpUnauthorizedError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.UNAUTHORIZED);
 
 /** Check if error is HttpForbiddenError */
-export const isHttpForbiddenError = (
-  error: unknown,
-): error is HttpForbiddenError =>
+export const isHttpForbiddenError = (error: unknown): error is HttpForbiddenError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.FORBIDDEN);
 
 /** Check if error is HttpNotFoundError */
-export const isHttpNotFoundError = (
-  error: unknown,
-): error is HttpNotFoundError =>
+export const isHttpNotFoundError = (error: unknown): error is HttpNotFoundError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.NOT_FOUND);
 
 /** Check if error is HttpServerError */
@@ -105,9 +92,7 @@ export const isHttpConfigError = (error: unknown): error is HttpConfigError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.CONFIG_ERROR);
 
 /** Check if error is HttpSerializationError */
-export const isHttpSerializationError = (
-  error: unknown,
-): error is HttpSerializationError =>
+export const isHttpSerializationError = (error: unknown): error is HttpSerializationError =>
   hasHttpErrorCode(error, HTTP_ERROR_CODE.SERIALIZATION_ERROR);
 
 // =============================================================================
@@ -149,11 +134,7 @@ export const isRetryableHttpError = (error: unknown): boolean => {
   }
 
   if (isHttpError(error) && error.statusCode !== undefined) {
-    return (
-      error.statusCode >= 500 ||
-      error.statusCode === 408 ||
-      error.statusCode === 429
-    );
+    return error.statusCode >= 500 || error.statusCode === 408 || error.statusCode === 429;
   }
 
   return false;

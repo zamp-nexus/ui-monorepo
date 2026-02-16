@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Textarea } from './textarea';
 
@@ -151,11 +152,7 @@ export const WithMaxLength: Story = {
 export const WithError: Story = {
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <Textarea
-        invalid
-        defaultValue="Short"
-        aria-describedby="message-error"
-      />
+      <Textarea invalid defaultValue="Short" aria-describedby="message-error" />
       <span id="message-error" style={{ color: '#dc2626', fontSize: '14px' }}>
         Message must be at least 10 characters
       </span>
@@ -230,12 +227,7 @@ export const FormExample: Story = {
         >
           Your feedback
         </label>
-        <Textarea
-          id="feedback"
-          name="feedback"
-          placeholder="Tell us what you think..."
-          rows={5}
-        />
+        <Textarea id="feedback" name="feedback" placeholder="Tell us what you think..." rows={5} />
       </div>
       <button
         type="submit"
@@ -254,4 +246,3 @@ export const FormExample: Story = {
     </form>
   ),
 };
-

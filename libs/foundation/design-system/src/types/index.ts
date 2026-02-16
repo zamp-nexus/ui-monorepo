@@ -34,9 +34,7 @@ export type {
   ComponentThemeConfigStructure,
 } from './cva';
 
-export {
-  CLASS_PROP_KEY,
-} from './cva';
+export { CLASS_PROP_KEY } from './cva';
 
 // Polymorphic types
 export type {
@@ -87,6 +85,4 @@ export type {
   UseThemeReturn,
 } from './theme';
 
-export {
-  DIRECTION,
-} from './theme';
+export { DIRECTION } from './theme';

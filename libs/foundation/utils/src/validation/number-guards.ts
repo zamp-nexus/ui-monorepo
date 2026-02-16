@@ -72,11 +72,7 @@ export const isFiniteNumber = (value: unknown): value is number => {
  * @param max - Maximum value
  * @returns True if value is within [min, max]
  */
-export const isInRange = (
-  value: unknown,
-  min: number,
-  max: number
-): value is number => {
+export const isInRange = (value: unknown, min: number, max: number): value is number => {
   return typeof value === 'number' && value >= min && value <= max;
 };
 

@@ -8,9 +8,10 @@
  */
 
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import type { AuthConfig } from '../../core/types';
+
 import { HTTP_STATUS } from '../../core/constants';
-import { isHttpUnauthorizedError, isHttpForbiddenError } from '../../errors/type-guards';
+import type { AuthConfig } from '../../core/types';
+import { isHttpForbiddenError, isHttpUnauthorizedError } from '../../errors/type-guards';
 
 // =============================================================================
 // Types
@@ -36,17 +37,14 @@ export interface UnauthorizedHandlerOptions {
  * The `onUnauthorized` callback receives `(statusCode, url?)` — no mock
  * AxiosResponse objects are constructed.
  */
-export const createUnauthorizedHandlerInterceptor = (
-  options: UnauthorizedHandlerOptions,
-) => {
+export const createUnauthorizedHandlerInterceptor = (options: UnauthorizedHandlerOptions) => {
   const { auth, debug } = options;
 
   const onFulfilled = (response: AxiosResponse): AxiosResponse => {
     if (
       auth.enabled &&
       auth.onUnauthorized &&
-      (response.status === HTTP_STATUS.UNAUTHORIZED ||
-        response.status === HTTP_STATUS.FORBIDDEN)
+      (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN)
     ) {
       if (debug) {
         console.log('[HttpClient] Unauthorized response detected:', {

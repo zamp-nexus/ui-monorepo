@@ -7,17 +7,18 @@
  * @module services/query-cache
  */
 
-import { BaseService } from './base';
 import { QUERY_CACHE_STATUS } from '@open-insights-web/foundation-data-model';
+
 import type {
-  QueryCacheOperations,
+  GetCacheOptions,
   QueryCacheEntry,
   QueryCacheEntryWithStatus,
-  GetCacheOptions,
+  QueryCacheOperations,
 } from '../tables/query-cache';
-import { isCacheExpired, getCacheStatus } from '../tables/query-cache';
-import { queryCacheEntrySchema } from '../validation/schemas';
+import { getCacheStatus, isCacheExpired } from '../tables/query-cache';
 import { assertValid } from '../validation/assert-valid';
+import { queryCacheEntrySchema } from '../validation/schemas';
+import { BaseService } from './base';
 
 /**
  * Query Cache Service
@@ -29,7 +30,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
    */
   private resolveEntry = (
     entry: QueryCacheEntry | undefined,
-    options?: GetCacheOptions
+    options?: GetCacheOptions,
   ): QueryCacheEntryWithStatus | null => {
     if (!entry) {
       return null;
@@ -62,7 +63,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
    */
   get = async (
     queryHash: string,
-    options?: GetCacheOptions
+    options?: GetCacheOptions,
   ): Promise<QueryCacheEntryWithStatus | null> => {
     const entry = await this.db.queries.get(queryHash);
     return this.resolveEntry(entry, options);
@@ -90,10 +91,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
    * Delete all entries for a specific table
    */
   deleteByTable = async (tableName: string): Promise<number> => {
-    const count = await this.db.queries
-      .where('tableName')
-      .equals(tableName)
-      .delete();
+    const count = await this.db.queries.where('tableName').equals(tableName).delete();
     this.log(`Deleted ${count} entries for table:`, tableName);
     return count;
   };
@@ -157,7 +155,7 @@ export class QueryCacheService extends BaseService implements QueryCacheOperatio
    */
   bulkGet = async (
     queryHashes: string[],
-    options?: GetCacheOptions
+    options?: GetCacheOptions,
   ): Promise<(QueryCacheEntryWithStatus | null)[]> => {
     if (queryHashes.length === 0) return [];
 

@@ -3,11 +3,7 @@
  * @module sampling
  */
 
-export {
-  createHeadSampler,
-  createPrioritySampler,
-  createConsistentSampler,
-} from './head-sampler';
+export { createHeadSampler, createPrioritySampler, createConsistentSampler } from './head-sampler';
 export type { SamplerResult } from './head-sampler';
 
 export {

@@ -21,9 +21,7 @@ export const DEFAULTS = {
    * Default number of workers (based on hardware concurrency, capped at 8)
    */
   WORKER_COUNT:
-    typeof navigator !== 'undefined'
-      ? Math.min(navigator.hardwareConcurrency || 2, 8)
-      : 2,
+    typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 2, 8) : 2,
 
   /**
    * Maximum queries per worker queue before overflow
@@ -150,18 +148,54 @@ export const SQL = {
    * SQL reserved words that cannot be used as identifiers
    */
   RESERVED_WORDS: [
-    'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE',
-    'TABLE', 'VIEW', 'INDEX', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'NULL',
-    'TRUE', 'FALSE', 'AS', 'ON', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
-    'GROUP', 'BY', 'ORDER', 'HAVING', 'LIMIT', 'OFFSET', 'UNION', 'ALL',
-    'DISTINCT', 'INTO', 'VALUES', 'SET', 'BEGIN', 'COMMIT', 'ROLLBACK',
+    'SELECT',
+    'INSERT',
+    'UPDATE',
+    'DELETE',
+    'DROP',
+    'CREATE',
+    'ALTER',
+    'TRUNCATE',
+    'TABLE',
+    'VIEW',
+    'INDEX',
+    'FROM',
+    'WHERE',
+    'AND',
+    'OR',
+    'NOT',
+    'NULL',
+    'TRUE',
+    'FALSE',
+    'AS',
+    'ON',
+    'JOIN',
+    'LEFT',
+    'RIGHT',
+    'INNER',
+    'OUTER',
+    'GROUP',
+    'BY',
+    'ORDER',
+    'HAVING',
+    'LIMIT',
+    'OFFSET',
+    'UNION',
+    'ALL',
+    'DISTINCT',
+    'INTO',
+    'VALUES',
+    'SET',
+    'BEGIN',
+    'COMMIT',
+    'ROLLBACK',
   ] as const,
 } as const;
 
 /**
  * SQL reserved word type (derived from SQL.RESERVED_WORDS array)
  */
-export type SqlReservedWord = typeof SQL.RESERVED_WORDS[number];
+export type SqlReservedWord = (typeof SQL.RESERVED_WORDS)[number];
 
 // =============================================================================
 // Worker Message Types
@@ -189,8 +223,7 @@ export const WORKER_MESSAGE_TYPES = {
 /**
  * Worker message type
  */
-export type WorkerMessageType =
-  (typeof WORKER_MESSAGE_TYPES)[keyof typeof WORKER_MESSAGE_TYPES];
+export type WorkerMessageType = (typeof WORKER_MESSAGE_TYPES)[keyof typeof WORKER_MESSAGE_TYPES];
 
 // =============================================================================
 // Runtime Environment (constants: CAPITAL_SNAKE_CASE; type: PascalCase)

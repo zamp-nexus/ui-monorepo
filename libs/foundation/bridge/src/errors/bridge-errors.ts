@@ -8,6 +8,7 @@
  */
 
 import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+
 import { BridgeError } from './base-error';
 
 // =============================================================================
@@ -37,13 +38,14 @@ export class BridgeNotInitializedError extends BridgeError {
 export class BridgeInitializationError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_INIT_FAILED;
 
-  constructor(
-    readonly bridgeType: string,
-    cause: Error
-  ) {
-    super(`Failed to initialize ${bridgeType}: ${cause.message}`, {
-      bridgeType,
-    }, cause);
+  constructor(readonly bridgeType: string, cause: Error) {
+    super(
+      `Failed to initialize ${bridgeType}: ${cause.message}`,
+      {
+        bridgeType,
+      },
+      cause,
+    );
   }
 }
 
@@ -72,10 +74,7 @@ export class OpfsNotFoundError extends BridgeError {
 export class OpfsPermissionError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_OPFS_PERMISSION_DENIED;
 
-  constructor(
-    readonly fileName: string,
-    cause?: Error
-  ) {
+  constructor(readonly fileName: string, cause?: Error) {
     super(`OPFS permission denied: ${fileName}`, { fileName }, cause);
   }
 }
@@ -90,10 +89,7 @@ export class OpfsPermissionError extends BridgeError {
 export class OpfsWriteError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.BRIDGE_OPFS_WRITE_FAILED;
 
-  constructor(
-    readonly fileName: string,
-    cause: Error
-  ) {
+  constructor(readonly fileName: string, cause: Error) {
     super(`Failed to write OPFS file: ${fileName}`, { fileName }, cause);
   }
 }
@@ -108,10 +104,7 @@ export class OpfsWriteError extends BridgeError {
 export class ConfigurationError extends BridgeError {
   readonly code = FOUNDATION_ERROR_CODE.CONFIG_INVALID;
 
-  constructor(
-    readonly configName: string,
-    readonly validationErrors: readonly string[]
-  ) {
+  constructor(readonly configName: string, readonly validationErrors: readonly string[]) {
     super(`Invalid ${configName} configuration: ${validationErrors.join(', ')}`, {
       configName,
       validationErrors,

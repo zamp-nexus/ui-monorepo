@@ -9,11 +9,15 @@
  * @module types/schema
  */
 
-import type { MemberRef, SqlTableName as TableName } from '@open-insights-web/foundation-data-model';
+import type {
+  MemberRef,
+  SqlTableName as TableName,
+} from '@open-insights-web/foundation-data-model';
+
 import type { Aggregation } from './aggregation';
+import type { JoinType } from './join';
 import type { MeasureFormatType } from './measure';
 import type { TimeGranularity } from './time';
-import type { JoinType } from './join';
 
 // =============================================================================
 // MEASURE DATA TYPES - Const object pattern
@@ -129,9 +133,9 @@ export type JoinRelationshipCardinality =
  *
  * Use this when converting between the two cardinality representations.
  */
-export const CARDINALITY_TO_JOIN_CARDINALITY: Readonly<Record<
-  RelationshipCardinality, JoinRelationshipCardinality
->> = {
+export const CARDINALITY_TO_JOIN_CARDINALITY: Readonly<
+  Record<RelationshipCardinality, JoinRelationshipCardinality>
+> = {
   [RELATIONSHIP_CARDINALITIES.ONE_TO_ONE]: JOIN_RELATIONSHIP_CARDINALITIES.ONE_TO_ONE,
   [RELATIONSHIP_CARDINALITIES.ONE_TO_MANY]: JOIN_RELATIONSHIP_CARDINALITIES.ONE_TO_MANY,
   [RELATIONSHIP_CARDINALITIES.MANY_TO_ONE]: JOIN_RELATIONSHIP_CARDINALITIES.MANY_TO_ONE,
@@ -337,15 +341,14 @@ export const isDimensionType = (value: unknown): value is DimensionType =>
  * Check if a dimension is a time dimension
  */
 export const isTimeDimension = (
-  dimension: DimensionDefinition | TimeDimensionDefinition
+  dimension: DimensionDefinition | TimeDimensionDefinition,
 ): dimension is TimeDimensionDefinition => dimension.type === DIMENSION_TYPES.TIME;
 
 /**
  * Check if a value is a valid member visibility
  */
 export const isMemberVisibility = (value: unknown): value is MemberVisibility =>
-  typeof value === 'string' &&
-  Object.values(MEMBER_VISIBILITY).includes(value as MemberVisibility);
+  typeof value === 'string' && Object.values(MEMBER_VISIBILITY).includes(value as MemberVisibility);
 
 // =============================================================================
 // SCHEMA HELPERS
@@ -366,7 +369,9 @@ export const getTableDimensions = (table: TableDefinition): ReadonlyArray<string
 /**
  * Get all visible members from a table
  */
-export const getVisibleMembers = (table: TableDefinition): {
+export const getVisibleMembers = (
+  table: TableDefinition,
+): {
   measures: ReadonlyArray<string>;
   dimensions: ReadonlyArray<string>;
 } => {

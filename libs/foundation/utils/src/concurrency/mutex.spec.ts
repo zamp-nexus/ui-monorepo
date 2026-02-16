@@ -2,7 +2,8 @@
  * Tests for Mutex and Semaphore
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { Mutex, Semaphore } from './mutex';
 
 describe('Mutex', () => {
@@ -81,7 +82,7 @@ describe('Mutex', () => {
     await expect(
       mutex.runExclusive(async () => {
         throw new Error('test error');
-      })
+      }),
     ).rejects.toThrow('test error');
 
     expect(mutex.isLocked).toBe(false);
@@ -191,7 +192,7 @@ describe('Semaphore', () => {
     await expect(
       semaphore.runWithPermit(async () => {
         throw new Error('test error');
-      })
+      }),
     ).rejects.toThrow('test error');
 
     expect(semaphore.available).toBe(1);

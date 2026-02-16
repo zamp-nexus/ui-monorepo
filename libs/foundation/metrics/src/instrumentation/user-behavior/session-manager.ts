@@ -3,10 +3,11 @@
  * @module instrumentation/user-behavior/session-manager
  */
 
-import type { UserBehaviorSignalConfig, SessionData, SessionState } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { generateId, hashStringSync } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { SessionData, SessionState, UserBehaviorSignalConfig } from '../../types';
 
 /**
  * Session manager state
@@ -29,7 +30,7 @@ const SESSION_STORAGE_KEY = 'fm_session';
  */
 export function installSessionManager(
   config: UserBehaviorSignalConfig,
-  callback?: (session: SessionData) => void
+  callback?: (session: SessionData) => void,
 ): void {
   if (typeof window === 'undefined') {
     return;
@@ -107,7 +108,7 @@ export function uninstallSessionManager(): void {
     clearTimeout(throttleTimeout);
     throttleTimeout = null;
   }
-  
+
   if (typeof document !== 'undefined') {
     document.removeEventListener('click', handleActivity);
     document.removeEventListener('keydown', handleActivity);

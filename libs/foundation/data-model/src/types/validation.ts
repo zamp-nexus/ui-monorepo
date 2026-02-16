@@ -156,7 +156,7 @@ export const ValidationResult = {
   error: (
     path: string,
     message: string,
-    options?: { code?: string; suggestion?: string }
+    options?: { code?: string; suggestion?: string },
   ): ValidationResultData => ({
     valid: false,
     issues: [
@@ -181,7 +181,7 @@ export const ValidationResult = {
   warning: (
     path: string,
     message: string,
-    options?: { code?: string; suggestion?: string }
+    options?: { code?: string; suggestion?: string },
   ): ValidationResultData => ({
     valid: true,
     issues: [
@@ -277,7 +277,7 @@ export const ValidationResult = {
    */
   mapIssues: (
     result: ValidationResultData,
-    fn: (issue: ValidationIssue) => ValidationIssue
+    fn: (issue: ValidationIssue) => ValidationIssue,
   ): ValidationResultData => ({
     valid: result.valid,
     issues: result.issues.map(fn),
@@ -315,9 +315,7 @@ export const ValidationResult = {
    * @returns Formatted error message or empty string if valid
    */
   formatErrors: (result: ValidationResultData, separator = ', '): string => {
-    const errors = result.issues.filter(
-      (issue) => issue.severity === VALIDATION_SEVERITY.ERROR
-    );
+    const errors = result.issues.filter((issue) => issue.severity === VALIDATION_SEVERITY.ERROR);
     if (errors.length === 0) return '';
     return errors
       .map((issue) => (issue.path ? `${issue.path}: ${issue.message}` : issue.message))
@@ -352,5 +350,5 @@ export const ValidationResult = {
 // Example:
 //   import { ValidationResult } from './validation';
 //   import type { ValidationResultData } from './validation';
-//   
+//
 //   const result: ValidationResultData = ValidationResult.success();

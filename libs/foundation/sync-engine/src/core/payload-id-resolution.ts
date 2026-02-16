@@ -19,7 +19,7 @@ const isPlainObjectRecord = (value: unknown): value is Record<string, unknown> =
  */
 const resolveValue = (
   value: unknown,
-  resolveId: (provisionalId: string) => string | undefined
+  resolveId: (provisionalId: string) => string | undefined,
 ): unknown => {
   if (typeof value === 'string' && isProvisionalId(value)) {
     return resolveId(value) ?? value;
@@ -45,7 +45,7 @@ const resolveValue = (
  */
 export const resolvePayloadProvisionalIds = <TPayload extends Record<string, unknown>>(
   payload: TPayload,
-  resolveId: (provisionalId: string) => string | undefined
+  resolveId: (provisionalId: string) => string | undefined,
 ): TPayload => {
   return resolveValue(payload, resolveId) as TPayload;
 };

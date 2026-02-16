@@ -3,23 +3,20 @@
  * @module native/electron-bridge
  */
 
-import type { DuckDBBridge, QueryResult, QueryOptions, ViewDefinition, TableInfo } from '../types/bridge';
-import type {
-  Logger} from '@open-insights-web/foundation-utils';
-import {
-  createDebugLogger,
-  normalizeError,
-} from '@open-insights-web/foundation-utils';
-import {
-  BridgeNotInitializedError,
-  BridgeInitializationError,
-} from '../errors/bridge-errors';
-import {
-  QueryCancelledError,
-  QueryExecutionError,
-} from '../errors/query-errors';
-import { validateIdentifier, validateViewSql } from '../utils/sql';
 import { QueryId } from '@open-insights-web/foundation-data-model';
+import type { Logger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, normalizeError } from '@open-insights-web/foundation-utils';
+
+import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';
+import { QueryCancelledError, QueryExecutionError } from '../errors/query-errors';
+import type {
+  DuckDBBridge,
+  QueryOptions,
+  QueryResult,
+  TableInfo,
+  ViewDefinition,
+} from '../types/bridge';
+import { validateIdentifier, validateViewSql } from '../utils/sql';
 
 /**
  * Electron API interface (exposed via preload)
@@ -27,7 +24,7 @@ import { QueryId } from '@open-insights-web/foundation-data-model';
 interface ElectronDuckDBAPI {
   query<T extends Record<string, unknown>>(
     sql: string,
-    params?: readonly unknown[]
+    params?: readonly unknown[],
   ): Promise<readonly T[]>;
   execute(sql: string, params?: readonly unknown[]): Promise<void>;
   registerFile(path: string, alias: string): Promise<void>;
@@ -47,8 +44,7 @@ interface ElectronDuckDBAPI {
  */
 const getElectronAPI = (): ElectronDuckDBAPI | null => {
   if (typeof window !== 'undefined' && 'electronDuckDB' in window) {
-    return (window as Window & { electronDuckDB: ElectronDuckDBAPI })
-      .electronDuckDB;
+    return (window as Window & { electronDuckDB: ElectronDuckDBAPI }).electronDuckDB;
   }
   return null;
 };
@@ -100,17 +96,14 @@ export class ElectronDuckDBBridge implements DuckDBBridge {
 
       if (!this.api) {
         throw new Error(
-          'Electron DuckDB API not found. Ensure preload script exposes electronDuckDB.'
+          'Electron DuckDB API not found. Ensure preload script exposes electronDuckDB.',
         );
       }
 
       this.initialized = true;
       this.logger.info('Initialized');
     } catch (error) {
-      throw new BridgeInitializationError(
-        'ElectronDuckDBBridge',
-        normalizeError(error)
-      );
+      throw new BridgeInitializationError('ElectronDuckDBBridge', normalizeError(error));
     }
   }
 
@@ -138,7 +131,7 @@ export class ElectronDuckDBBridge implements DuckDBBridge {
 
   async query<T extends Record<string, unknown> = Record<string, unknown>>(
     sql: string,
-    options?: QueryOptions
+    options?: QueryOptions,
   ): Promise<QueryResult<T>> {
     const api = this.getApi();
     const queryId = QueryId.create();
@@ -166,9 +159,7 @@ export class ElectronDuckDBBridge implements DuckDBBridge {
       return {
         rows,
         columns,
-        types: columns.map((col) =>
-          firstRow ? inferColumnType(firstRow[col]) : 'unknown',
-        ),
+        types: columns.map((col) => (firstRow ? inferColumnType(firstRow[col]) : 'unknown')),
         executionTimeMs,
       };
     } catch (error) {

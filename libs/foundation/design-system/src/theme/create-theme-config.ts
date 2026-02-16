@@ -4,10 +4,10 @@
  */
 
 import type {
-  OIComponentVariants,
+  ComponentThemeConfigStructure,
   OIComponentModifiers,
   OIComponentSlots,
-  ComponentThemeConfigStructure,
+  OIComponentVariants,
   SlotThemeConfig,
 } from '../types';
 
@@ -30,7 +30,9 @@ export interface CreateThemeConfigOptions<
   /** Root slot configuration */
   root: SlotThemeConfig;
   /** Named slot configurations */
-  slotConfigs?: Partial<Record<Slots[number] extends string ? Slots[number] : never, SlotThemeConfig>>;
+  slotConfigs?: Partial<
+    Record<Slots[number] extends string ? Slots[number] : never, SlotThemeConfig>
+  >;
   /** Default variant values */
   defaultVariants?: Partial<{ [K in keyof Variants]: Variants[K][number] }>;
 }
@@ -81,22 +83,17 @@ export function createThemeConfig<
   Variants extends OIComponentVariants,
   Modifiers extends OIComponentModifiers,
   Slots extends OIComponentSlots,
->(
-  options: CreateThemeConfigOptions<Variants, Modifiers, Slots>,
-): ComponentThemeConfigStructure {
+>(options: CreateThemeConfigOptions<Variants, Modifiers, Slots>): ComponentThemeConfigStructure {
   const { root, slotConfigs, defaultVariants } = options;
 
   // Convert slot configs to the expected format
   const slots: Record<string, SlotThemeConfig> | undefined = slotConfigs
-    ? Object.entries(slotConfigs).reduce(
-        (acc, [slotName, config]) => {
-          if (config) {
-            acc[slotName] = config;
-          }
-          return acc;
-        },
-        {} as Record<string, SlotThemeConfig>,
-      )
+    ? Object.entries(slotConfigs).reduce((acc, [slotName, config]) => {
+        if (config) {
+          acc[slotName] = config;
+        }
+        return acc;
+      }, {} as Record<string, SlotThemeConfig>)
     : undefined;
 
   return {
@@ -128,9 +125,7 @@ export function createEmptySlotConfig(): SlotThemeConfig {
  *   lg: 'text-lg p-4',
  * });
  */
-export function createVariantConfig<T extends Record<string, string>>(
-  config: T,
-): T {
+export function createVariantConfig<T extends Record<string, string>>(config: T): T {
   return config;
 }
 
@@ -143,10 +138,9 @@ export function createVariantConfig<T extends Record<string, string>>(
  *   false: '',
  * });
  */
-export function createModifierConfig(config: {
+export function createModifierConfig(config: { true: string; false?: string }): {
   true: string;
   false?: string;
-}): { true: string; false?: string } {
+} {
   return config;
 }
-

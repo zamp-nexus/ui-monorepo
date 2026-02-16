@@ -19,8 +19,8 @@ export class HistoryManager {
   private static instance: HistoryManager | null = null;
 
   private isInstalled = false;
-  private originalPushState: typeof history.pushState | null = null;
-  private originalReplaceState: typeof history.replaceState | null = null;
+  private originalPushState: History['pushState'] | null = null;
+  private originalReplaceState: History['replaceState'] | null = null;
   private listeners = new Set<HistoryCallback>();
 
   private constructor() {
@@ -57,11 +57,12 @@ export class HistoryManager {
   getListenerCount = (): number => this.listeners.size;
 
   private install = (): void => {
-    if (typeof window === 'undefined' || typeof history === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.history === 'undefined') return;
     if (this.isInstalled) return;
 
-    this.originalPushState = history.pushState.bind(history);
-    this.originalReplaceState = history.replaceState.bind(history);
+    const historyApi = window.history;
+    this.originalPushState = historyApi.pushState.bind(historyApi);
+    this.originalReplaceState = historyApi.replaceState.bind(historyApi);
 
     const notifyListeners = (url: string, historyState: unknown): void => {
       for (const listener of this.listeners) {
@@ -73,15 +74,23 @@ export class HistoryManager {
       }
     };
 
-    history.pushState = (data: unknown, unused: string, url?: string | URL | null) => {
-      this.originalPushState!(data, unused, url);
+    historyApi.pushState = (data: unknown, unused: string, url?: string | URL | null) => {
+      const originalPushState = this.originalPushState;
+      if (originalPushState === null) {
+        return;
+      }
+      originalPushState(data, unused, url);
       if (url) {
         notifyListeners(url.toString(), data);
       }
     };
 
-    history.replaceState = (data: unknown, unused: string, url?: string | URL | null) => {
-      this.originalReplaceState!(data, unused, url);
+    historyApi.replaceState = (data: unknown, unused: string, url?: string | URL | null) => {
+      const originalReplaceState = this.originalReplaceState;
+      if (originalReplaceState === null) {
+        return;
+      }
+      originalReplaceState(data, unused, url);
       if (url) {
         notifyListeners(url.toString(), data);
       }
@@ -93,11 +102,12 @@ export class HistoryManager {
   private uninstall = (): void => {
     if (!this.isInstalled) return;
 
+    const historyApi = window.history;
     if (this.originalPushState) {
-      history.pushState = this.originalPushState;
+      historyApi.pushState = this.originalPushState;
     }
     if (this.originalReplaceState) {
-      history.replaceState = this.originalReplaceState;
+      historyApi.replaceState = this.originalReplaceState;
     }
 
     this.listeners.clear();

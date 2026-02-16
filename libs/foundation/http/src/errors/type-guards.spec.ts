@@ -4,40 +4,41 @@
  * Tests for type guard functions that classify HTTP errors.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { HTTP_ERROR_CODE } from '../core/constants';
 import {
-  HttpRequestError,
-  HttpTimeoutError,
-  HttpNetworkError,
   HttpCancelledError,
-  HttpUnauthorizedError,
-  HttpForbiddenError,
-  HttpNotFoundError,
-  HttpServerError,
-  HttpNotInitializedError,
   HttpConfigError,
+  HttpForbiddenError,
+  HttpNetworkError,
+  HttpNotFoundError,
+  HttpNotInitializedError,
+  HttpRequestError,
   HttpSerializationError,
+  HttpServerError,
+  HttpTimeoutError,
+  HttpUnauthorizedError,
 } from './http-errors';
 import {
-  isHttpError,
   hasHttpErrorCode,
-  isHttpNotInitializedError,
-  isHttpRequestError,
-  isHttpTimeoutError,
-  isHttpNetworkError,
-  isHttpCancelledError,
-  isHttpUnauthorizedError,
-  isHttpForbiddenError,
-  isHttpNotFoundError,
-  isHttpServerError,
-  isHttpConfigError,
-  isHttpSerializationError,
   isAuthenticationError,
   isClientError,
-  isServerError,
-  isRetryableHttpError,
+  isHttpCancelledError,
+  isHttpConfigError,
+  isHttpError,
+  isHttpForbiddenError,
+  isHttpNetworkError,
+  isHttpNotFoundError,
+  isHttpNotInitializedError,
+  isHttpRequestError,
+  isHttpSerializationError,
+  isHttpServerError,
+  isHttpTimeoutError,
+  isHttpUnauthorizedError,
   isNonRetryableHttpError,
+  isRetryableHttpError,
+  isServerError,
 } from './type-guards';
 
 // =============================================================================

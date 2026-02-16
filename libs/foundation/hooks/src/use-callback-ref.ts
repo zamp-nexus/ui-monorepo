@@ -2,7 +2,7 @@
  * useCallbackRef - Store callback in ref to avoid dependency issues
  * @module use-callback-ref
  */
-import { useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Hook to create a stable callback reference.
@@ -24,9 +24,7 @@ import { useRef, useEffect, useCallback } from 'react';
  * }, []); // Safe to have empty deps
  * ```
  */
-export function useCallbackRef<T extends (...args: never[]) => unknown>(
-  callback: T
-): T {
+export function useCallbackRef<T extends (...args: never[]) => unknown>(callback: T): T {
   const callbackRef = useRef(callback);
 
   // Update ref on every render
@@ -35,8 +33,5 @@ export function useCallbackRef<T extends (...args: never[]) => unknown>(
   });
 
   // Return stable callback that calls the ref
-  return useCallback(
-    ((...args: Parameters<T>) => callbackRef.current(...args)) as T,
-    []
-  );
+  return useCallback(((...args: Parameters<T>) => callbackRef.current(...args)) as T, []);
 }

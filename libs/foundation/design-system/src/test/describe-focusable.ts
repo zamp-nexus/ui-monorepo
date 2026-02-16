@@ -3,9 +3,9 @@
  * @module test/describe-focusable
  */
 
-import React from 'react';
+import React, { act } from 'react';
+
 import { render } from '@testing-library/react';
-import { act } from 'react';
 
 import { randomString } from './random';
 
@@ -100,4 +100,3 @@ export function describeFocusable(
     fn?.();
   });
 }
-

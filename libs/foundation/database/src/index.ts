@@ -6,7 +6,7 @@
  *
  * NOTE: JsonSerializable and related utilities should be imported directly from
  * @open-insights-web/foundation-data-model
- * 
+ *
  * NOTE: Generic hash functions (hashPayloadSync, hashPayloadAsync) should be
  * imported directly from @open-insights-web/foundation-utils
  *
@@ -26,20 +26,13 @@ export {
   hasDatabaseFacade,
 } from './facade';
 
-export type {
-  DatabaseTransactionMode,
-  DatabaseTransactionTable,
-} from './facade';
+export type { DatabaseTransactionMode, DatabaseTransactionTable } from './facade';
 
 // ============================================================================
 // Configuration (used by data-layer, bridge)
 // ============================================================================
 
-export {
-  SYNC_STATE_KEYS,
-  MUTATION_STATUS,
-  QUERY_CACHE_STATUS,
-} from './core/config';
+export { SYNC_STATE_KEYS, MUTATION_STATUS, QUERY_CACHE_STATUS } from './core/config';
 
 // ============================================================================
 // Tables (used by data-layer, sync-engine, bridge)
@@ -83,7 +76,7 @@ export {
 // ============================================================================
 //
 // ARCHITECTURE NOTE:
-// 
+//
 // The database library has two access patterns:
 // 1. DatabaseFacade (recommended) - Provides a clean service-based API
 //    Use getDatabaseFacade() for application code
@@ -95,10 +88,7 @@ export {
 // If DatabaseFacade creates a database, getDatabase() returns that same instance.
 //
 
-export {
-  InsightsDatabase,
-  getDatabase,
-} from './core/database';
+export { InsightsDatabase, getDatabase } from './core/database';
 
 // Services (used by bridge for type-safe state operations)
 export { SyncStateService } from './services/sync-state';

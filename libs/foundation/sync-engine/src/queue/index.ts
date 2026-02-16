@@ -1,9 +1,9 @@
 /**
  * Queue exports
- * 
+ *
  * NOTE: QueueStats and ProcessingResult types should be imported
  * directly from @open-insights-web/foundation-data-model
- * 
+ *
  * @module queue
  */
 

@@ -18,9 +18,10 @@
 
 import {
   createSingletonFactory,
-  type IDisposable,
   DisposedError,
+  type IDisposable,
 } from '@open-insights-web/foundation-utils';
+
 import type {
   DecisionContext,
   DecisionFactors,
@@ -29,12 +30,8 @@ import type {
   DecisionRule,
 } from '../types/decision';
 import { DECISION_PATHS, DECISION_REASONS } from '../types/decision';
+import { isMutationOperation, OPERATIONS, WRITE_OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
-import {
-  isMutationOperation,
-  OPERATIONS,
-  WRITE_OPERATIONS,
-} from '../types/operations';
 import { TableExtractor } from './table-extractor';
 
 // =============================================================================
@@ -137,11 +134,7 @@ export class DecisionEngine implements IDisposable {
    * @param options - Optional decision options
    * @returns Decision result with path, reason, and confidence
    */
-  decide = (
-    query: Query,
-    context: DecisionContext,
-    options?: DecisionOptions
-  ): DecisionResult => {
+  decide = (query: Query, context: DecisionContext, options?: DecisionOptions): DecisionResult => {
     this.ensureNotDisposed();
 
     // Allow forced path for testing/override
@@ -189,10 +182,7 @@ export class DecisionEngine implements IDisposable {
   /**
    * Compute decision factors from query and context.
    */
-  computeFactors = (
-    query: Query,
-    context: DecisionContext
-  ): DecisionFactors => {
+  computeFactors = (query: Query, context: DecisionContext): DecisionFactors => {
     const { tables, operation, tableConfigs, isOnline } = context;
 
     const isMutation = isMutationOperation(operation);
@@ -503,7 +493,11 @@ export interface DecisionEngineConfig {
  * ```
  */
 const decisionEngineFactory = createSingletonFactory<DecisionEngine, DecisionEngineConfig>(
-  (config) => new DecisionEngine(config?.tableExtractor, config?.customRules ? [...config.customRules] : undefined),
+  (config) =>
+    new DecisionEngine(
+      config?.tableExtractor,
+      config?.customRules ? [...config.customRules] : undefined,
+    ),
   {
     name: 'DecisionEngine',
     warnOnConfigOverride: true,
@@ -513,7 +507,7 @@ const decisionEngineFactory = createSingletonFactory<DecisionEngine, DecisionEng
       }
     },
     defaultConfig: {},
-  }
+  },
 );
 
 /**

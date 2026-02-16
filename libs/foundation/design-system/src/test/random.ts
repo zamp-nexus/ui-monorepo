@@ -43,4 +43,3 @@ export function randomElement<T>(arr: readonly T[]): T {
 export function randomBoolean(): boolean {
   return Math.random() >= 0.5;
 }
-

@@ -2,20 +2,18 @@
  * Tests for bridge validation utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
+import type { ValidationResultData } from '@open-insights-web/foundation-data-model';
 import {
-  validatePoolConfig,
-  validateRouterConfig,
-  resolvePoolConfig,
-} from './validation';
-import {
-  deepFreeze,
   assert,
   assertDefined,
-  isPositiveInteger,
+  deepFreeze,
   isNonNegative,
+  isPositiveInteger,
 } from '@open-insights-web/foundation-utils';
-import type { ValidationResultData } from '@open-insights-web/foundation-data-model';
+
+import { resolvePoolConfig, validatePoolConfig, validateRouterConfig } from './validation';
 
 const getMessages = (result: ValidationResultData): string[] =>
   result.issues.map((issue) => issue.message);
@@ -54,7 +52,7 @@ describe('validatePoolConfig', () => {
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain(
-      'workerCount should not exceed 16 (diminishing returns with more workers)'
+      'workerCount should not exceed 16 (diminishing returns with more workers)',
     );
   });
 
@@ -90,7 +88,7 @@ describe('validatePoolConfig', () => {
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain(
-      'defaultQueryTimeout should not exceed 300000ms (5 minutes)'
+      'defaultQueryTimeout should not exceed 300000ms (5 minutes)',
     );
   });
 
@@ -257,7 +255,9 @@ describe('assertDefined', () => {
   });
 
   it('should throw for undefined', () => {
-    expect(() => assertDefined(undefined, 'myValue')).toThrow('myValue is required but was undefined');
+    expect(() => assertDefined(undefined, 'myValue')).toThrow(
+      'myValue is required but was undefined',
+    );
   });
 });
 

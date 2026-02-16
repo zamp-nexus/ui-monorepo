@@ -34,8 +34,8 @@ export type DeepMerge<T, U> = {
         : U[K]
       : U[K]
     : K extends keyof T
-      ? T[K]
-      : never;
+    ? T[K]
+    : never;
 };
 
 /** Extract keys from object type */
@@ -59,4 +59,3 @@ export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never
 ) => void
   ? I
   : never;
-

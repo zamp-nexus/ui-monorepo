@@ -12,11 +12,10 @@
  */
 
 import type { FunctionReference } from 'convex/server';
-import {
-  CONFLICT_STRATEGY,
-  type ConflictStrategy,
-} from '@open-insights-web/foundation-data-model';
-import { TIME_MS, createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+
+import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import { createDebugLogger, TIME_MS, type Logger } from '@open-insights-web/foundation-utils';
+
 import type { TableOperation } from './constants';
 
 // =============================================================================
@@ -172,11 +171,7 @@ export interface UnifiedTableConfig {
     /** Fields to deep merge (for nested objects) */
     readonly deepMergeFields?: ReadonlyArray<string>;
     /** Custom merge function */
-    readonly customMerge?: (
-      serverValue: unknown,
-      clientValue: unknown,
-      field: string
-    ) => unknown;
+    readonly customMerge?: (serverValue: unknown, clientValue: unknown, field: string) => unknown;
   };
 
   // ─── ANALYTICS CONFIGURATION ────────────────────────────────────────────────
@@ -216,7 +211,7 @@ export class TableRegistry {
       gcTime?: number;
       conflictStrategy?: ConflictStrategy;
       debug?: boolean;
-    } = {}
+    } = {},
   ) {
     this.logger = createDebugLogger('TableRegistry', defaults.debug ?? false);
     this.defaults = {
@@ -231,7 +226,7 @@ export class TableRegistry {
       if (seenNames.has(table.name)) {
         this.logger.warn(
           `Duplicate table name '${table.name}' in initialization.`,
-          'Only the last configuration will be used.'
+          'Only the last configuration will be used.',
         );
       }
       seenNames.add(table.name);
@@ -301,7 +296,7 @@ export class TableRegistry {
     if (existing && !options?.force) {
       this.logger.warn(
         `Overwriting existing table configuration for '${config.name}'.`,
-        'Use { force: true } to suppress this warning.'
+        'Use { force: true } to suppress this warning.',
       );
     }
 
@@ -324,7 +319,7 @@ export class TableRegistry {
    */
   getConvexRef = (
     tableName: string,
-    operation: TableOperation
+    operation: TableOperation,
   ): FunctionReference<'query'> | FunctionReference<'mutation'> | undefined => {
     const table = this.tables.get(tableName);
     return table?.convex?.[operation];
@@ -334,7 +329,9 @@ export class TableRegistry {
    * Get mutation references for a table (create, update, delete).
    * Used by DataLayer hooks and SyncEngine.
    */
-  getMutationRefs = (tableName: string): {
+  getMutationRefs = (
+    tableName: string,
+  ): {
     create?: FunctionReference<'mutation'>;
     update?: FunctionReference<'mutation'>;
     delete?: FunctionReference<'mutation'>;
@@ -360,10 +357,8 @@ export class TableRegistry {
   /**
    * Check if table has a specific API operation defined.
    */
-  hasConvexRef = (
-    tableName: string,
-    operation: TableOperation
-  ): boolean => this.getConvexRef(tableName, operation) !== undefined;
+  hasConvexRef = (tableName: string, operation: TableOperation): boolean =>
+    this.getConvexRef(tableName, operation) !== undefined;
 
   // ─── CACHE ACCESSORS (DataLayer, QueryEngine) ───────────────────────────────
 
@@ -476,5 +471,5 @@ export const createTableRegistry = (
     gcTime?: number;
     conflictStrategy?: ConflictStrategy;
     debug?: boolean;
-  }
+  },
 ): TableRegistry => new TableRegistry(tables, defaults);

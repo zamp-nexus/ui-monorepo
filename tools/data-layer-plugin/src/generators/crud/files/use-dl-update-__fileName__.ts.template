@@ -1,57 +1,31 @@
 /**
- * useDLMutatePatch<%= className %> Hook
+ * useDLUpdate<%= className %> Hook
  *
  * Updates an existing <%= name %>.
  */
 
-import { useDLMutatePatch } from '@open-insights-web/foundation-data-layer';
-import type { <%= className %>, Update<%= className %>Input } from '<%= dataModel %>';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+import { useDLUpdate, type UseDLUpdateOptions } from '@open-insights-web/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 /**
- * Update an existing <%= name %>
- *
- * Automatically invalidates list queries on success.
- *
- * @example
- * ```tsx
- * function Update<%= className %>Form({ <%= propertyName %> }: { <%= propertyName %>: <%= className %> }) {
- *   const mutation = useDLMutatePatch<%= className %>();
- *
- *   const handleSubmit = (data: Update<%= className %>Input) => {
- *     mutation.mutate(data, {
- *       onSuccess: (updated<%= className %>) => {
- *         console.log('Updated:', updated<%= className %>);
- *       },
- *     });
- *   };
- *
- *   return (
- *     <form onSubmit={handleSubmit}>
- *       {mutation.isPending && <Spinner />}
- *       ...
- *     </form>
- *   );
- * }
- * ```
- *
- * @example With optimistic update
- * ```tsx
- * import { useDLMutatePatch } from '@open-insights-web/foundation-data-layer';
- *
- * const mutation = useDLMutatePatch<<%= className %>, Update<%= className %>Input>({
- *   endpoint: (input) => `<%= endpoint %>/${input.<%= idField %>}`,
- *   invalidates: [<%= propertyName %>Keys.lists()],
- *   optimisticUpdate: {
- *     queryKey: <%= propertyName %>Keys.detail(id),
- *     updater: (old, input) => ({ ...old, ...input }),
- *   },
- * });
- * ```
+ * Options for useDLUpdate<%= className %>
  */
-export function useDLMutatePatch<%= className %>() {
-  return useDLMutatePatch<<%= className %>, Update<%= className %>Input>({
-    endpoint: (input) => `<%= endpoint %>/${input.<%= idField %>}`,
-    invalidates: [<%= propertyName %>Keys.lists()],
+export type UseDLUpdate<%= className %>Options<TMutation extends FunctionReference<'mutation'>> = Omit<
+  UseDLUpdateOptions<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>,
+  'table'
+>;
+
+/**
+ * Update an existing <%= name %>
+ */
+export function useDLUpdate<%= className %><TMutation extends FunctionReference<'mutation'>>(
+  options: UseDLUpdate<%= className %>Options<TMutation>
+) {
+  return useDLUpdate<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>({
+    ...options,
+    table: '<%= propertyName %>s',
+    listQueryKey: options.listQueryKey ?? <%= propertyName %>Keys.list(),
+    itemQueryKey: options.itemQueryKey ?? ((id: string) => <%= propertyName %>Keys.detail(id)),
   });
 }

@@ -4,14 +4,15 @@
  */
 
 import type { z } from 'zod';
+
 import type {
   BaseEntitySchema,
-  TimestampsSchema,
-  SoftDeleteSchema,
-  TenantScopedSchema,
-  PaginationParamsSchema,
-  SortDirectionSchema,
   DateRangeSchema,
+  PaginationParamsSchema,
+  SoftDeleteSchema,
+  SortDirectionSchema,
+  TenantScopedSchema,
+  TimestampsSchema,
 } from '../schemas/base.schema';
 
 /**
@@ -116,8 +117,7 @@ export const OFFLINE_DATA_SOURCE = {
   OFFLINE_DB: 'offline_db',
 } as const;
 
-export type OfflineDataSource =
-  (typeof OFFLINE_DATA_SOURCE)[keyof typeof OFFLINE_DATA_SOURCE];
+export type OfflineDataSource = (typeof OFFLINE_DATA_SOURCE)[keyof typeof OFFLINE_DATA_SOURCE];
 
 /**
  * Offline metadata attached to queries/mutations

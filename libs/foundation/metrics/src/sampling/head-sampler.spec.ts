@@ -3,12 +3,9 @@
  * @module sampling/head-sampler.spec
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-  createHeadSampler,
-  createPrioritySampler,
-  createConsistentSampler,
-} from './head-sampler';
+import { describe, expect, it } from 'vitest';
+
+import { createConsistentSampler, createHeadSampler, createPrioritySampler } from './head-sampler';
 
 describe('Head Sampler', () => {
   describe('createHeadSampler', () => {
@@ -169,7 +166,7 @@ describe('Head Sampler', () => {
           traceRate: 0.5,
           userBehaviorRate: 0.5,
         },
-        'test-salt'
+        'test-salt',
       );
 
       const id = 'user-123';
@@ -192,11 +189,11 @@ describe('Head Sampler', () => {
           traceRate: 0.5,
           userBehaviorRate: 0.5,
         },
-        'test-salt'
+        'test-salt',
       );
 
       const decisions = new Set<string>();
-      
+
       // Generate many different IDs
       for (let i = 0; i < 1000; i++) {
         const result = sampler.shouldSampleConsistent(`user-${i}`);
@@ -216,7 +213,7 @@ describe('Head Sampler', () => {
           traceRate: 0.5,
           userBehaviorRate: 0.5,
         },
-        'test-salt'
+        'test-salt',
       );
 
       for (let i = 0; i < 100; i++) {

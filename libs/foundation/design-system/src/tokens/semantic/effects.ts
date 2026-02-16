@@ -1,12 +1,12 @@
 /**
  * Semantic Effect Tokens - Tier 2
  * Shadows, focus rings, and visual effects
- * 
+ *
  * Linear-inspired subtle shadows:
  * - Minimal shadow spread for clean look
  * - Color-matched to neutral palette
  * - Depth system for elevation hierarchy
- * 
+ *
  * @module tokens/semantic/effects
  */
 
@@ -14,7 +14,7 @@ import type { ShadowToken } from '../types';
 
 /**
  * Depth shadow tokens
- * 
+ *
  * 4-level depth system:
  * - depth01: Subtle lift (cards, buttons)
  * - depth02: Medium elevation (dropdowns)
@@ -222,7 +222,7 @@ export const effectTokens = {
  */
 export function getShadowValue(
   category: 'depth' | 'interactive' | 'component',
-  key: string
+  key: string,
 ): string | undefined {
   const categoryObj = effectTokens.shadow[category];
   if (categoryObj && key in categoryObj) {

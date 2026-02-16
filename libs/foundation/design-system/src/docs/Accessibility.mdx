@@ -22,12 +22,12 @@ The Open Insights Design System is built with accessibility as a core principle.
 
 ### Contrast Requirements
 
-| Element Type | Minimum Ratio | Our Implementation |
-|--------------|---------------|-------------------|
-| Normal Text | 4.5:1 | ✅ Exceeds |
-| Large Text (18px+) | 3:1 | ✅ Exceeds |
-| UI Components | 3:1 | ✅ Meets |
-| Focus Indicators | 3:1 | ✅ Meets |
+| Element Type       | Minimum Ratio | Our Implementation |
+| ------------------ | ------------- | ------------------ |
+| Normal Text        | 4.5:1         | ✅ Exceeds         |
+| Large Text (18px+) | 3:1           | ✅ Exceeds         |
+| UI Components      | 3:1           | ✅ Meets           |
+| Focus Indicators   | 3:1           | ✅ Meets           |
 
 ### Color Independence
 
@@ -69,8 +69,9 @@ All components automatically adapt to dark mode while maintaining contrast:
 All focusable elements display a visible focus indicator:
 
 ```css
---ring-focus: 0 0 0 var(--ring-offset) var(--color-background),
-              0 0 0 calc(var(--ring-offset) + var(--ring-width)) var(--ring-color);
+--ring-focus: 0 0 0 var(--ring-offset) var(--color-background), 0 0 0 calc(
+      var(--ring-offset) + var(--ring-width)
+    ) var(--ring-color);
 ```
 
 #### Focus Trapping
@@ -82,31 +83,31 @@ Overlays (Modal, Drawer, Popover) trap focus within their boundaries:
   {/* Focus is trapped within modal while open */}
   <Modal.Content>
     <Modal.Close /> {/* First focusable */}
-    <Input />       {/* Next focusable */}
-    <Button />      {/* Last focusable - Tab wraps to Close */}
+    <Input /> {/* Next focusable */}
+    <Button /> {/* Last focusable - Tab wraps to Close */}
   </Modal.Content>
 </Modal>
 ```
 
 ### Standard Keyboard Patterns
 
-| Component | Key | Action |
-|-----------|-----|--------|
-| All | `Tab` | Move focus forward |
-| All | `Shift + Tab` | Move focus backward |
-| Button | `Enter` / `Space` | Activate |
-| Link | `Enter` | Navigate |
-| Checkbox | `Space` | Toggle |
-| Radio | `Arrow Up/Down` | Select option |
-| Select | `Arrow Up/Down` | Navigate options |
-| Select | `Enter` | Select highlighted |
-| Modal | `Escape` | Close |
-| Menu | `Escape` | Close |
-| Menu | `Arrow Up/Down` | Navigate items |
-| Accordion | `Arrow Up/Down` | Navigate headers |
-| Accordion | `Enter` / `Space` | Toggle panel |
-| Tabs | `Arrow Left/Right` | Navigate tabs |
-| Tabs | `Enter` / `Space` | Activate tab |
+| Component | Key                | Action              |
+| --------- | ------------------ | ------------------- |
+| All       | `Tab`              | Move focus forward  |
+| All       | `Shift + Tab`      | Move focus backward |
+| Button    | `Enter` / `Space`  | Activate            |
+| Link      | `Enter`            | Navigate            |
+| Checkbox  | `Space`            | Toggle              |
+| Radio     | `Arrow Up/Down`    | Select option       |
+| Select    | `Arrow Up/Down`    | Navigate options    |
+| Select    | `Enter`            | Select highlighted  |
+| Modal     | `Escape`           | Close               |
+| Menu      | `Escape`           | Close               |
+| Menu      | `Arrow Up/Down`    | Navigate items      |
+| Accordion | `Arrow Up/Down`    | Navigate headers    |
+| Accordion | `Enter` / `Space`  | Toggle panel        |
+| Tabs      | `Arrow Left/Right` | Navigate tabs       |
+| Tabs      | `Enter` / `Space`  | Activate tab        |
 
 ---
 
@@ -176,7 +177,7 @@ Dynamic content updates are announced to screen readers:
     required
     aria-required="true"
     aria-invalid={hasError}
-    aria-describedby={hasError ? "email-error" : "email-hint"}
+    aria-describedby={hasError ? 'email-error' : 'email-hint'}
   />
   <span id="email-hint" className="text-sm text-foreground-muted">
     We'll use this to contact you
@@ -277,14 +278,14 @@ Use the Storybook a11y addon for automated checks:
 
 ### Testing Tools
 
-| Tool | Purpose |
-|------|---------|
-| axe DevTools | Automated accessibility testing |
-| WAVE | Web accessibility evaluation |
-| Lighthouse | Chrome DevTools accessibility audit |
-| VoiceOver | macOS screen reader |
-| NVDA | Windows screen reader |
-| Colour Contrast Analyzer | Contrast checking |
+| Tool                     | Purpose                             |
+| ------------------------ | ----------------------------------- |
+| axe DevTools             | Automated accessibility testing     |
+| WAVE                     | Web accessibility evaluation        |
+| Lighthouse               | Chrome DevTools accessibility audit |
+| VoiceOver                | macOS screen reader                 |
+| NVDA                     | Windows screen reader               |
+| Colour Contrast Analyzer | Contrast checking                   |
 
 ---
 

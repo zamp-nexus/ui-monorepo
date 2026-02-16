@@ -4,22 +4,40 @@
  * @module types/types.spec
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   MemberRef,
-  SqlTableName as TableName,
   QueryId,
+  SqlTableName as TableName,
 } from '@open-insights-web/foundation-data-model';
-import { OPERATIONS, isOperation, isReadOperation, isWriteOperation } from './operations';
+
 import { AGGREGATIONS, isAggregation } from './aggregation';
-import { FILTER_OPERATORS, isFilterCondition, isFilterAndGroup, isFilterOrGroup, isFilterExpression, operatorRequiresValues, operatorAcceptsMultipleValues } from './filter';
-import { JOIN_TYPES, isJoinType, isJoinSpec } from './join';
-import { QUERY_BACKENDS, isQueryBackend, isMutationQuery, isReadQuery } from './query';
 import { DECISION_PATHS, isExecutionPath } from './decision';
-import { PRESET_DATE_RANGES, TIME_GRANULARITIES, isPresetDateRange, isDateRange, isDateRangeTuple, isTimeGranularity, resolvePresetDateRange } from './time';
-import { isDimensionSpec, extractTableFromDimension } from './dimension';
+import { extractTableFromDimension, isDimensionSpec } from './dimension';
 import type { DimensionSpec } from './dimension';
+import {
+  FILTER_OPERATORS,
+  isFilterAndGroup,
+  isFilterCondition,
+  isFilterExpression,
+  isFilterOrGroup,
+  operatorAcceptsMultipleValues,
+  operatorRequiresValues,
+} from './filter';
+import { isJoinSpec, isJoinType, JOIN_TYPES } from './join';
 import { isMeasureSpec } from './measure';
+import { isOperation, isReadOperation, isWriteOperation, OPERATIONS } from './operations';
+import { isMutationQuery, isQueryBackend, isReadQuery, QUERY_BACKENDS } from './query';
+import {
+  isDateRange,
+  isDateRangeTuple,
+  isPresetDateRange,
+  isTimeGranularity,
+  PRESET_DATE_RANGES,
+  resolvePresetDateRange,
+  TIME_GRANULARITIES,
+} from './time';
 
 describe('Common Types', () => {
   describe('TableName', () => {

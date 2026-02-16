@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+
 import type { Query } from '../types/query';
 import {
   convertFiltersToArgs,
-  hasComplexFilters,
   countConvertibleFilters,
+  hasComplexFilters,
 } from './filter-converter';
 
 // =============================================================================
@@ -56,9 +57,7 @@ describe('convertFiltersToArgs', () => {
   it('ignores equality filters with multiple values', () => {
     const query: Query = {
       dimensions: [{ member: 'users.name' }],
-      filters: [
-        { member: 'users.status', operator: 'equals', values: ['active', 'pending'] },
-      ],
+      filters: [{ member: 'users.status', operator: 'equals', values: ['active', 'pending'] }],
     };
     const args = convertFiltersToArgs(query);
     expect(args).toEqual({});
@@ -69,9 +68,7 @@ describe('convertFiltersToArgs', () => {
       dimensions: [{ member: 'users.name' }],
       filters: [
         {
-          and: [
-            { member: 'users.status', operator: 'equals', values: ['active'] },
-          ],
+          and: [{ member: 'users.status', operator: 'equals', values: ['active'] }],
         },
       ],
     };
@@ -84,9 +81,7 @@ describe('convertFiltersToArgs', () => {
     const query: Query = {
       dimensions: [{ member: 'users.name' }],
       limit: 50,
-      filters: [
-        { member: 'users.status', operator: 'equals', values: ['active'] },
-      ],
+      filters: [{ member: 'users.status', operator: 'equals', values: ['active'] }],
     };
     const args = convertFiltersToArgs(query);
     expect(args).toEqual({ limit: 50, status: 'active' });
@@ -106,9 +101,7 @@ describe('hasComplexFilters', () => {
   it('returns false when all filters are simple equality', () => {
     const query: Query = {
       dimensions: [{ member: 'users.name' }],
-      filters: [
-        { member: 'users.status', operator: 'equals', values: ['active'] },
-      ],
+      filters: [{ member: 'users.status', operator: 'equals', values: ['active'] }],
     };
     expect(hasComplexFilters(query)).toBe(false);
   });
@@ -116,9 +109,7 @@ describe('hasComplexFilters', () => {
   it('returns true for comparison operator', () => {
     const query: Query = {
       dimensions: [{ member: 'users.name' }],
-      filters: [
-        { member: 'users.age', operator: 'gte', values: [18] },
-      ],
+      filters: [{ member: 'users.age', operator: 'gte', values: [18] }],
     };
     expect(hasComplexFilters(query)).toBe(true);
   });
@@ -126,9 +117,7 @@ describe('hasComplexFilters', () => {
   it('returns true for string operator', () => {
     const query: Query = {
       dimensions: [{ member: 'users.name' }],
-      filters: [
-        { member: 'users.name', operator: 'contains', values: ['john'] },
-      ],
+      filters: [{ member: 'users.name', operator: 'contains', values: ['john'] }],
     };
     expect(hasComplexFilters(query)).toBe(true);
   });

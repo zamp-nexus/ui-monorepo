@@ -7,26 +7,24 @@
  */
 
 import type { Session } from '@ory/client-fetch';
+
 import { ManagedInterval } from '@open-insights-web/foundation-utils';
+
+import { DEFAULT_AUTH_CONFIG, SESSION_STATE, type SessionStateType } from '../core/constants';
 import type { OryClientInstance } from '../core/ory-client';
-import {
-  DEFAULT_AUTH_CONFIG,
-  SESSION_STATE,
-  type SessionStateType,
-} from '../core/constants';
 import type {
   AuthConfig,
   AuthSession,
   SessionServiceInterface,
-  SessionStateListener,
   SessionStateChangeEvent,
+  SessionStateListener,
 } from '../core/types';
 import {
-  SessionCheckError,
-  SessionRefreshError,
-  SessionExpiredError,
-  LogoutError,
   AuthNetworkError,
+  LogoutError,
+  SessionCheckError,
+  SessionExpiredError,
+  SessionRefreshError,
 } from '../errors/auth-errors';
 
 // =============================================================================
@@ -114,7 +112,7 @@ export class SessionService implements SessionServiceInterface {
 
       throw new SessionCheckError(
         error instanceof Error ? error.message : 'Unknown error',
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
   };
@@ -131,7 +129,7 @@ export class SessionService implements SessionServiceInterface {
     this.updateSession(
       this.session ? { ...this.session, state: SESSION_STATE.REFRESHING } : null,
       SESSION_STATE.REFRESHING,
-      previousState
+      previousState,
     );
 
     try {
@@ -164,14 +162,14 @@ export class SessionService implements SessionServiceInterface {
         this.updateSession(
           this.session ? { ...this.session, state: SESSION_STATE.STALE } : null,
           SESSION_STATE.STALE,
-          SESSION_STATE.REFRESHING
+          SESSION_STATE.REFRESHING,
         );
         throw new AuthNetworkError('refresh', error as Error);
       }
 
       throw new SessionRefreshError(
         error instanceof Error ? error.message : 'Unknown error',
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
   };
@@ -221,7 +219,7 @@ export class SessionService implements SessionServiceInterface {
 
       throw new LogoutError(
         error instanceof Error ? error.message : 'Unknown error',
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
   };
@@ -245,7 +243,7 @@ export class SessionService implements SessionServiceInterface {
     // The browser sends the session cookie automatically.
     console.debug(
       '[SessionService] getAccessToken called — returning null (cookie-based auth). ' +
-      'If you need an access token, integrate Ory Hydra for OIDC token exchange.',
+        'If you need an access token, integrate Ory Hydra for OIDC token exchange.',
     );
     return null;
   };
@@ -307,7 +305,7 @@ export class SessionService implements SessionServiceInterface {
   private updateSession = (
     session: AuthSession | null,
     newState: SessionStateType,
-    previousState: SessionStateType
+    previousState: SessionStateType,
   ): void => {
     this.session = session;
 

@@ -4,17 +4,20 @@
  */
 
 import type { ZodSchema } from 'zod';
+
 import type {
   DuckDBViewsValue,
   LastSyncValue,
   NetworkStatus,
   SyncStateKey,
 } from '@open-insights-web/foundation-data-model';
+
 import {
+  duckDBViewsValueSchema,
   lastSyncValueSchema,
   networkStatusSchema,
-  duckDBViewsValueSchema,
 } from '../validation/schemas';
+
 export type { DuckDBViewsValue, LastSyncValue };
 
 /**
@@ -39,7 +42,7 @@ export interface SyncStateEntry<TValue = unknown> {
  */
 export const createSyncStateEntry = <TValue = unknown>(
   key: SyncStateKey,
-  value: TValue
+  value: TValue,
 ): SyncStateEntry<TValue> => ({
   key,
   value,
@@ -126,7 +129,6 @@ export const isLastSyncValue = (value: unknown): value is LastSyncValue => {
 export const isNetworkStatus = (value: unknown): value is NetworkStatus => {
   return networkStatusSchema.safeParse(value).success;
 };
-
 
 /**
  * Type guard for DuckDBViewsValue using Zod schema validation

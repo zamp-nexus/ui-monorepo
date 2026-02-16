@@ -4,10 +4,11 @@
  * Tests for error code constants, category mapping, and retryability.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  FOUNDATION_ERROR_CODE,
   ERROR_CATEGORY,
+  FOUNDATION_ERROR_CODE,
   getErrorCategory,
   isRetryableErrorCode,
   type FoundationErrorCode,

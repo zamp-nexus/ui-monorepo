@@ -94,4 +94,3 @@ export interface WithBaseOiid {
   /** Base Open Insights ID from parent component */
   baseOiid?: string;
 }
-

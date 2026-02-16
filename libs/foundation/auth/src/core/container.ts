@@ -8,14 +8,15 @@
  */
 
 import { Mutex } from '@open-insights-web/foundation-utils';
+
+import { createOryClientConfig, getOryClient, type OryClientInstance } from './ory-client';
 import type {
   AuthConfig,
-  SessionServiceInterface,
-  FlowServiceInterface,
-  UserServiceInterface,
   AuthFacadeInterface,
+  FlowServiceInterface,
+  SessionServiceInterface,
+  UserServiceInterface,
 } from './types';
-import { getOryClient, createOryClientConfig, type OryClientInstance } from './ory-client';
 
 // =============================================================================
 // Types
@@ -54,7 +55,7 @@ export interface AuthDependencyFactories {
     sessionService: SessionServiceInterface,
     flowService: FlowServiceInterface,
     userService: UserServiceInterface,
-    config: AuthConfig
+    config: AuthConfig,
   ) => AuthFacadeInterface;
 }
 

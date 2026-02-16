@@ -41,9 +41,7 @@ export const Default: Story = {
     <Accordion defaultValue={['item-1']}>
       <Accordion.Item value="item-1">
         <Accordion.Trigger>Is it accessible?</Accordion.Trigger>
-        <Accordion.Content>
-          Yes. It adheres to the WAI-ARIA design pattern.
-        </Accordion.Content>
+        <Accordion.Content>Yes. It adheres to the WAI-ARIA design pattern.</Accordion.Content>
       </Accordion.Item>
       <Accordion.Item value="item-2">
         <Accordion.Trigger>Is it styled?</Accordion.Trigger>
@@ -75,15 +73,11 @@ export const Bordered: Story = {
       </Accordion.Item>
       <Accordion.Item value="item-2">
         <Accordion.Trigger>Section 2</Accordion.Trigger>
-        <Accordion.Content>
-          Content for section 2.
-        </Accordion.Content>
+        <Accordion.Content>Content for section 2.</Accordion.Content>
       </Accordion.Item>
       <Accordion.Item value="item-3">
         <Accordion.Trigger>Section 3</Accordion.Trigger>
-        <Accordion.Content>
-          Content for section 3.
-        </Accordion.Content>
+        <Accordion.Content>Content for section 3.</Accordion.Content>
       </Accordion.Item>
     </Accordion>
   ),
@@ -109,9 +103,7 @@ export const Separated: Story = {
       </Accordion.Item>
       <Accordion.Item value="item-3">
         <Accordion.Trigger>Do you offer international shipping?</Accordion.Trigger>
-        <Accordion.Content>
-          Yes, we ship to over 100 countries worldwide.
-        </Accordion.Content>
+        <Accordion.Content>Yes, we ship to over 100 countries worldwide.</Accordion.Content>
       </Accordion.Item>
     </Accordion>
   ),
@@ -131,15 +123,11 @@ export const Multiple: Story = {
       </Accordion.Item>
       <Accordion.Item value="item-2">
         <Accordion.Trigger>Second item (also open)</Accordion.Trigger>
-        <Accordion.Content>
-          This item is also open by default.
-        </Accordion.Content>
+        <Accordion.Content>This item is also open by default.</Accordion.Content>
       </Accordion.Item>
       <Accordion.Item value="item-3">
         <Accordion.Trigger>Third item</Accordion.Trigger>
-        <Accordion.Content>
-          Click to open this one too.
-        </Accordion.Content>
+        <Accordion.Content>Click to open this one too.</Accordion.Content>
       </Accordion.Item>
     </Accordion>
   ),
@@ -245,32 +233,30 @@ export const FAQExample: Story = {
         <Accordion.Item value="faq-1">
           <Accordion.Trigger>What payment methods do you accept?</Accordion.Trigger>
           <Accordion.Content>
-            We accept all major credit cards (Visa, MasterCard, American Express),
-            PayPal, and bank transfers. For enterprise customers, we also offer
-            invoice-based payments.
+            We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank
+            transfers. For enterprise customers, we also offer invoice-based payments.
           </Accordion.Content>
         </Accordion.Item>
         <Accordion.Item value="faq-2">
           <Accordion.Trigger>Can I cancel my subscription anytime?</Accordion.Trigger>
           <Accordion.Content>
-            Yes, you can cancel your subscription at any time. If you cancel,
-            you'll continue to have access until the end of your current billing
-            period.
+            Yes, you can cancel your subscription at any time. If you cancel, you'll continue to
+            have access until the end of your current billing period.
           </Accordion.Content>
         </Accordion.Item>
         <Accordion.Item value="faq-3">
           <Accordion.Trigger>Do you offer a free trial?</Accordion.Trigger>
           <Accordion.Content>
-            Yes! We offer a 14-day free trial on all plans. No credit card
-            required to start your trial.
+            Yes! We offer a 14-day free trial on all plans. No credit card required to start your
+            trial.
           </Accordion.Content>
         </Accordion.Item>
         <Accordion.Item value="faq-4">
           <Accordion.Trigger>How do I contact support?</Accordion.Trigger>
           <Accordion.Content>
-            You can reach our support team via email at support@example.com,
-            through the in-app chat, or by scheduling a call with our team.
-            Enterprise customers have access to dedicated support channels.
+            You can reach our support team via email at support@example.com, through the in-app
+            chat, or by scheduling a call with our team. Enterprise customers have access to
+            dedicated support channels.
           </Accordion.Content>
         </Accordion.Item>
       </Accordion>

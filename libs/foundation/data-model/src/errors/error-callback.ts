@@ -7,9 +7,9 @@
  * @module errors/error-callback
  */
 
-import type { FoundationErrorCode, ErrorCategory } from './error-codes';
+import type { ErrorCategory, FoundationErrorCode } from './error-codes';
 import type { ErrorContext } from './foundation-error';
-import { type FoundationError, toFoundationError } from './foundation-error';
+import { toFoundationError, type FoundationError } from './foundation-error';
 
 // =============================================================================
 // Types
@@ -88,9 +88,7 @@ export function createErrorInfo(error: FoundationError, source: string): ErrorIn
  * const newHandler = adaptLegacyCallback(legacyHandler);
  * ```
  */
-export function adaptLegacyCallback(
-  legacyCallback: LegacyErrorCallback
-): FoundationErrorCallback {
+export function adaptLegacyCallback(legacyCallback: LegacyErrorCallback): FoundationErrorCallback {
   return (info: ErrorInfo) => {
     const context = info.source || info.context.operation || 'unknown';
     legacyCallback(info.error, context);
@@ -106,7 +104,7 @@ export function adaptLegacyCallback(
  */
 export function adaptToLegacyCallback(
   callback: FoundationErrorCallback,
-  source: string
+  source: string,
 ): LegacyErrorCallback {
   return (error: Error, context?: string) => {
     const foundationError = toFoundationError(error, undefined, {
@@ -188,7 +186,7 @@ export function combineErrorCallbacks(
  */
 export function filterByCategory(
   categories: ErrorCategory[],
-  callback: FoundationErrorCallback
+  callback: FoundationErrorCallback,
 ): FoundationErrorCallback {
   return (info: ErrorInfo) => {
     if (categories.includes(info.category)) {
@@ -206,7 +204,7 @@ export function filterByCategory(
  */
 export function filterByCode(
   codes: FoundationErrorCode[],
-  callback: FoundationErrorCallback
+  callback: FoundationErrorCallback,
 ): FoundationErrorCallback {
   return (info: ErrorInfo) => {
     if (codes.includes(info.code)) {

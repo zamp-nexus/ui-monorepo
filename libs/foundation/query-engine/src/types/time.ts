@@ -178,8 +178,7 @@ export interface TimeDimensionSpec {
  * Check if a value is a preset date range
  */
 export const isPresetDateRange = (range: DateRangeSpec): range is PresetDateRange =>
-  typeof range === 'string' &&
-  Object.values(PRESET_DATE_RANGES).includes(range as PresetDateRange);
+  typeof range === 'string' && Object.values(PRESET_DATE_RANGES).includes(range as PresetDateRange);
 
 /**
  * Check if a value is an absolute date range
@@ -203,8 +202,7 @@ export const isRelativeDateRange = (range: DateRangeSpec): range is RelativeDate
  * Check if a value is a valid time granularity
  */
 export const isTimeGranularity = (value: unknown): value is TimeGranularity =>
-  typeof value === 'string' &&
-  Object.values(TIME_GRANULARITIES).includes(value as TimeGranularity);
+  typeof value === 'string' && Object.values(TIME_GRANULARITIES).includes(value as TimeGranularity);
 
 /**
  * Check if a value is a valid time unit
@@ -294,7 +292,7 @@ export const getDateTruncUnit = (granularity: TimeGranularity): string => {
  */
 export const resolvePresetDateRange = (
   preset: PresetDateRange,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
 ): DateRange => {
   const today = new Date(referenceDate);
   today.setHours(0, 0, 0, 0);

@@ -8,7 +8,8 @@
  */
 
 import type { ZodSchema } from 'zod';
-import { BaseService } from './base';
+import { z } from 'zod';
+
 import {
   SYNC_STATE_KEY,
   type DuckDBViewsValue,
@@ -16,18 +17,16 @@ import {
   type NetworkStatus,
   type SyncStateKey,
 } from '@open-insights-web/foundation-data-model';
-import type {
-  SyncStateOperations,
-  SyncStateEntry,
-} from '../tables/sync-state';
-import { z } from 'zod';
+
+import type { SyncStateEntry, SyncStateOperations } from '../tables/sync-state';
+import { assertValid } from '../validation/assert-valid';
 import {
-  syncStateEntrySchema,
+  duckDBViewsValueSchema,
   lastSyncValueSchema,
   networkStatusSchema,
-  duckDBViewsValueSchema,
+  syncStateEntrySchema,
 } from '../validation/schemas';
-import { assertValid } from '../validation/assert-valid';
+import { BaseService } from './base';
 
 // Simple schemas for primitive values
 const numberSchema = z.number();
@@ -52,10 +51,7 @@ export class SyncStateService extends BaseService implements SyncStateOperations
    * @param options - Options with Zod schema for runtime validation
    * @returns The validated value if found and valid, undefined otherwise
    */
-  get = async <T>(
-    key: SyncStateKey,
-    options: GetStateOptions<T>
-  ): Promise<T | undefined> => {
+  get = async <T>(key: SyncStateKey, options: GetStateOptions<T>): Promise<T | undefined> => {
     const entry = await this.db.syncState.get(key);
     if (!entry) return undefined;
 
@@ -86,10 +82,7 @@ export class SyncStateService extends BaseService implements SyncStateOperations
   /**
    * Set state value with validation
    */
-  set = async <TValue>(
-    key: SyncStateKey,
-    value: TValue
-  ): Promise<void> => {
+  set = async <TValue>(key: SyncStateKey, value: TValue): Promise<void> => {
     const entry: SyncStateEntry<TValue> = {
       key,
       value,

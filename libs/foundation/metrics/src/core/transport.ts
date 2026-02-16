@@ -20,9 +20,7 @@ export const DEFAULT_TRANSPORT_CONFIG: TransportConfig = {
 /**
  * Merge transport config with defaults
  */
-export function resolveTransportConfig(
-  config?: Partial<TransportConfig>
-): TransportConfig {
+export function resolveTransportConfig(config?: Partial<TransportConfig>): TransportConfig {
   return {
     ...DEFAULT_TRANSPORT_CONFIG,
     ...config,
@@ -114,7 +112,7 @@ export function createTransport(config: TransportConfig) {
         state.retryCount++;
         state.queue.unshift(...items);
         console.warn(
-          `[FoundationMetrics] Send failed, retry ${state.retryCount}/${config.retryAttempts}`
+          `[FoundationMetrics] Send failed, retry ${state.retryCount}/${config.retryAttempts}`,
         );
         scheduleFlush();
       } else {

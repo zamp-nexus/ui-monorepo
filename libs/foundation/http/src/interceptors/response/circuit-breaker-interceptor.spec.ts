@@ -5,11 +5,9 @@
  * failure tracking, half-open probes, and reset behavior.
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import {
-  CircuitBreaker,
-  DEFAULT_CIRCUIT_BREAKER_CONFIG,
-} from './circuit-breaker-interceptor';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from './circuit-breaker-interceptor';
 
 describe('CircuitBreaker', () => {
   let breaker: CircuitBreaker;

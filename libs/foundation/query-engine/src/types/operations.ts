@@ -61,10 +61,7 @@ export type WriteOperation = (typeof WRITE_OPERATIONS)[keyof typeof WRITE_OPERAT
  * Check if operation is a valid operation.
  */
 export const isOperation = (value: unknown): value is Operation => {
-  return (
-    typeof value === 'string' &&
-    Object.values(OPERATIONS).includes(value as Operation)
-  );
+  return typeof value === 'string' && Object.values(OPERATIONS).includes(value as Operation);
 };
 
 /**
@@ -72,8 +69,7 @@ export const isOperation = (value: unknown): value is Operation => {
  */
 export const isReadOperation = (value: unknown): value is ReadOperation => {
   return (
-    typeof value === 'string' &&
-    Object.values(READ_OPERATIONS).includes(value as ReadOperation)
+    typeof value === 'string' && Object.values(READ_OPERATIONS).includes(value as ReadOperation)
   );
 };
 
@@ -82,8 +78,7 @@ export const isReadOperation = (value: unknown): value is ReadOperation => {
  */
 export const isWriteOperation = (value: unknown): value is WriteOperation => {
   return (
-    typeof value === 'string' &&
-    Object.values(WRITE_OPERATIONS).includes(value as WriteOperation)
+    typeof value === 'string' && Object.values(WRITE_OPERATIONS).includes(value as WriteOperation)
   );
 };
 

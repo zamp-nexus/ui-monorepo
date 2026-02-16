@@ -122,7 +122,7 @@ export const createDeferred = <T>(): Deferred<T> => {
  */
 export const createDeferredWithTimeout = <T>(
   timeoutMs: number,
-  timeoutMessage = 'Operation timed out'
+  timeoutMessage = 'Operation timed out',
 ): Deferred<T> & { clearTimeout: () => void } => {
   const deferred = createDeferred<T>();
 
@@ -195,7 +195,7 @@ export interface TimeoutPromiseResult<T> {
  */
 export const createTimeoutPromise = <T = never>(
   ms: number,
-  message?: string
+  message?: string,
 ): TimeoutPromiseResult<T> => {
   let timerId: ReturnType<typeof setTimeout> | undefined;
 
@@ -239,7 +239,7 @@ export const createTimeoutPromise = <T = never>(
 export const withTimeout = async <T>(
   promise: Promise<T>,
   ms: number,
-  message?: string
+  message?: string,
 ): Promise<T> => {
   const timeout = createTimeoutPromise<T>(ms, message);
   try {
@@ -273,7 +273,7 @@ export const withTimeout = async <T>(
  */
 export const runSequentially = async <T, R>(
   items: readonly T[],
-  fn: (item: T, index: number) => Promise<R>
+  fn: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> => {
   const results: R[] = [];
   for (let i = 0; i < items.length; i++) {
@@ -305,7 +305,7 @@ export const runSequentially = async <T, R>(
 export const runWithConcurrency = async <T, R>(
   items: readonly T[],
   fn: (item: T, index: number) => Promise<R>,
-  concurrency: number
+  concurrency: number,
 ): Promise<R[]> => {
   const results: R[] = Array.from({ length: items.length });
   let currentIndex = 0;
@@ -317,10 +317,7 @@ export const runWithConcurrency = async <T, R>(
     }
   };
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker()
-  );
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
 
   await Promise.all(workers);
   return results;

@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { Icon } from '@open-insights-web/foundation-icons';
 
@@ -34,16 +35,10 @@ export const Default: Story = {
         <Button intent="secondary">Open Menu</Button>
       </Menu.Trigger>
       <Menu.Content>
-        <Menu.Item onSelect={() => alert('Profile clicked')}>
-          Profile
-        </Menu.Item>
-        <Menu.Item onSelect={() => alert('Settings clicked')}>
-          Settings
-        </Menu.Item>
+        <Menu.Item onSelect={() => alert('Profile clicked')}>Profile</Menu.Item>
+        <Menu.Item onSelect={() => alert('Settings clicked')}>Settings</Menu.Item>
         <Menu.Separator />
-        <Menu.Item onSelect={() => alert('Logout clicked')}>
-          Logout
-        </Menu.Item>
+        <Menu.Item onSelect={() => alert('Logout clicked')}>Logout</Menu.Item>
       </Menu.Content>
     </Menu>
   ),
@@ -59,19 +54,11 @@ export const WithIcons: Story = {
         <Button intent="secondary">Actions</Button>
       </Menu.Trigger>
       <Menu.Content>
-        <Menu.Item start={<Icon name="user" />}>
-          Profile
-        </Menu.Item>
-        <Menu.Item start={<Icon name="settings" />}>
-          Settings
-        </Menu.Item>
-        <Menu.Item start={<Icon name="credit-card" />}>
-          Billing
-        </Menu.Item>
+        <Menu.Item start={<Icon name="user" />}>Profile</Menu.Item>
+        <Menu.Item start={<Icon name="settings" />}>Settings</Menu.Item>
+        <Menu.Item start={<Icon name="credit-card" />}>Billing</Menu.Item>
         <Menu.Separator />
-        <Menu.Item start={<Icon name="log-out" />}>
-          Logout
-        </Menu.Item>
+        <Menu.Item start={<Icon name="log-out" />}>Logout</Menu.Item>
       </Menu.Content>
     </Menu>
   ),
@@ -146,22 +133,13 @@ export const WithCheckboxItems: Story = {
           <Button intent="secondary">View Options</Button>
         </Menu.Trigger>
         <Menu.Content>
-          <Menu.CheckboxItem
-            checked={showStatusBar}
-            onCheckedChange={setShowStatusBar}
-          >
+          <Menu.CheckboxItem checked={showStatusBar} onCheckedChange={setShowStatusBar}>
             Show Status Bar
           </Menu.CheckboxItem>
-          <Menu.CheckboxItem
-            checked={showPanel}
-            onCheckedChange={setShowPanel}
-          >
+          <Menu.CheckboxItem checked={showPanel} onCheckedChange={setShowPanel}>
             Show Panel
           </Menu.CheckboxItem>
-          <Menu.CheckboxItem
-            checked={showNotifications}
-            onCheckedChange={setShowNotifications}
-          >
+          <Menu.CheckboxItem checked={showNotifications} onCheckedChange={setShowNotifications}>
             Show Notifications
           </Menu.CheckboxItem>
         </Menu.Content>
@@ -300,9 +278,7 @@ export const ComplexExample: Story = {
     return (
       <Menu>
         <Menu.Trigger>
-          <Button start={<Icon name="menu" />}>
-            Menu
-          </Button>
+          <Button start={<Icon name="menu" />}>Menu</Button>
         </Menu.Trigger>
         <Menu.Content>
           <Menu.Group>
@@ -311,49 +287,41 @@ export const ComplexExample: Story = {
             <Menu.Item start={<Icon name="compass" />}>Explore</Menu.Item>
             <Menu.Item start={<Icon name="star" />}>Favorites</Menu.Item>
           </Menu.Group>
-          
+
           <Menu.Separator />
-          
+
           <Menu.Group>
             <Menu.GroupLabel>View Options</Menu.GroupLabel>
-            <Menu.CheckboxItem
-              checked={bookmarks}
-              onCheckedChange={setBookmarks}
-            >
+            <Menu.CheckboxItem checked={bookmarks} onCheckedChange={setBookmarks}>
               Show Bookmarks
             </Menu.CheckboxItem>
-            <Menu.CheckboxItem
-              checked={fullUrls}
-              onCheckedChange={setFullUrls}
-            >
+            <Menu.CheckboxItem checked={fullUrls} onCheckedChange={setFullUrls}>
               Show Full URLs
             </Menu.CheckboxItem>
           </Menu.Group>
-          
+
           <Menu.Separator />
-          
+
           <Menu.RadioGroup value={sortBy} onValueChange={setSortBy}>
             <Menu.GroupLabel>Sort By</Menu.GroupLabel>
             <Menu.RadioItem value="date">Date</Menu.RadioItem>
             <Menu.RadioItem value="name">Name</Menu.RadioItem>
             <Menu.RadioItem value="size">Size</Menu.RadioItem>
           </Menu.RadioGroup>
-          
+
           <Menu.Separator />
-          
+
           <Menu.Sub>
-            <Menu.SubTrigger start={<Icon name="share" />}>
-              Share
-            </Menu.SubTrigger>
+            <Menu.SubTrigger start={<Icon name="share" />}>Share</Menu.SubTrigger>
             <Menu.SubContent>
               <Menu.Item>Email</Menu.Item>
               <Menu.Item>Message</Menu.Item>
               <Menu.Item>Copy Link</Menu.Item>
             </Menu.SubContent>
           </Menu.Sub>
-          
+
           <Menu.Separator />
-          
+
           <Menu.Item start={<Icon name="settings" />} end="⌘,">
             Settings
           </Menu.Item>

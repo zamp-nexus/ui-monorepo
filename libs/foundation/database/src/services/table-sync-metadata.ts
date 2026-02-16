@@ -7,22 +7,19 @@
  * @module services/table-sync-metadata
  */
 
-import { BaseService } from './base';
 import type {
-  TableSyncMetadataOperations,
   TableSyncMetadataEntry,
+  TableSyncMetadataOperations,
 } from '../tables/table-sync-metadata';
-import { tableSyncMetadataEntrySchema } from '../validation/schemas';
 import { assertValid } from '../validation/assert-valid';
+import { tableSyncMetadataEntrySchema } from '../validation/schemas';
+import { BaseService } from './base';
 
 /**
  * Table Sync Metadata Service
  * Implements TableSyncMetadataOperations
  */
-export class TableSyncMetadataService
-  extends BaseService
-  implements TableSyncMetadataOperations
-{
+export class TableSyncMetadataService extends BaseService implements TableSyncMetadataOperations {
   /**
    * Get metadata for a table by name
    */
@@ -59,7 +56,7 @@ export class TableSyncMetadataService
    * Get multiple entries by table names
    */
   getMany = async (
-    tableNames: string[]
+    tableNames: string[],
   ): Promise<Map<string, TableSyncMetadataEntry | undefined>> => {
     const result = new Map<string, TableSyncMetadataEntry | undefined>();
 

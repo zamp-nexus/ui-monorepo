@@ -24,9 +24,7 @@ Many of our complex components use the compound component pattern, which provide
       <Modal.Description>Make changes to your profile here.</Modal.Description>
       <Modal.Close />
     </Modal.Header>
-    <Modal.Body>
-      {/* Form content */}
-    </Modal.Body>
+    <Modal.Body>{/* Form content */}</Modal.Body>
     <Modal.Footer>
       <Button intent="secondary">Cancel</Button>
       <Button intent="primary">Save</Button>
@@ -53,7 +51,7 @@ Many of our complex components use the compound component pattern, which provide
 All components must be wrapped in a `ThemeProvider`:
 
 ```tsx
-import { ThemeProvider, defaultTheme } from '@open-insights-web/foundation-design-system';
+import { defaultTheme, ThemeProvider } from '@open-insights-web/foundation-design-system';
 
 function App() {
   return (
@@ -91,11 +89,11 @@ Components use a consistent variant system powered by `class-variance-authority`
 
 ### Common Variants
 
-| Variant | Values | Usage |
-|---------|--------|-------|
-| `intent` | `primary`, `secondary`, `danger`, `ghost`, `link` | Action type |
-| `size` | `sm`, `md`, `lg` | Component sizing |
-| `state` | `default`, `hover`, `focus`, `disabled` | Visual states |
+| Variant  | Values                                            | Usage            |
+| -------- | ------------------------------------------------- | ---------------- |
+| `intent` | `primary`, `secondary`, `danger`, `ghost`, `link` | Action type      |
+| `size`   | `sm`, `md`, `lg`                                  | Component sizing |
+| `state`  | `default`, `hover`, `focus`, `disabled`           | Visual states    |
 
 ### Example Usage
 
@@ -115,13 +113,13 @@ Components use a consistent variant system powered by `class-variance-authority`
 
 All interactive components support full keyboard navigation:
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Move focus to next element |
-| `Shift + Tab` | Move focus to previous element |
-| `Enter` / `Space` | Activate focused element |
-| `Escape` | Close overlays (modal, popover) |
-| `Arrow Keys` | Navigate within component (menus, tabs) |
+| Key               | Action                                  |
+| ----------------- | --------------------------------------- |
+| `Tab`             | Move focus to next element              |
+| `Shift + Tab`     | Move focus to previous element          |
+| `Enter` / `Space` | Activate focused element                |
+| `Escape`          | Close overlays (modal, popover)         |
+| `Arrow Keys`      | Navigate within component (menus, tabs) |
 
 ### ARIA Attributes
 
@@ -153,11 +151,11 @@ All form components support both patterns:
 
 ```tsx
 // Uncontrolled (with default value)
-<Input name="email" defaultValue="user@example.com" />
+<Input name="email" defaultValue="user@example.com" />;
 
 // Controlled (with state)
 const [value, setValue] = useState('');
-<Input value={value} onChange={(e) => setValue(e.target.value)} />
+<Input value={value} onChange={(e) => setValue(e.target.value)} />;
 ```
 
 ### Form Validation
@@ -183,9 +181,7 @@ Group related inputs with proper labels:
 <div className="space-y-2">
   <Label htmlFor="email">Email Address</Label>
   <Input id="email" type="email" />
-  <p className="text-sm text-foreground-muted">
-    We'll never share your email.
-  </p>
+  <p className="text-sm text-foreground-muted">We'll never share your email.</p>
 </div>
 ```
 
@@ -235,7 +231,7 @@ import { ErrorBoundary } from '@open-insights-web/foundation-design-system';
 
 <ErrorBoundary fallback={<ErrorFallback />}>
   <ComponentThatMightFail />
-</ErrorBoundary>
+</ErrorBoundary>;
 ```
 
 ### Empty States
@@ -245,9 +241,7 @@ Use the EmptyState component for missing data:
 ```tsx
 <EmptyState>
   <EmptyState.Title>No results found</EmptyState.Title>
-  <EmptyState.Description>
-    Try adjusting your search or filters
-  </EmptyState.Description>
+  <EmptyState.Description>Try adjusting your search or filters</EmptyState.Description>
   <EmptyState.Actions>
     <Button onClick={resetFilters}>Clear Filters</Button>
   </EmptyState.Actions>
@@ -265,7 +259,6 @@ Import components directly for optimal tree-shaking:
 ```tsx
 // Good - only imports Button
 import { Button } from '@open-insights-web/foundation-design-system';
-
 // Also good - same result
 import { Button } from '@open-insights-web/foundation-design-system/button';
 ```
@@ -279,7 +272,7 @@ const Modal = lazy(() => import('./components/Modal'));
 
 <Suspense fallback={<Spinner />}>
   <Modal>...</Modal>
-</Suspense>
+</Suspense>;
 ```
 
 ---
@@ -293,14 +286,15 @@ Components are designed for easy testing:
 ```tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
 import { Button } from '@open-insights-web/foundation-design-system';
 
 test('button calls onClick when clicked', async () => {
   const handleClick = vi.fn();
   render(<Button onClick={handleClick}>Click me</Button>);
-  
+
   await userEvent.click(screen.getByRole('button'));
-  
+
   expect(handleClick).toHaveBeenCalledTimes(1);
 });
 ```

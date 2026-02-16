@@ -2,7 +2,8 @@
  * Tests for TableLockManager
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { TableLockManager } from './table-lock-manager';
 
 describe('TableLockManager', () => {

@@ -155,4 +155,3 @@ export const scrollAreaDefaultTheme: ComponentThemeConfigStructure = {
     type: 'hover',
   },
 };
-

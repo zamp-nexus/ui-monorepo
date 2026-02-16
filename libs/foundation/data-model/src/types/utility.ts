@@ -29,8 +29,8 @@
 export type DeepReadonly<T> = T extends (infer U)[]
   ? ReadonlyArray<DeepReadonly<U>>
   : T extends object
-    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
-    : T;
+  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : T;
 
 /**
  * Deep partial utility type - makes all nested properties optional
@@ -47,9 +47,7 @@ export type DeepReadonly<T> = T extends (infer U)[]
  * // Result: { settings?: { debug?: boolean; timeout?: number } }
  * ```
  */
-export type DeepPartial<T> = T extends object
-  ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : T;
+export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 // =============================================================================
 // Property Modifiers
@@ -152,8 +150,8 @@ export type Mutable<T> = { -readonly [P in keyof T]: T[P] };
 export type DeepMutable<T> = T extends ReadonlyArray<infer U>
   ? Array<DeepMutable<U>>
   : T extends object
-    ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
-    : T;
+  ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+  : T;
 
 // =============================================================================
 // Nullability Utilities
@@ -303,9 +301,7 @@ export interface WithId {
  * This is a stricter type that guarantees at least one ID field exists.
  * Use this when you need to ensure the entity can be identified.
  */
-export type WithRequiredId =
-  | { id: string; _id?: string }
-  | { id?: string; _id: string };
+export type WithRequiredId = { id: string; _id?: string } | { id?: string; _id: string };
 
 /**
  * Extract ID from entity - returns string if entity has any ID field
@@ -321,7 +317,11 @@ export type WithRequiredId =
  * type MaybeUserId = ExtractId<UserMaybeId>; // string | undefined
  * ```
  */
-export type ExtractId<T> = T extends WithRequiredId ? string : T extends WithId ? string | undefined : never;
+export type ExtractId<T> = T extends WithRequiredId
+  ? string
+  : T extends WithId
+  ? string | undefined
+  : never;
 
 /**
  * Make specific fields optional (alias for OptionalFields)

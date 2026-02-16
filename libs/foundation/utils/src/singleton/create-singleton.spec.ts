@@ -2,11 +2,12 @@
  * Tests for singleton factory utilities
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
-  createSingletonFactory,
   createAsyncSingletonFactory,
   createDeepEqualComparison,
+  createSingletonFactory,
 } from './create-singleton';
 
 describe('createSingletonFactory', () => {
@@ -16,7 +17,9 @@ describe('createSingletonFactory', () => {
 
   class TestService {
     constructor(public config: TestConfig) {}
-    dispose() { return undefined; }
+    dispose() {
+      return undefined;
+    }
   }
 
   beforeEach(() => {
@@ -24,10 +27,9 @@ describe('createSingletonFactory', () => {
   });
 
   it('should create instance on first call', () => {
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService' }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+    });
 
     const instance = factory.getInstance({ value: 42 });
 
@@ -36,10 +38,9 @@ describe('createSingletonFactory', () => {
   });
 
   it('should return same instance on subsequent calls', () => {
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService' }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+    });
 
     const instance1 = factory.getInstance({ value: 1 });
     const instance2 = factory.getInstance({ value: 2 });
@@ -50,26 +51,27 @@ describe('createSingletonFactory', () => {
 
   it('should warn when config is passed to existing instance', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService', logger: mockLogger }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+    });
 
     factory.getInstance({ value: 1 });
     factory.getInstance({ value: 2 });
 
     expect(mockLogger).toHaveBeenCalledTimes(1);
     expect(mockLogger).toHaveBeenCalledWith(
-      expect.stringContaining('[TestService] Instance already exists')
+      expect.stringContaining('[TestService] Instance already exists'),
     );
   });
 
   it('should not warn when warnOnConfigOverride is false', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService', logger: mockLogger, warnOnConfigOverride: false }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      warnOnConfigOverride: false,
+    });
 
     factory.getInstance({ value: 1 });
     factory.getInstance({ value: 2 });
@@ -79,10 +81,10 @@ describe('createSingletonFactory', () => {
 
   it('should not warn when no config is passed to existing instance', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService', logger: mockLogger }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+    });
 
     factory.getInstance({ value: 1 });
     factory.getInstance();
@@ -92,13 +94,10 @@ describe('createSingletonFactory', () => {
 
   it('should reset instance and call onDispose', async () => {
     const disposeFn = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        onDispose: disposeFn,
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      onDispose: disposeFn,
+    });
 
     const instance1 = factory.getInstance({ value: 1 });
     await factory.reset();
@@ -111,13 +110,10 @@ describe('createSingletonFactory', () => {
 
   it('should handle async onDispose', async () => {
     const disposeFn = vi.fn().mockResolvedValue(undefined);
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        onDispose: disposeFn,
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      onDispose: disposeFn,
+    });
 
     factory.getInstance({ value: 1 });
     await factory.reset();
@@ -126,10 +122,9 @@ describe('createSingletonFactory', () => {
   });
 
   it('should return correct hasInstance value', () => {
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      { name: 'TestService' }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+    });
 
     expect(factory.hasInstance()).toBe(false);
 
@@ -138,13 +133,10 @@ describe('createSingletonFactory', () => {
   });
 
   it('should use default config when none provided', () => {
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        defaultConfig: { value: 100 },
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      defaultConfig: { value: 100 },
+    });
 
     const instance = factory.getInstance();
 
@@ -159,7 +151,9 @@ describe('createAsyncSingletonFactory', () => {
 
   class TestAsyncService {
     constructor(public config: TestConfig) {}
-    async disconnect() { return undefined; }
+    async disconnect() {
+      return undefined;
+    }
   }
 
   async function createTestService(config: TestConfig): Promise<TestAsyncService> {
@@ -202,7 +196,7 @@ describe('createAsyncSingletonFactory', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         return new TestAsyncService(config);
       },
-      { name: 'TestAsyncService' }
+      { name: 'TestAsyncService' },
     );
 
     const [instance1, instance2] = await Promise.all([
@@ -226,7 +220,7 @@ describe('createAsyncSingletonFactory', () => {
 
     expect(mockLogger).toHaveBeenCalledTimes(1);
     expect(mockLogger).toHaveBeenCalledWith(
-      expect.stringContaining('[TestAsyncService] Instance already exists')
+      expect.stringContaining('[TestAsyncService] Instance already exists'),
     );
   });
 
@@ -252,7 +246,7 @@ describe('createAsyncSingletonFactory', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         return new TestAsyncService(config);
       },
-      { name: 'TestAsyncService' }
+      { name: 'TestAsyncService' },
     );
 
     // Start initialization
@@ -292,20 +286,17 @@ describe('compareConfig option', () => {
 
   it('should use custom compareConfig to determine warnings', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        logger: mockLogger,
-        compareConfig: (existing, provided) => {
-          // Only warn if value changed
-          if (existing && existing.value !== provided.value) {
-            return { shouldWarn: true, message: 'Value changed!' };
-          }
-          return { shouldWarn: false };
-        },
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      compareConfig: (existing, provided) => {
+        // Only warn if value changed
+        if (existing && existing.value !== provided.value) {
+          return { shouldWarn: true, message: 'Value changed!' };
+        }
+        return { shouldWarn: false };
+      },
+    });
 
     factory.getInstance({ value: 1, debug: false });
 
@@ -319,18 +310,15 @@ describe('compareConfig option', () => {
   });
 
   it('should throw when shouldThrow is true', () => {
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        compareConfig: (existing, provided) => {
-          if (existing && existing.value !== provided.value) {
-            return { shouldWarn: false, shouldThrow: true, message: 'Config mismatch!' };
-          }
-          return { shouldWarn: false };
-        },
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      compareConfig: (existing, provided) => {
+        if (existing && existing.value !== provided.value) {
+          return { shouldWarn: false, shouldThrow: true, message: 'Config mismatch!' };
+        }
+        return { shouldWarn: false };
+      },
+    });
 
     factory.getInstance({ value: 1 });
 
@@ -339,20 +327,17 @@ describe('compareConfig option', () => {
 
   it('should use default message when compareConfig returns no message', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        logger: mockLogger,
-        compareConfig: () => ({ shouldWarn: true }),
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      compareConfig: () => ({ shouldWarn: true }),
+    });
 
     factory.getInstance({ value: 1 });
     factory.getInstance({ value: 2 });
 
     expect(mockLogger).toHaveBeenCalledWith(
-      expect.stringContaining('[TestService] Instance already exists')
+      expect.stringContaining('[TestService] Instance already exists'),
     );
   });
 });
@@ -373,14 +358,11 @@ describe('createDeepEqualComparison', () => {
 
   it('should not warn when config is equal', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        logger: mockLogger,
-        compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
+    });
 
     factory.getInstance({ value: 1, nested: { foo: 'bar' } });
     factory.getInstance({ value: 1, nested: { foo: 'bar' } });
@@ -390,33 +372,27 @@ describe('createDeepEqualComparison', () => {
 
   it('should warn when config differs', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        logger: mockLogger,
-        compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
+    });
 
     factory.getInstance({ value: 1 });
     factory.getInstance({ value: 2 });
 
     expect(mockLogger).toHaveBeenCalledWith(
-      expect.stringContaining('[TestService] Config ignored')
+      expect.stringContaining('[TestService] Config ignored'),
     );
   });
 
   it('should not warn on first call', () => {
     const mockLogger = vi.fn();
-    const factory = createSingletonFactory(
-      (config: TestConfig) => new TestService(config),
-      {
-        name: 'TestService',
-        logger: mockLogger,
-        compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
-      }
-    );
+    const factory = createSingletonFactory((config: TestConfig) => new TestService(config), {
+      name: 'TestService',
+      logger: mockLogger,
+      compareConfig: createDeepEqualComparison(simpleIsEqual, 'TestService'),
+    });
 
     factory.getInstance({ value: 1 });
 

@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
+
 import type { Query } from '../types/query';
 import type { SchemaDefinition } from '../types/schema-definition';
 import { createSchemaRegistry } from './registry';
 import {
-  validateSchema,
-  validateTableDefinition,
-  validateQuery,
+  formatValidationErrors,
   isValidQuery,
   isValidSchema,
-  formatValidationErrors,
+  validateQuery,
+  validateSchema,
+  validateTableDefinition,
 } from './validator';
 
 // =============================================================================
@@ -128,7 +129,7 @@ describe('validateTableDefinition', () => {
   it('fails when table name is missing', () => {
     const result = validateTableDefinition(
       { name: '', sql: 'orders', dimensions: {} } as never,
-      'orders'
+      'orders',
     );
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.path.includes('.name'))).toBe(true);
@@ -137,7 +138,7 @@ describe('validateTableDefinition', () => {
   it('fails when table sql is missing', () => {
     const result = validateTableDefinition(
       { name: 'orders', sql: '', dimensions: {} } as never,
-      'orders'
+      'orders',
     );
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.path.includes('.sql'))).toBe(true);
@@ -150,7 +151,7 @@ describe('validateTableDefinition', () => {
         sql: 'orders',
         measures: { broken: { type: '', sql: 'amount' } },
       } as never,
-      'orders'
+      'orders',
     );
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.path.includes('measures.broken.type'))).toBe(true);
@@ -163,17 +164,14 @@ describe('validateTableDefinition', () => {
         sql: 'orders',
         dimensions: { broken: { type: 'string', sql: '' } },
       } as never,
-      'orders'
+      'orders',
     );
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.path.includes('dimensions.broken.sql'))).toBe(true);
   });
 
   it('warns when table has no measures or dimensions', () => {
-    const result = validateTableDefinition(
-      { name: 'empty', sql: 'empty' } as never,
-      'empty'
-    );
+    const result = validateTableDefinition({ name: 'empty', sql: 'empty' } as never, 'empty');
     expect(result.valid).toBe(true);
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.warnings[0].message).toContain('no measures or dimensions');
@@ -243,9 +241,7 @@ describe('validateQuery', () => {
 
   it('validates time dimension against schema', () => {
     const query: Query = {
-      timeDimensions: [
-        { dimension: 'orders.created_at', granularity: 'day' },
-      ],
+      timeDimensions: [{ dimension: 'orders.created_at', granularity: 'day' }],
     };
     const result = validateQuery(query, registry);
     expect(result.valid).toBe(true);
@@ -253,9 +249,7 @@ describe('validateQuery', () => {
 
   it('fails when time dimension not in schema', () => {
     const query: Query = {
-      timeDimensions: [
-        { dimension: 'orders.nonexistent', granularity: 'day' },
-      ],
+      timeDimensions: [{ dimension: 'orders.nonexistent', granularity: 'day' }],
     };
     const result = validateQuery(query, registry);
     expect(result.valid).toBe(false);

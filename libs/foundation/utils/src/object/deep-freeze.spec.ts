@@ -2,7 +2,8 @@
  * Tests for deep-freeze utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { deepFreeze, isDeeplyFrozen } from './deep-freeze';
 
 describe('deepFreeze', () => {

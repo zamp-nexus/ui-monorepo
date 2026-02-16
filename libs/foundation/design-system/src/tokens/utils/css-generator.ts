@@ -23,12 +23,12 @@ export interface CSSGeneratorOptions {
 
 /**
  * Generates CSS custom properties from a token object
- * 
+ *
  * @param tokens - Token object (can be nested)
  * @param prefix - Current prefix for nesting
  * @param options - Generation options
  * @returns Array of CSS variable declarations
- * 
+ *
  * @example
  * const vars = generateCSSVariables(colorPrimitives.neutral, 'color-neutral');
  * // ['--color-neutral-100: hsl(228 6% 90%);', ...]
@@ -36,13 +36,9 @@ export interface CSSGeneratorOptions {
 export function generateCSSVariables(
   tokens: Record<string, unknown>,
   prefix = '',
-  options: CSSGeneratorOptions = {}
+  options: CSSGeneratorOptions = {},
 ): string[] {
-  const {
-    indent = '  ',
-    includeComments = true,
-    includeDeprecated = true,
-  } = options;
+  const { indent = '  ', includeComments = true, includeDeprecated = true } = options;
 
   const lines: string[] = [];
 
@@ -63,9 +59,8 @@ export function generateCSSVariables(
 
       // Add deprecation warning
       if (value.$deprecated) {
-        const msg = typeof value.$deprecated === 'string'
-          ? value.$deprecated
-          : 'This token is deprecated';
+        const msg =
+          typeof value.$deprecated === 'string' ? value.$deprecated : 'This token is deprecated';
         lines.push(`${indent}/* @deprecated ${msg} */`);
       }
 
@@ -75,7 +70,7 @@ export function generateCSSVariables(
       const nestedVars = generateCSSVariables(
         value as Record<string, unknown>,
         prefix ? `${prefix}-${key}` : key,
-        { ...options, indent }
+        { ...options, indent },
       );
       lines.push(...nestedVars);
     }
@@ -86,19 +81,19 @@ export function generateCSSVariables(
 
 /**
  * Generates a complete CSS file content from theme tokens
- * 
+ *
  * @param theme - Theme token object
  * @param selector - CSS selector for the variables (default: ':root')
  * @param options - Generation options
  * @returns Complete CSS string
- * 
+ *
  * @example
  * const css = generateThemeCSS(darkTheme.colors, ':root', { prefix: 'oi' });
  */
 export function generateThemeCSS(
   theme: Record<string, unknown>,
   selector = ':root',
-  options: CSSGeneratorOptions = {}
+  options: CSSGeneratorOptions = {},
 ): string {
   const { prefix } = options;
   const variables = generateCSSVariables(theme, prefix, options);
@@ -108,10 +103,10 @@ export function generateThemeCSS(
 
 /**
  * Generates CSS for multiple themes/selectors
- * 
+ *
  * @param themes - Array of theme configurations
  * @returns Complete CSS string with all themes
- * 
+ *
  * @example
  * const css = generateMultiThemeCSS([
  *   { selector: ':root', tokens: darkTheme, prefix: 'oi' },
@@ -124,10 +119,10 @@ export function generateMultiThemeCSS(
     tokens: Record<string, unknown>;
     prefix?: string;
     options?: CSSGeneratorOptions;
-  }>
+  }>,
 ): string {
   const blocks = themes.map(({ selector, tokens, prefix, options = {} }) =>
-    generateThemeCSS(tokens, selector, { ...options, prefix })
+    generateThemeCSS(tokens, selector, { ...options, prefix }),
   );
 
   return blocks.join('\n\n');
@@ -136,11 +131,11 @@ export function generateMultiThemeCSS(
 /**
  * Generates CSS variable reference string
  * Useful for building values that reference other tokens
- * 
+ *
  * @param tokenPath - Dot-notated path to token
  * @param prefix - Optional prefix
  * @returns CSS var() reference
- * 
+ *
  * @example
  * const ref = cssVar('colors.background.layer01', 'oi');
  * // 'var(--oi-colors-background-layer01)'
@@ -153,17 +148,13 @@ export function cssVar(tokenPath: string, prefix?: string): string {
 
 /**
  * Generates CSS variable reference with fallback
- * 
+ *
  * @param tokenPath - Dot-notated path to token
  * @param fallback - Fallback value
  * @param prefix - Optional prefix
  * @returns CSS var() reference with fallback
  */
-export function cssVarWithFallback(
-  tokenPath: string,
-  fallback: string,
-  prefix?: string
-): string {
+export function cssVarWithFallback(tokenPath: string, fallback: string, prefix?: string): string {
   const varName = tokenPath.replace(/\./g, '-');
   const fullName = prefix ? `${prefix}-${varName}` : varName;
   return `var(--${fullName}, ${fallback})`;
@@ -172,14 +163,14 @@ export function cssVarWithFallback(
 /**
  * Generates Tailwind CSS @theme directive content
  * Compatible with Tailwind CSS v4
- * 
+ *
  * @param tokens - Token object
  * @param options - Generation options
  * @returns CSS content for @theme directive
  */
 export function generateTailwindTheme(
   tokens: Record<string, unknown>,
-  options: CSSGeneratorOptions = {}
+  options: CSSGeneratorOptions = {},
 ): string {
   const variables = generateCSSVariables(tokens, options.prefix, {
     ...options,
@@ -191,14 +182,14 @@ export function generateTailwindTheme(
 
 /**
  * Generates media query wrapper for reduced motion
- * 
+ *
  * @param durationTokens - Duration token object
  * @param prefix - Optional prefix
  * @returns CSS media query block
  */
 export function generateReducedMotionCSS(
   durationTokens: Record<string, DesignToken<string>>,
-  prefix?: string
+  prefix?: string,
 ): string {
   const lines: string[] = [];
 
@@ -214,7 +205,7 @@ export function generateReducedMotionCSS(
 
 /**
  * Generates CSS comment header for generated files
- * 
+ *
  * @param options - Header options
  * @returns CSS comment string
  */
@@ -229,11 +220,7 @@ export function generateFileHeader(options?: {
     generated = true,
   } = options ?? {};
 
-  const lines = [
-    '/**',
-    ` * ${title}`,
-    ` * ${description}`,
-  ];
+  const lines = ['/**', ` * ${title}`, ` * ${description}`];
 
   if (generated) {
     lines.push(' * @generated - DO NOT EDIT DIRECTLY');

@@ -264,8 +264,7 @@ export type FilterExpression = FilterCondition | FilterGroup;
  */
 export const isFilterOperator = (value: unknown): value is FilterOperator => {
   return (
-    typeof value === 'string' &&
-    Object.values(FILTER_OPERATORS).includes(value as FilterOperator)
+    typeof value === 'string' && Object.values(FILTER_OPERATORS).includes(value as FilterOperator)
   );
 };
 
@@ -339,7 +338,7 @@ export const isFilterExpression = (value: unknown): value is FilterExpression =>
  */
 export const operatorRequiresValues = (operator: FilterOperator): boolean => {
   return !Object.values(VALUELESS_FILTER_OPERATORS).includes(
-    operator as (typeof VALUELESS_FILTER_OPERATORS)[keyof typeof VALUELESS_FILTER_OPERATORS]
+    operator as (typeof VALUELESS_FILTER_OPERATORS)[keyof typeof VALUELESS_FILTER_OPERATORS],
   );
 };
 
@@ -348,7 +347,7 @@ export const operatorRequiresValues = (operator: FilterOperator): boolean => {
  */
 export const operatorAcceptsMultipleValues = (operator: FilterOperator): boolean => {
   return Object.values(MULTI_VALUE_FILTER_OPERATORS).includes(
-    operator as (typeof MULTI_VALUE_FILTER_OPERATORS)[keyof typeof MULTI_VALUE_FILTER_OPERATORS]
+    operator as (typeof MULTI_VALUE_FILTER_OPERATORS)[keyof typeof MULTI_VALUE_FILTER_OPERATORS],
   );
 };
 
@@ -375,7 +374,7 @@ export const extractColumnFromFilter = (filter: FilterCondition): string => {
 export const createFilterCondition = (
   member: string,
   operator: FilterOperator,
-  values?: ReadonlyArray<FilterPrimitive>
+  values?: ReadonlyArray<FilterPrimitive>,
 ): FilterCondition => {
   if (values !== undefined) {
     return { member, operator, values };
@@ -386,18 +385,14 @@ export const createFilterCondition = (
 /**
  * Create an AND filter group.
  */
-export const andFilter = (
-  ...conditions: ReadonlyArray<FilterExpression>
-): FilterAndGroup => ({
+export const andFilter = (...conditions: ReadonlyArray<FilterExpression>): FilterAndGroup => ({
   and: conditions,
 });
 
 /**
  * Create an OR filter group.
  */
-export const orFilter = (
-  ...conditions: ReadonlyArray<FilterExpression>
-): FilterOrGroup => ({
+export const orFilter = (...conditions: ReadonlyArray<FilterExpression>): FilterOrGroup => ({
   or: conditions,
 });
 
@@ -425,17 +420,15 @@ export const lte = (member: string, value: number | Date): FilterCondition =>
 export const between = (
   member: string,
   low: number | Date | string,
-  high: number | Date | string
+  high: number | Date | string,
 ): FilterCondition => createFilterCondition(member, 'between', [low, high]);
 
-export const inList = (
-  member: string,
-  values: ReadonlyArray<FilterPrimitive>
-): FilterCondition => createFilterCondition(member, 'in', values);
+export const inList = (member: string, values: ReadonlyArray<FilterPrimitive>): FilterCondition =>
+  createFilterCondition(member, 'in', values);
 
 export const notInList = (
   member: string,
-  values: ReadonlyArray<FilterPrimitive>
+  values: ReadonlyArray<FilterPrimitive>,
 ): FilterCondition => createFilterCondition(member, 'notIn', values);
 
 export const contains = (member: string, value: string): FilterCondition =>
@@ -447,8 +440,7 @@ export const startsWith = (member: string, value: string): FilterCondition =>
 export const endsWith = (member: string, value: string): FilterCondition =>
   createFilterCondition(member, 'endsWith', [value]);
 
-export const isNull = (member: string): FilterCondition =>
-  createFilterCondition(member, 'isNull');
+export const isNull = (member: string): FilterCondition => createFilterCondition(member, 'isNull');
 
 export const isNotNull = (member: string): FilterCondition =>
   createFilterCondition(member, 'isNotNull');

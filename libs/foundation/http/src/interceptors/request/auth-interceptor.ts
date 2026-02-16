@@ -7,8 +7,9 @@
  */
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import type { AuthConfig } from '../../core/types';
+
 import { HTTP_HEADERS } from '../../core/constants';
+import type { AuthConfig } from '../../core/types';
 
 // =============================================================================
 // Types
@@ -34,9 +35,7 @@ export interface AuthInterceptorOptions {
 export const createAuthInterceptor = (options: AuthInterceptorOptions) => {
   const { auth, getAccessToken, debug } = options;
 
-  return async (
-    config: InternalAxiosRequestConfig,
-  ): Promise<InternalAxiosRequestConfig> => {
+  return async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
     if (!auth.enabled) {
       return config;
     }
@@ -77,5 +76,4 @@ export const createAuthInterceptor = (options: AuthInterceptorOptions) => {
 export const setupAuthInterceptor = (
   instance: AxiosInstance,
   options: AuthInterceptorOptions,
-): number =>
-  instance.interceptors.request.use(createAuthInterceptor(options), undefined);
+): number => instance.interceptors.request.use(createAuthInterceptor(options), undefined);

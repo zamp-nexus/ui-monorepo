@@ -73,9 +73,7 @@ function parseStackFrame(line: string): StackFrame | null {
   const trimmed = line.trim();
 
   // Chrome/Edge/Node format: "    at functionName (file:line:column)"
-  const chromeMatch = trimmed.match(
-    /^at\s+(?:(.+?)\s+\()?(?:(.+?):(\d+):(\d+)|([^)]+))\)?$/
-  );
+  const chromeMatch = trimmed.match(/^at\s+(?:(.+?)\s+\()?(?:(.+?):(\d+):(\d+)|([^)]+))\)?$/);
 
   if (chromeMatch) {
     const [, functionName, fileName, lineNumber, columnNumber, evalSource] = chromeMatch;
@@ -131,7 +129,7 @@ export function serializeStackFrames(frames: StackFrame[]): string {
       f: frame.fileName,
       l: frame.lineNumber,
       c: frame.columnNumber,
-    }))
+    })),
   );
 }
 
@@ -170,10 +168,7 @@ export function extractSourceMapComment(scriptContent: string): string | null {
 /**
  * Check if a stack frame is from our application (not a library)
  */
-export function isApplicationFrame(
-  frame: StackFrame,
-  applicationPaths: string[] = []
-): boolean {
+export function isApplicationFrame(frame: StackFrame, applicationPaths: string[] = []): boolean {
   if (frame.isNative) {
     return false;
   }
@@ -181,14 +176,7 @@ export function isApplicationFrame(
   const fileName = frame.fileName.toLowerCase();
 
   // Exclude common library paths
-  const libraryPatterns = [
-    'node_modules',
-    'vendor',
-    '/react.',
-    '/react-dom.',
-    'webpack',
-    'chunk',
-  ];
+  const libraryPatterns = ['node_modules', 'vendor', '/react.', '/react-dom.', 'webpack', 'chunk'];
 
   if (libraryPatterns.some((pattern) => fileName.includes(pattern))) {
     return false;
@@ -208,12 +196,10 @@ export function isApplicationFrame(
 export function getTopApplicationFrames(
   stack: string,
   count = 5,
-  applicationPaths: string[] = []
+  applicationPaths: string[] = [],
 ): StackFrame[] {
   const parsed = parseStackTrace(stack);
-  const appFrames = parsed.frames.filter((frame) =>
-    isApplicationFrame(frame, applicationPaths)
-  );
+  const appFrames = parsed.frames.filter((frame) => isApplicationFrame(frame, applicationPaths));
   return appFrames.slice(0, count);
 }
 
@@ -222,7 +208,7 @@ export function getTopApplicationFrames(
  */
 export function createErrorFingerprint(
   error: { name: string; message: string; stack?: string },
-  applicationPaths: string[] = []
+  applicationPaths: string[] = [],
 ): string {
   const parts: string[] = [error.name];
 

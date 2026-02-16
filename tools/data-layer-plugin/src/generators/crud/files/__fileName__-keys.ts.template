@@ -4,30 +4,9 @@
  * Type-safe query key factory for <%= name %> entity.
  */
 
-import { createQueryKeys } from '@open-insights-web/foundation-data-layer';
+import { createQueryKeys } from '@open-insights-web/foundation-data-model';
 
 /**
  * Query keys for <%= name %> entity
- *
- * @example
- * ```typescript
- * // All <%= name %> queries
- * queryClient.invalidateQueries({ queryKey: <%= propertyName %>Keys.all });
- *
- * // All list queries
- * queryClient.invalidateQueries({ queryKey: <%= propertyName %>Keys.lists() });
- *
- * // Specific filtered list
- * useDLQuery({
- *   queryKey: <%= propertyName %>Keys.list({ status: 'active' }),
- *   endpoint: '<%= endpoint %>?status=active',
- * });
- *
- * // Specific detail
- * useDLQuery({
- *   queryKey: <%= propertyName %>Keys.detail(id),
- *   endpoint: `<%= endpoint %>/${id}`,
- * });
- * ```
  */
 export const <%= propertyName %>Keys = createQueryKeys('<%= propertyName %>s');

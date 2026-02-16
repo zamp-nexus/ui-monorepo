@@ -2,17 +2,18 @@
  * Tests for error guard utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  isErrorType,
+  hasErrorCode,
   isAbortError,
+  isErrorType,
   isNetworkError,
+  isRangeError,
+  isRetriableHttpStatus,
+  isSyntaxError,
   isTimeoutError,
   isTypeError,
-  isSyntaxError,
-  isRangeError,
-  hasErrorCode,
-  isRetriableHttpStatus,
 } from './error-guards';
 
 describe('isErrorType', () => {

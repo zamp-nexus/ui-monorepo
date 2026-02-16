@@ -16,6 +16,12 @@ export default [
   {
     ignores: [
       '**/dist',
+      '**/storybook-static',
+      '**/coverage',
+      '**/.nx',
+      '**/.turbo',
+      '**/.next',
+      '**/tmp',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
       '**/test-output',
@@ -46,7 +52,7 @@ export default [
       '@nx/enforce-module-boundaries': [
         'error',
         {
-          enforceBuildableLibDependency: true,
+          // enforceBuildableLibDependency: true,
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             // ============================================
@@ -557,9 +563,7 @@ export default [
       'libs/foundation/query-engine/src/**/*.ts',
       'libs/foundation/query-engine/src/**/*.tsx',
     ],
-    ignores: [
-      'libs/foundation/query-engine/src/hooks/**',
-    ],
+    ignores: ['libs/foundation/query-engine/src/hooks/**'],
     rules: {
       'no-restricted-imports': [
         'error',

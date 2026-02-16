@@ -25,26 +25,26 @@ export interface FeatureFlags {
  * Extract feature flags from signals configuration
  */
 export const extractFeatureFlags = (signals: SignalsConfig): FeatureFlags => {
-  const errorConfig = typeof signals.errors === 'boolean'
-    ? { enabled: signals.errors }
-    : signals.errors;
+  const errorConfig =
+    typeof signals.errors === 'boolean' ? { enabled: signals.errors } : signals.errors;
 
-  const perfConfig = typeof signals.performance === 'boolean'
-    ? { enabled: signals.performance, webVitals: true, longTasks: true, spaNavigation: true }
-    : signals.performance;
+  const perfConfig =
+    typeof signals.performance === 'boolean'
+      ? { enabled: signals.performance, webVitals: true, longTasks: true, spaNavigation: true }
+      : signals.performance;
 
-  const networkConfig = typeof signals.network === 'boolean'
-    ? { enabled: signals.network }
-    : signals.network;
+  const networkConfig =
+    typeof signals.network === 'boolean' ? { enabled: signals.network } : signals.network;
 
-  const behaviorConfig = typeof signals.userBehavior === 'boolean'
-    ? {
-        enabled: signals.userBehavior,
-        trackClicks: true,
-        detectRageClicks: true,
-        trackSession: true,
-      }
-    : signals.userBehavior;
+  const behaviorConfig =
+    typeof signals.userBehavior === 'boolean'
+      ? {
+          enabled: signals.userBehavior,
+          trackClicks: true,
+          detectRageClicks: true,
+          trackSession: true,
+        }
+      : signals.userBehavior;
 
   return {
     errors: errorConfig.enabled,
@@ -69,5 +69,7 @@ export const isFeatureEnabled = (flags: FeatureFlags, feature: keyof FeatureFlag
 /**
  * Create a feature flag checker function
  */
-export const createFeatureChecker = (flags: FeatureFlags) =>
-  (feature: keyof FeatureFlags): boolean => isFeatureEnabled(flags, feature);
+export const createFeatureChecker =
+  (flags: FeatureFlags) =>
+  (feature: keyof FeatureFlags): boolean =>
+    isFeatureEnabled(flags, feature);

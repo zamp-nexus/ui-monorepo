@@ -6,10 +6,7 @@
  * @module builders/query-builder
  */
 
-import {
-  QueryId,
-  Timestamp,
-} from '@open-insights-web/foundation-data-model';
+import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
 
 // =============================================================================
 // Types
@@ -18,13 +15,7 @@ import {
 /**
  * Aggregation function types
  */
-export type AggregationType =
-  | 'sum'
-  | 'count'
-  | 'avg'
-  | 'min'
-  | 'max'
-  | 'countDistinct';
+export type AggregationType = 'sum' | 'count' | 'avg' | 'min' | 'max' | 'countDistinct';
 
 /**
  * Sort direction
@@ -181,11 +172,7 @@ export class QueryBuilder {
   /**
    * Add a measure
    */
-  withMeasure(
-    member: string,
-    aggregation: AggregationType,
-    alias?: string
-  ): this {
+  withMeasure(member: string, aggregation: AggregationType, alias?: string): this {
     this._measures.push({ member, aggregation, alias });
     return this;
   }
@@ -217,11 +204,7 @@ export class QueryBuilder {
   /**
    * Add a time dimension
    */
-  withTimeDimension(
-    member: string,
-    granularity: TimeGranularity,
-    alias?: string
-  ): this {
+  withTimeDimension(member: string, granularity: TimeGranularity, alias?: string): this {
     this._timeDimensions.push({ member, granularity, alias });
     return this;
   }
@@ -229,11 +212,7 @@ export class QueryBuilder {
   /**
    * Add a filter
    */
-  withFilter(
-    member: string,
-    operator: FilterOperator,
-    value: unknown
-  ): this {
+  withFilter(member: string, operator: FilterOperator, value: unknown): this {
     this._filters.push({ member, operator, value });
     return this;
   }
@@ -305,9 +284,7 @@ export class QueryBuilder {
  * const query = quickQuery({ table: 'events', limit: 10 });
  * ```
  */
-export function quickQuery(
-  overrides: Partial<TestQuery> = {}
-): TestQuery {
+export function quickQuery(overrides: Partial<TestQuery> = {}): TestQuery {
   return {
     id: overrides.id ?? QueryId.create(),
     table: overrides.table ?? 'test_table',

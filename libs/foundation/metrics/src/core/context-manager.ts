@@ -3,28 +3,29 @@
  * @module core/context-manager
  */
 
-import { context, trace, propagation, type SpanContext } from '@opentelemetry/api';
+import { context, propagation, trace, type SpanContext } from '@opentelemetry/api';
 
-import type {
-  TelemetryContext,
-  PageContext,
-  AppContext,
-  TenantContext,
-  UserContext,
-  SessionContext,
-  TraceContext,
-  ReleaseContext,
-  ContextUpdate,
-  ResolvedConfig,
-} from '../types';
 import {
   detectBrowser,
+  generateId,
   getCurrentPageUrl,
   getCurrentRoute,
-  generateId,
   hashStringSync,
   type BrowserInfo,
 } from '@open-insights-web/foundation-utils';
+
+import type {
+  AppContext,
+  ContextUpdate,
+  PageContext,
+  ReleaseContext,
+  ResolvedConfig,
+  SessionContext,
+  TelemetryContext,
+  TenantContext,
+  TraceContext,
+  UserContext,
+} from '../types';
 
 /**
  * Context manager state
@@ -124,7 +125,7 @@ export function setUser(userId: string, traits?: Record<string, unknown>): void 
   }
 
   const salt = contextState.config.compliance.tenantHashSalt || '';
-  
+
   const role = typeof traits?.role === 'string' ? traits.role : undefined;
 
   contextState.user = {
@@ -152,13 +153,17 @@ export function clearUser(): void {
 /**
  * Update tenant context
  */
-export function setTenant(tenantId: string, tier?: string, metadata?: Record<string, string>): void {
+export function setTenant(
+  tenantId: string,
+  tier?: string,
+  metadata?: Record<string, string>,
+): void {
   if (!contextState) {
     throw new Error('Context manager not initialized');
   }
 
   const salt = contextState.config.compliance.tenantHashSalt || '';
-  
+
   contextState.tenant = {
     id: hashTenantId(tenantId, salt),
     tier,
@@ -271,7 +276,7 @@ function getCurrentTraceContext(): TraceContext | undefined {
   }
 
   const spanContext: SpanContext = span.spanContext();
-  
+
   return {
     traceId: spanContext.traceId,
     spanId: spanContext.spanId,
@@ -292,7 +297,7 @@ function hashTenantId(tenantId: string, salt?: string): string {
  */
 function generateSessionId(): string {
   const id = generateId();
-  
+
   // Store in session storage for persistence
   if (typeof sessionStorage !== 'undefined') {
     try {
@@ -301,7 +306,7 @@ function generateSessionId(): string {
       // Session storage not available
     }
   }
-  
+
   return id;
 }
 
@@ -310,7 +315,7 @@ function generateSessionId(): string {
  */
 function getOrCreateAnonymousId(): string {
   const storageKey = 'fm_anonymous_id';
-  
+
   // Try to get from localStorage
   if (typeof localStorage !== 'undefined') {
     try {
@@ -318,7 +323,7 @@ function getOrCreateAnonymousId(): string {
       if (existingId) {
         return existingId;
       }
-      
+
       const newId = generateId();
       localStorage.setItem(storageKey, newId);
       return newId;
@@ -326,7 +331,7 @@ function getOrCreateAnonymousId(): string {
       // localStorage not available
     }
   }
-  
+
   // Fallback to generating a new ID
   return generateId();
 }
@@ -382,11 +387,11 @@ export function getSpanAttributes(): Record<string, string | number | boolean | 
 export function injectTraceContext(headers: Headers): Headers {
   const carrier: Record<string, string> = {};
   propagation.inject(context.active(), carrier);
-  
+
   Object.entries(carrier).forEach(([key, value]) => {
     headers.set(key, value);
   });
-  
+
   return headers;
 }
 
@@ -398,10 +403,10 @@ export function extractTraceContext(headers: Headers): SpanContext | undefined {
   headers.forEach((value, key) => {
     carrier[key] = value;
   });
-  
+
   const extractedContext = propagation.extract(context.active(), carrier);
   const span = trace.getSpan(extractedContext);
-  
+
   return span?.spanContext();
 }
 
@@ -412,10 +417,10 @@ export function shutdownContextManager(): void {
   if (typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   }
-  
+
   if (typeof window !== 'undefined') {
     window.removeEventListener('popstate', handleNavigation);
   }
-  
+
   contextState = null;
 }

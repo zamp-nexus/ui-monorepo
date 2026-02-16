@@ -5,20 +5,16 @@
 import React from 'react';
 
 import { useTheme } from '../../theme';
-import { useBannerContext } from './banner.context';
 import type { BannerTitleProps } from './banner';
 import { bannerDefaultTheme } from './banner';
+import { useBannerContext } from './banner.context';
 
 /**
  * Banner.Title component
  *
  * Title text for the banner. Uses context to provide proper ARIA labeling.
  */
-export const BannerTitle: React.FC<BannerTitleProps> = ({
-  children,
-  className,
-  oiid,
-}) => {
+export const BannerTitle: React.FC<BannerTitleProps> = ({ children, className, oiid }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
   const { titleId, variant } = useBannerContext();
 

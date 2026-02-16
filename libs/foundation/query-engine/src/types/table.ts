@@ -10,16 +10,12 @@
  */
 
 import type { FunctionReference } from 'convex/server';
+
 // ConflictStrategy is both a const object (value) and a type in data-model.
 // We need the value import for the type guard `isConflictStrategy`.
-import {
-  CONFLICT_STRATEGY,
-  type ConflictStrategy,
-} from '@open-insights-web/foundation-data-model';
-import {
-  type WriteOperation,
-  WRITE_OPERATIONS,
-} from './operations';
+import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+
+import { WRITE_OPERATIONS, type WriteOperation } from './operations';
 
 // =============================================================================
 // TABLE SOURCE
@@ -300,10 +296,7 @@ export interface RegisterTableOptions {
  * Check if value is a valid table source.
  */
 export const isTableSource = (value: unknown): value is TableSource => {
-  return (
-    typeof value === 'string' &&
-    Object.values(TABLE_SOURCES).includes(value as TableSource)
-  );
+  return typeof value === 'string' && Object.values(TABLE_SOURCES).includes(value as TableSource);
 };
 
 /**
@@ -311,8 +304,7 @@ export const isTableSource = (value: unknown): value is TableSource => {
  */
 export const isTableLoadState = (value: unknown): value is TableLoadState => {
   return (
-    typeof value === 'string' &&
-    Object.values(TABLE_LOAD_STATES).includes(value as TableLoadState)
+    typeof value === 'string' && Object.values(TABLE_LOAD_STATES).includes(value as TableLoadState)
   );
 };
 
@@ -335,7 +327,9 @@ export const isConflictStrategy = (value: unknown): value is ConflictStrategy =>
  * Check if a table is loaded and ready for querying.
  */
 export const isTableReady = (table: TableConfig): boolean => {
-  return table.loadState === TABLE_LOAD_STATES.LOADED || table.loadState === TABLE_LOAD_STATES.STALE;
+  return (
+    table.loadState === TABLE_LOAD_STATES.LOADED || table.loadState === TABLE_LOAD_STATES.STALE
+  );
 };
 
 /**
@@ -397,10 +391,7 @@ export const tableHasListApi = (table: TableConfig): boolean => {
 /**
  * Check if table can use API for mutations.
  */
-export const tableHasMutationApi = (
-  table: TableConfig,
-  operation: WriteOperation
-): boolean => {
+export const tableHasMutationApi = (table: TableConfig, operation: WriteOperation): boolean => {
   switch (operation) {
     case WRITE_OPERATIONS.CREATE:
       return !!table.convex?.create;

@@ -33,7 +33,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const SAMPLE_IMAGE = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop';
+const SAMPLE_IMAGE =
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop';
 
 /**
  * Default avatar with image
@@ -165,19 +166,9 @@ export const Skeleton: Story = {
 export const AvatarGroup: Story = {
   render: () => (
     <div className="flex -space-x-3">
-      <Avatar
-        src={SAMPLE_IMAGE}
-        alt="User 1"
-        className="ring-2 ring-background"
-      />
-      <Avatar
-        name="Alice Bob"
-        className="ring-2 ring-background"
-      />
-      <Avatar
-        name="Charlie Dan"
-        className="ring-2 ring-background"
-      />
+      <Avatar src={SAMPLE_IMAGE} alt="User 1" className="ring-2 ring-background" />
+      <Avatar name="Alice Bob" className="ring-2 ring-background" />
+      <Avatar name="Charlie Dan" className="ring-2 ring-background" />
       <Avatar
         fallback={<span className="text-xs">+5</span>}
         className="ring-2 ring-background bg-muted"

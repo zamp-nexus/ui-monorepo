@@ -3,14 +3,14 @@
  * @module lifecycle/idle-timer
  */
 
-import {
-  createDebugLogger,
-  type Logger,
-  Disposable,
-  SafeTimer,
-} from '@open-insights-web/foundation-utils';
 import type { Milliseconds } from '@open-insights-web/foundation-data-model';
 import { Timestamp } from '@open-insights-web/foundation-data-model';
+import {
+  createDebugLogger,
+  Disposable,
+  SafeTimer,
+  type Logger,
+} from '@open-insights-web/foundation-utils';
 
 /**
  * Idle timer configuration
@@ -149,5 +149,4 @@ export class IdleTimer extends Disposable {
 /**
  * Create an idle timer
  */
-export const createIdleTimer = (config: IdleTimerConfig): IdleTimer =>
-  new IdleTimer(config);
+export const createIdleTimer = (config: IdleTimerConfig): IdleTimer => new IdleTimer(config);

@@ -2,7 +2,7 @@
  * useMountedRef - Track component mounted state
  * @module use-mounted-ref
  */
-import { useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Hook to track if a component is mounted.

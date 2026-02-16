@@ -5,16 +5,17 @@
  * and type guards.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
+import { ERROR_CATEGORY, FOUNDATION_ERROR_CODE } from './error-codes';
 import {
   FoundationError,
   GenericFoundationError,
-  toFoundationError,
-  isFoundationError,
   hasErrorCode,
   isErrorCategory,
+  isFoundationError,
+  toFoundationError,
 } from './foundation-error';
-import { FOUNDATION_ERROR_CODE, ERROR_CATEGORY, type FoundationErrorCode } from './error-codes';
 
 // =============================================================================
 // GenericFoundationError (concrete implementation for testing)
@@ -44,11 +45,9 @@ describe('GenericFoundationError', () => {
   });
 
   it('should freeze context', () => {
-    const error = new GenericFoundationError(
-      FOUNDATION_ERROR_CODE.INTERNAL_ERROR,
-      'test',
-      { source: 'test' },
-    );
+    const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.INTERNAL_ERROR, 'test', {
+      source: 'test',
+    });
     expect(Object.isFrozen(error.context)).toBe(true);
   });
 
@@ -77,7 +76,10 @@ describe('GenericFoundationError', () => {
 describe('FoundationError properties', () => {
   describe('category', () => {
     it('should return transient for network errors', () => {
-      const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED, 'fail');
+      const error = new GenericFoundationError(
+        FOUNDATION_ERROR_CODE.NETWORK_REQUEST_FAILED,
+        'fail',
+      );
       expect(error.category).toBe(ERROR_CATEGORY.TRANSIENT);
     });
 
@@ -106,17 +108,26 @@ describe('FoundationError properties', () => {
 
   describe('shouldReport', () => {
     it('should be false for user input errors', () => {
-      const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.VALIDATION_FAILED, 'bad input');
+      const error = new GenericFoundationError(
+        FOUNDATION_ERROR_CODE.VALIDATION_FAILED,
+        'bad input',
+      );
       expect(error.shouldReport).toBe(false);
     });
 
     it('should be false for cancelled queries', () => {
-      const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.BRIDGE_QUERY_CANCELLED, 'cancelled');
+      const error = new GenericFoundationError(
+        FOUNDATION_ERROR_CODE.BRIDGE_QUERY_CANCELLED,
+        'cancelled',
+      );
       expect(error.shouldReport).toBe(false);
     });
 
     it('should be true for infrastructure errors', () => {
-      const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.DATABASE_OPERATION_FAILED, 'db fail');
+      const error = new GenericFoundationError(
+        FOUNDATION_ERROR_CODE.DATABASE_OPERATION_FAILED,
+        'db fail',
+      );
       expect(error.shouldReport).toBe(true);
     });
   });
@@ -159,11 +170,9 @@ describe('FoundationError properties', () => {
     });
 
     it('should include context when non-empty', () => {
-      const error = new GenericFoundationError(
-        FOUNDATION_ERROR_CODE.INTERNAL_ERROR,
-        'test',
-        { source: 'unit-test' },
-      );
+      const error = new GenericFoundationError(FOUNDATION_ERROR_CODE.INTERNAL_ERROR, 'test', {
+        source: 'unit-test',
+      });
       expect(error.toString()).toContain('unit-test');
     });
   });
@@ -185,12 +194,12 @@ describe('toFoundationError', () => {
     // because its constructor signature (code, message, context, cause) differs
     // from the base class assumption (message, context, cause). This test
     // verifies the function does not throw and returns a FoundationError.
-    const original = new GenericFoundationError(
-      FOUNDATION_ERROR_CODE.INTERNAL_ERROR,
-      'test',
-      { source: 'a' },
-    );
-    const result = toFoundationError(original, FOUNDATION_ERROR_CODE.INTERNAL_ERROR, { operation: 'b' });
+    const original = new GenericFoundationError(FOUNDATION_ERROR_CODE.INTERNAL_ERROR, 'test', {
+      source: 'a',
+    });
+    const result = toFoundationError(original, FOUNDATION_ERROR_CODE.INTERNAL_ERROR, {
+      operation: 'b',
+    });
     expect(result).toBeInstanceOf(FoundationError);
   });
 

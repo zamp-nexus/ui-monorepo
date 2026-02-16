@@ -25,17 +25,10 @@ export type {
 } from './types';
 
 // SafeTimer
-export {
-  SafeTimer,
-  createSafeTimer,
-  createOneShotTimer,
-} from './safe-timer';
+export { SafeTimer, createSafeTimer, createOneShotTimer } from './safe-timer';
 
 // ManagedInterval
-export {
-  ManagedInterval,
-  createManagedInterval,
-} from './managed-interval';
+export { ManagedInterval, createManagedInterval } from './managed-interval';
 
 // SafeDebounce
 export {

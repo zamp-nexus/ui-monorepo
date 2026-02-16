@@ -2,12 +2,11 @@
  * Tests for database hash utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
-import {
-  generateIdempotencyKey,
-  generateIdempotencyKeyAsync,
-} from './hash';
+
+import { generateIdempotencyKey, generateIdempotencyKeyAsync } from './hash';
 
 describe('hashPayloadSync', () => {
   it('should hash objects consistently', () => {

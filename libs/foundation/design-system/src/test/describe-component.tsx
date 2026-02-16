@@ -4,12 +4,13 @@
  */
 
 import React from 'react';
+
 import { render } from '@testing-library/react';
 import camelCase from 'lodash/camelCase';
 
-import { slotOiid } from '../utils/oiid';
 import { ThemeProvider } from '../theme';
 import type { OIComponentModifiers, OIComponentVariants } from '../types';
+import { slotOiid } from '../utils/oiid';
 import { randomString } from './random';
 import { resetTestingComponentState, setTestingComponentState } from './test-state';
 
@@ -173,16 +174,14 @@ export function testModifiers(
         );
         if (allowMultiple) {
           const renderedElements = getAllByTestId(
-            slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
+            slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
           );
           for (const renderedElement of renderedElements) {
             expect(renderedElement).toHaveClass(trueClassName);
             expect(renderedElement).not.toHaveClass(falseClassName);
           }
         } else {
-          const renderedElement = getByTestId(
-            slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
-          );
+          const renderedElement = getByTestId(slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '');
           expect(renderedElement).toHaveClass(trueClassName);
           expect(renderedElement).not.toHaveClass(falseClassName);
         }
@@ -196,16 +195,14 @@ export function testModifiers(
         );
         if (allowMultiple) {
           const renderedElements = getAllByTestId(
-            slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
+            slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
           );
           for (const renderedElement of renderedElements) {
             expect(renderedElement).toHaveClass(falseClassName);
             expect(renderedElement).not.toHaveClass(trueClassName);
           }
         } else {
-          const renderedElement = getByTestId(
-            slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
-          );
+          const renderedElement = getByTestId(slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '');
           expect(renderedElement).toHaveClass(falseClassName);
           expect(renderedElement).not.toHaveClass(trueClassName);
         }
@@ -240,13 +237,10 @@ export function testVariants(
 ) {
   for (const [variant, values] of Object.entries(variants)) {
     describe(`variant: ${variant}`, () => {
-      const valuesClassNames = values.reduce(
-        (obj, value) => {
-          obj[value] = randomString(`variant-cn-${variant}-${value}`);
-          return obj;
-        },
-        {} as Record<string, string>,
-      );
+      const valuesClassNames = values.reduce((obj, value) => {
+        obj[value] = randomString(`variant-cn-${variant}-${value}`);
+        return obj;
+      }, {} as Record<string, string>);
       const themeConfig = {
         components: {
           [themeKey]: {
@@ -267,7 +261,7 @@ export function testVariants(
           );
           if (allowMultiple) {
             const renderedElements = getAllByTestId(
-              slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
+              slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
             );
             for (const renderedElement of renderedElements) {
               for (const otherValue of values) {
@@ -280,7 +274,7 @@ export function testVariants(
             }
           } else {
             const renderedElement = getByTestId(
-              slot === 'root' ? oiid : (slotOiid(oiid, slot) ?? ''),
+              slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
             );
             for (const otherValue of values) {
               if (otherValue === value) {
@@ -362,4 +356,3 @@ export function describeComponent(
     resetTestingComponentState();
   });
 }
-

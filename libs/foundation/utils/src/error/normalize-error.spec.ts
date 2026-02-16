@@ -2,12 +2,13 @@
  * Tests for error normalization utilities
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  normalizeError,
   formatErrorMessage,
   getErrorMessage,
   getErrorName,
+  normalizeError,
 } from './normalize-error';
 
 describe('normalizeError', () => {

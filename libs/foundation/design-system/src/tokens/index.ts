@@ -1,14 +1,14 @@
 /**
  * Open Insights Design System - Token System
- * 
+ *
  * Enterprise-grade, W3C-compliant design tokens
  * Following Linear's design language
- * 
+ *
  * Architecture:
  * - Tier 1 (Primitives): Raw values
  * - Tier 2 (Semantic): Usage-based tokens
  * - Tier 3 (Themes): Theme compositions
- * 
+ *
  * @module tokens
  */
 

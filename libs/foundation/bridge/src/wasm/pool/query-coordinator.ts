@@ -11,23 +11,31 @@
  * @module wasm/pool/query-coordinator
  */
 
-import { Timestamp, QueryId } from '@open-insights-web/foundation-data-model';
-import type { PoolQueryResult, DuckDBPoolConfig, QueryRequest, QueryItem, PoolStatus, ResolvedPoolConfig } from '../../types';
-import { PriorityQueue } from './priority-queue';
-import { TableLockManager } from './table-lock-manager';
-import { WorkerPoolManager } from './worker-pool';
-import type { WorkerInstance } from './worker-instance';
-import { resolvePoolConfig } from '../../utils/validation';
+import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
 import {
-  type Logger,
   createDebugLogger,
+  createDeferred,
   getErrorMessage,
   normalizeError,
-  createDeferred,
+  type Logger,
 } from '@open-insights-web/foundation-utils';
-import { QueryTimeoutError, QueryCancelledError } from '../../errors/query-errors';
-import { PoolShutdownError, PoolCapacityError } from '../../errors/pool-errors';
-import { QUERY_MODE, PRIORITY } from '../../constants';
+
+import { PRIORITY, QUERY_MODE } from '../../constants';
+import { PoolCapacityError, PoolShutdownError } from '../../errors/pool-errors';
+import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
+import type {
+  DuckDBPoolConfig,
+  PoolQueryResult,
+  PoolStatus,
+  QueryItem,
+  QueryRequest,
+  ResolvedPoolConfig,
+} from '../../types';
+import { resolvePoolConfig } from '../../utils/validation';
+import { PriorityQueue } from './priority-queue';
+import { TableLockManager } from './table-lock-manager';
+import type { WorkerInstance } from './worker-instance';
+import { WorkerPoolManager } from './worker-pool';
 
 // =============================================================================
 // Types
@@ -147,7 +155,7 @@ export class QueryCoordinator {
    * @returns Promise resolving to query result
    */
   async query<T extends Record<string, unknown> = Record<string, unknown>>(
-    request: Omit<QueryRequest, 'id'> & { id?: QueryId }
+    request: Omit<QueryRequest, 'id'> & { id?: QueryId },
   ): Promise<PoolQueryResult<T>> {
     // Auto-initialize if needed
     if (!this.initialized) {
@@ -164,10 +172,7 @@ export class QueryCoordinator {
         maxActiveQueries: this.config.maxActiveQueries,
         currentActive: this.activeQueries.size,
       });
-      throw new PoolCapacityError(
-        this.config.maxActiveQueries,
-        this.activeQueries.size
-      );
+      throw new PoolCapacityError(this.config.maxActiveQueries, this.activeQueries.size);
     }
 
     // Generate query ID
@@ -255,10 +260,7 @@ export class QueryCoordinator {
             maxOverflowQueueSize: this.config.maxOverflowQueueSize,
             currentSize: this.overflowQueue.size(),
           });
-          throw new PoolCapacityError(
-            this.config.maxOverflowQueueSize,
-            this.overflowQueue.size(),
-          );
+          throw new PoolCapacityError(this.config.maxOverflowQueueSize, this.overflowQueue.size());
         }
 
         // All workers at capacity, add to overflow queue
@@ -289,7 +291,7 @@ export class QueryCoordinator {
    */
   private async executeQueryOnWorkerWithLocks(
     queryItem: QueryItem,
-    worker: WorkerInstance
+    worker: WorkerInstance,
   ): Promise<void> {
     const tables = queryItem.request.tables ?? [];
     const mode = queryItem.request.mode ?? QUERY_MODE.READ;
@@ -319,10 +321,7 @@ export class QueryCoordinator {
   /**
    * Execute a query on a specific worker
    */
-  private async executeQueryOnWorker(
-    queryItem: QueryItem,
-    worker: WorkerInstance
-  ): Promise<void> {
+  private async executeQueryOnWorker(queryItem: QueryItem, worker: WorkerInstance): Promise<void> {
     const { id, request, submittedAt } = queryItem;
 
     this.logger.debug('Routing to worker', { queryId: id, workerId: worker.id });
@@ -431,8 +430,7 @@ export class QueryCoordinator {
    * Cancel a query
    */
   cancelQuery(queryId: QueryId | string): boolean {
-    const normalizedQueryId =
-      typeof queryId === 'string' ? QueryId.from(queryId) : queryId;
+    const normalizedQueryId = typeof queryId === 'string' ? QueryId.from(queryId) : queryId;
     const activeQuery = this.activeQueries.get(normalizedQueryId);
     if (!activeQuery) {
       return false;
@@ -477,10 +475,7 @@ export class QueryCoordinator {
 
     // Remove abort handler
     if (activeQuery.abortHandler && activeQuery.signal) {
-      activeQuery.signal.removeEventListener(
-        'abort',
-        activeQuery.abortHandler
-      );
+      activeQuery.signal.removeEventListener('abort', activeQuery.abortHandler);
     }
 
     this.activeQueries.delete(queryId);
@@ -496,8 +491,7 @@ export class QueryCoordinator {
   getStatus(): PoolStatus {
     const workers = this.pool.getWorkerStatus();
     const totalPending =
-      workers.reduce((sum, w) => sum + w.queueLength, 0) +
-      this.overflowQueue.size();
+      workers.reduce((sum, w) => sum + w.queueLength, 0) + this.overflowQueue.size();
 
     return {
       ready: this.isReady(),

@@ -4,7 +4,9 @@
  */
 
 import React from 'react';
+
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
+
 import { ThemeProvider } from '../theme';
 import type { ThemeConfig, ThemeProviderProps } from '../types';
 
@@ -68,4 +70,3 @@ export function createThemeRenderer(defaultTheme: ThemeConfig) {
     });
   };
 }
-

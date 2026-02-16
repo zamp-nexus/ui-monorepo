@@ -7,7 +7,10 @@
  * @module types/constants
  */
 
-import { SEVERITY_NUMBER, type SeverityNumberValue } from '@open-insights-web/foundation-data-model';
+import {
+  SEVERITY_NUMBER,
+  type SeverityNumberValue,
+} from '@open-insights-web/foundation-data-model';
 
 export const ERROR_TYPE = {
   RUNTIME: 'runtime',

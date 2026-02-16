@@ -33,11 +33,7 @@ export {
   borderStyles,
   borderTokens,
 } from './borders';
-export type {
-  BorderColorKey,
-  BorderWidthKey,
-  BorderStyleKey,
-} from './borders';
+export type { BorderColorKey, BorderWidthKey, BorderStyleKey } from './borders';
 
 // Text tokens
 export {
@@ -52,10 +48,7 @@ export {
   textCode,
   textTokens,
 } from './text';
-export type {
-  TextColorKey,
-  TextFeedbackKey,
-} from './text';
+export type { TextColorKey, TextFeedbackKey } from './text';
 
 // Effect tokens
 export {
@@ -67,8 +60,4 @@ export {
   effectTokens,
   getShadowValue,
 } from './effects';
-export type {
-  ShadowDepthKey,
-  ShadowInteractiveKey,
-  FocusRingKey,
-} from './effects';
+export type { ShadowDepthKey, ShadowInteractiveKey, FocusRingKey } from './effects';

@@ -1,45 +1,30 @@
 /**
- * useDLMutatePost<%= className %> Hook
+ * useDLCreate<%= className %> Hook
  *
  * Creates a new <%= name %>.
  */
 
-import { useDLMutatePost } from '@open-insights-web/foundation-data-layer';
-import type { <%= className %>, Create<%= className %>Input } from '<%= dataModel %>';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+import { useDLCreate, type UseDLCreateOptions } from '@open-insights-web/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 /**
- * Create a new <%= name %>
- *
- * @example
- * ```tsx
- * function Create<%= className %>Form() {
- *   const mutation = useDLMutatePost<%= className %>();
- *
- *   const handleSubmit = (data: Create<%= className %>Input) => {
- *     mutation.mutate(data, {
- *       onSuccess: (created<%= className %>) => {
- *         console.log('Created:', created<%= className %>);
- *       },
- *       onError: (error) => {
- *         console.error('Failed:', error);
- *       },
- *     });
- *   };
- *
- *   return (
- *     <form onSubmit={handleSubmit}>
- *       {mutation.isPending && <Spinner />}
- *       {mutation.isError && <Error error={mutation.error} />}
- *       ...
- *     </form>
- *   );
- * }
- * ```
+ * Options for useDLCreate<%= className %>
  */
-export function useDLMutatePost<%= className %>() {
-  return useDLMutatePost<<%= className %>, Create<%= className %>Input>({
-    endpoint: '<%= endpoint %>',
-    invalidates: [<%= propertyName %>Keys.lists()],
+export type UseDLCreate<%= className %>Options<TMutation extends FunctionReference<'mutation'>> = Omit<
+  UseDLCreateOptions<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>,
+  'table' | 'listQueryKey'
+>;
+
+/**
+ * Create a new <%= name %>
+ */
+export function useDLCreate<%= className %><TMutation extends FunctionReference<'mutation'>>(
+  options: UseDLCreate<%= className %>Options<TMutation>
+) {
+  return useDLCreate<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>({
+    ...options,
+    table: '<%= propertyName %>s',
+    listQueryKey: <%= propertyName %>Keys.list(),
   });
 }

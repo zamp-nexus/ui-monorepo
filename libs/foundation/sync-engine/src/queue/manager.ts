@@ -3,36 +3,34 @@
  * @module queue/manager
  */
 
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
 import {
-  getDatabase,
-  createMutationEntry,
-} from '@open-insights-web/foundation-database';
-import {
-  SYNC_STATE_KEY,
-  MUTATION_TYPE,
-  MUTATION_STATUS,
-  type MutationQueueEntry,
-  type CreateMutationOptions,
   generateProvisionalId,
   isProvisionalId,
+  MUTATION_STATUS,
+  MUTATION_TYPE,
+  SYNC_STATE_KEY,
+  type CreateMutationOptions,
   type IdMapping,
+  type MutationQueueEntry,
   type MutationStatus,
   type QueueStats,
 } from '@open-insights-web/foundation-data-model';
+import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+import { createMutationEntry, getDatabase } from '@open-insights-web/foundation-database';
 import {
-  createSingletonFactory,
-  normalizeError,
-  Disposable,
   createDebugLogger,
+  createSingletonFactory,
+  Disposable,
+  normalizeError,
 } from '@open-insights-web/foundation-utils';
-import type { IQueueManager } from '../core/interfaces';
-import { resolvePayloadProvisionalIds } from '../core/payload-id-resolution';
+
 import {
   DEFAULT_ID_MAPPING_TTL_MS,
   DEFAULT_MAX_ID_MAPPINGS,
   DEFAULT_MAX_RETRIES,
 } from '../core/defaults';
+import type { IQueueManager } from '../core/interfaces';
+import { resolvePayloadProvisionalIds } from '../core/payload-id-resolution';
 
 /**
  * Extended mutation options with optional idempotency key for deduplication.
@@ -138,22 +136,22 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
   private async initialize(): Promise<void> {
     // Already initialized
     if (this.initialized) return;
-    
+
     // Already initializing - wait for the existing promise
     if (this.initializationPromise) {
       return this.initializationPromise;
     }
-    
+
     // Create and store the initialization promise
     this.initializationPromise = this.doInitialize();
-    
+
     try {
       await this.initializationPromise;
     } finally {
       this.initializationPromise = null;
     }
   }
-  
+
   /**
    * Internal initialization logic
    */
@@ -167,7 +165,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
             this.idMappings.set(mapping.provisionalId, mapping);
           }
           this.logger.debug('Loaded', this.idMappings.size, 'ID mappings from storage');
-          
+
           // Clean up stale mappings from previous sessions
           this.cleanupIdMappings();
         } else {
@@ -179,7 +177,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
     } catch (error) {
       this.handleError(error, 'ID mappings initialization');
     }
-    
+
     this.initialized = true;
   }
 
@@ -214,7 +212,9 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    * Add a mutation to the queue with deduplication
    * @param options - Mutation options, can include idempotencyKey for deduplication
    */
-  async enqueue(options: CreateMutationOptions | ExtendedCreateMutationOptions): Promise<MutationQueueEntry> {
+  async enqueue(
+    options: CreateMutationOptions | ExtendedCreateMutationOptions,
+  ): Promise<MutationQueueEntry> {
     this.ensureNotDisposed();
     await this.ensureInitialized();
 
@@ -277,7 +277,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
   async updateStatus(
     id: string,
     status: MutationStatus,
-    updates?: Partial<MutationQueueEntry>
+    updates?: Partial<MutationQueueEntry>,
   ): Promise<void> {
     this.ensureNotDisposed();
     await this.db.mutations.update(id, {
@@ -310,9 +310,7 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
 
     const newRetryCount = mutation.retryCount + 1;
     const newStatus: MutationStatus =
-      newRetryCount >= this.config.maxRetries
-        ? MUTATION_STATUS.FAILED
-        : MUTATION_STATUS.PENDING;
+      newRetryCount >= this.config.maxRetries ? MUTATION_STATUS.FAILED : MUTATION_STATUS.PENDING;
 
     await this.updateStatus(id, newStatus, {
       retryCount: newRetryCount,
@@ -397,13 +395,13 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
 
   /**
    * Get queue statistics using efficient database-level count queries.
-   * 
+   *
    * Uses indexed lookups instead of loading all mutations into memory,
    * making it performant for large queues.
    */
   async getStats(): Promise<QueueStats> {
     this.ensureNotDisposed();
-    
+
     // Run count queries in parallel for better performance
     const [pending, inProgress, failed, offlineQueued, total] = await Promise.all([
       this.db.mutations.where('status').equals(MUTATION_STATUS.PENDING).count(),
@@ -585,9 +583,8 @@ export class OfflineQueueManager extends Disposable implements IQueueManager {
    * Update references to provisional IDs in a mutation payload
    */
   resolvePayloadIds<T extends Record<string, unknown>>(payload: T): T {
-    return resolvePayloadProvisionalIds(
-      payload,
-      (provisionalId) => this.getServerId(provisionalId)
+    return resolvePayloadProvisionalIds(payload, (provisionalId) =>
+      this.getServerId(provisionalId),
     );
   }
 
@@ -612,7 +609,7 @@ const queueManagerFactory = createSingletonFactory(
         instance.dispose();
       }
     },
-  }
+  },
 );
 
 /**
@@ -631,8 +628,7 @@ export const resetQueueManager = (): void => {
 /**
  * Check if queue manager instance exists.
  */
-export const hasQueueManager = (): boolean =>
-  queueManagerFactory.hasInstance();
+export const hasQueueManager = (): boolean => queueManagerFactory.hasInstance();
 
 /**
  * Create a new OfflineQueueManager instance (non-singleton).

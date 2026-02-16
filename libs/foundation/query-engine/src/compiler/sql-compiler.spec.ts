@@ -4,34 +4,33 @@
  * @module compiler/sql-compiler.spec
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { SqlCompiler } from './sql-compiler';
-import {
-  quoteIdentifier,
-  quoteTableName,
-  quoteColumn,
-  quoteMemberRef,
-  escapeString,
-  formatValue,
-  formatValueList,
-  escapeLikePattern,
-  buildContainsPattern,
-  buildStartsWithPattern,
-  buildEndsWithPattern,
-  buildDateTrunc,
-  buildAggregation,
-  buildCaseExpression,
-  isValidIdentifier,
-  sanitizeIdentifier,
-  formatSql,
-} from './sql-utils';
-import type { Query } from '../types/query';
-import {
-  AGGREGATIONS,
-} from '../types/aggregation';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { AGGREGATIONS } from '../types/aggregation';
 import { FILTER_OPERATORS } from '../types/filter';
 import { JOIN_TYPES } from '../types/join';
 import { ORDER_DIRECTIONS } from '../types/order';
+import type { Query } from '../types/query';
+import { SqlCompiler } from './sql-compiler';
+import {
+  buildAggregation,
+  buildCaseExpression,
+  buildContainsPattern,
+  buildDateTrunc,
+  buildEndsWithPattern,
+  buildStartsWithPattern,
+  escapeLikePattern,
+  escapeString,
+  formatSql,
+  formatValue,
+  formatValueList,
+  isValidIdentifier,
+  quoteColumn,
+  quoteIdentifier,
+  quoteMemberRef,
+  quoteTableName,
+  sanitizeIdentifier,
+} from './sql-utils';
 
 describe('SqlCompiler', () => {
   let compiler: SqlCompiler;
@@ -69,10 +68,7 @@ describe('SqlCompiler', () => {
 
       it('should compile dimensions (DimensionSpec format)', () => {
         const query: Query = {
-          dimensions: [
-            { member: 'orders.status' },
-            { member: 'orders.region' },
-          ],
+          dimensions: [{ member: 'orders.status' }, { member: 'orders.region' }],
         };
 
         const result = compiler.compile(query, { primaryTable: 'orders' });
@@ -292,7 +288,11 @@ describe('SqlCompiler', () => {
           filters: [
             {
               and: [
-                { member: 'orders.status', operator: FILTER_OPERATORS.EQUALS, values: ['completed'] },
+                {
+                  member: 'orders.status',
+                  operator: FILTER_OPERATORS.EQUALS,
+                  values: ['completed'],
+                },
                 { member: 'orders.amount', operator: FILTER_OPERATORS.GT, values: [100] },
               ],
             },
@@ -310,7 +310,11 @@ describe('SqlCompiler', () => {
             {
               or: [
                 { member: 'orders.status', operator: FILTER_OPERATORS.EQUALS, values: ['pending'] },
-                { member: 'orders.status', operator: FILTER_OPERATORS.EQUALS, values: ['processing'] },
+                {
+                  member: 'orders.status',
+                  operator: FILTER_OPERATORS.EQUALS,
+                  values: ['processing'],
+                },
               ],
             },
           ],
@@ -644,7 +648,7 @@ describe('SQL Utilities', () => {
   describe('buildDateTrunc', () => {
     it('should build date_trunc expression', () => {
       expect(buildDateTrunc('month', '"orders"."created_at"')).toBe(
-        "date_trunc('month', \"orders\".\"created_at\")"
+        'date_trunc(\'month\', "orders"."created_at")',
       );
     });
   });
@@ -668,7 +672,7 @@ describe('SQL Utilities', () => {
 
     it('should build aggregation with filter', () => {
       expect(buildAggregation('SUM', '"amount"', false, '"status" = \'completed\'')).toBe(
-        'SUM("amount") FILTER (WHERE "status" = \'completed\')'
+        'SUM("amount") FILTER (WHERE "status" = \'completed\')',
       );
     });
   });
@@ -683,10 +687,7 @@ describe('SQL Utilities', () => {
     });
 
     it('should build CASE expression with ELSE', () => {
-      const result = buildCaseExpression(
-        [{ when: 'status = 1', then: "'active'" }],
-        "'unknown'"
-      );
+      const result = buildCaseExpression([{ when: 'status = 1', then: "'active'" }], "'unknown'");
       expect(result).toBe("CASE WHEN status = 1 THEN 'active' ELSE 'unknown' END");
     });
   });

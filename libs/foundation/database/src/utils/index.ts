@@ -1,9 +1,9 @@
 /**
  * Utility exports
- * 
+ *
  * NOTE: Generic hash functions (hashPayloadSync, hashPayloadAsync) should be
  * imported directly from @open-insights-web/foundation-utils
- * 
+ *
  * @module utils
  */
 

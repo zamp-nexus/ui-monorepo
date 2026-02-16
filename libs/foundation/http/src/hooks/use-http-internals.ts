@@ -10,8 +10,8 @@
  * @internal
  */
 
-import { useHttpInternalsContext } from '../provider/http-internals-context';
 import type { HttpInternals } from '../core/types';
+import { useHttpInternalsContext } from '../provider/http-internals-context';
 
 /**
  * Returns the full HTTP internals value (axios, config, getAccessToken).

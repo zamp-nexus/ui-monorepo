@@ -7,9 +7,10 @@
  */
 
 import { useMemo } from 'react';
+
+import type { UseAuthResult } from '../core/types';
 import { useAuthContext } from '../providers/auth-context';
 import { useAuthInternals } from '../providers/auth-internals-context';
-import type { UseAuthResult } from '../core/types';
 
 /**
  * Main authentication hook
@@ -56,6 +57,6 @@ export const useAuth = (): UseAuthResult => {
       ...context,
       state: internals.state.state,
     }),
-    [context, internals.state.state]
+    [context, internals.state.state],
   );
 };

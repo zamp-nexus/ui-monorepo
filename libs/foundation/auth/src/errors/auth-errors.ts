@@ -12,6 +12,7 @@ import {
   FoundationError,
   type ErrorContext,
 } from '@open-insights-web/foundation-data-model';
+
 import { AUTH_ERROR_CODE, type AuthErrorCode } from '../core/constants';
 
 // =============================================================================
@@ -54,7 +55,7 @@ export class AuthNotInitializedError extends AuthError {
     super(
       `Auth provider not initialized${operation ? `. Cannot perform: ${operation}` : ''}`,
       { operation },
-      cause
+      cause,
     );
   }
 }
@@ -70,11 +71,7 @@ export class SessionCheckError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.SESSION_CHECK_FAILED;
 
   constructor(reason?: string, cause?: Error) {
-    super(
-      `Session check failed${reason ? `: ${reason}` : ''}`,
-      { reason },
-      cause
-    );
+    super(`Session check failed${reason ? `: ${reason}` : ''}`, { reason }, cause);
   }
 }
 
@@ -85,11 +82,7 @@ export class SessionRefreshError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.SESSION_REFRESH_FAILED;
 
   constructor(reason?: string, cause?: Error) {
-    super(
-      `Session refresh failed${reason ? `: ${reason}` : ''}`,
-      { reason },
-      cause
-    );
+    super(`Session refresh failed${reason ? `: ${reason}` : ''}`, { reason }, cause);
   }
 }
 
@@ -100,11 +93,7 @@ export class SessionExpiredError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.SESSION_EXPIRED;
 
   constructor(expiredAt?: number, cause?: Error) {
-    super(
-      'Session has expired',
-      { expiredAt },
-      cause
-    );
+    super('Session has expired', { expiredAt }, cause);
   }
 }
 
@@ -115,11 +104,7 @@ export class LogoutError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.LOGOUT_FAILED;
 
   constructor(reason?: string, cause?: Error) {
-    super(
-      `Logout failed${reason ? `: ${reason}` : ''}`,
-      { reason },
-      cause
-    );
+    super(`Logout failed${reason ? `: ${reason}` : ''}`, { reason }, cause);
   }
 }
 
@@ -137,7 +122,7 @@ export class FlowCreationError extends AuthError {
     super(
       `Failed to create ${flowType} flow${reason ? `: ${reason}` : ''}`,
       { flowType, reason },
-      cause
+      cause,
     );
   }
 }
@@ -152,7 +137,7 @@ export class FlowNotFoundError extends AuthError {
     super(
       `Flow not found: ${flowId}${flowType ? ` (${flowType})` : ''}`,
       { flowId, flowType },
-      cause
+      cause,
     );
   }
 }
@@ -167,7 +152,7 @@ export class FlowSubmissionError extends AuthError {
     super(
       `Failed to submit ${flowType} flow${reason ? `: ${reason}` : ''}`,
       { flowType, reason },
-      cause
+      cause,
     );
   }
 }
@@ -179,11 +164,7 @@ export class FlowExpiredError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.FLOW_EXPIRED;
 
   constructor(flowId: string, flowType?: string, expiredAt?: number, cause?: Error) {
-    super(
-      `Flow has expired: ${flowId}`,
-      { flowId, flowType, expiredAt },
-      cause
-    );
+    super(`Flow has expired: ${flowId}`, { flowId, flowType, expiredAt }, cause);
   }
 }
 
@@ -198,11 +179,7 @@ export class InvalidCredentialsError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.INVALID_CREDENTIALS;
 
   constructor(cause?: Error) {
-    super(
-      'Invalid credentials',
-      {},
-      cause
-    );
+    super('Invalid credentials', {}, cause);
   }
 }
 
@@ -213,11 +190,7 @@ export class UserNotFoundError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.USER_NOT_FOUND;
 
   constructor(identifier?: string, cause?: Error) {
-    super(
-      `User not found${identifier ? `: ${identifier}` : ''}`,
-      { identifier },
-      cause
-    );
+    super(`User not found${identifier ? `: ${identifier}` : ''}`, { identifier }, cause);
   }
 }
 
@@ -231,16 +204,13 @@ export class UserNotFoundError extends AuthError {
 export class PermissionDeniedError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.PERMISSION_DENIED;
 
-  constructor(
-    permission?: string,
-    requiredRole?: string,
-    context?: ErrorContext,
-    cause?: Error
-  ) {
+  constructor(permission?: string, requiredRole?: string, context?: ErrorContext, cause?: Error) {
     super(
-      `Permission denied${permission ? `: ${permission}` : ''}${requiredRole ? ` (requires: ${requiredRole})` : ''}`,
+      `Permission denied${permission ? `: ${permission}` : ''}${
+        requiredRole ? ` (requires: ${requiredRole})` : ''
+      }`,
       { ...context, permission, requiredRole },
-      cause
+      cause,
     );
   }
 }
@@ -256,11 +226,7 @@ export class TokenRetrievalError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.TOKEN_RETRIEVAL_FAILED;
 
   constructor(reason?: string, cause?: Error) {
-    super(
-      `Failed to retrieve access token${reason ? `: ${reason}` : ''}`,
-      { reason },
-      cause
-    );
+    super(`Failed to retrieve access token${reason ? `: ${reason}` : ''}`, { reason }, cause);
   }
 }
 
@@ -271,11 +237,7 @@ export class TokenExpiredError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.TOKEN_EXPIRED;
 
   constructor(expiredAt?: number, cause?: Error) {
-    super(
-      'Access token has expired',
-      { expiredAt },
-      cause
-    );
+    super('Access token has expired', { expiredAt }, cause);
   }
 }
 
@@ -290,11 +252,7 @@ export class ClientConfigError extends AuthError {
   readonly authCode = AUTH_ERROR_CODE.CLIENT_CONFIG_ERROR;
 
   constructor(reason: string, cause?: Error) {
-    super(
-      `Auth client configuration error: ${reason}`,
-      { reason },
-      cause
-    );
+    super(`Auth client configuration error: ${reason}`, { reason }, cause);
   }
 }
 
@@ -312,7 +270,7 @@ export class AuthNetworkError extends AuthError {
     super(
       `Network error during authentication${operation ? ` (${operation})` : ''}`,
       { operation },
-      cause
+      cause,
     );
   }
 }
@@ -324,16 +282,12 @@ export class AuthNetworkError extends AuthError {
 /**
  * Check if an error is an AuthError
  */
-export const isAuthError = (error: unknown): error is AuthError =>
-  error instanceof AuthError;
+export const isAuthError = (error: unknown): error is AuthError => error instanceof AuthError;
 
 /**
  * Check if an error has a specific auth error code
  */
-export const hasAuthErrorCode = (
-  error: unknown,
-  code: AuthErrorCode
-): error is AuthError =>
+export const hasAuthErrorCode = (error: unknown, code: AuthErrorCode): error is AuthError =>
   isAuthError(error) && error.authCode === code;
 
 /**

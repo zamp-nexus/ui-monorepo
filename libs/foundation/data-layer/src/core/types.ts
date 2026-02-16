@@ -14,9 +14,12 @@
  */
 
 import type { QueryKey } from '@tanstack/react-query';
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
+import type { AxiosInstance } from 'axios';
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
+
 import type { ConflictStrategy, SyncState } from '@open-insights-web/foundation-data-model';
-import type { UnifiedTableConfig, TableAnalyticsConfig } from './table-registry';
+
+import type { TableAnalyticsConfig, UnifiedTableConfig } from './table-registry';
 
 const CONVEX_FUNCTION_VISIBILITY = {
   PUBLIC: 'public',
@@ -33,7 +36,12 @@ type ConvexFunctionVisibility =
  * Note: We use a generic signature here because Convex function references
  * have complex internal types that vary by deployment.
  */
-export type ConvexQueryReference = FunctionReference<'query', 'public', Record<string, unknown>, unknown>;
+export type ConvexQueryReference = FunctionReference<
+  'query',
+  'public',
+  Record<string, unknown>,
+  unknown
+>;
 
 /**
  * Generic Convex function reference for any visibility and args.
@@ -126,6 +134,9 @@ export interface DataLayerConfig {
   /** Cache configuration overrides */
   readonly cache?: CacheConfig;
 
+  /** Optional shared Axios instance used for network paths in dependent foundation libs */
+  readonly axiosInstance?: AxiosInstance;
+
   /** Enable debug logging */
   readonly debug?: boolean;
 
@@ -190,7 +201,7 @@ export interface BaseMutationOptions<
   readonly onSettled?: (
     data: TData | undefined,
     error: Error | null,
-    variables: TVariables
+    variables: TVariables,
   ) => void | Promise<void>;
 }
 

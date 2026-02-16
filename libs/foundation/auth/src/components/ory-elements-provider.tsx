@@ -6,7 +6,8 @@
  * @module components/ory-elements-provider
  */
 
-import { type ReactNode, createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+
 import type { OryConfig } from '../core/types';
 
 // =============================================================================
@@ -84,10 +85,7 @@ OryElementsContext.displayName = 'OryElementsContext';
  * </OryElementsProvider>
  * ```
  */
-export const OryElementsProvider = ({
-  config,
-  children,
-}: OryElementsProviderProps): ReactNode => {
+export const OryElementsProvider = ({ config, children }: OryElementsProviderProps): ReactNode => {
   const value = useMemo<OryElementsContextValue>(() => {
     // Normalize the SDK URL
     const sdkUrl = config.ory.kratosUrl.replace(/\/+$/, '');
@@ -98,11 +96,7 @@ export const OryElementsProvider = ({
     };
   }, [config]);
 
-  return (
-    <OryElementsContext.Provider value={value}>
-      {children}
-    </OryElementsContext.Provider>
-  );
+  return <OryElementsContext.Provider value={value}>{children}</OryElementsContext.Provider>;
 };
 
 // =============================================================================
@@ -119,9 +113,7 @@ export const useOryElements = (): OryElementsContextValue => {
   const context = useContext(OryElementsContext);
 
   if (!context) {
-    throw new Error(
-      '[useOryElements] Must be used within an OryElementsProvider'
-    );
+    throw new Error('[useOryElements] Must be used within an OryElementsProvider');
   }
 
   return context;
@@ -175,6 +167,6 @@ export const useOryElementsConfig = () => {
         },
       }),
     }),
-    [sdkUrl, config.ory.projectSlug, config.styling, config.locale]
+    [sdkUrl, config.ory.projectSlug, config.styling, config.locale],
   );
 };

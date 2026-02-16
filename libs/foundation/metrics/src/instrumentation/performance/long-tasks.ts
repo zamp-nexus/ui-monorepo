@@ -3,10 +3,11 @@
  * @module instrumentation/performance/long-tasks
  */
 
-import type { PerformanceSignalConfig, LongTaskEntry } from '../../types';
-import { getMeter } from '../../core/otel-provider';
-import { getSpanAttributes } from '../../core/context-manager';
 import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+
+import { getSpanAttributes } from '../../core/context-manager';
+import { getMeter } from '../../core/otel-provider';
+import type { LongTaskEntry, PerformanceSignalConfig } from '../../types';
 
 /**
  * Long tasks instrumentation state
@@ -25,7 +26,7 @@ let state: LongTasksState | null = null;
  */
 export function installLongTasksInstrumentation(
   config: PerformanceSignalConfig,
-  callback?: (entry: LongTaskEntry) => void
+  callback?: (entry: LongTaskEntry) => void,
 ): void {
   if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') {
     return;
@@ -201,10 +202,7 @@ function recordLongTask(entry: LongTaskEntry): void {
 /**
  * Manually report a long task (for custom blocking operations)
  */
-export function reportLongTask(
-  duration: number,
-  name = 'custom-long-task'
-): void {
+export function reportLongTask(duration: number, name = 'custom-long-task'): void {
   if (!state?.config.enabled) {
     return;
   }
@@ -223,19 +221,16 @@ export function reportLongTask(
 /**
  * Measure a function execution and report if it's a long task
  */
-export async function measureTask<T>(
-  name: string,
-  fn: () => T | Promise<T>
-): Promise<T> {
+export async function measureTask<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
   const start = performance.now();
-  
+
   try {
     const result = await fn();
     return result;
   } finally {
     const duration = performance.now() - start;
     const threshold = state?.config.longTaskThreshold || 50;
-    
+
     if (duration >= threshold) {
       reportLongTask(duration, name);
     }

@@ -3,10 +3,15 @@
  * @module core/foundation-metrics.spec
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FoundationMetrics, isInitialized, resetMetricsStateForTesting, getLifecycleState } from './foundation-metrics';
 import type { FoundationMetricsConfig } from '../types';
+import {
+  FoundationMetrics,
+  getLifecycleState,
+  isInitialized,
+  resetMetricsStateForTesting,
+} from './foundation-metrics';
 
 // Mock OpenTelemetry modules
 vi.mock('@opentelemetry/api', () => ({
@@ -151,7 +156,7 @@ describe('FoundationMetrics', () => {
     it('should initialize with valid config', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       expect(sdk).toBeInstanceOf(FoundationMetrics);
       expect(isInitialized()).toBe(true);
     });
@@ -159,14 +164,14 @@ describe('FoundationMetrics', () => {
     it('should throw error if serviceName is missing', () => {
       const config = createValidConfig();
       delete (config as any).serviceName;
-      
+
       expect(() => FoundationMetrics.init(config as any)).toThrow();
     });
 
     it('should throw error if collectorEndpoint is missing', () => {
       const config = createValidConfig();
       delete (config as any).collectorEndpoint;
-      
+
       expect(() => FoundationMetrics.init(config as any)).toThrow();
     });
 
@@ -174,7 +179,7 @@ describe('FoundationMetrics', () => {
       const config = createValidConfig();
       const sdk1 = FoundationMetrics.init(config);
       const sdk2 = FoundationMetrics.init(config);
-      
+
       expect(sdk1).toBe(sdk2);
     });
   });
@@ -193,7 +198,7 @@ describe('FoundationMetrics', () => {
     it('should return instance after initialization', () => {
       const config = createValidConfig();
       FoundationMetrics.init(config);
-      
+
       const instance = FoundationMetrics.getInstance();
       expect(instance).toBeInstanceOf(FoundationMetrics);
     });
@@ -203,9 +208,9 @@ describe('FoundationMetrics', () => {
     it('should capture an error', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       const error = new Error('Test error');
-      
+
       // Should not throw
       expect(() => sdk.captureError(error)).not.toThrow();
     });
@@ -213,14 +218,16 @@ describe('FoundationMetrics', () => {
     it('should capture error with context', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       const error = new Error('Test error');
-      
-      expect(() => sdk.captureError(error, {
-        type: 'custom',
-        componentName: 'TestComponent',
-        metadata: { key: 'value' },
-      })).not.toThrow();
+
+      expect(() =>
+        sdk.captureError(error, {
+          type: 'custom',
+          componentName: 'TestComponent',
+          metadata: { key: 'value' },
+        }),
+      ).not.toThrow();
     });
   });
 
@@ -228,9 +235,9 @@ describe('FoundationMetrics', () => {
     it('should create a span', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       const span = sdk.startSpan('test-span');
-      
+
       expect(span).toBeDefined();
       expect(typeof span.end).toBe('function');
     });
@@ -238,12 +245,12 @@ describe('FoundationMetrics', () => {
     it('should create a span with options', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       const span = sdk.startSpan('test-span', {
         kind: 'client',
         attributes: { foo: 'bar' },
       });
-      
+
       expect(span).toBeDefined();
     });
   });
@@ -252,7 +259,7 @@ describe('FoundationMetrics', () => {
     it('should set user context', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       expect(() => sdk.setUser('user-123', { role: 'admin' })).not.toThrow();
     });
   });
@@ -261,7 +268,7 @@ describe('FoundationMetrics', () => {
     it('should set tenant context', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       expect(() => sdk.setTenant('tenant-123', 'enterprise')).not.toThrow();
     });
   });
@@ -270,13 +277,13 @@ describe('FoundationMetrics', () => {
     it('should add a breadcrumb', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       sdk.addBreadcrumb({
         category: 'navigation',
         message: 'User clicked button',
         timestamp: Date.now(),
       });
-      
+
       const breadcrumbs = sdk.getBreadcrumbs();
       expect(breadcrumbs.length).toBe(1);
       expect(breadcrumbs[0].message).toBe('User clicked button');
@@ -285,7 +292,7 @@ describe('FoundationMetrics', () => {
     it('should limit breadcrumbs to 100', () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       for (let i = 0; i < 150; i++) {
         sdk.addBreadcrumb({
           category: 'ui',
@@ -293,7 +300,7 @@ describe('FoundationMetrics', () => {
           timestamp: Date.now(),
         });
       }
-      
+
       const breadcrumbs = sdk.getBreadcrumbs();
       expect(breadcrumbs.length).toBe(100);
     });
@@ -303,7 +310,7 @@ describe('FoundationMetrics', () => {
     it('should flush without error', async () => {
       const config = createValidConfig();
       const sdk = FoundationMetrics.init(config);
-      
+
       await expect(sdk.flush()).resolves.not.toThrow();
     });
   });

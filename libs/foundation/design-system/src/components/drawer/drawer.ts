@@ -31,11 +31,7 @@ export const DrawerSlots = [] as const;
  * Drawer's own props
  */
 export interface DrawerOwnProps
-  extends OIComponentOwnProps<
-    typeof DrawerVariants,
-    typeof DrawerModifiers,
-    typeof DrawerSlots
-  > {
+  extends OIComponentOwnProps<typeof DrawerVariants, typeof DrawerModifiers, typeof DrawerSlots> {
   /** Direction the drawer slides in from */
   direction?: (typeof DrawerVariants.direction)[number];
   /** Size of the drawer */
@@ -160,9 +156,11 @@ export const drawerDefaultTheme: ComponentThemeConfigStructure = {
       variants: {
         direction: {
           left: 'inset-y-0 left-0 border-r data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full',
-          right: 'inset-y-0 right-0 border-l data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full',
+          right:
+            'inset-y-0 right-0 border-l data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full',
           top: 'inset-x-0 top-0 border-b data-[starting-style]:-translate-y-full data-[ending-style]:-translate-y-full',
-          bottom: 'inset-x-0 bottom-0 border-t data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full',
+          bottom:
+            'inset-x-0 bottom-0 border-t data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full',
         },
         size: {
           auto: '',

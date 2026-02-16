@@ -6,11 +6,11 @@
 import type { FoundationMetricsConfig, ResolvedConfig } from './config';
 import type { TelemetryContext } from './context';
 import type {
-  CapturedError,
-  WebVitalMetric,
-  NetworkRequest,
-  InteractionEvent,
   Breadcrumb,
+  CapturedError,
+  InteractionEvent,
+  NetworkRequest,
+  WebVitalMetric,
 } from './signals';
 
 /**
@@ -39,9 +39,7 @@ export interface PluginHooks {
     context: TelemetryContext,
   ): InteractionEvent | null | Promise<InteractionEvent | null>;
   afterTrackInteraction?(event: InteractionEvent): void;
-  beforeAddBreadcrumb?(
-    breadcrumb: Breadcrumb,
-  ): Breadcrumb | null | Promise<Breadcrumb | null>;
+  beforeAddBreadcrumb?(breadcrumb: Breadcrumb): Breadcrumb | null | Promise<Breadcrumb | null>;
   onContextUpdate?(context: TelemetryContext): void;
   beforeExport?(data: unknown): unknown | Promise<unknown>;
 }

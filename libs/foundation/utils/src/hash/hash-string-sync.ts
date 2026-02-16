@@ -12,5 +12,4 @@ import { simpleHash } from './simple-hash';
  * @param salt - Optional salt to prepend
  * @returns Hashed string (hex)
  */
-export const hashStringSync = (value: string, salt = ''): string =>
-  simpleHash(salt + value);
+export const hashStringSync = (value: string, salt = ''): string => simpleHash(salt + value);

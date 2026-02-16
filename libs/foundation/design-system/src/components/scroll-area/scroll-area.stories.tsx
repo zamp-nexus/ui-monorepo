@@ -51,9 +51,7 @@ dolore magnam aliquam quaerat voluptatem.
 export const Default: Story = {
   render: () => (
     <ScrollArea height={200} className="w-[350px] rounded-md border p-4">
-      <div className="text-sm">
-        {longContent}
-      </div>
+      <div className="text-sm">{longContent}</div>
     </ScrollArea>
   ),
 };
@@ -64,9 +62,7 @@ export const Default: Story = {
 export const AlwaysVisible: Story = {
   render: () => (
     <ScrollArea type="always" height={200} className="w-[350px] rounded-md border p-4">
-      <div className="text-sm">
-        {longContent}
-      </div>
+      <div className="text-sm">{longContent}</div>
     </ScrollArea>
   ),
 };
@@ -135,16 +131,11 @@ export const ListExample: Story = {
         <h4 className="mb-4 text-sm font-medium">Notifications</h4>
         <div className="space-y-3">
           {Array.from({ length: 15 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 rounded-lg p-3 hover:bg-muted"
-            >
+            <div key={i} className="flex items-start gap-3 rounded-lg p-3 hover:bg-muted">
               <div className="h-8 w-8 rounded-full bg-primary/10" />
               <div className="flex-1">
                 <p className="text-sm font-medium">Notification {i + 1}</p>
-                <p className="text-xs text-muted-foreground">
-                  This is a notification message
-                </p>
+                <p className="text-xs text-muted-foreground">This is a notification message</p>
               </div>
             </div>
           ))}

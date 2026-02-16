@@ -17,50 +17,45 @@
  * @module hooks/use-dl-query-engine
  */
 
-import { useMemo, useCallback } from 'react';
-import {
-  useDataLayerInternals,
-  useDLGetList,
-  useDLAnalytics,
-  createAnalyticsQueryKey,
-  useBackgroundFileSync,
-  DATA_FRESHNESS,
-} from '@open-insights-web/foundation-data-layer';
-import { hashPayloadSync } from '@open-insights-web/foundation-utils';
+import { useCallback, useMemo } from 'react';
 
-import { getDecisionEngine } from '../engine/decision-engine';
+import {
+  createAnalyticsQueryKey,
+  DATA_FRESHNESS,
+  useBackgroundFileSync,
+  useDataLayerInternals,
+  useDLAnalytics,
+  useDLGetList,
+} from '@open-insights-web/foundation-data-layer';
+import { EMPTY_ARRAY, EMPTY_OBJECT, hashPayloadSync } from '@open-insights-web/foundation-utils';
+
 import { getSqlCompiler } from '../compiler/sql-compiler';
-import { getTableExtractor } from '../engine/table-extractor';
+import { getDecisionEngine } from '../engine/decision-engine';
 import { convertFiltersToArgs } from '../engine/filter-converter';
+import { getTableExtractor } from '../engine/table-extractor';
+import { HOOK_PATH_TO_DECISION_PATH } from '../internal/constants';
 import {
   DECISION_PATHS,
   type DecisionContext,
   type DecisionResult,
   type DecisionTableConfig,
 } from '../types/decision';
+import { OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
 import type { AnalyticsFreshness } from '../types/table';
-import { EMPTY_ARRAY, EMPTY_OBJECT } from '@open-insights-web/foundation-utils';
-import { OPERATIONS } from '../types/operations';
-import { HOOK_PATH_TO_DECISION_PATH } from '../internal/constants';
+import { getAnyQueryReference, getListQueryReference } from './internal/data-layer-adapters';
 import {
+  DATA_SOURCES,
+  EXECUTION_PATHS,
   type UseDLQueryEngineOptions,
   type UseDLQueryEngineResult,
-  EXECUTION_PATHS,
-  DATA_SOURCES,
 } from './types';
-import {
-  getAnyQueryReference,
-  getListQueryReference,
-} from './internal/data-layer-adapters';
 
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
 
-const mapAnalyticsFreshness = (
-  freshness: string | undefined
-): AnalyticsFreshness | undefined => {
+const mapAnalyticsFreshness = (freshness: string | undefined): AnalyticsFreshness | undefined => {
   switch (freshness) {
     case DATA_FRESHNESS.REALTIME:
       return 'realtime';
@@ -73,10 +68,8 @@ const mapAnalyticsFreshness = (
   }
 };
 
-const selectQueryResultData = <TData,>(
-  rawData: unknown,
-  select?: (data: unknown) => TData
-): TData => (select ? select(rawData) : (rawData as TData));
+const selectQueryResultData = <TData>(rawData: unknown, select?: (data: unknown) => TData): TData =>
+  select ? select(rawData) : (rawData as TData);
 
 /**
  * useDLQueryEngine
@@ -116,17 +109,9 @@ const selectQueryResultData = <TData,>(
  * ```
  */
 export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
-  options: UseDLQueryEngineOptions<TQuery, TData>
+  options: UseDLQueryEngineOptions<TQuery, TData>,
 ): UseDLQueryEngineResult<TData> => {
-  const {
-    query,
-    enabled = true,
-    staleTime,
-    gcTime,
-    select,
-    forcePath,
-    preferAnalytics,
-  } = options;
+  const { query, enabled = true, staleTime, gcTime, select, forcePath, preferAnalytics } = options;
 
   // ─────────────────────────────────────────────────────────────────────────
   // DATA LAYER CONTEXT
@@ -148,10 +133,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   // TABLE EXTRACTION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const extraction = useMemo(
-    () => tableExtractor.extractDetailed(query),
-    [tableExtractor, query]
-  );
+  const extraction = useMemo(() => tableExtractor.extractDetailed(query), [tableExtractor, query]);
 
   const tables = extraction.tables;
   const primaryTable = extraction.primaryTable;
@@ -168,9 +150,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
         const mappedFreshness = mapAnalyticsFreshness(config.analytics?.freshness);
         configs.set(tableName, {
           convex: config.convex,
-          ...(mappedFreshness !== undefined
-            ? { analytics: { freshness: mappedFreshness } }
-            : {}),
+          ...(mappedFreshness !== undefined ? { analytics: { freshness: mappedFreshness } } : {}),
         });
       }
     }
@@ -244,12 +224,12 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   // Use data-layer's createAnalyticsQueryKey for analytics path
   const analyticsQueryKey = useMemo(
     () => createAnalyticsQueryKey('query-engine', 'query', queryKeyHash),
-    [queryKeyHash]
+    [queryKeyHash],
   );
 
   const transactionalQueryKey = useMemo(
     () => ['query-engine', 'transactional', primaryTable, queryKeyHash] as const,
-    [primaryTable, queryKeyHash]
+    [primaryTable, queryKeyHash],
   );
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -299,10 +279,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   }, [isTransactionalPath, primaryTable, query]);
 
   // Get Convex query function reference from TableRegistry
-  const fallbackQueryRef = useMemo(
-    () => getAnyQueryReference(tableRegistry),
-    [tableRegistry]
-  );
+  const fallbackQueryRef = useMemo(() => getAnyQueryReference(tableRegistry), [tableRegistry]);
 
   const listQueryRef = useMemo(() => {
     if (!primaryTable) {
@@ -318,7 +295,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
 
   if (!transactionalQueryRef) {
     throw new Error(
-      'useDLQueryEngine requires at least one query API reference in the table registry'
+      'useDLQueryEngine requires at least one query API reference in the table registry',
     );
   }
 
@@ -327,8 +304,11 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
     args: transactionalArgs,
     table: primaryTable ?? '',
     enabled: transactionalEnabled,
-    staleTime: staleTime ?? (primaryTable ? tableRegistry.getStaleTime(primaryTable) : cacheConfig.defaultStaleTime),
-    gcTime: gcTime ?? (primaryTable ? tableRegistry.getGcTime(primaryTable) : cacheConfig.defaultGcTime),
+    staleTime:
+      staleTime ??
+      (primaryTable ? tableRegistry.getStaleTime(primaryTable) : cacheConfig.defaultStaleTime),
+    gcTime:
+      gcTime ?? (primaryTable ? tableRegistry.getGcTime(primaryTable) : cacheConfig.defaultGcTime),
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -408,9 +388,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
 
   // Analytics result
   if (isAnalyticsPath && compiledSql !== null) {
-    const dataSource = analyticsResult.data
-      ? DATA_SOURCES.DUCKDB
-      : DATA_SOURCES.NONE;
+    const dataSource = analyticsResult.data ? DATA_SOURCES.DUCKDB : DATA_SOURCES.NONE;
 
     return {
       ...baseResult,

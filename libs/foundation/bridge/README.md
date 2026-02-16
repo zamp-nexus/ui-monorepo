@@ -74,20 +74,20 @@ This library is designed for enterprise-grade applications requiring reliable, p
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Environment Detection** | Auto-selects WASM or Native DuckDB based on runtime |
-| **Lazy Initialization** | Bridge is only initialized when first needed |
-| **Idle Timeout** | Automatic shutdown after configurable inactivity period |
-| **View Tracking** | Tracks and rehydrates views across bridge restarts |
-| **Transaction Support** | Full transaction support with BEGIN, COMMIT, ROLLBACK |
-| **SQL Validation** | Type-safe SQL identifier validation with memoization |
-| **Parallel View Rehydration** | Independent views restored in parallel |
-| **Query Cancellation** | AbortSignal support for cancelling long-running queries |
-| **Priority Queuing** | HIGH/NORMAL/LOW priority with FIFO within each level |
-| **Table Locking** | Readers-writer locks for OPFS coordination |
-| **Parquet Support** | Import/export Parquet files |
-| **Singleton Pattern** | Consistent factory-based singleton instances |
+| Feature                       | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| **Environment Detection**     | Auto-selects WASM or Native DuckDB based on runtime     |
+| **Lazy Initialization**       | Bridge is only initialized when first needed            |
+| **Idle Timeout**              | Automatic shutdown after configurable inactivity period |
+| **View Tracking**             | Tracks and rehydrates views across bridge restarts      |
+| **Transaction Support**       | Full transaction support with BEGIN, COMMIT, ROLLBACK   |
+| **SQL Validation**            | Type-safe SQL identifier validation with memoization    |
+| **Parallel View Rehydration** | Independent views restored in parallel                  |
+| **Query Cancellation**        | AbortSignal support for cancelling long-running queries |
+| **Priority Queuing**          | HIGH/NORMAL/LOW priority with FIFO within each level    |
+| **Table Locking**             | Readers-writer locks for OPFS coordination              |
+| **Parquet Support**           | Import/export Parquet files                             |
+| **Singleton Pattern**         | Consistent factory-based singleton instances            |
 
 ---
 
@@ -234,12 +234,12 @@ interface User {
 
 // Execute a type-safe query
 const result = await router.query<User>(
-  'SELECT id, name, email, active FROM users WHERE active = true'
+  'SELECT id, name, email, active FROM users WHERE active = true',
 );
 
-console.log(result.rows);           // User[]
-console.log(result.columns);        // ['id', 'name', 'email', 'active']
-console.log(result.types);          // ['INTEGER', 'VARCHAR', 'VARCHAR', 'BOOLEAN']
+console.log(result.rows); // User[]
+console.log(result.columns); // ['id', 'name', 'email', 'active']
+console.log(result.types); // ['INTEGER', 'VARCHAR', 'VARCHAR', 'BOOLEAN']
 console.log(result.executionTimeMs); // 12.5
 ```
 
@@ -247,10 +247,7 @@ console.log(result.executionTimeMs); // 12.5
 
 ```typescript
 const userId = 42;
-const result = await router.query<User>(
-  'SELECT * FROM users WHERE id = ?',
-  { params: [userId] }
-);
+const result = await router.query<User>('SELECT * FROM users WHERE id = ?', { params: [userId] });
 ```
 
 ### View Management
@@ -282,14 +279,14 @@ const router = getDuckDBRouter();
 
 try {
   await router.beginTransaction();
-  
+
   await router.execute('INSERT INTO users (name, email) VALUES (?, ?)', {
     params: ['Alice', 'alice@example.com'],
   });
   await router.execute('INSERT INTO audit_log (action, user_id) VALUES (?, ?)', {
     params: ['USER_CREATED', 1],
   });
-  
+
   await router.commit();
 } catch (error) {
   await router.rollback();
@@ -308,10 +305,9 @@ const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 5000);
 
 try {
-  const result = await router.query(
-    'SELECT * FROM very_large_table',
-    { signal: controller.signal }
-  );
+  const result = await router.query('SELECT * FROM very_large_table', {
+    signal: controller.signal,
+  });
   clearTimeout(timeout);
 } catch (error) {
   if (isQueryCancelledError(error)) {
@@ -328,10 +324,10 @@ try {
 
 The library supports two DuckDB implementations. **Constants use CAPITAL_SNAKE_CASE**; **types use PascalCase**.
 
-| Type | Constant | Environment | Use Case |
-|------|----------|-------------|----------|
-| WASM | `BRIDGE_TYPE.WASM` | Browser | Default for web applications |
-| Native | `BRIDGE_TYPE.NATIVE` | Electron | Native file system access, better performance |
+| Type   | Constant             | Environment | Use Case                                      |
+| ------ | -------------------- | ----------- | --------------------------------------------- |
+| WASM   | `BRIDGE_TYPE.WASM`   | Browser     | Default for web applications                  |
+| Native | `BRIDGE_TYPE.NATIVE` | Electron    | Native file system access, better performance |
 
 ```typescript
 import { BRIDGE_TYPE } from '@open-insights-web/foundation-bridge';
@@ -344,6 +340,7 @@ const router = getDuckDBRouter({
 ```
 
 The router auto-detects the appropriate bridge:
+
 1. If Electron IPC (`window.electronDuckDB`) is available → Native bridge
 2. Otherwise → WASM bridge
 
@@ -351,9 +348,9 @@ The router auto-detects the appropriate bridge:
 
 When using the worker pool, queries specify their lock mode. Use **constants** (CAPITAL_SNAKE) for values and **PascalCase types** for type annotations.
 
-| Mode | Constant | Behavior |
-|------|----------|----------|
-| Read | `QUERY_MODE.READ` | Allows concurrent access with other readers |
+| Mode  | Constant           | Behavior                                      |
+| ----- | ------------------ | --------------------------------------------- |
+| Read  | `QUERY_MODE.READ`  | Allows concurrent access with other readers   |
 | Write | `QUERY_MODE.WRITE` | Exclusive access, blocks all other operations |
 
 ```typescript
@@ -379,14 +376,14 @@ await pool.query({
 
 Queries are processed in priority order. Use **PRIORITY** (constant) for values and **PriorityLevel** (type) for annotations.
 
-| Priority | Constant | Numeric Value | Use Case |
-|----------|----------|---------------|----------|
-| High | `PRIORITY.HIGH` | 3 | User-facing, interactive queries |
-| Normal | `PRIORITY.NORMAL` | 2 | Background data loading (default) |
-| Low | `PRIORITY.LOW` | 1 | Maintenance, cleanup, analytics |
+| Priority | Constant          | Numeric Value | Use Case                          |
+| -------- | ----------------- | ------------- | --------------------------------- |
+| High     | `PRIORITY.HIGH`   | 3             | User-facing, interactive queries  |
+| Normal   | `PRIORITY.NORMAL` | 2             | Background data loading (default) |
+| Low      | `PRIORITY.LOW`    | 1             | Maintenance, cleanup, analytics   |
 
 ```typescript
-import { QUERY_MODE, PRIORITY } from '@open-insights-web/foundation-bridge';
+import { PRIORITY, QUERY_MODE } from '@open-insights-web/foundation-bridge';
 import type { PriorityLevel } from '@open-insights-web/foundation-bridge';
 
 // High-priority user request
@@ -412,16 +409,16 @@ import { Milliseconds } from '@open-insights-web/foundation-data-model';
 
 const router = getDuckDBRouter({
   idleTimeout: Milliseconds.from(60_000), // 60 seconds
-  autoInit: true,                          // Auto-init on first query
-  debug: true,                             // Enable logging
+  autoInit: true, // Auto-init on first query
+  debug: true, // Enable logging
 });
 
 // Get current status
 const status = router.getStatus();
-console.log(status.initialized);    // true/false
-console.log(status.busy);           // true if initializing
+console.log(status.initialized); // true/false
+console.log(status.busy); // true if initializing
 console.log(status.lastActivityAt); // Timestamp
-console.log(status.type);           // 'wasm' or 'native'
+console.log(status.type); // 'wasm' or 'native'
 ```
 
 ---
@@ -451,13 +448,13 @@ const exists = hasDuckDBRouter(): boolean;
 interface DuckDBRouterConfig {
   /** Force a specific bridge type (auto-detects if not set) */
   forceBridgeType?: BridgeType;
-  
+
   /** Idle timeout before shutdown in ms (default: 30000) */
   idleTimeout?: Milliseconds;
-  
+
   /** Enable debug logging */
   debug?: boolean;
-  
+
   /** Auto-initialize on first query (default: true) */
   autoInit?: boolean;
 }
@@ -473,11 +470,8 @@ interface DuckDBRouter {
   isInitialized(): boolean;
 
   // Query Execution
-  query<T = Record<string, unknown>>(
-    sql: string,
-    options?: QueryOptions
-  ): Promise<QueryResult<T>>;
-  
+  query<T = Record<string, unknown>>(sql: string, options?: QueryOptions): Promise<QueryResult<T>>;
+
   execute(sql: string, options?: QueryOptions): Promise<void>;
 
   // File Management
@@ -518,16 +512,16 @@ interface DuckDBRouter {
 interface QueryOptions {
   /** Parameterized query values */
   params?: readonly unknown[];
-  
+
   /** Query timeout in milliseconds */
   timeout?: Milliseconds;
-  
+
   /** Maximum rows to return */
   limit?: number;
-  
+
   /** Offset for pagination */
   offset?: number;
-  
+
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
 }
@@ -539,16 +533,16 @@ interface QueryOptions {
 interface QueryResult<T = Record<string, unknown>> {
   /** Result rows */
   rows: T[];
-  
+
   /** Column names */
   columns: string[];
-  
+
   /** Column types (DuckDB type strings) */
   types: string[];
-  
+
   /** Rows affected (for mutations) */
   rowsAffected?: number;
-  
+
   /** Execution time in milliseconds */
   executionTimeMs: number;
 }
@@ -576,10 +570,8 @@ hasDuckDBPool(): boolean;
 
 ```typescript
 interface DuckDBPool {
-  query<T = Record<string, unknown>>(
-    request: QueryRequest<T>
-  ): Promise<PoolQueryResult<T>>;
-  
+  query<T = Record<string, unknown>>(request: QueryRequest<T>): Promise<PoolQueryResult<T>>;
+
   getStatus(): PoolStatus;
   getConfig(): ResolvedPoolConfig;
   isReady(): boolean;
@@ -638,12 +630,13 @@ export const PRIORITY = {
 export type PriorityLevel = (typeof PRIORITY)[keyof typeof PRIORITY];
 
 // Usage
-const p1: PriorityLevel = PRIORITY.HIGH;  // Value from const, type from type
-const p2: PriorityLevel = 'high';         // Literal still valid
-const p3: PriorityLevel = 'invalid';      // ❌ Type error
+const p1: PriorityLevel = PRIORITY.HIGH; // Value from const, type from type
+const p2: PriorityLevel = 'high'; // Literal still valid
+const p3: PriorityLevel = 'invalid'; // ❌ Type error
 ```
 
 Available constants (CAPITAL_SNAKE) and their types (PascalCase):
+
 - `BRIDGE_TYPE` / `BridgeType` - `'wasm' | 'native'`
 - `PRIORITY` / `PriorityLevel` - `'high' | 'normal' | 'low'`
 - `QUERY_MODE` / `QueryLockMode` - `'read' | 'write'`
@@ -658,39 +651,33 @@ Follow these import conventions:
 
 ```typescript
 // Branded types - from foundation-data-model
-import {
-  QueryId,
-  WorkerId,
-  SqlIdentifier,
-  SqlTableName,
-  Milliseconds,
-  Timestamp,
-} from '@open-insights-web/foundation-data-model';
-
-// Const objects (values) - from bridge constants
-import {
-  BridgeType,
-  Priority,
-  QueryMode,
-} from '@open-insights-web/foundation-bridge/constants';
-
-// Or from internal.ts for foundation libraries:
-import { Priority, QueryMode, BridgeType } from './constants';
 
 // Interface types - from bridge types
 import type {
-  QueryOptions,
-  ViewDefinition,
-  QueryResult,
   DuckDBBridge,
   DuckDBBridgeStatus,
-  WorkerInfo,
   PoolStatus,
+  QueryOptions,
+  QueryResult,
+  ViewDefinition,
+  WorkerInfo,
+  WorkerStatus,
 } from '@open-insights-web/foundation-bridge';
-
 // WORKER_STATUS const, WorkerStatus type - from types/pool or internal
 import { WORKER_STATUS } from '@open-insights-web/foundation-bridge';
-import type { WorkerStatus } from '@open-insights-web/foundation-bridge';
+// Const objects (values) - from bridge constants
+import { BridgeType, Priority, QueryMode } from '@open-insights-web/foundation-bridge/constants';
+import {
+  Milliseconds,
+  QueryId,
+  SqlIdentifier,
+  SqlTableName,
+  Timestamp,
+  WorkerId,
+} from '@open-insights-web/foundation-data-model';
+
+// Or from internal.ts for foundation libraries:
+import { BridgeType, Priority, QueryMode } from './constants';
 ```
 
 ---
@@ -701,14 +688,14 @@ import type { WorkerStatus } from '@open-insights-web/foundation-bridge';
 
 Foundation **Utils** provides **generic** error utilities; Foundation **Bridge** provides **domain-specific** error classes and guards. Both are used together.
 
-| Concern | Use | Source |
-|--------|-----|--------|
-| Normalize `unknown` to `Error`, get message/name | `normalizeError`, `getErrorMessage`, `getErrorName`, `formatErrorMessage` | `@open-insights-web/foundation-utils` |
-| Generic guards (abort, network, timeout by message) | `isAbortError`, `isTimeoutError`, `isNetworkError`, `hasErrorCode` (generic) | `@open-insights-web/foundation-utils` |
-| Error handling strategy (retry/report/log) | `categorizeError`, `getErrorStrategy`, `createErrorHandler`, `handleErrorByCategory` | `@open-insights-web/foundation-utils` |
-| Domain error classes (Bridge) | `QueryTimeoutError`, `BridgeNotInitializedError`, etc. | This library |
-| Domain type guards (Bridge) | `isQueryTimeoutError`, `isQueryCancelledError`, etc. | This library |
-| Foundation error base and codes | `FoundationError`, `FOUNDATION_ERROR_CODE`, `isFoundationError`, `hasErrorCode(error, FOUNDATION_ERROR_CODE.*)` | `@open-insights-web/foundation-data-model` |
+| Concern                                             | Use                                                                                                             | Source                                     |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Normalize `unknown` to `Error`, get message/name    | `normalizeError`, `getErrorMessage`, `getErrorName`, `formatErrorMessage`                                       | `@open-insights-web/foundation-utils`      |
+| Generic guards (abort, network, timeout by message) | `isAbortError`, `isTimeoutError`, `isNetworkError`, `hasErrorCode` (generic)                                    | `@open-insights-web/foundation-utils`      |
+| Error handling strategy (retry/report/log)          | `categorizeError`, `getErrorStrategy`, `createErrorHandler`, `handleErrorByCategory`                            | `@open-insights-web/foundation-utils`      |
+| Domain error classes (Bridge)                       | `QueryTimeoutError`, `BridgeNotInitializedError`, etc.                                                          | This library                               |
+| Domain type guards (Bridge)                         | `isQueryTimeoutError`, `isQueryCancelledError`, etc.                                                            | This library                               |
+| Foundation error base and codes                     | `FoundationError`, `FOUNDATION_ERROR_CODE`, `isFoundationError`, `hasErrorCode(error, FOUNDATION_ERROR_CODE.*)` | `@open-insights-web/foundation-data-model` |
 
 **Why Bridge has its own error “things”:**
 
@@ -757,44 +744,44 @@ Error
 
 ```typescript
 import {
-  QueryTimeoutError,
   QueryCancelledError,
   QueryExecutionError,
+  QueryTimeoutError,
   SqlValidationError,
 } from '@open-insights-web/foundation-bridge';
 
 // QueryTimeoutError - query exceeded timeout
 const error = new QueryTimeoutError(queryId, timeoutMs, sql);
-error.queryId;    // QueryId
-error.timeoutMs;  // Milliseconds
-error.sql;        // string | undefined (first 100 chars)
+error.queryId; // QueryId
+error.timeoutMs; // Milliseconds
+error.sql; // string | undefined (first 100 chars)
 
 // QueryCancelledError - query was cancelled
 const error = new QueryCancelledError(queryId, reason);
-error.queryId;    // QueryId
-error.reason;     // CancellationReason ('user' | 'shutdown' | 'timeout')
+error.queryId; // QueryId
+error.reason; // CancellationReason ('user' | 'shutdown' | 'timeout')
 
 // QueryExecutionError - query execution failed
 const error = new QueryExecutionError(queryId, sql, cause);
-error.queryId;    // QueryId
-error.sql;        // string (first 200 chars)
-error.cause;      // Error
+error.queryId; // QueryId
+error.sql; // string (first 200 chars)
+error.cause; // Error
 
 // SqlValidationError - invalid SQL identifier
 const error = new SqlValidationError(identifier, reason);
 error.identifier; // string
-error.reason;     // string
+error.reason; // string
 ```
 
 #### Pool Errors
 
 ```typescript
 import {
+  NoAvailableWorkersError,
+  PoolCapacityError,
   PoolShutdownError,
   WorkerError,
   WorkerInitializationError,
-  NoAvailableWorkersError,
-  PoolCapacityError,
 } from '@open-insights-web/foundation-bridge';
 
 // PoolShutdownError - pool is shutting down
@@ -817,14 +804,13 @@ const error = new PoolCapacityError(maxCapacity, currentSize);
 
 ```typescript
 import {
-  BridgeNotInitializedError,
   BridgeInitializationError,
+  BridgeNotInitializedError,
+  ConfigurationError,
   OpfsNotFoundError,
   OpfsPermissionError,
   OpfsWriteError,
-  ConfigurationError,
 } from '@open-insights-web/foundation-bridge';
-
 // OpfsNotSupportedError should be imported from foundation-database
 // (OPFS is fundamentally a database concern)
 import { OpfsNotSupportedError } from '@open-insights-web/foundation-database';
@@ -835,21 +821,21 @@ import { OpfsNotSupportedError } from '@open-insights-web/foundation-database';
 ```typescript
 import {
   isBridgeError,
-  isQueryTimeoutError,
-  isQueryCancelledError,
-  isQueryExecutionError,
-  isSqlValidationError,
-  isPoolShutdownError,
-  isWorkerError,
-  isWorkerInitializationError,
-  isNoAvailableWorkersError,
-  isPoolCapacityError,
-  isBridgeNotInitializedError,
   isBridgeInitializationError,
+  isBridgeNotInitializedError,
+  isConfigurationError,
+  isNoAvailableWorkersError,
   isOpfsNotFoundError,
   isOpfsPermissionError,
   isOpfsWriteError,
-  isConfigurationError,
+  isPoolCapacityError,
+  isPoolShutdownError,
+  isQueryCancelledError,
+  isQueryExecutionError,
+  isQueryTimeoutError,
+  isSqlValidationError,
+  isWorkerError,
+  isWorkerInitializationError,
 } from '@open-insights-web/foundation-bridge';
 
 // OpfsNotSupportedError and isOpfsNotSupportedError: import from '@open-insights-web/foundation-database'
@@ -863,12 +849,16 @@ if (isQueryTimeoutError(error)) {
 
 ```typescript
 import {
-  isQueryTimeoutError,
-  isQueryCancelledError,
-  isSqlValidationError,
   isBridgeError,
+  isQueryCancelledError,
+  isQueryTimeoutError,
+  isSqlValidationError,
 } from '@open-insights-web/foundation-bridge';
-import { isFoundationError, hasErrorCode, FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+import {
+  FOUNDATION_ERROR_CODE,
+  hasErrorCode,
+  isFoundationError,
+} from '@open-insights-web/foundation-data-model';
 
 try {
   const result = await router.query(sql);
@@ -878,27 +868,27 @@ try {
     // Retry with longer timeout
     return await router.query(sql, { timeout: Milliseconds.from(60_000) });
   }
-  
+
   if (isQueryCancelledError(error)) {
     // User cancelled - no action needed
     return null;
   }
-  
+
   if (isSqlValidationError(error)) {
     // Show validation error to user
     throw new UserInputError(`Invalid identifier: ${error.identifier}`);
   }
-  
+
   // Check error codes
   if (hasErrorCode(error, FOUNDATION_ERROR_CODE.BRIDGE_QUERY_TIMEOUT)) {
     // Handle by error code
   }
-  
+
   // Log structured error
   if (isBridgeError(error)) {
     logger.error('Bridge error', error.toJSON());
   }
-  
+
   // Re-throw unknown errors
   throw error;
 }
@@ -912,21 +902,21 @@ try {
 
 ```typescript
 import {
+  isValidIdentifier,
   validateIdentifier,
   validateTableName,
-  isValidIdentifier,
 } from '@open-insights-web/foundation-bridge';
 
 // Validate and create branded type (throws on invalid)
-const safeName = validateIdentifier('users');        // SqlIdentifier
-const safeTable = validateTableName('events');       // SqlTableName
+const safeName = validateIdentifier('users'); // SqlIdentifier
+const safeTable = validateTableName('events'); // SqlTableName
 
 // These throw SqlValidationError:
-validateIdentifier('');                 // Empty
-validateIdentifier('1table');           // Starts with number
-validateIdentifier('DROP');             // Reserved word
-validateIdentifier('user-name');        // Invalid character
-validateIdentifier('a'.repeat(300));    // Too long (max 256)
+validateIdentifier(''); // Empty
+validateIdentifier('1table'); // Starts with number
+validateIdentifier('DROP'); // Reserved word
+validateIdentifier('user-name'); // Invalid character
+validateIdentifier('a'.repeat(300)); // Too long (max 256)
 
 // Check without throwing
 if (isValidIdentifier(userInput)) {
@@ -938,12 +928,12 @@ if (isValidIdentifier(userInput)) {
 
 ```typescript
 import {
-  quoteIdentifier,
+  applyLimitOffset,
   buildCreateViewSql,
   buildDropViewSql,
-  escapeString,
   buildParameterizedSql,
-  applyLimitOffset,
+  escapeString,
+  quoteIdentifier,
 } from '@open-insights-web/foundation-bridge';
 
 // Quote identifier (handles double-quotes)
@@ -957,7 +947,7 @@ quoteIdentifier(validateIdentifier('user_name'));
 const viewSql = buildCreateViewSql(
   validateIdentifier('active_users'),
   'SELECT * FROM users WHERE active = true',
-  true  // orReplace
+  true, // orReplace
 );
 // → 'CREATE OR REPLACE VIEW "active_users" AS SELECT * FROM users WHERE active = true'
 
@@ -976,7 +966,7 @@ const paginatedSql = applyLimitOffset('SELECT * FROM users', 10, 20);
 // Validate parameterized SQL
 const { sql, placeholderCount } = buildParameterizedSql(
   'SELECT * FROM users WHERE id = ? AND name = ?',
-  2  // expected param count
+  2, // expected param count
 );
 // Throws if placeholder count doesn't match
 ```
@@ -992,10 +982,10 @@ The `validateIdentifier` function uses LRU memoization for performance:
 // - LRU eviction when cache is full
 
 // First call validates
-const name1 = validateIdentifier('users');  // Validates
+const name1 = validateIdentifier('users'); // Validates
 
 // Subsequent calls use cache
-const name2 = validateIdentifier('users');  // Cache hit!
+const name2 = validateIdentifier('users'); // Cache hit!
 ```
 
 ---
@@ -1004,15 +994,15 @@ const name2 = validateIdentifier('users');  // Cache hit!
 
 ### Router Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `forceBridgeType` | `BridgeType` | `undefined` | Force WASM or Native (auto-detect if not set) |
-| `idleTimeout` | `Milliseconds` | `30000` | Shutdown after inactivity (0 to disable) |
-| `debug` | `boolean` | `false` | Enable debug logging |
-| `autoInit` | `boolean` | `true` | Initialize on first query |
+| Option            | Type           | Default     | Description                                   |
+| ----------------- | -------------- | ----------- | --------------------------------------------- |
+| `forceBridgeType` | `BridgeType`   | `undefined` | Force WASM or Native (auto-detect if not set) |
+| `idleTimeout`     | `Milliseconds` | `30000`     | Shutdown after inactivity (0 to disable)      |
+| `debug`           | `boolean`      | `false`     | Enable debug logging                          |
+| `autoInit`        | `boolean`      | `true`      | Initialize on first query                     |
 
 ```typescript
-import { getDuckDBRouter, BridgeType } from '@open-insights-web/foundation-bridge';
+import { BridgeType, getDuckDBRouter } from '@open-insights-web/foundation-bridge';
 import { Milliseconds } from '@open-insights-web/foundation-data-model';
 
 const router = getDuckDBRouter({
@@ -1025,17 +1015,17 @@ const router = getDuckDBRouter({
 
 ### Pool Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `workerCount` | `number` | `min(hardwareConcurrency, 8)` | Number of workers |
-| `maxQueuePerWorker` | `number` | `10` | Max queries per worker queue |
-| `maxActiveQueries` | `number` | `1000` | Max total active queries |
-| `defaultQueryTimeout` | `Milliseconds` | `30000` | Default timeout |
-| `workerInitTimeout` | `Milliseconds` | `10000` | Worker startup timeout |
-| `workerIdleTimeout` | `Milliseconds \| null` | `null` | Worker idle shutdown |
-| `enableTableLocking` | `boolean` | `true` | Enable OPFS coordination |
-| `restartFailedWorkers` | `boolean` | `true` | Auto-restart failed workers |
-| `debug` | `boolean` | `false` | Enable debug logging |
+| Option                 | Type                   | Default                       | Description                  |
+| ---------------------- | ---------------------- | ----------------------------- | ---------------------------- |
+| `workerCount`          | `number`               | `min(hardwareConcurrency, 8)` | Number of workers            |
+| `maxQueuePerWorker`    | `number`               | `10`                          | Max queries per worker queue |
+| `maxActiveQueries`     | `number`               | `1000`                        | Max total active queries     |
+| `defaultQueryTimeout`  | `Milliseconds`         | `30000`                       | Default timeout              |
+| `workerInitTimeout`    | `Milliseconds`         | `10000`                       | Worker startup timeout       |
+| `workerIdleTimeout`    | `Milliseconds \| null` | `null`                        | Worker idle shutdown         |
+| `enableTableLocking`   | `boolean`              | `true`                        | Enable OPFS coordination     |
+| `restartFailedWorkers` | `boolean`              | `true`                        | Auto-restart failed workers  |
+| `debug`                | `boolean`              | `false`                       | Enable debug logging         |
 
 ```typescript
 import { getDuckDBPool } from '@open-insights-web/foundation-bridge';
@@ -1057,9 +1047,9 @@ const pool = await getDuckDBPool({
 
 ```typescript
 import {
+  resolvePoolConfig,
   validatePoolConfig,
   validateRouterConfig,
-  resolvePoolConfig,
 } from '@open-insights-web/foundation-bridge';
 
 // Validate configuration
@@ -1131,10 +1121,7 @@ For frequently executed queries, consider using prepared statements:
 
 ```typescript
 // Parameterized queries use prepared statements internally
-const result = await router.query(
-  'SELECT * FROM users WHERE id = ?',
-  { params: [userId] }
-);
+const result = await router.query('SELECT * FROM users WHERE id = ?', { params: [userId] });
 // DuckDB prepares the statement once and reuses it
 ```
 
@@ -1180,11 +1167,7 @@ const worker = new WorkerInstance(WorkerId.create(1), { debug: true });
 await worker.initialize();
 
 // Workers execute queries sequentially
-const result = await worker.execute(
-  QueryId.create(),
-  'SELECT 1',
-  abortSignal
-);
+const result = await worker.execute(QueryId.create(), 'SELECT 1', abortSignal);
 
 await worker.shutdown();
 ```
@@ -1207,7 +1190,7 @@ queue.enqueue(query3, PRIORITY.LOW);
 const next = queue.dequeue(); // query1 (HIGH)
 
 // O(1) operations
-queue.size();         // Total size
+queue.size(); // Total size
 queue.sizeAt(PRIORITY.HIGH); // Size at priority
 queue.isEmpty();
 queue.peek();
@@ -1320,11 +1303,11 @@ controller.abort();
 
 ```typescript
 // ✅ Good - direct imports
-import { Milliseconds, Timestamp } from '@open-insights-web/foundation-data-model';
-import { sleep, withTimeout } from '@open-insights-web/foundation-utils';
 
 // ❌ Bad - importing from wrong package
 import { Milliseconds } from '@open-insights-web/foundation-bridge';
+import { Milliseconds, Timestamp } from '@open-insights-web/foundation-data-model';
+import { sleep, withTimeout } from '@open-insights-web/foundation-utils';
 ```
 
 ### 7. Clean Up Resources
@@ -1367,7 +1350,8 @@ nx test foundation-bridge --coverage
 ### Test Setup
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { getDuckDBRouter, resetDuckDBRouter } from '@open-insights-web/foundation-bridge';
 
 describe('DuckDBRouter', () => {
@@ -1504,26 +1488,26 @@ libs/foundation/bridge/
 
 ### Runtime Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `@duckdb/duckdb-wasm` | DuckDB WASM runtime |
+| Package                                    | Purpose                      |
+| ------------------------------------------ | ---------------------------- |
+| `@duckdb/duckdb-wasm`                      | DuckDB WASM runtime          |
 | `@open-insights-web/foundation-data-model` | Branded types, error classes |
-| `@open-insights-web/foundation-utils` | Utility functions |
-| `apache-arrow` | Arrow format support |
-| `react-fast-compare` | Deep equality comparison |
+| `@open-insights-web/foundation-utils`      | Utility functions            |
+| `apache-arrow`                             | Arrow format support         |
+| `react-fast-compare`                       | Deep equality comparison     |
 
 ### Peer Dependencies
 
-| Package | Purpose |
-|---------|---------|
+| Package                                  | Purpose                           |
+| ---------------------------------------- | --------------------------------- |
 | `@open-insights-web/foundation-database` | IndexedDB for metadata (optional) |
 
 ### Dev Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `vitest` | Testing framework |
-| `vite` | Build tool |
+| Package      | Purpose             |
+| ------------ | ------------------- |
+| `vitest`     | Testing framework   |
+| `vite`       | Build tool          |
 | `typescript` | TypeScript compiler |
 
 ---
@@ -1536,27 +1520,40 @@ libs/foundation/bridge/
 
 Constants and types no longer share the same name. **Const objects** use **CAPITAL_SNAKE_CASE**; **types** use **PascalCase**:
 
-| Before (v2) | After (v3) – constant | After (v3) – type |
-|-------------|------------------------|-------------------|
-| `Priority`  | `PRIORITY`             | `PriorityLevel`   |
-| `QueryMode` | `QUERY_MODE`           | `QueryLockMode`   |
-| `BridgeType`| `BRIDGE_TYPE`          | `BridgeType`  |
-| `WorkerStatus` | `WORKER_STATUS`    | `WorkerStatus` |
+| Before (v2)          | After (v3) – constant | After (v3) – type        |
+| -------------------- | --------------------- | ------------------------ |
+| `Priority`           | `PRIORITY`            | `PriorityLevel`          |
+| `QueryMode`          | `QUERY_MODE`          | `QueryLockMode`          |
+| `BridgeType`         | `BRIDGE_TYPE`         | `BridgeType`             |
+| `WorkerStatus`       | `WORKER_STATUS`       | `WorkerStatus`           |
 | `CancellationReason` | `CANCELLATION_REASON` | `CancellationReasonKind` |
 | `RuntimeEnvironment` | `RUNTIME_ENVIRONMENT` | `RuntimeEnvironmentKind` |
-| `StorageStrategy` | `STORAGE_STRATEGY`   | `StorageStrategyKind` |
+| `StorageStrategy`    | `STORAGE_STRATEGY`    | `StorageStrategyKind`    |
 
 ```typescript
 // Before
-import { Priority, QueryMode, BridgeType } from '@open-insights-web/foundation-bridge';
-mode: QueryMode;  // type
-priority: Priority.HIGH;  // value
+// value
 
 // After
-import { PRIORITY, QUERY_MODE, BRIDGE_TYPE } from '@open-insights-web/foundation-bridge';
-import type { QueryLockMode, PriorityLevel, BridgeType } from '@open-insights-web/foundation-bridge';
-mode: QueryLockMode;  // type
-priority: PRIORITY.HIGH;  // value
+import {
+  BRIDGE_TYPE,
+  BridgeType,
+  Priority,
+  PRIORITY,
+  QUERY_MODE,
+  QueryMode,
+} from '@open-insights-web/foundation-bridge';
+import type {
+  BridgeType,
+  PriorityLevel,
+  QueryLockMode,
+} from '@open-insights-web/foundation-bridge';
+
+mode: QueryMode; // type
+priority: Priority.HIGH;
+
+mode: QueryLockMode; // type
+priority: PRIORITY.HIGH; // value
 ```
 
 #### Removed Type Guard Re-export: isOpfsNotSupportedError
@@ -1565,10 +1562,15 @@ priority: PRIORITY.HIGH;  // value
 
 ```typescript
 // Before
-import { OpfsNotSupportedError, isOpfsNotSupportedError } from '@open-insights-web/foundation-bridge';
-
+import {
+  isOpfsNotSupportedError,
+  OpfsNotSupportedError,
+} from '@open-insights-web/foundation-bridge';
 // After
-import { OpfsNotSupportedError, isOpfsNotSupportedError } from '@open-insights-web/foundation-database';
+import {
+  isOpfsNotSupportedError,
+  OpfsNotSupportedError,
+} from '@open-insights-web/foundation-database';
 ```
 
 #### Removed Re-exports (OpfsNotSupportedError class)
@@ -1578,7 +1580,6 @@ import { OpfsNotSupportedError, isOpfsNotSupportedError } from '@open-insights-w
 ```typescript
 // Before
 import { OpfsNotSupportedError } from '@open-insights-web/foundation-bridge';
-
 // After
 import { OpfsNotSupportedError } from '@open-insights-web/foundation-database';
 ```
@@ -1589,15 +1590,16 @@ Factory functions for error classes have been removed. Use direct instantiation:
 
 ```typescript
 // Before
-import { createQueryTimeoutError } from '@open-insights-web/foundation-bridge';
+// After
+import { createQueryTimeoutError, QueryTimeoutError } from '@open-insights-web/foundation-bridge';
+
 const error = createQueryTimeoutError(queryId, timeoutMs, sql);
 
-// After
-import { QueryTimeoutError } from '@open-insights-web/foundation-bridge';
 const error = new QueryTimeoutError(queryId, timeoutMs, sql);
 ```
 
 Removed factory functions:
+
 - `createQueryTimeoutError` - use `new QueryTimeoutError()`
 - `createQueryCancelledError` - use `new QueryCancelledError()`
 - `createQueryExecutionError` - use `new QueryExecutionError()`
@@ -1620,7 +1622,10 @@ Runtime and storage constants use CAPITAL_SNAKE_CASE; use the matching PascalCas
 
 ```typescript
 import { RUNTIME_ENVIRONMENT, STORAGE_STRATEGY } from '@open-insights-web/foundation-bridge';
-import type { RuntimeEnvironmentKind, StorageStrategyKind } from '@open-insights-web/foundation-bridge';
+import type {
+  RuntimeEnvironmentKind,
+  StorageStrategyKind,
+} from '@open-insights-web/foundation-bridge';
 
 if (environment === RUNTIME_ENVIRONMENT.ELECTRON) {
   // Electron-specific logic
@@ -1635,23 +1640,23 @@ const strategy: StorageStrategyKind = STORAGE_STRATEGY.OPFS;
 
 ```typescript
 // Before
-import { Priority, QueryMode } from '@open-insights-web/foundation-bridge/types/pool';
 
 // After (v3: use CAPITAL_SNAKE constants and PascalCase types)
 import { PRIORITY, QUERY_MODE } from '@open-insights-web/foundation-bridge';
 import type { PriorityLevel, QueryLockMode } from '@open-insights-web/foundation-bridge';
+import { Priority, QueryMode } from '@open-insights-web/foundation-bridge/types/pool';
 ```
 
 #### Removed Re-exports
 
 The following re-exports have been removed. Import from the canonical source:
 
-| Old Import | New Import |
-|------------|------------|
+| Old Import                            | New Import                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------ |
 | `types/pool.ts` → Priority, QueryMode | `constants` → PRIORITY, QUERY_MODE; types → PriorityLevel, QueryLockMode |
-| `types/index.ts` → BridgeType | `constants` → BRIDGE_TYPE; type → BridgeType |
-| `wasm/pool/types.ts` | Deleted - use `types/pool.ts` |
-| `wasm/pool/index.ts` → error classes | `errors/index.ts` |
+| `types/index.ts` → BridgeType         | `constants` → BRIDGE_TYPE; type → BridgeType                             |
+| `wasm/pool/types.ts`                  | Deleted - use `types/pool.ts`                                            |
+| `wasm/pool/index.ts` → error classes  | `errors/index.ts`                                                        |
 
 ---
 

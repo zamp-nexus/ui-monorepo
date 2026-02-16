@@ -42,14 +42,14 @@ Foundation HTTP provides a centralized, enterprise-grade HTTP client that standa
 
 ### Why Foundation HTTP?
 
-| Problem | Solution |
-|---------|----------|
-| Inconsistent auth token injection | Automatic token injection via interceptor |
-| No retry logic for transient failures | Exponential backoff with configurable retry |
-| Scattered error handling | Typed error hierarchy with type guards |
-| No request tracking | Automatic X-Request-ID and client headers |
-| Configuration duplication | Centralised configuration via React provider |
-| Memory leaks from dangling interceptors | Full lifecycle management with cleanup |
+| Problem                                 | Solution                                     |
+| --------------------------------------- | -------------------------------------------- |
+| Inconsistent auth token injection       | Automatic token injection via interceptor    |
+| No retry logic for transient failures   | Exponential backoff with configurable retry  |
+| Scattered error handling                | Typed error hierarchy with type guards       |
+| No request tracking                     | Automatic X-Request-ID and client headers    |
+| Configuration duplication               | Centralised configuration via React provider |
+| Memory leaks from dangling interceptors | Full lifecycle management with cleanup       |
 
 ### Design Principles
 
@@ -186,13 +186,13 @@ const UserList = () => {
 ```typescript
 interface HttpClientConfig {
   readonly baseUrl: string;
-  readonly timeout?: number;              // default: 30_000
-  readonly withCredentials?: boolean;      // default: false
+  readonly timeout?: number; // default: 30_000
+  readonly withCredentials?: boolean; // default: false
   readonly defaultHeaders?: Record<string, string>;
   readonly clientHeaders?: ClientHeadersConfig;
   readonly retry?: Partial<HttpRetryConfig>;
   readonly auth?: Partial<AuthConfig>;
-  readonly debug?: boolean;               // default: false
+  readonly debug?: boolean; // default: false
 }
 ```
 
@@ -203,7 +203,7 @@ interface AuthConfig {
   readonly enabled: boolean;
   readonly getAccessToken?: () => Promise<string | null>;
   readonly onUnauthorized?: (statusCode: number, url?: string) => void;
-  readonly tokenType?: string;            // default: 'Bearer'
+  readonly tokenType?: string; // default: 'Bearer'
 }
 ```
 
@@ -225,15 +225,15 @@ interface HttpRetryConfig {
 
 Default values (`DEFAULT_HTTP_RETRY_CONFIG`):
 
-| Field | Default |
-|-------|---------|
-| `enabled` | `true` |
-| `maxRetries` | `3` |
-| `initialDelayMs` | `1000` |
-| `maxDelayMs` | `30_000` |
-| `backoffMultiplier` | `2` |
+| Field                  | Default                          |
+| ---------------------- | -------------------------------- |
+| `enabled`              | `true`                           |
+| `maxRetries`           | `3`                              |
+| `initialDelayMs`       | `1000`                           |
+| `maxDelayMs`           | `30_000`                         |
+| `backoffMultiplier`    | `2`                              |
 | `retryableStatusCodes` | `[408, 429, 500, 502, 503, 504]` |
-| `retryOnNetworkError` | `true` |
+| `retryOnNetworkError`  | `true`                           |
 
 ### ClientHeadersConfig
 
@@ -261,11 +261,11 @@ interface ClientHeadersConfig {
 </HttpProvider>
 ```
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `config` | `HttpClientConfig` | Yes | HTTP client configuration |
-| `children` | `ReactNode` | Yes | Child components |
-| `authInternals` | `{ getAccessToken }` | No | Auth token provider |
+| Prop            | Type                 | Required | Description               |
+| --------------- | -------------------- | -------- | ------------------------- |
+| `config`        | `HttpClientConfig`   | Yes      | HTTP client configuration |
+| `children`      | `ReactNode`          | Yes      | Child components          |
+| `authInternals` | `{ getAccessToken }` | No       | Auth token provider       |
 
 ### useHttp Hook
 
@@ -273,11 +273,11 @@ interface ClientHeadersConfig {
 const { axios, isInitialized, baseUrl } = useHttp();
 ```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `axios` | `AxiosInstance \| null` | Configured instance (null before init) |
-| `isInitialized` | `boolean` | Whether the client is ready |
-| `baseUrl` | `string` | The configured base URL |
+| Property        | Type                    | Description                            |
+| --------------- | ----------------------- | -------------------------------------- |
+| `axios`         | `AxiosInstance \| null` | Configured instance (null before init) |
+| `isInitialized` | `boolean`               | Whether the client is ready            |
+| `baseUrl`       | `string`                | The configured base URL                |
 
 ### Provider Composition
 
@@ -301,19 +301,19 @@ const { axios, isInitialized, baseUrl } = useHttp();
 
 ### Request Interceptors
 
-| Interceptor | Purpose |
-|-------------|---------|
+| Interceptor | Purpose                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
 | **Headers** | Adds `X-Request-ID` (UUID from `foundation-utils`), `X-Client-*` headers |
-| **Params** | Strips `null`/`undefined` from query parameters |
-| **Auth** | Injects `Authorization: Bearer <token>` header |
+| **Params**  | Strips `null`/`undefined` from query parameters                          |
+| **Auth**    | Injects `Authorization: Bearer <token>` header                           |
 
 ### Response Interceptors
 
-| Interceptor | Purpose |
-|-------------|---------|
-| **Retry** | Retries on retryable status codes and network/timeout errors |
-| **Unauthorized Handler** | Calls `onUnauthorized(statusCode, url)` on 401/403 |
-| **Error Normalizer** | Converts raw AxiosError / non-2xx responses to typed `HttpError` |
+| Interceptor              | Purpose                                                          |
+| ------------------------ | ---------------------------------------------------------------- |
+| **Retry**                | Retries on retryable status codes and network/timeout errors     |
+| **Unauthorized Handler** | Calls `onUnauthorized(statusCode, url)` on 401/403               |
+| **Error Normalizer**     | Converts raw AxiosError / non-2xx responses to typed `HttpError` |
 
 ### Interceptor Execution Order
 
@@ -361,45 +361,46 @@ FoundationError (foundation-data-model)
 ### FoundationErrorCode Mapping
 
 Each `HttpError` subclass carries two error codes:
+
 - `code` — the `FoundationErrorCode` for cross-library categorisation
 - `httpCode` — the `HttpErrorCode` for HTTP-specific granularity
 
-| Error Class | `FoundationErrorCode` | `HttpErrorCode` |
-|-------------|----------------------|-----------------|
-| `HttpNotInitializedError` | `CONFIG_MISSING` | `HTTP_NOT_INITIALIZED` |
-| `HttpConfigError` | `CONFIG_INVALID` | `HTTP_CONFIG_ERROR` |
-| `HttpRequestError` | `NETWORK_REQUEST_FAILED` | `HTTP_REQUEST_FAILED` |
-| `HttpTimeoutError` | `NETWORK_TIMEOUT` | `HTTP_TIMEOUT` |
-| `HttpNetworkError` | `NETWORK_REQUEST_FAILED` | `HTTP_NETWORK_ERROR` |
-| `HttpCancelledError` | `NETWORK_REQUEST_FAILED` | `HTTP_CANCELLED` |
-| `HttpUnauthorizedError` | `NETWORK_REQUEST_FAILED` | `HTTP_UNAUTHORIZED` |
-| `HttpForbiddenError` | `NETWORK_REQUEST_FAILED` | `HTTP_FORBIDDEN` |
-| `HttpNotFoundError` | `RESOURCE_NOT_FOUND` | `HTTP_NOT_FOUND` |
-| `HttpServerError` | `NETWORK_REQUEST_FAILED` | `HTTP_SERVER_ERROR` |
-| `HttpSerializationError` | `VALIDATION_FAILED` | `HTTP_SERIALIZATION_ERROR` |
+| Error Class               | `FoundationErrorCode`    | `HttpErrorCode`            |
+| ------------------------- | ------------------------ | -------------------------- |
+| `HttpNotInitializedError` | `CONFIG_MISSING`         | `HTTP_NOT_INITIALIZED`     |
+| `HttpConfigError`         | `CONFIG_INVALID`         | `HTTP_CONFIG_ERROR`        |
+| `HttpRequestError`        | `NETWORK_REQUEST_FAILED` | `HTTP_REQUEST_FAILED`      |
+| `HttpTimeoutError`        | `NETWORK_TIMEOUT`        | `HTTP_TIMEOUT`             |
+| `HttpNetworkError`        | `NETWORK_REQUEST_FAILED` | `HTTP_NETWORK_ERROR`       |
+| `HttpCancelledError`      | `NETWORK_REQUEST_FAILED` | `HTTP_CANCELLED`           |
+| `HttpUnauthorizedError`   | `NETWORK_REQUEST_FAILED` | `HTTP_UNAUTHORIZED`        |
+| `HttpForbiddenError`      | `NETWORK_REQUEST_FAILED` | `HTTP_FORBIDDEN`           |
+| `HttpNotFoundError`       | `RESOURCE_NOT_FOUND`     | `HTTP_NOT_FOUND`           |
+| `HttpServerError`         | `NETWORK_REQUEST_FAILED` | `HTTP_SERVER_ERROR`        |
+| `HttpSerializationError`  | `VALIDATION_FAILED`      | `HTTP_SERIALIZATION_ERROR` |
 
 ### Error Conversion Table
 
-| Axios Condition | HttpError Class |
-|----------------|-----------------|
-| `ERR_CANCELED` | `HttpCancelledError` |
-| `ECONNABORTED` / `ETIMEDOUT` | `HttpTimeoutError` |
-| `ERR_NETWORK` / no response | `HttpNetworkError` |
-| Status 401 | `HttpUnauthorizedError` |
-| Status 403 | `HttpForbiddenError` |
-| Status 404 | `HttpNotFoundError` |
-| Status 5xx | `HttpServerError` |
-| Other 4xx | `HttpRequestError` |
+| Axios Condition              | HttpError Class         |
+| ---------------------------- | ----------------------- |
+| `ERR_CANCELED`               | `HttpCancelledError`    |
+| `ECONNABORTED` / `ETIMEDOUT` | `HttpTimeoutError`      |
+| `ERR_NETWORK` / no response  | `HttpNetworkError`      |
+| Status 401                   | `HttpUnauthorizedError` |
+| Status 403                   | `HttpForbiddenError`    |
+| Status 404                   | `HttpNotFoundError`     |
+| Status 5xx                   | `HttpServerError`       |
+| Other 4xx                    | `HttpRequestError`      |
 
 ### Type Guards
 
 ```typescript
 import {
+  isAuthenticationError,
   isHttpError,
   isHttpTimeoutError,
   isHttpUnauthorizedError,
   isRetryableHttpError,
-  isAuthenticationError,
 } from '@open-insights-web/foundation-http';
 
 try {
@@ -436,9 +437,10 @@ try {
 useEffect(() => {
   const controller = new AbortController();
 
-  axios.get('/data', { signal: controller.signal })
-    .then(res => setData(res.data))
-    .catch(err => {
+  axios
+    .get('/data', { signal: controller.signal })
+    .then((res) => setData(res.data))
+    .catch((err) => {
       if (!isHttpCancelledError(err)) setError(err);
     });
 
@@ -455,18 +457,13 @@ useEffect(() => {
 For applications with multiple API endpoints:
 
 ```typescript
-import { httpInstanceManager, getDefaultAxiosInstance } from '@open-insights-web/foundation-http';
+import { getDefaultAxiosInstance, httpInstanceManager } from '@open-insights-web/foundation-http';
 
-httpInstanceManager.createInstance(
-  { baseUrl: 'https://api.example.com' },
-  'main-api',
-  { setAsDefault: true },
-);
+httpInstanceManager.createInstance({ baseUrl: 'https://api.example.com' }, 'main-api', {
+  setAsDefault: true,
+});
 
-httpInstanceManager.createInstance(
-  { baseUrl: 'https://analytics.example.com' },
-  'analytics-api',
-);
+httpInstanceManager.createInstance({ baseUrl: 'https://analytics.example.com' }, 'analytics-api');
 
 const mainAxios = getDefaultAxiosInstance();
 const analyticsAxios = httpInstanceManager.getInstance('analytics-api')?.instance;
@@ -513,7 +510,8 @@ const HttpProviderWithAuth = ({ children }) => {
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
-import { useHttp, isHttpNotFoundError } from '@open-insights-web/foundation-http';
+
+import { isHttpNotFoundError, useHttp } from '@open-insights-web/foundation-http';
 
 const useUser = (userId: string) => {
   const { axios, isInitialized } = useHttp();
@@ -580,7 +578,7 @@ Using `useHttp` outside of `HttpProvider` or before initialisation completes.
 
 ```tsx
 <HttpProvider config={config}>
-  <YourComponent />  {/* must be a child */}
+  <YourComponent /> {/* must be a child */}
 </HttpProvider>
 ```
 

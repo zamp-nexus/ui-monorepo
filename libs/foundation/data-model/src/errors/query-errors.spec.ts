@@ -4,15 +4,16 @@
  * Tests for query-specific error classes.
  */
 
-import { describe, it, expect } from 'vitest';
-import { QueryId, Milliseconds } from '../types/branded';
-import { FOUNDATION_ERROR_CODE, ERROR_CATEGORY } from './error-codes';
+import { describe, expect, it } from 'vitest';
+
+import { Milliseconds, QueryId } from '../types/branded';
+import { ERROR_CATEGORY, FOUNDATION_ERROR_CODE } from './error-codes';
 import { FoundationError } from './foundation-error';
 import {
-  QueryTimeoutError,
+  CANCELLATION_REASON,
   QueryCancelledError,
   QueryExecutionError,
-  CANCELLATION_REASON,
+  QueryTimeoutError,
 } from './query-errors';
 
 // =============================================================================
