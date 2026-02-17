@@ -17,17 +17,14 @@ import type { QueryKey } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
 
-import type { ConflictStrategy, SyncState } from '@open-insights-web/foundation-data-model';
+import type {
+  ConflictStrategy,
+  SyncState,
+  TableAnalyticsConfig,
+  UnifiedTableConfig as SharedUnifiedTableConfig,
+} from '@open-insights-web/foundation-data-model';
 
-import type { TableAnalyticsConfig, UnifiedTableConfig } from './table-registry';
-
-const CONVEX_FUNCTION_VISIBILITY = {
-  PUBLIC: 'public',
-  INTERNAL: 'internal',
-} as const;
-
-type ConvexFunctionVisibility =
-  (typeof CONVEX_FUNCTION_VISIBILITY)[keyof typeof CONVEX_FUNCTION_VISIBILITY];
+type ConvexFunctionVisibility = 'public' | 'internal';
 
 /**
  * Generic Convex query function reference type.
@@ -47,15 +44,13 @@ export type ConvexQueryReference = FunctionReference<
  * Generic Convex function reference for any visibility and args.
  * Used when the specific function signature is not known at compile time.
  */
-export type AnyFunctionReference = FunctionReference<
-  'query',
-  ConvexFunctionVisibility,
-  Record<string, unknown>,
-  unknown
->;
+export type AnyFunctionReference = FunctionReference<'query', ConvexFunctionVisibility>;
 
-// Re-export table config types for convenience (these are defined in this library)
-export type { UnifiedTableConfig, TableAnalyticsConfig };
+export type UnifiedTableConfig = SharedUnifiedTableConfig<
+  FunctionReference<'query'>,
+  FunctionReference<'mutation'>
+>;
+export type { TableAnalyticsConfig };
 
 // =============================================================================
 // Configuration

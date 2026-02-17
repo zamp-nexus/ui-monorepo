@@ -48,10 +48,6 @@ export {
   QUERY_RETRY_DELAY_MAX_MS,
   OFFLINE_NETWORK_MODE,
   ANALYTICS_QUERY_RETRY_MAX,
-  TABLE_OPERATION,
-  type TableOperation,
-  CONFLICT_RESOLUTION_TYPE,
-  type ConflictResolutionType,
   resolveCacheConfig,
 } from './constants';
 
@@ -59,7 +55,7 @@ export {
 // Table Registry
 // =============================================================================
 
-export { TableRegistry, createTableRegistry, DATA_FRESHNESS } from './table-registry';
+export { TableRegistry, createTableRegistry } from './table-registry';
 
 // =============================================================================
 // Container

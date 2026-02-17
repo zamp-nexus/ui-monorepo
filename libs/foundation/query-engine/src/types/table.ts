@@ -13,7 +13,12 @@ import type { FunctionReference } from 'convex/server';
 
 // ConflictStrategy is both a const object (value) and a type in data-model.
 // We need the value import for the type guard `isConflictStrategy`.
-import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  DATA_FRESHNESS,
+  type ConflictStrategy,
+  type DataFreshnessLevel,
+} from '@open-insights-web/foundation-data-model';
 
 import { WRITE_OPERATIONS, type WriteOperation } from './operations';
 
@@ -89,16 +94,13 @@ export type TableFileType = (typeof TABLE_FILE_TYPES)[keyof typeof TABLE_FILE_TY
  *      (includes `historical` for queries that accept stale data).
  */
 export const ANALYTICS_FRESHNESS_LEVELS = {
-  REALTIME: 'realtime',
-  NEAR_REALTIME: 'near-realtime',
-  EVENTUAL: 'eventual',
+  ...DATA_FRESHNESS,
 } as const;
 
 /**
  * Analytics freshness type derived from ANALYTICS_FRESHNESS_LEVELS.
  */
-export type AnalyticsFreshness =
-  (typeof ANALYTICS_FRESHNESS_LEVELS)[keyof typeof ANALYTICS_FRESHNESS_LEVELS];
+export type AnalyticsFreshness = DataFreshnessLevel;
 
 // =============================================================================
 // CONVEX FUNCTION REFERENCES

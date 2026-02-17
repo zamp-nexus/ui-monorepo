@@ -8,6 +8,12 @@
  */
 
 import { TIME_MS } from '@open-insights-web/foundation-utils';
+import {
+  CONFLICT_RESOLUTION_TYPE,
+  OPERATIONS,
+  type ConflictResolutionType,
+  type Operation,
+} from '@open-insights-web/foundation-data-model';
 
 import type { CacheConfig, ResolvedCacheConfig } from './types';
 
@@ -87,27 +93,9 @@ export const ANALYTICS_QUERY_RETRY_MAX = 2;
 /**
  * Supported table operations.
  */
-export const TABLE_OPERATION = {
-  LIST: 'list',
-  GET: 'get',
-  CREATE: 'create',
-  UPDATE: 'update',
-  DELETE: 'delete',
-} as const;
-
-export type TableOperation = (typeof TABLE_OPERATION)[keyof typeof TABLE_OPERATION];
-
-/**
- * Conflict resolution discriminant values.
- */
-export const CONFLICT_RESOLUTION_TYPE = {
-  ACCEPT_LOCAL: 'accept-local',
-  ACCEPT_REMOTE: 'accept-remote',
-  MERGE: 'merge',
-} as const;
-
-export type ConflictResolutionType =
-  (typeof CONFLICT_RESOLUTION_TYPE)[keyof typeof CONFLICT_RESOLUTION_TYPE];
+export const TABLE_OPERATION = OPERATIONS;
+export type TableOperation = Operation;
+export { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType };
 
 // =============================================================================
 // Cache Config Resolution

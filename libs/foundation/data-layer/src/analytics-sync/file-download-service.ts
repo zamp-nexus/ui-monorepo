@@ -7,7 +7,12 @@
  * @module analytics-sync/file-download-service
  */
 
-import axios, { type AxiosInstance, type AxiosProgressEvent, type AxiosRequestConfig } from 'axios';
+import axios, {
+  isAxiosError,
+  type AxiosInstance,
+  type AxiosProgressEvent,
+  type AxiosRequestConfig,
+} from 'axios';
 
 import {
   FOUNDATION_ERROR_CODE,
@@ -146,6 +151,13 @@ const toArrayBuffer = (data: ArrayBuffer | Uint8Array): ArrayBuffer => {
   return copy.buffer;
 };
 
+const safeDivide = (numerator: number, denominator: number): number => {
+  if (denominator <= 0) {
+    return 0;
+  }
+  return numerator / denominator;
+};
+
 /**
  * File Download Service
  *
@@ -196,7 +208,7 @@ export class FileDownloadService {
     this.logger.debug(`Downloading file: ${file.filename} (${file.size} bytes)`);
 
     try {
-      const requestConfig: AxiosRequestConfig<ArrayBuffer> = {
+      const requestConfig: AxiosRequestConfig<ArrayBuffer | Uint8Array> = {
         responseType: 'arraybuffer',
         onDownloadProgress: (progressEvent: AxiosProgressEvent) => {
           const loaded = progressEvent.loaded ?? 0;
@@ -207,14 +219,16 @@ export class FileDownloadService {
       if (signal !== undefined) {
         requestConfig.signal = signal;
       }
-      const response = await this.axiosInstance.get<ArrayBuffer>(file.url, requestConfig);
+      const response = await this.axiosInstance.get<ArrayBuffer | Uint8Array>(file.url, requestConfig);
 
-      const normalizedData = toArrayBuffer(response.data as ArrayBuffer | Uint8Array);
+      const normalizedData = toArrayBuffer(response.data);
       this.logger.debug(`Downloaded file: ${file.filename} (${normalizedData.byteLength} bytes)`);
       return normalizedData;
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const res = (err as { response?: { status?: number; statusText?: string } }).response;
+      if (isAxiosError(err) || (err !== null && typeof err === 'object' && 'response' in err)) {
+        const res = isAxiosError(err)
+          ? err.response
+          : (err as { response?: { status?: number; statusText?: string } }).response;
         throw new DownloadError(
           `Download failed: HTTP ${res?.status ?? ''} ${res?.statusText ?? ''}`.trim(),
           file.filename,
@@ -332,7 +346,7 @@ export class FileDownloadService {
           (bytesLoaded) => {
             onProgress?.({
               isDownloading: true,
-              progress: ((filesCompleted + bytesLoaded / file.size) / total) * 100,
+              progress: (filesCompleted + safeDivide(bytesLoaded, file.size)) / total * 100,
               filesTotal: total,
               filesCompleted,
               currentFile: file.filename,

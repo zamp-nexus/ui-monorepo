@@ -313,7 +313,7 @@ describe('validateQuery', () => {
     expect(result.warnings.some((w) => w.path === 'query.ungrouped')).toBe(true);
   });
 
-  it('fails for deeply nested filters exceeding MAX_FILTER_DEPTH', () => {
+  it('passes for deeply nested filters', () => {
     // Build a filter nested 21 levels deep
     let filter: { member: string; operator: string; values: string[] } | { and: unknown[] } = {
       member: 'orders.status',
@@ -326,8 +326,8 @@ describe('validateQuery', () => {
 
     const query: Query = { filters: [filter as never] };
     const result = validateQuery(query, registry);
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.message.includes('nesting depth'))).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 

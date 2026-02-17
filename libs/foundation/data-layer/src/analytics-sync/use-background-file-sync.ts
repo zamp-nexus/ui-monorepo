@@ -13,9 +13,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, hashPayloadSync } from '@open-insights-web/foundation-utils';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
+import { invalidateQueries } from '../utils/mutation-helpers';
 import { INITIAL_DOWNLOAD_STATE, type DownloadProgressState } from './file-download-service';
 
 /**
@@ -73,12 +74,21 @@ export const useBackgroundFileSync = (
   const isSyncingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const normalizedTablesHash = useMemo(
+    () => hashPayloadSync([...new Set(tables)].sort()),
+    [tables],
+  );
+  const normalizedTables = useMemo(
+    () => [...new Set(tables)].sort(),
+    [normalizedTablesHash],
+  );
+
   const logger = useMemo(() => createDebugLogger('useBackgroundFileSync', debug), [debug]);
 
   const isConfigured = datasourceApi !== null;
 
   const triggerSync = useCallback(async (): Promise<void> => {
-    if (!enabled || tables.length === 0 || !datasourceApi) {
+    if (!enabled || normalizedTables.length === 0 || !datasourceApi) {
       logger.debug('Sync skipped: not configured or disabled');
       return;
     }
@@ -95,10 +105,10 @@ export const useBackgroundFileSync = (
 
     try {
       const syncService = getTableSyncService();
-      logger.debug('Fetching table info for:', tables);
-      const response = await syncService.fetchTablesInfo(tables);
+      logger.debug('Fetching table info for:', normalizedTables);
+      const response = await syncService.fetchTablesInfo(normalizedTables);
 
-      const localMetadata = await syncService.getLocalMetadataForTables(tables);
+      const localMetadata = await syncService.getLocalMetadataForTables(normalizedTables);
       const updatePlans = syncService.analyzeUpdates(response, localMetadata);
 
       if (updatePlans.length === 0) {
@@ -174,10 +184,7 @@ export const useBackgroundFileSync = (
       }
 
       logger.debug('Invalidating queries');
-      await queryClient.invalidateQueries({
-        queryKey: ['analytics'],
-        refetchType: 'active',
-      });
+      await invalidateQueries(queryClient, [['analytics']], { refetchType: 'active' });
 
       const now = Date.now();
       setState((previousState) => ({
@@ -222,7 +229,7 @@ export const useBackgroundFileSync = (
     }
   }, [
     enabled,
-    tables,
+    normalizedTables,
     datasourceApi,
     getTableSyncService,
     getFileDownloadService,
@@ -234,10 +241,10 @@ export const useBackgroundFileSync = (
   ]);
 
   useEffect(() => {
-    if (enabled && datasourceApi && tables.length > 0) {
+    if (enabled && datasourceApi && normalizedTables.length > 0) {
       void triggerSync();
     }
-  }, [enabled, datasourceApi, tables, triggerSync]);
+  }, [enabled, datasourceApi, normalizedTables, triggerSync]);
 
   useEffect(() => {
     return () => {

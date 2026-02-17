@@ -26,7 +26,7 @@ import type { WithId } from '@open-insights-web/foundation-data-model';
 import { createCacheEntry } from '@open-insights-web/foundation-database';
 
 import { DEFAULT_CACHE_TTL } from '../core/constants';
-import type { BaseMutationOptions, DLMutationResult, OptimisticMetadata } from '../core/types';
+import type { BaseMutationOptions, DLMutationResult } from '../core/types';
 import { createScopedErrorHandler } from '../utils/error-handler';
 import { buildMutationResult, executeLocalFirstMutation } from '../utils/mutation-helpers';
 import {
@@ -46,19 +46,20 @@ import {
 // Scoped error handler for this hook
 const handleCreateError = createScopedErrorHandler('useDLCreate');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const getStringField = (
+  value: Record<string, unknown>,
+  key: 'id' | '_id',
+): string | null => (typeof value[key] === 'string' ? (value[key] as string) : null);
+
 const getResultEntityId = (result: unknown): string | null => {
-  if (result === null || typeof result !== 'object') {
+  if (!isRecord(result)) {
     return null;
   }
 
-  const resultRecord = result as Record<string, unknown>;
-  if (typeof resultRecord.id === 'string') {
-    return resultRecord.id;
-  }
-  if (typeof resultRecord._id === 'string') {
-    return resultRecord._id;
-  }
-  return null;
+  return getStringField(result, 'id') ?? getStringField(result, '_id');
 };
 
 // =============================================================================
@@ -146,6 +147,9 @@ export const useDLCreate = <
 
       // Create optimistic data with sync metadata
       const optimisticData = onOptimistic(variables);
+      if (!isRecord(optimisticData)) {
+        throw new Error('useDLCreate.onOptimistic must return an object-like value');
+      }
       const optimisticWithId = {
         ...optimisticData,
         id: newProvisionalId,
@@ -153,7 +157,7 @@ export const useDLCreate = <
         _isPendingSync: true,
         _provisionalId: newProvisionalId,
         _createdLocallyAt: Date.now(),
-      } as TData & WithId & OptimisticMetadata;
+      };
 
       // Step 1: Optimistically update TanStack cache
       if (listQueryKey) {
@@ -179,7 +183,7 @@ export const useDLCreate = <
       return executeLocalFirstMutation<TData>({
         isOnline,
         setIsQueued,
-        offlineResult: optimisticWithId as TData,
+        offlineResult: optimisticWithId,
         queueOffline: async () => {
           await queueManager.enqueue({
             type: 'create',

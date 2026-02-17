@@ -29,8 +29,8 @@ import { createLogger, Mutex, type Logger } from '@open-insights-web/foundation-
 
 import { FileDownloadService } from '../analytics-sync/file-download-service';
 import { TableSyncService } from '../analytics-sync/table-sync-service';
+import { pickDefined } from './config-normalization';
 import {
-  DEFAULT_CACHE_CONFIG,
   OFFLINE_NETWORK_MODE,
   QUERY_RETRY_DELAY_BASE_MS,
   QUERY_RETRY_DELAY_MAX_MS,
@@ -226,11 +226,11 @@ export class DataLayerContainer {
     this.log('Initializing container');
 
     // Resolve cache config first
-    const cacheConfig = resolveCacheConfig(this.config.cache) ?? {
-      ...DEFAULT_CACHE_CONFIG,
-      defaultStaleTime: this.config.defaultStaleTime ?? DEFAULT_CACHE_CONFIG.defaultStaleTime,
-      defaultGcTime: this.config.defaultGcTime ?? DEFAULT_CACHE_CONFIG.defaultGcTime,
-    };
+    const cacheConfig = resolveCacheConfig({
+      ...this.config.cache,
+      defaultStaleTime: this.config.defaultStaleTime ?? this.config.cache?.defaultStaleTime,
+      defaultGcTime: this.config.defaultGcTime ?? this.config.cache?.defaultGcTime,
+    });
 
     // Create TableRegistry from unified table config
     const tableRegistryDefaults: {
@@ -242,10 +242,10 @@ export class DataLayerContainer {
       staleTime: cacheConfig.defaultStaleTime,
       gcTime: cacheConfig.defaultGcTime,
       conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
+      ...pickDefined({
+        debug: this.config.debug,
+      }),
     };
-    if (this.config.debug !== undefined) {
-      tableRegistryDefaults.debug = this.config.debug;
-    }
 
     const tableRegistry = createTableRegistry(this.config.tables ?? [], tableRegistryDefaults);
     this.log('Table registry created with', tableRegistry.getTableNames().length, 'tables');
@@ -282,13 +282,11 @@ export class DataLayerContainer {
       enableCrossTab: this.config.enableCrossTab ?? true,
       autoStart: true,
       debug: this.config.debug ?? false,
+      ...pickDefined({
+        axiosInstance: this.config.axiosInstance,
+        onError: this.config.onSyncError,
+      }),
     };
-    if (this.config.axiosInstance !== undefined) {
-      syncCoordinatorFactoryConfig.axiosInstance = this.config.axiosInstance;
-    }
-    if (this.config.onSyncError) {
-      syncCoordinatorFactoryConfig.onError = this.config.onSyncError;
-    }
 
     const syncCoordinatorConfig: {
       queryClient: QueryClient;
@@ -307,16 +305,12 @@ export class DataLayerContainer {
       conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
       enableCrossTab: this.config.enableCrossTab ?? true,
       autoStart: true,
+      ...pickDefined({
+        axiosInstance: this.config.axiosInstance,
+        debug: this.config.debug,
+        onError: this.config.onSyncError,
+      }),
     };
-    if (this.config.axiosInstance !== undefined) {
-      syncCoordinatorConfig.axiosInstance = this.config.axiosInstance;
-    }
-    if (this.config.debug !== undefined) {
-      syncCoordinatorConfig.debug = this.config.debug;
-    }
-    if (this.config.onSyncError) {
-      syncCoordinatorConfig.onError = this.config.onSyncError;
-    }
 
     const syncCoordinator =
       this.config.factories?.syncCoordinator?.(syncCoordinatorFactoryConfig) ??
@@ -359,10 +353,10 @@ export class DataLayerContainer {
         convexClient,
         datasourceApi: this.config.datasourceApi ?? null,
         database: database.tableSyncMetadata,
+        ...pickDefined({
+          debug: this.config.debug,
+        }),
       };
-      if (this.config.debug !== undefined) {
-        tableSyncConfig.debug = this.config.debug;
-      }
       this.tableSyncService = new TableSyncService(tableSyncConfig);
     }
     return this.tableSyncService;
@@ -384,13 +378,11 @@ export class DataLayerContainer {
         debug?: boolean;
       } = {
         opfsManager: runtimeOpfsManager,
+        ...pickDefined({
+          axiosInstance: this.config.axiosInstance,
+          debug: this.config.debug,
+        }),
       };
-      if (this.config.axiosInstance !== undefined) {
-        fileDownloadConfig.axiosInstance = this.config.axiosInstance;
-      }
-      if (this.config.debug !== undefined) {
-        fileDownloadConfig.debug = this.config.debug;
-      }
       this.fileDownloadService = new FileDownloadService(fileDownloadConfig);
       this.fileDownloadServiceOpfsManager = runtimeOpfsManager;
     }
@@ -424,10 +416,9 @@ export class DataLayerContainer {
       }
 
       try {
-        const duckdbRouterConfig: { debug?: boolean } = {};
-        if (this.config.debug !== undefined) {
-          duckdbRouterConfig.debug = this.config.debug;
-        }
+        const duckdbRouterConfig: { debug?: boolean } = pickDefined({
+          debug: this.config.debug,
+        });
         const duckdbRouter =
           this.config.factories?.duckdbRouter?.() ?? new DuckDBRouter(duckdbRouterConfig);
         const opfsManagerConfig: {
@@ -435,10 +426,10 @@ export class DataLayerContainer {
           debug?: boolean;
         } = {
           database: database.getDatabase(),
+          ...pickDefined({
+            debug: this.config.debug,
+          }),
         };
-        if (this.config.debug !== undefined) {
-          opfsManagerConfig.debug = this.config.debug;
-        }
         const opfsManager =
           this.config.factories?.opfsManager?.(database) ?? new OpfsManager(opfsManagerConfig);
 

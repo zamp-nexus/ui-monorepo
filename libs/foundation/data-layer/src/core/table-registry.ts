@@ -13,175 +13,24 @@
 
 import type { FunctionReference } from 'convex/server';
 
-import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  DATA_FRESHNESS,
+  type ConflictStrategy,
+  type DataFreshnessLevel,
+  type Operation,
+  type TableAnalyticsConfig,
+  type UnifiedTableConfig as SharedUnifiedTableConfig,
+} from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, TIME_MS, type Logger } from '@open-insights-web/foundation-utils';
 
-import type { TableOperation } from './constants';
+export { DATA_FRESHNESS, type DataFreshnessLevel };
 
-// =============================================================================
-// DATA FRESHNESS CONSTANTS
-// =============================================================================
-
-/**
- * Data freshness level values for analytics queries.
- * Controls when DuckDB is used vs Convex API.
- *
- * These are the actual string values stored in configuration.
- */
-export const DATA_FRESHNESS = {
-  /** Always use API (no DuckDB) */
-  REALTIME: 'REALTIME',
-  /** Prefer API, use DuckDB for complex queries */
-  NEAR_REALTIME: 'NEAR_REALTIME',
-  /** Prefer DuckDB, API only for mutations */
-  EVENTUAL: 'EVENTUAL',
-} as const;
-
-/**
- * Data freshness level type.
- *
- * @example
- * ```ts
- * // Use constant value
- * const freshness = DATA_FRESHNESS.NEAR_REALTIME;
- *
- * // Use as type
- * const config: { freshness: DataFreshnessLevel } = {
- *   freshness: DATA_FRESHNESS.REALTIME
- * };
- * ```
- */
-export type DataFreshnessLevel = (typeof DATA_FRESHNESS)[keyof typeof DATA_FRESHNESS];
-
-// =============================================================================
-// UNIFIED TABLE CONFIG
-// =============================================================================
-
-/**
- * Analytics configuration for a table.
- * Controls DuckDB/Parquet behavior for complex queries.
- */
-export interface TableAnalyticsConfig {
-  /**
-   * Whether analytics (DuckDB) is enabled for this table.
-   * If false, all queries use Convex API only.
-   */
-  readonly enabled: boolean;
-
-  /**
-   * Data freshness requirement.
-   * @see DATA_FRESHNESS for available values
-   */
-  readonly freshness?: DataFreshnessLevel;
-
-  /**
-   * Stale time for analytics data (ms).
-   * Analytics can have longer stale times than transactional queries.
-   */
-  readonly staleTime?: number;
-}
-
-/**
- * Unified table configuration - single source of truth.
- *
- * Combines all table metadata previously scattered across:
- * - DataLayer mutationMap
- * - SyncEngine tableStrategies/tableMergeConfigs
- * - QueryEngine SchemaRegistry
- *
- * @example
- * {
- *   name: 'users',
- *   convex: {
- *     list: api.users.list,
- *     get: api.users.get,
- *     create: api.users.create,
- *     update: api.users.update,
- *     delete: api.users.delete,
- *   },
- *   staleTime: 5 * 60 * 1000,
- *   conflictStrategy: CONFLICT_STRATEGY.LAST_WRITE_WINS,
- *   analytics: {
- *     enabled: true,
- *     freshness: DATA_FRESHNESS.NEAR_REALTIME,
- *   },
- * }
- */
-export interface UnifiedTableConfig {
-  /**
-   * Table name (unique identifier).
-   * Used as key in all registries and for query routing.
-   */
-  readonly name: string;
-
-  // ─── CONVEX API REFERENCES ──────────────────────────────────────────────────
-
-  /**
-   * Convex function references for this table.
-   * Used by DataLayer for API calls and SyncEngine for offline mutations.
-   */
-  readonly convex?: {
-    /** List/query function for fetching multiple records */
-    readonly list?: FunctionReference<'query'>;
-    /** Get function for fetching a single record by ID */
-    readonly get?: FunctionReference<'query'>;
-    /** Create mutation for inserting new records */
-    readonly create?: FunctionReference<'mutation'>;
-    /** Update mutation for modifying existing records */
-    readonly update?: FunctionReference<'mutation'>;
-    /** Delete mutation for removing records */
-    readonly delete?: FunctionReference<'mutation'>;
-  };
-
-  // ─── CACHE CONFIGURATION ────────────────────────────────────────────────────
-
-  /**
-   * Stale time override for this table (ms).
-   * After this time, data is considered stale and may be refetched.
-   * If not set, uses global defaultStaleTime.
-   */
-  readonly staleTime?: number;
-
-  /**
-   * GC time override for this table (ms).
-   * Unused cache entries are garbage collected after this time.
-   * If not set, uses global defaultGcTime.
-   */
-  readonly gcTime?: number;
-
-  // ─── CONFLICT RESOLUTION ────────────────────────────────────────────────────
-
-  /**
-   * Conflict resolution strategy for this table.
-   * Used by SyncEngine when offline mutations conflict with server state.
-   *
-   * @see ConflictStrategy from foundation-data-model
-   */
-  readonly conflictStrategy?: ConflictStrategy;
-
-  /**
-   * Merge configuration for 'merge' conflict strategy.
-   * Defines field-level merge rules.
-   */
-  readonly mergeConfig?: {
-    /** Fields that always use server value */
-    readonly serverFields?: ReadonlyArray<string>;
-    /** Fields that always use client value */
-    readonly clientFields?: ReadonlyArray<string>;
-    /** Fields to deep merge (for nested objects) */
-    readonly deepMergeFields?: ReadonlyArray<string>;
-    /** Custom merge function */
-    readonly customMerge?: (serverValue: unknown, clientValue: unknown, field: string) => unknown;
-  };
-
-  // ─── ANALYTICS CONFIGURATION ────────────────────────────────────────────────
-
-  /**
-   * Analytics (DuckDB) configuration for this table.
-   * Controls when DuckDB is used vs Convex API.
-   */
-  readonly analytics?: TableAnalyticsConfig;
-}
+export type UnifiedTableConfig = SharedUnifiedTableConfig<
+  FunctionReference<'query'>,
+  FunctionReference<'mutation'>
+>;
+export type { TableAnalyticsConfig };
 
 // =============================================================================
 // TABLE REGISTRY
@@ -319,7 +168,7 @@ export class TableRegistry {
    */
   getConvexRef = (
     tableName: string,
-    operation: TableOperation,
+    operation: Operation,
   ): FunctionReference<'query'> | FunctionReference<'mutation'> | undefined => {
     const table = this.tables.get(tableName);
     return table?.convex?.[operation];
@@ -357,7 +206,7 @@ export class TableRegistry {
   /**
    * Check if table has a specific API operation defined.
    */
-  hasConvexRef = (tableName: string, operation: TableOperation): boolean =>
+  hasConvexRef = (tableName: string, operation: Operation): boolean =>
     this.getConvexRef(tableName, operation) !== undefined;
 
   // ─── CACHE ACCESSORS (DataLayer, QueryEngine) ───────────────────────────────

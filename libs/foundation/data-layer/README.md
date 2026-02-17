@@ -1,64 +1,46 @@
 # Foundation Data Layer
 
-`@open-insights-web/foundation-data-layer` is the enterprise React data runtime for Open Insights.
-It unifies Convex reads/writes, offline-first persistence, optimistic mutation orchestration, analytics SQL execution, and background parquet synchronization.
+`@open-insights-web/foundation-data-layer` is the runtime composition layer for data access in Open Insights.
 
-## Table Of Contents
+It combines:
+- Convex query/mutation execution
+- Offline cache persistence via foundation-database
+- Offline queueing and sync orchestration via foundation-sync-engine
+- Optional analytics SQL execution via DuckDB bridge
+- Background parquet sync for analytics tables
 
-- [What This Library Owns](#what-this-library-owns)
-- [Installation And Setup](#installation-and-setup)
-- [Configuration Reference](#configuration-reference)
-- [Public API Reference](#public-api-reference)
-- [Architecture](#architecture)
-- [Advanced Usage](#advanced-usage)
-- [Performance And Caching Guidance](#performance-and-caching-guidance)
-- [Failure Modes And Recovery](#failure-modes-and-recovery)
-- [Migration Guide (Breaking Release)](#migration-guide-breaking-release)
-- [Contributing And Extending](#contributing-and-extending)
-- [Validation Commands](#validation-commands)
-
-## What This Library Owns
-
-This library is the composition layer on top of foundation core packages:
-
-- `@open-insights-web/foundation-data-model`: shared contracts, constants, branded primitives, query-key hashing
-- `@open-insights-web/foundation-database`: IndexedDB/OPFS persistence facade
-- `@open-insights-web/foundation-sync-engine`: offline queue, sync orchestration, conflict handling
-- `@open-insights-web/foundation-bridge`: DuckDB router and SQL helpers
-- `@open-insights-web/foundation-utils`: logging, synchronization primitives, platform utilities
-
-Primary responsibilities:
-
-- Online Convex query/mutation execution
-- Offline query fallback from IndexedDB cache
-- Optimistic create/update/delete with rollback and queueing
-- Analytics SQL query/mutation execution through DuckDB
-- Background parquet download + persistence + sync status
-- Conflict surface and resolution hooks
-
-## Installation And Setup
+## Installation
 
 ```bash
 npm install @open-insights-web/foundation-data-layer @tanstack/react-query convex
 ```
 
-Required runtime assumptions:
-
-- React 18+
-- Browser runtime with IndexedDB support
-- For analytics features: WASM support, workers, and OPFS availability in target environment
-
-Typical environment variables:
-
-- `VITE_CONVEX_URL`: Convex deployment URL
-
-Minimal provider setup:
+## Quick Start
 
 ```tsx
 import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
-import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  DATA_FRESHNESS,
+  type UnifiedTableConfig,
+} from '@open-insights-web/foundation-data-model';
 
-import { api } from '../convex/_generated/api';
+const tables: ReadonlyArray<UnifiedTableConfig> = [
+  {
+    name: 'events',
+    convex: {
+      list: api.events.list,
+      get: api.events.get,
+      create: api.events.create,
+      update: api.events.update,
+      delete: api.events.remove,
+    },
+    analytics: {
+      enabled: true,
+      freshness: DATA_FRESHNESS.NEAR_REALTIME,
+    },
+  },
+];
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (
   <DataLayerProvider
@@ -68,19 +50,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
       enableCrossTab: true,
       enableAnalytics: true,
       datasourceApi: api.datasource.list,
-      tables: [
-        {
-          name: 'events',
-          convex: {
-            list: api.events.list,
-            get: api.events.get,
-            create: api.events.create,
-            update: api.events.update,
-            delete: api.events.remove,
-          },
-          analytics: { enabled: true },
-        },
-      ],
+      tables,
     }}
   >
     {children}
@@ -88,59 +58,40 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 );
 ```
 
-## Configuration Reference
+## Configuration
 
 `DataLayerConfig`:
-
-- `convexUrl` (`string`, required): Convex deployment URL
-- `tables` (`ReadonlyArray<UnifiedTableConfig>`, optional): unified table registry configuration
-- `datasourceApi` (`ConvexQueryReference`, optional): datasource metadata query for background parquet sync
-- `conflictStrategy` (`ConflictStrategy`, optional): default global strategy value from `CONFLICT_STRATEGY`
-- `enableCrossTab` (`boolean`, optional, default `true`)
-- `enableAnalytics` (`boolean`, optional, default `true`)
-- `defaultStaleTime` (`number`, optional)
-- `defaultGcTime` (`number`, optional)
-- `cache` (`CacheConfig`, optional)
-- `debug` (`boolean`, optional)
-- `onSyncError` (`(error, context?) => void`, optional)
-
-`UnifiedTableConfig`:
-
-- `name`
-- `convex` (`list` / `get` / `create` / `update` / `delete`)
-- `staleTime`
-- `gcTime`
+- `convexUrl` (required)
+- `tables` (`ReadonlyArray<UnifiedTableConfig>`)
+- `datasourceApi` (Convex datasource query for background parquet sync)
 - `conflictStrategy`
-- `mergeConfig`
-- `analytics` (`enabled`, `freshness`, `staleTime`)
+- `enableCrossTab` (default `true`)
+- `enableAnalytics` (default `true`)
+- `defaultStaleTime`
+- `defaultGcTime`
+- `cache` (`CacheConfig`)
+- `axiosInstance` (shared transport instance for network-dependent paths)
+- `debug`
+- `onSyncError`
 
-Data-layer constants for operations/freshness:
-
-- `TABLE_OPERATION`
-- `DATA_FRESHNESS`
-- `CONFLICT_RESOLUTION_TYPE`
-
-## Public API Reference
+## Public API
 
 Provider and context:
-
 - `DataLayerProvider`
 - `useDataLayer`
+- `useDataLayerInternals` (advanced integrations)
 
-Core query hooks:
-
+Query hooks:
 - `useDLGet`
 - `useDLGetList`
 - `useDLGetOne`
 
-Core mutation hooks:
-
+Mutation hooks:
 - `useDLCreate`
 - `useDLUpdate`
 - `useDLDelete`
 
 Analytics hooks:
-
 - `useDLAnalytics`
 - `useDLAnalyticsMutation`
 - `useCreateAnalyticsView`
@@ -150,25 +101,20 @@ Analytics hooks:
 - `useCopyToParquet`
 
 Sync/conflict hooks:
-
 - `useSyncStatus`
 - `useSyncTrigger`
 - `useSyncEventListener`
 - `useConflictResolution`
 - `useEntityConflict`
-- `useConflicts`
 - `useBackgroundFileSync`
 
 Advanced composition:
-
 - `DataLayerContainer`
 - `createDataLayerContainer`
 - `TableRegistry`
 - `createTableRegistry`
 
 ## Architecture
-
-High-level composition:
 
 ```mermaid
 flowchart TD
@@ -180,145 +126,61 @@ flowchart TD
   B --> G["Lazy Analytics Runtime"]
   G --> H["DuckDBRouter"]
   G --> I["OpfsManager"]
-  A --> J["DataLayerContext"]
-  A --> K["DataLayerInternalsContext"]
-  K --> L["Hooks (query/mutation/analytics/sync)"]
 ```
 
-Module map:
+Key design choices:
+- Single container instance owns dependency lifecycle
+- Analytics runtime initializes lazily on first analytics use
+- Table registry is the single runtime source for table metadata
+- Shared contracts (operations/freshness/conflict/table config) are defined in `foundation-data-model`
 
-- `src/core`: container, registry, constants, shared types
-- `src/provider`: provider and internal/public contexts
-- `src/hooks`: public hook surface
-- `src/analytics-sync`: table sync + file download services and background sync hook
-- `src/utils`: shared mutation/query/analytics helpers and error handling
+## Background Sync
 
-Architectural constraints in this release:
+`useBackgroundFileSync` flow:
+1. Fetch datasource metadata
+2. Compare remote table metadata with local metadata
+3. Download changed parquet files with progress reporting
+4. Persist file metadata
+5. Invalidate analytics queries
 
-- Internal implementation imports concrete modules directly (no internal barrel-import fan-out)
-- Shared datasource contracts live in `foundation-data-model`
-- Table sync and file download services are container-scoped lazy singletons
-- No `fetch` usage in data-layer runtime; Axios-based download path is used
+The hook now normalizes table lists to avoid unnecessary reruns when callers pass a new array identity with equivalent table names.
 
-## Advanced Usage
+## Performance Notes
 
-Offline-first create/update/delete:
+- Optimistic mutation paths reuse shared helpers to reduce duplicate cache logic.
+- File downloads support bounded concurrency with serialized OPFS writes.
+- Download progress calculations are safe for zero-byte file metadata.
 
-```tsx
-const createEvent = useDLCreate({
-  mutation: api.events.create,
-  table: 'events',
-  listQueryKey: ['events'],
-  onOptimistic: (vars) => ({
-    ...vars,
-    createdAt: new Date().toISOString(),
-  }),
-});
+## Migration Notes (Major Redesign)
 
-await createEvent.mutateAsync({ name: 'offline-safe' });
-if (createEvent.isQueued) {
-  // queued locally; sync-engine will flush on reconnect
-}
-```
+### Shared contracts moved to data-model
+Import these from `@open-insights-web/foundation-data-model`:
+- `OPERATIONS`, `READ_OPERATIONS`, `WRITE_OPERATIONS`
+- `DATA_FRESHNESS`
+- `CONFLICT_RESOLUTION_TYPE`
+- `UnifiedTableConfig`, `TableAnalyticsConfig`
 
-Analytics sync with progress:
+### Data-layer root exports simplified
+`foundation-data-layer` no longer acts as the canonical export surface for shared operation/freshness/conflict contracts. Use data-model for those contracts.
 
-```tsx
-const sync = useBackgroundFileSync({
-  tables: ['events', 'sessions'],
-  enabled: true,
-  onProgress: (state) => {
-    console.log(state.progress, state.filesCompleted, state.filesTotal);
-  },
-});
-```
+### Query-engine alignment
+`foundation-query-engine` now consumes the shared contract definitions from data-model, eliminating duplicated operation/freshness declarations.
 
-Conflict resolution:
+## Contributing
 
-```tsx
-const { conflicts, resolveConflict } = useConflictResolution();
-
-for (const conflict of conflicts) {
-  await resolveConflict(conflict.id, {
-    type: CONFLICT_RESOLUTION_TYPE.ACCEPT_REMOTE,
-  });
-}
-```
-
-## Performance And Caching Guidance
-
-- Analytics runtime is lazy-initialized; no DuckDB startup cost until analytics hooks run.
-- Use table-level `staleTime` and `gcTime` overrides for high-volume tables.
-- Background sync downloads files concurrently, but file writes are serialized to avoid OPFS handle contention.
-- Mutation hooks centralize local-first execution and query invalidation logic through shared helpers.
-- Keep `enableAnalytics` false in deployments that do not require SQL analytics.
-
-## Failure Modes And Recovery
-
-- `No datasource API configured`: configure `datasourceApi` for background file sync.
-- `DuckDB is not available`: verify browser/runtime support and analytics runtime initialization.
-- Offline query misses cache: `useDLGet` throws when neither network nor cache can satisfy a request.
-- Sync pipeline errors: subscribe via `useSyncStatus` and handle `onSyncError` in provider config.
-- Conflict accumulation: resolve through `useConflictResolution` or apply a bulk strategy (`resolveAll`).
-
-## Migration Guide (Breaking Release)
-
-This release includes intentional breaking changes for strict typing and naming consistency.
-
-### Constant renames
-
-- `ErrorSeverity` -> `ERROR_SEVERITY`
-- `HookContext` -> `HOOK_CONTEXT`
-
-No legacy aliases are retained.
-
-### Mutation return typing
-
-- `DLMutationResult.mutateAsync` now returns `Promise<TData | undefined>`.
-- `useDLDelete` offline path returns `undefined` as a typed result.
-
-### Data source type consolidation
-
-Datasource contracts are centralized in `foundation-data-model` and consumed by data-layer/query-engine:
-
-- `DataSourceFileInfo`
-- `DataSourceTableInfo`
-- `DataSourceMetadata`
-- `DataSourceResponse`
-- `DataSourceRequest`
-
-### Const-backed option types
-
-String-literal options were replaced or normalized to const-backed values where applicable.
-Use exported constants instead of handwritten string unions.
-
-### Internal import policy
-
-Implementation code should import concrete modules directly.
-Only package-root API exports should be consumed by downstream libraries/apps.
-
-## Contributing And Extending
-
-Engineering rules for this library:
-
-- Keep strict TypeScript compatibility (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
-- Avoid explicit `undefined` assignment to optional props unless the type allows it.
-- Use `UPPER_SNAKE_CASE` for constants and `PascalCase` for types/interfaces/enums.
-- Prefer shared utilities over duplicated hook logic.
-- Keep public hook behavior documented with concise JSDoc.
-- Use Axios (or configured Axios instances) for HTTP operations.
-
-When adding new hook features:
-
-1. Add or reuse utility logic in `src/utils` first.
-2. Keep hook files thin and strategy-driven.
-3. Add tests in `src/hooks/*.spec.tsx` for online/offline and error behavior.
-4. Update root exports in `src/index.ts` only for intended public surface.
+Development guidelines:
+- Keep strict TypeScript compatibility
+- Keep data-layer hooks thin and move reusable logic into `src/utils`
+- Prefer direct module imports over excessive barrel indirection
+- Use axios (or injected `axiosInstance`) for HTTP operations
 
 ## Validation Commands
 
 ```bash
-npx eslint libs/foundation/data-layer/src --ext .ts,.tsx --max-warnings=0
-npx vitest run libs/foundation/data-layer/src
-npx tsc -b libs/foundation/bridge/tsconfig.lib.json libs/foundation/data-model/tsconfig.lib.json libs/foundation/data-layer/tsconfig.lib.json libs/foundation/query-engine/tsconfig.lib.json
+npx tsc -p libs/foundation/data-model/tsconfig.lib.json --noEmit
+npx tsc -p libs/foundation/data-layer/tsconfig.lib.json --noEmit
+npx tsc -p libs/foundation/query-engine/tsconfig.lib.json --noEmit
+npx vitest run --config libs/foundation/data-layer/vite.config.mts
+npx vitest run --config libs/foundation/query-engine/vite.config.mts
+npx eslint libs/foundation/data-layer/src --ext .ts,.tsx,.js,.jsx --max-warnings=0
 ```

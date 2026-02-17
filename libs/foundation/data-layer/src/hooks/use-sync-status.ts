@@ -51,7 +51,7 @@ const isLeaderChangedEventData = (data: unknown): data is LeaderChangedEventData
   data !== null &&
   typeof data === 'object' &&
   'isLeader' in data &&
-  typeof (data as { isLeader?: unknown }).isLeader === 'boolean';
+  typeof (data as Record<string, unknown>).isLeader === 'boolean';
 
 /**
  * Hook for monitoring sync status

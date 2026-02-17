@@ -223,6 +223,34 @@ export {
 } from './query-keys';
 
 // ============================================================================
+// Cross-library contracts (used by data-layer and query-engine)
+// ============================================================================
+
+export {
+  OPERATIONS,
+  READ_OPERATIONS,
+  WRITE_OPERATIONS,
+  isOperation,
+  isReadOperation,
+  isWriteOperation,
+  isMutationOperation,
+  DATA_FRESHNESS,
+  CONFLICT_RESOLUTION_TYPE,
+} from './contracts';
+
+export type {
+  Operation,
+  ReadOperation,
+  WriteOperation,
+  DataFreshnessLevel,
+  ConflictResolutionType,
+  UnifiedTableConfig,
+  UnifiedTableConvexConfig,
+  UnifiedTableMergeConfig,
+  TableAnalyticsConfig,
+} from './contracts';
+
+// ============================================================================
 // Datasource contracts (used by data-layer and query-engine)
 // ============================================================================
 

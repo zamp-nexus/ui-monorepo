@@ -21,6 +21,7 @@ import {
   DisposedError,
   type IDisposable,
 } from '@open-insights-web/foundation-utils';
+import { DATA_FRESHNESS } from '@open-insights-web/foundation-data-model';
 
 import type {
   DecisionContext,
@@ -402,7 +403,8 @@ const analyticsPreferredRule: DecisionRule = {
   match: (_query, context, _factors, options) => {
     if (!options?.preferAnalytics) return false;
     const config = context.tableConfigs.get(context.tables[0]);
-    return config?.analytics?.freshness === 'eventual';
+    const freshness = config?.analytics?.freshness as string | undefined;
+    return freshness === DATA_FRESHNESS.EVENTUAL || freshness === 'eventual';
   },
   decide: (_query, context, factors) => ({
     path: DECISION_PATHS.DUCKDB,

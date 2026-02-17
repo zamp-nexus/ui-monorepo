@@ -7,7 +7,7 @@
  * @module utils/mutation-helpers
  */
 
-import type { QueryClient, QueryKey, UseMutationResult } from '@tanstack/react-query';
+import type { InvalidateQueryFilters, QueryClient, QueryKey, UseMutationResult } from '@tanstack/react-query';
 
 import {
   hashQueryKey,
@@ -41,8 +41,16 @@ import type { DLMutationResult } from '../core/types';
 export const invalidateQueries = async (
   queryClient: QueryClient,
   keys: QueryKey[],
+  options?: Pick<InvalidateQueryFilters, 'refetchType'>,
 ): Promise<void> => {
-  await Promise.all(keys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
+  await Promise.all(
+    keys.map((key) =>
+      queryClient.invalidateQueries({
+        queryKey: key,
+        ...(options?.refetchType !== undefined ? { refetchType: options.refetchType } : {}),
+      }),
+    ),
+  );
 };
 
 /**

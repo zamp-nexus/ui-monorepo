@@ -21,7 +21,6 @@ import { useCallback, useMemo } from 'react';
 
 import {
   createAnalyticsQueryKey,
-  DATA_FRESHNESS,
   useBackgroundFileSync,
   useDataLayerInternals,
   useDLAnalytics,
@@ -42,7 +41,6 @@ import {
 } from '../types/decision';
 import { OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
-import type { AnalyticsFreshness } from '../types/table';
 import { getAnyQueryReference, getListQueryReference } from './internal/data-layer-adapters';
 import {
   DATA_SOURCES,
@@ -54,19 +52,6 @@ import {
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
-
-const mapAnalyticsFreshness = (freshness: string | undefined): AnalyticsFreshness | undefined => {
-  switch (freshness) {
-    case DATA_FRESHNESS.REALTIME:
-      return 'realtime';
-    case DATA_FRESHNESS.NEAR_REALTIME:
-      return 'near-realtime';
-    case DATA_FRESHNESS.EVENTUAL:
-      return 'eventual';
-    default:
-      return undefined;
-  }
-};
 
 const selectQueryResultData = <TData>(rawData: unknown, select?: (data: unknown) => TData): TData =>
   select ? select(rawData) : (rawData as TData);
@@ -147,10 +132,11 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
     for (const tableName of tables) {
       const config = tableRegistry.getTable(tableName);
       if (config) {
-        const mappedFreshness = mapAnalyticsFreshness(config.analytics?.freshness);
         configs.set(tableName, {
           convex: config.convex,
-          ...(mappedFreshness !== undefined ? { analytics: { freshness: mappedFreshness } } : {}),
+          ...(config.analytics?.freshness !== undefined
+            ? { analytics: { freshness: config.analytics.freshness } }
+            : {}),
         });
       }
     }

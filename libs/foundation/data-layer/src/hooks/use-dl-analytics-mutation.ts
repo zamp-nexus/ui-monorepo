@@ -22,6 +22,7 @@ import {
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { getAnalyticsRouterOrThrow } from '../utils/analytics-runtime';
 import { createScopedErrorHandler } from '../utils/error-handler';
+import { invalidateQueries } from '../utils/mutation-helpers';
 
 // =============================================================================
 // Error Handling
@@ -181,9 +182,7 @@ export const useDLAnalyticsMutation = <TVariables = void>(
     onSuccess: async (data, variables) => {
       // Invalidate related queries
       if (invalidateKeys.length > 0) {
-        await Promise.all(
-          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key })),
-        );
+        await invalidateQueries(queryClient, invalidateKeys);
       }
 
       if (onSuccess) {

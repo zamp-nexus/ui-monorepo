@@ -22,12 +22,13 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
+  CONFLICT_RESOLUTION_TYPE,
   SYNC_EVENT_TYPE,
   SYNC_STATE_KEY,
   toJsonSerializable,
+  type ConflictResolutionType,
 } from '@open-insights-web/foundation-data-model';
 
-import { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType } from '../core/constants';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';
 

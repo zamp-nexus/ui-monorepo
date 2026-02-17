@@ -17,6 +17,18 @@ vi.mock('@open-insights-web/foundation-data-model', () => ({
   hashQueryKey: vi.fn((key: unknown[]) => `hash_${key.join('_')}`),
   SCHEMA_VERSION: 1,
   toJsonSerializable: vi.fn((data: unknown) => data),
+  OPERATIONS: {
+    GET: 'get',
+    LIST: 'list',
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+  },
+  CONFLICT_RESOLUTION_TYPE: {
+    ACCEPT_LOCAL: 'accept-local',
+    ACCEPT_REMOTE: 'accept-remote',
+    MERGE: 'merge',
+  },
 }));
 
 // Mock the foundation-utils for TIME_MS

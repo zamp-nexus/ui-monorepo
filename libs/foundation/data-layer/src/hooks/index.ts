@@ -78,8 +78,6 @@ export {
 export {
   useConflictResolution,
   useEntityConflict,
-  useConflicts,
-  ConflictsProvider,
   type ConflictInfo,
   type ConflictResolution,
 } from './use-conflict-resolution';

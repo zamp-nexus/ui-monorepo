@@ -27,6 +27,7 @@ import type { SyncEvent } from '@open-insights-web/foundation-data-model';
 import { SYNC_EVENT_TYPE } from '@open-insights-web/foundation-data-model';
 import { createLogger, hashPayloadSync, type Logger } from '@open-insights-web/foundation-utils';
 
+import { createContainerConfig, getDatasourceApiFingerprint } from '../core/config-normalization';
 import { DataLayerContainer, type DataLayerDependencies } from '../core/container';
 import type { DataLayerConfig, DataLayerContextValue } from '../core/types';
 import { DataLayerContext } from './data-layer-context';
@@ -46,22 +47,6 @@ export interface DataLayerProviderProps {
   /** Error component */
   readonly errorComponent?: (error: Error) => ReactNode;
 }
-
-const getDatasourceApiFingerprint = (
-  datasourceApi: DataLayerConfig['datasourceApi'],
-): Record<string, unknown> | null => {
-  if (!datasourceApi || typeof datasourceApi !== 'object') {
-    return null;
-  }
-
-  const value = datasourceApi as Record<string, unknown>;
-  return {
-    type: value['_type'] ?? null,
-    visibility: value['_visibility'] ?? null,
-    name: value['_name'] ?? null,
-    path: value['_path'] ?? null,
-  };
-};
 
 // =============================================================================
 // Provider Component
@@ -154,36 +139,7 @@ export const DataLayerProvider = ({
     const currentConfig = configRef.current;
 
     // Create container with current config
-    const container = new DataLayerContainer({
-      convexUrl: currentConfig.convexUrl,
-      ...(currentConfig.tables !== undefined ? { tables: currentConfig.tables } : {}),
-      ...(currentConfig.datasourceApi !== undefined
-        ? { datasourceApi: currentConfig.datasourceApi }
-        : {}),
-      ...(currentConfig.conflictStrategy !== undefined
-        ? { conflictStrategy: currentConfig.conflictStrategy }
-        : {}),
-      ...(currentConfig.enableCrossTab !== undefined
-        ? { enableCrossTab: currentConfig.enableCrossTab }
-        : {}),
-      ...(currentConfig.enableAnalytics !== undefined
-        ? { enableAnalytics: currentConfig.enableAnalytics }
-        : {}),
-      ...(currentConfig.defaultStaleTime !== undefined
-        ? { defaultStaleTime: currentConfig.defaultStaleTime }
-        : {}),
-      ...(currentConfig.defaultGcTime !== undefined
-        ? { defaultGcTime: currentConfig.defaultGcTime }
-        : {}),
-      ...(currentConfig.cache !== undefined ? { cache: currentConfig.cache } : {}),
-      ...(currentConfig.axiosInstance !== undefined
-        ? { axiosInstance: currentConfig.axiosInstance }
-        : {}),
-      ...(currentConfig.debug !== undefined ? { debug: currentConfig.debug } : {}),
-      ...(currentConfig.onSyncError !== undefined
-        ? { onSyncError: currentConfig.onSyncError }
-        : {}),
-    });
+    const container = new DataLayerContainer(createContainerConfig(currentConfig));
 
     containerRef.current = container;
 
