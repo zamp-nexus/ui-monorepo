@@ -20,7 +20,6 @@ import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex
 import type {
   ConflictStrategy,
   SyncState,
-  TableAnalyticsConfig,
   UnifiedTableConfig as SharedUnifiedTableConfig,
 } from '@open-insights-web/foundation-data-model';
 
@@ -46,11 +45,10 @@ export type ConvexQueryReference = FunctionReference<
  */
 export type AnyFunctionReference = FunctionReference<'query', ConvexFunctionVisibility>;
 
-export type UnifiedTableConfig = SharedUnifiedTableConfig<
+type DataLayerUnifiedTableConfig = SharedUnifiedTableConfig<
   FunctionReference<'query'>,
   FunctionReference<'mutation'>
 >;
-export type { TableAnalyticsConfig };
 
 // =============================================================================
 // Configuration
@@ -94,7 +92,7 @@ export interface DataLayerConfig {
    * - SyncEngine (conflict resolution, offline sync)
    * - QueryEngine (routing decisions, analytics)
    */
-  readonly tables?: ReadonlyArray<UnifiedTableConfig>;
+  readonly tables?: ReadonlyArray<DataLayerUnifiedTableConfig>;
 
   /**
    * Global datasource API reference for background file sync.

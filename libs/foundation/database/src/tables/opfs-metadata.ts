@@ -3,10 +3,8 @@
  * @module tables/opfs-metadata
  */
 
-import { OPFS_FILE_TYPE, type OpfsFileType } from '@open-insights-web/foundation-data-model';
+import type { OpfsFileType } from '@open-insights-web/foundation-data-model';
 import { hasCircularDependency, topologicalSort } from '@open-insights-web/foundation-utils';
-
-export { OPFS_FILE_TYPE };
 
 /**
  * OPFS file metadata entry

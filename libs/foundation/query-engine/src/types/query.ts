@@ -8,12 +8,17 @@
  */
 
 import type { QueryId } from '@open-insights-web/foundation-data-model';
+import {
+  isMutationOperation,
+  isReadOperation,
+  OPERATIONS,
+  type Operation,
+} from '@open-insights-web/foundation-data-model';
 
 import type { DimensionSpec } from './dimension';
 import type { FilterExpression } from './filter';
 import type { JoinSpec } from './join';
 import type { MeasureSpec } from './measure';
-import { isMutationOperation, isReadOperation, OPERATIONS, type Operation } from './operations';
 import type { OrderBySpec } from './order';
 import type { TimeDimensionSpec } from './time';
 

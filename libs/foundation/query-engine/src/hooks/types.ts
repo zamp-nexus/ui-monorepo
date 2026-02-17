@@ -9,12 +9,12 @@
 
 import type { QueryKey } from '@tanstack/react-query';
 
-import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import {
   isMutationOperation as isCoreMutationOperation,
   WRITE_OPERATIONS,
-  type WriteOperation,
-} from '../types/operations';
+} from '@open-insights-web/foundation-data-model';
+
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import { QUERY_DATA_SOURCES, type Query, type DataSource as QueryDataSource } from '../types/query';
 
 // =============================================================================
@@ -234,7 +234,7 @@ export const MUTATION_OPERATIONS = {
 /**
  * Mutation operation type derived from MUTATION_OPERATIONS
  */
-export type MutationOperation = WriteOperation;
+export type MutationOperation = (typeof MUTATION_OPERATIONS)[keyof typeof MUTATION_OPERATIONS];
 
 export const MUTATION_RESULT_OPERATIONS = {
   ...MUTATION_OPERATIONS,

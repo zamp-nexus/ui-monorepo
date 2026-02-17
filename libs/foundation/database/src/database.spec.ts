@@ -10,6 +10,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  DATABASE_TRANSACTION_MODE,
+  DATABASE_TRANSACTION_TABLE,
   createTableSyncMetadataEntry,
   FOUNDATION_ERROR_CODE,
   getFilesNeedingDownload as getSharedFilesNeedingDownload,
@@ -31,17 +33,8 @@ import {
   isDatabaseError,
   isQuotaExceededError,
 } from './errors';
-import {
-  DATABASE_TRANSACTION_MODE,
-  DATABASE_TRANSACTION_TABLE,
-  getDatabaseFacade,
-  resetDatabaseFacade,
-} from './facade/database-facade';
+import { getDatabaseFacade, resetDatabaseFacade } from './facade/database-facade';
 import { isDuckDBViewsValue, isLastSyncValue, isNetworkStatus } from './tables/sync-state';
-import {
-  getFilesNeedingDownload as getLocalFilesNeedingDownload,
-  needsTableUpdate as needsLocalTableUpdate,
-} from './tables/table-sync-metadata';
 import {
   // Utils
   generateIdempotencyKey,
@@ -472,11 +465,11 @@ describe('DatabaseFacade lifecycle', () => {
 });
 
 // =============================================================================
-// Shared Contract Re-Export Tests
+// Shared Contract Tests
 // =============================================================================
 
 describe('Shared table sync helpers', () => {
-  it('should re-export table sync helpers from foundation-data-model', () => {
+  it('should evaluate table sync helpers from foundation-data-model', () => {
     const localMetadata = createTableSyncMetadataEntry('sessions', 100, {
       'sessions.parquet': 'hash-1',
     });
@@ -485,11 +478,9 @@ describe('Shared table sync helpers', () => {
       { filename: 'events.parquet', hash: 'hash-2' },
     ];
 
-    expect(needsLocalTableUpdate(localMetadata, 101)).toBe(
-      needsSharedTableUpdate(localMetadata, 101),
-    );
-    expect(getLocalFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)).toEqual(
-      getSharedFilesNeedingDownload(localMetadata.fileHashes, remoteFiles),
-    );
+    expect(needsSharedTableUpdate(localMetadata, localMetadata.loadedAt + 1)).toBe(true);
+    expect(getSharedFilesNeedingDownload(localMetadata.fileHashes, remoteFiles)).toEqual([
+      remoteFiles[1],
+    ]);
   });
 });

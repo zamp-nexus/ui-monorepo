@@ -16,11 +16,11 @@ import type { FunctionReference } from 'convex/server';
 import {
   CONFLICT_STRATEGY,
   DATA_FRESHNESS,
+  WRITE_OPERATIONS,
   type ConflictStrategy,
   type DataFreshnessLevel,
+  type WriteOperation,
 } from '@open-insights-web/foundation-data-model';
-
-import { WRITE_OPERATIONS, type WriteOperation } from './operations';
 
 // =============================================================================
 // TABLE SOURCE
@@ -96,11 +96,6 @@ export type TableFileType = (typeof TABLE_FILE_TYPES)[keyof typeof TABLE_FILE_TY
 export const ANALYTICS_FRESHNESS_LEVELS = {
   ...DATA_FRESHNESS,
 } as const;
-
-/**
- * Analytics freshness type derived from ANALYTICS_FRESHNESS_LEVELS.
- */
-export type AnalyticsFreshness = DataFreshnessLevel;
 
 // =============================================================================
 // CONVEX FUNCTION REFERENCES
@@ -258,7 +253,7 @@ export interface TableConfig {
     /** Whether analytics is enabled for this table */
     readonly enabled?: boolean;
     /** Data freshness requirement */
-    readonly freshness?: AnalyticsFreshness;
+    readonly freshness?: DataFreshnessLevel;
     /** Analytics-specific stale time */
     readonly staleTime?: number;
   };

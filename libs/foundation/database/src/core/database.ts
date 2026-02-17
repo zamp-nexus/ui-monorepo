@@ -14,7 +14,11 @@
 import Dexie, { type Table } from 'dexie';
 import isEqual from 'fast-deep-equal';
 
-import { MUTATION_STATUS } from '@open-insights-web/foundation-data-model';
+import {
+  MUTATION_STATUS,
+  type MutationQueueEntry,
+  type TableSyncMetadataEntry,
+} from '@open-insights-web/foundation-data-model';
 import {
   createDebugLogger,
   createDeepEqualComparison,
@@ -23,11 +27,9 @@ import {
   type Logger,
 } from '@open-insights-web/foundation-utils';
 
-import type { MutationQueueEntry } from '../tables/mutation-queue';
 import type { OpfsMetadataEntry } from '../tables/opfs-metadata';
 import type { QueryCacheEntry } from '../tables/query-cache';
 import type { SyncStateEntry } from '../tables/sync-state';
-import type { TableSyncMetadataEntry } from '../tables/table-sync-metadata';
 import type { DatabaseConfig } from './config';
 import { mergeConfig } from './config';
 

@@ -17,9 +17,14 @@ import { ConvexQueryClient } from '@convex-dev/react-query';
 import { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 import { ConvexReactClient } from 'convex/react';
+import type { FunctionReference } from 'convex/server';
 
 import { DuckDBRouter } from '@open-insights-web/foundation-bridge';
-import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  type ConflictStrategy,
+  type UnifiedTableConfig as SharedUnifiedTableConfig,
+} from '@open-insights-web/foundation-data-model';
 import { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
 import {
   createSyncCoordinator,
@@ -38,12 +43,12 @@ import {
   resolveCacheConfig,
 } from './constants';
 import { createTableRegistry, type TableRegistry } from './table-registry';
-import type {
-  CacheConfig,
-  ConvexQueryReference,
-  ResolvedCacheConfig,
-  UnifiedTableConfig,
-} from './types';
+import type { CacheConfig, ConvexQueryReference, ResolvedCacheConfig } from './types';
+
+type UnifiedTableConfig = SharedUnifiedTableConfig<
+  FunctionReference<'query'>,
+  FunctionReference<'mutation'>
+>;
 
 /**
  * Dependencies managed by the container

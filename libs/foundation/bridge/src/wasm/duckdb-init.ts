@@ -50,9 +50,12 @@ export interface DuckDBInstance {
 export const createDuckDBInstance = async (logger?: duckdb.Logger): Promise<DuckDBInstance> => {
   // Select the best bundle based on browser capabilities
   const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+  if (!bundle.mainWorker) {
+    throw new Error('DuckDB bundle is missing a mainWorker entry');
+  }
 
   // Create the worker from the selected bundle
-  const worker = new Worker(bundle.mainWorker!);
+  const worker = new Worker(bundle.mainWorker);
 
   // Create the async DuckDB instance
   const db = new duckdb.AsyncDuckDB(logger ?? new duckdb.ConsoleLogger(), worker);

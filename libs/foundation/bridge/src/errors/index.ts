@@ -13,15 +13,8 @@
 // Base error class and type guard
 export { BridgeError, isBridgeError } from './base-error';
 
-// Query errors - CANCELLATION_REASON is const (CAPITAL_SNAKE), CancellationReasonKind is type (PascalCase)
-export {
-  QueryTimeoutError,
-  QueryCancelledError,
-  QueryExecutionError,
-  SqlValidationError,
-  CANCELLATION_REASON,
-} from './query-errors';
-export type { CancellationReasonKind } from './query-errors';
+// Bridge-owned query error
+export { SqlValidationError } from './query-errors';
 
 // Pool errors
 export {

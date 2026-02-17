@@ -32,8 +32,6 @@ export {
   type PoolStatus,
 
   // Error types
-  QueryTimeoutError,
-  QueryCancelledError,
   WorkerError,
   PoolShutdownError,
 } from './pool';

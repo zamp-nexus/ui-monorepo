@@ -1,12 +1,11 @@
-import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
+import {
+  CONFLICT_STRATEGY,
+  DATA_FRESHNESS,
+  type UnifiedTableConfig,
+} from '@open-insights-web/foundation-data-model';
 import { TIME_MS } from '@open-insights-web/foundation-utils';
 
-import {
-  createTableRegistry,
-  DATA_FRESHNESS,
-  TableRegistry,
-  type UnifiedTableConfig,
-} from './table-registry';
+import { createTableRegistry, TableRegistry } from './table-registry';
 
 // =============================================================================
 // MOCK DATA

@@ -248,6 +248,7 @@ export class DuckDBRouter implements DuckDBBridge {
     if (this.viewDefinitions.size === 0 || !this.bridge) {
       return;
     }
+    const bridge = this.bridge;
 
     // Build dependency graph levels (topological sort)
     const levels = this.buildViewDependencyLevels();
@@ -269,7 +270,7 @@ export class DuckDBRouter implements DuckDBBridge {
       const results = await Promise.allSettled(
         level.map(async (view) => {
           try {
-            await this.bridge!.createView(view);
+            await bridge.createView(view);
             this.logger.debug('Restored view', { name: view.name });
             return { name: view.name, success: true };
           } catch (error) {

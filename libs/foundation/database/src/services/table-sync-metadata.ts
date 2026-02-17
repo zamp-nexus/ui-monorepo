@@ -7,8 +7,9 @@
  * @module services/table-sync-metadata
  */
 
+import type { TableSyncMetadataEntry } from '@open-insights-web/foundation-data-model';
+
 import type {
-  TableSyncMetadataEntry,
   TableSyncMetadataOperations,
 } from '../tables/table-sync-metadata';
 import { assertValid } from '../validation/assert-valid';

@@ -3,16 +3,7 @@
  * @module tables/table-sync-metadata
  */
 
-import {
-  createTableSyncMetadataEntry,
-  getFilesNeedingDownload,
-  needsTableUpdate,
-  type TableSyncMetadataEntry,
-} from '@open-insights-web/foundation-data-model';
-
-export { createTableSyncMetadataEntry, getFilesNeedingDownload, needsTableUpdate };
-
-export type { TableSyncMetadataEntry };
+import type { TableSyncMetadataEntry } from '@open-insights-web/foundation-data-model';
 
 /**
  * Table sync metadata operations interface

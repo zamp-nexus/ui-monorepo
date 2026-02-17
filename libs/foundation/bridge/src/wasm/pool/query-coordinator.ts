@@ -11,7 +11,12 @@
  * @module wasm/pool/query-coordinator
  */
 
-import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
+import {
+  QueryCancelledError,
+  QueryId,
+  QueryTimeoutError,
+  Timestamp,
+} from '@open-insights-web/foundation-data-model';
 import {
   createDebugLogger,
   createDeferred,
@@ -22,7 +27,6 @@ import {
 
 import { PRIORITY, QUERY_MODE } from '../../constants';
 import { PoolCapacityError, PoolShutdownError } from '../../errors/pool-errors';
-import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
 import type {
   DuckDBPoolConfig,
   PoolQueryResult,

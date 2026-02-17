@@ -83,8 +83,6 @@ export {
 export type {
   CacheConfig,
   ResolvedCacheConfig,
-  UnifiedTableConfig,
-  TableAnalyticsConfig,
   BaseMutationOptions,
   DLMutationResult,
   OptimisticMetadata,

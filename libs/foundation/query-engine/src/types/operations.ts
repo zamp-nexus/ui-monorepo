@@ -1,21 +1,8 @@
 /**
- * Query operation contracts re-exported from foundation-data-model.
- *
  * @module types/operations
+ *
+ * Query operation contracts are owned by `@open-insights-web/foundation-data-model`.
+ * Import them directly from that package.
  */
 
-export {
-  OPERATIONS,
-  READ_OPERATIONS,
-  WRITE_OPERATIONS,
-  isOperation,
-  isReadOperation,
-  isWriteOperation,
-  isMutationOperation,
-} from '@open-insights-web/foundation-data-model';
-
-export type {
-  Operation,
-  ReadOperation,
-  WriteOperation,
-} from '@open-insights-web/foundation-data-model';
+export {};

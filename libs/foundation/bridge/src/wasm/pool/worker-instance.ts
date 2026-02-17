@@ -10,7 +10,11 @@
 import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
 import type { QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
-import { Timestamp } from '@open-insights-web/foundation-data-model';
+import {
+  QueryCancelledError,
+  QueryExecutionError,
+  Timestamp,
+} from '@open-insights-web/foundation-data-model';
 import type { Logger } from '@open-insights-web/foundation-utils';
 import {
   createDebugLogger,
@@ -22,7 +26,6 @@ import {
 
 import { convertArrowToQueryResult } from '../../duckdb/arrow-converter';
 import { WorkerError, WorkerInitializationError } from '../../errors/pool-errors';
-import { QueryCancelledError, QueryExecutionError } from '../../errors/query-errors';
 import { WORKER_STATUS } from '../../types';
 import type { QueryResult, WorkerInfo, WorkerStatus } from '../../types';
 import { createDuckDBInstance } from '../duckdb-init';
@@ -335,7 +338,10 @@ export class WorkerInstance {
 
     // Status can change asynchronously during loop execution
     while (this.queue.length > 0 && !this.isShutdownStatus()) {
-      const queuedQuery = this.queue.shift()!;
+      const queuedQuery = this.queue.shift();
+      if (!queuedQuery) {
+        continue;
+      }
       this.currentQuery = queuedQuery;
       this._status = WORKER_STATUS.BUSY;
       this.lastActivityAt = Timestamp.now();

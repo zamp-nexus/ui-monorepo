@@ -110,17 +110,11 @@ export {
 // =============================================================================
 
 export {
-  OPERATIONS,
-  READ_OPERATIONS,
-  WRITE_OPERATIONS,
   QUERY_BACKENDS,
   QUERY_DATA_SOURCES,
   FRESHNESS_REQUIREMENTS,
   DECISION_PATHS,
   DECISION_REASONS,
-  type Operation,
-  type ReadOperation,
-  type WriteOperation,
   type Query,
   type QueryBackend,
   type DataSource,

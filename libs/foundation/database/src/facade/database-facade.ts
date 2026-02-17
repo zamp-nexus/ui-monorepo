@@ -31,9 +31,6 @@ import { QueryCacheService } from '../services/query-cache';
 import { SyncStateService } from '../services/sync-state';
 import { TableSyncMetadataService } from '../services/table-sync-metadata';
 
-export { DATABASE_TRANSACTION_MODE, DATABASE_TRANSACTION_TABLE };
-export type { DatabaseTransactionMode, DatabaseTransactionTable };
-
 const DEXIE_TRANSACTION_MODE_MAP: Record<DatabaseTransactionMode, TransactionMode> = {
   [DATABASE_TRANSACTION_MODE.READ]: 'r',
   [DATABASE_TRANSACTION_MODE.READ_WRITE]: 'rw',

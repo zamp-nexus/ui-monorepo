@@ -7,9 +7,8 @@
  */
 
 import { QUERY_ENGINE_PATHS } from '../internal/constants';
-import type { Operation } from './operations';
+import type { DataFreshnessLevel, Operation } from '@open-insights-web/foundation-data-model';
 import type { Query } from './query';
-import type { AnalyticsFreshness } from './table';
 
 /**
  * Canonical query-engine execution paths used by DecisionEngine.
@@ -176,7 +175,7 @@ export interface DecisionTableConfig {
     readonly delete?: unknown;
   };
   readonly analytics?: {
-    readonly freshness?: AnalyticsFreshness;
+    readonly freshness?: DataFreshnessLevel;
   };
 }
 

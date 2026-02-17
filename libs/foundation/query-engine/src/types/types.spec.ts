@@ -8,6 +8,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MemberRef,
+  isOperation,
+  isReadOperation,
+  isWriteOperation,
+  OPERATIONS,
   QueryId,
   SqlTableName as TableName,
 } from '@open-insights-web/foundation-data-model';
@@ -27,7 +31,6 @@ import {
 } from './filter';
 import { isJoinSpec, isJoinType, JOIN_TYPES } from './join';
 import { isMeasureSpec } from './measure';
-import { isOperation, isReadOperation, isWriteOperation, OPERATIONS } from './operations';
 import { isMutationQuery, isQueryBackend, isReadQuery, QUERY_BACKENDS } from './query';
 import {
   isDateRange,

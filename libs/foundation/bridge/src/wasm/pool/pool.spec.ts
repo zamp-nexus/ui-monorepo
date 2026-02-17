@@ -14,10 +14,15 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { Milliseconds, QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
+import {
+  Milliseconds,
+  QueryCancelledError,
+  QueryId,
+  QueryTimeoutError,
+  WorkerId,
+} from '@open-insights-web/foundation-data-model';
 
 import { PoolShutdownError, WorkerError } from '../../errors/pool-errors';
-import { QueryCancelledError, QueryTimeoutError } from '../../errors/query-errors';
 import { PriorityQueue } from './priority-queue';
 import { TableLockManager } from './table-lock-manager';
 

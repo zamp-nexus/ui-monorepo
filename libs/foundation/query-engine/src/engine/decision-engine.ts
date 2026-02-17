@@ -21,7 +21,12 @@ import {
   DisposedError,
   type IDisposable,
 } from '@open-insights-web/foundation-utils';
-import { DATA_FRESHNESS } from '@open-insights-web/foundation-data-model';
+import {
+  DATA_FRESHNESS,
+  isMutationOperation,
+  OPERATIONS,
+  WRITE_OPERATIONS,
+} from '@open-insights-web/foundation-data-model';
 
 import type {
   DecisionContext,
@@ -31,7 +36,6 @@ import type {
   DecisionRule,
 } from '../types/decision';
 import { DECISION_PATHS, DECISION_REASONS } from '../types/decision';
-import { isMutationOperation, OPERATIONS, WRITE_OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
 import { TableExtractor } from './table-extractor';
 

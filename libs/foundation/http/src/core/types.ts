@@ -8,9 +8,6 @@
 
 import type { AxiosInstance } from 'axios';
 
-// Re-export HttpMethod from data-model for convenience within this library
-export type { HttpMethod } from '@open-insights-web/foundation-data-model';
-
 /**
  * HTTP retry configuration
  *

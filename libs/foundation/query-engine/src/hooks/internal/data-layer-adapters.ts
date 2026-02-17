@@ -11,7 +11,7 @@ import {
   WRITE_OPERATIONS,
   type Operation,
   type WriteOperation,
-} from '../../types/operations';
+} from '@open-insights-web/foundation-data-model';
 
 type QueryFunctionReference = FunctionReference<'query'>;
 type MutationFunctionReference = FunctionReference<'mutation'>;

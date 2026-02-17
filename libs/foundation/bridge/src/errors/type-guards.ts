@@ -7,6 +7,12 @@
  */
 
 import {
+  QueryCancelledError,
+  QueryExecutionError,
+  QueryTimeoutError,
+} from '@open-insights-web/foundation-data-model';
+
+import {
   BridgeInitializationError,
   BridgeNotInitializedError,
   ConfigurationError,
@@ -22,9 +28,6 @@ import {
   WorkerInitializationError,
 } from './pool-errors';
 import {
-  QueryCancelledError,
-  QueryExecutionError,
-  QueryTimeoutError,
   SqlValidationError,
 } from './query-errors';
 

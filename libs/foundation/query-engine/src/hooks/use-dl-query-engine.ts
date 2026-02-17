@@ -26,6 +26,7 @@ import {
   useDLAnalytics,
   useDLGetList,
 } from '@open-insights-web/foundation-data-layer';
+import { OPERATIONS } from '@open-insights-web/foundation-data-model';
 import { EMPTY_ARRAY, EMPTY_OBJECT, hashPayloadSync } from '@open-insights-web/foundation-utils';
 
 import { getSqlCompiler } from '../compiler/sql-compiler';
@@ -39,7 +40,6 @@ import {
   type DecisionResult,
   type DecisionTableConfig,
 } from '../types/decision';
-import { OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
 import { getAnyQueryReference, getListQueryReference } from './internal/data-layer-adapters';
 import {

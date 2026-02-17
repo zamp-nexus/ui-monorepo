@@ -103,27 +103,26 @@ const count = await db.queries.count();
 
 ### Transaction constants
 
-- `DATABASE_TRANSACTION_MODE`
-  - `READ`
-  - `READ_WRITE`
-- `DATABASE_TRANSACTION_TABLE`
-  - `QUERIES`
-  - `MUTATIONS`
-  - `SYNC_STATE`
-  - `OPFS_FILES`
-  - `TABLE_SYNC_METADATA`
+- Import from `@open-insights-web/foundation-data-model`:
+  - `DATABASE_TRANSACTION_MODE`
+    - `READ`
+    - `READ_WRITE`
+  - `DATABASE_TRANSACTION_TABLE`
+    - `QUERIES`
+    - `MUTATIONS`
+    - `SYNC_STATE`
+    - `OPFS_FILES`
+    - `TABLE_SYNC_METADATA`
 
 ### Shared database constants and helpers
 
-These are re-exported for compatibility, but canonical ownership is in `foundation-data-model`:
+Import these directly from `@open-insights-web/foundation-data-model`:
 
 - `QUERY_CACHE_STATUS`
 - `MUTATION_STATUS`
 - `MUTATION_TYPE`
 - `OPFS_FILE_TYPE`
-- `SYNC_STATE_KEYS` (compatibility alias of data-model `SYNC_STATE_KEY`)
-- `DATABASE_TRANSACTION_MODE`
-- `DATABASE_TRANSACTION_TABLE`
+- `SYNC_STATE_KEY`
 - `createTableSyncMetadataEntry`
 - `needsTableUpdate`
 - `getFilesNeedingDownload`
@@ -163,16 +162,16 @@ These are re-exported for compatibility, but canonical ownership is in `foundati
 
 ### Shared contract ownership
 
-`foundation-database` consumes canonical shared contracts from `@open-insights-web/foundation-data-model` (`src/types/database.ts`) and re-exports compatibility symbols from its root entrypoint.
+`foundation-database` consumes canonical shared contracts from `@open-insights-web/foundation-data-model` (`src/types/database.ts`) and does not proxy those symbols.
 
 ### Ownership matrix
 
-| Contract                                                  | Canonical owner         | Compatibility export                             |
+| Contract                                                  | Canonical owner         | Import from                                      |
 | --------------------------------------------------------- | ----------------------- | ------------------------------------------------ |
-| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `foundation-database` root                       |
-| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `SYNC_STATE_KEYS` alias in `foundation-database` |
-| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `foundation-database` facade/root                |
-| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `foundation-database` table exports              |
+| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
+| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
+| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
+| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
 
 ### Singleton safety
 
@@ -277,4 +276,4 @@ npx tsc -p libs/foundation/bridge/tsconfig.lib.json --pretty false
 2. Prefer direct imports internally; avoid unnecessary barrel dependency chains.
 3. Use enums/constants for fixed option sets; avoid string-literal union duplication.
 4. Add tests for lifecycle regressions (singleton reset/accessor coherence), schema/index behavior, and helper contract consistency.
-5. Keep public API compatibility at `src/index.ts` unless an explicit breaking change is approved.
+5. Keep `src/index.ts` focused on database-owned APIs and avoid cross-foundation proxy exports.

@@ -8,12 +8,6 @@
  */
 
 import { TIME_MS } from '@open-insights-web/foundation-utils';
-import {
-  CONFLICT_RESOLUTION_TYPE,
-  OPERATIONS,
-  type ConflictResolutionType,
-  type Operation,
-} from '@open-insights-web/foundation-data-model';
 
 import type { CacheConfig, ResolvedCacheConfig } from './types';
 
@@ -89,13 +83,6 @@ export const OFFLINE_NETWORK_MODE = 'offlineFirst' as const;
  * Retry attempts for analytics SQL queries.
  */
 export const ANALYTICS_QUERY_RETRY_MAX = 2;
-
-/**
- * Supported table operations.
- */
-export const TABLE_OPERATION = OPERATIONS;
-export type TableOperation = Operation;
-export { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType };
 
 // =============================================================================
 // Cache Config Resolution

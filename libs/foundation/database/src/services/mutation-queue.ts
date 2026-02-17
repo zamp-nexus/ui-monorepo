@@ -9,14 +9,15 @@
 
 import Dexie from 'dexie';
 
-import { MUTATION_STATUS, type MutationStatus } from '@open-insights-web/foundation-data-model';
+import {
+  MUTATION_STATUS,
+  type CreateMutationOptions,
+  type MutationQueueEntry,
+  type MutationStatus,
+} from '@open-insights-web/foundation-data-model';
 
 import { createDuplicateEntryError } from '../errors/database-errors';
-import type {
-  CreateMutationOptions,
-  MutationQueueEntry,
-  MutationQueueOperations,
-} from '../tables/mutation-queue';
+import type { MutationQueueOperations } from '../tables/mutation-queue';
 import { generateIdempotencyKey as generateIdempotencyKeyUtil } from '../utils/hash';
 import { assertValid } from '../validation/assert-valid';
 import { mutationQueueEntrySchema } from '../validation/schemas';

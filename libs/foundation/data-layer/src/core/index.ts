@@ -21,10 +21,6 @@ export type {
   DataLayerConfig,
   DataLayerContextValue,
 
-  // Unified Table Config (single source of truth)
-  UnifiedTableConfig,
-  TableAnalyticsConfig,
-
   // Base mutation types (shared across hooks)
   BaseMutationOptions,
   DLMutationResult,

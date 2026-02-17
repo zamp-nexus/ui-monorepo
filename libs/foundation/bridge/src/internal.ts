@@ -49,15 +49,8 @@ export type {
 
 export { BridgeError } from './errors/base-error';
 
-// Query errors - CANCELLATION_REASON const, CancellationReasonKind type
-export {
-  QueryTimeoutError,
-  QueryCancelledError,
-  QueryExecutionError,
-  SqlValidationError,
-  CANCELLATION_REASON,
-} from './errors/query-errors';
-export type { CancellationReasonKind } from './errors/query-errors';
+// Bridge-owned query error
+export { SqlValidationError } from './errors/query-errors';
 
 export {
   PoolShutdownError,

@@ -23,13 +23,6 @@ export { useDLQueryEngine } from './use-dl-query-engine';
 
 export { useDLMutateQueryEngine } from './use-dl-mutate-query-engine';
 
-export {
-  useBackgroundFileSync,
-  type UseBackgroundFileSyncOptions,
-  type UseBackgroundFileSyncResult,
-  type BackgroundSyncState,
-} from '@open-insights-web/foundation-data-layer';
-
 // =============================================================================
 // TYPES
 // =============================================================================

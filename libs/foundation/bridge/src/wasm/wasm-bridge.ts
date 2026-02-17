@@ -13,7 +13,12 @@ import type {
   Logger as DuckDBLogger,
 } from '@duckdb/duckdb-wasm';
 
-import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
+import {
+  QueryCancelledError,
+  QueryExecutionError,
+  QueryId,
+  Timestamp,
+} from '@open-insights-web/foundation-data-model';
 import {
   createDebugLogger,
   getErrorMessage,
@@ -23,7 +28,6 @@ import {
 
 import { convertArrowToQueryResult } from '../duckdb/arrow-converter';
 import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';
-import { QueryCancelledError, QueryExecutionError } from '../errors/query-errors';
 import type {
   ColumnInfo,
   DuckDBBridge,

@@ -6,7 +6,6 @@
 import {
   CONFLICT_STRATEGY,
   MUTATION_STATUS,
-  MUTATION_TYPE,
   type CreateMutationOptions,
   type JsonValue,
   type MutationQueueEntry,
@@ -14,9 +13,6 @@ import {
 } from '@open-insights-web/foundation-data-model';
 
 import { generateIdempotencyKey } from '../utils/hash';
-
-export { MUTATION_TYPE };
-export type { CreateMutationOptions, MutationQueueEntry };
 
 /**
  * Create a new mutation queue entry

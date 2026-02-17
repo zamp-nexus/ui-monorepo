@@ -42,9 +42,6 @@ export type {
   HttpProviderProps,
 } from './core/types';
 
-// Re-export HttpMethod from data-model for consumer convenience
-export type { HttpMethod } from './core/types';
-
 // =============================================================================
 // Core Constants
 // =============================================================================

@@ -3,12 +3,15 @@
  * @module native/electron-bridge
  */
 
-import { QueryId } from '@open-insights-web/foundation-data-model';
+import {
+  QueryCancelledError,
+  QueryExecutionError,
+  QueryId,
+} from '@open-insights-web/foundation-data-model';
 import type { Logger } from '@open-insights-web/foundation-utils';
 import { createDebugLogger, normalizeError } from '@open-insights-web/foundation-utils';
 
 import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';
-import { QueryCancelledError, QueryExecutionError } from '../errors/query-errors';
 import type {
   DuckDBBridge,
   QueryOptions,

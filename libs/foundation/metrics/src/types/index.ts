@@ -40,22 +40,6 @@ export {
   type NavigationType,
 } from './constants';
 
-// Re-export shared types from data-model for convenience (type-only)
-export type {
-  Environment,
-  ComplianceRegion,
-  SeverityNumberValue,
-  HashAlgorithm,
-  HttpMethod,
-} from '@open-insights-web/foundation-data-model';
-
-export {
-  ENVIRONMENT,
-  COMPLIANCE_REGION,
-  SEVERITY_NUMBER,
-  HASH_ALGORITHM,
-} from '@open-insights-web/foundation-data-model';
-
 // Configuration types
 export type {
   ErrorSignalConfig,

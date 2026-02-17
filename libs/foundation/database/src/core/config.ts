@@ -3,12 +3,7 @@
  * @module core/config
  */
 
-import {
-  MUTATION_STATUS,
-  QUERY_CACHE_STATUS,
-  SYNC_STATE_KEY,
-} from '@open-insights-web/foundation-data-model';
-import type { SyncStateKey as DataModelSyncStateKey } from '@open-insights-web/foundation-data-model';
+import { SYNC_STATE_KEY } from '@open-insights-web/foundation-data-model';
 import { TIME_MS } from '@open-insights-web/foundation-utils';
 
 /**
@@ -74,10 +69,6 @@ export const mergeConfig = (userConfig: Partial<DatabaseConfig> = {}): DatabaseC
   ...DEFAULT_DATABASE_CONFIG,
   ...userConfig,
 });
-
-export { MUTATION_STATUS, QUERY_CACHE_STATUS };
-
-export type SyncStateKey = DataModelSyncStateKey;
 
 /**
  * Sync state keys

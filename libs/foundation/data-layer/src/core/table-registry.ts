@@ -19,18 +19,14 @@ import {
   type ConflictStrategy,
   type DataFreshnessLevel,
   type Operation,
-  type TableAnalyticsConfig,
   type UnifiedTableConfig as SharedUnifiedTableConfig,
 } from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, TIME_MS, type Logger } from '@open-insights-web/foundation-utils';
 
-export { DATA_FRESHNESS, type DataFreshnessLevel };
-
-export type UnifiedTableConfig = SharedUnifiedTableConfig<
+type UnifiedTableConfig = SharedUnifiedTableConfig<
   FunctionReference<'query'>,
   FunctionReference<'mutation'>
 >;
-export type { TableAnalyticsConfig };
 
 // =============================================================================
 // TABLE REGISTRY

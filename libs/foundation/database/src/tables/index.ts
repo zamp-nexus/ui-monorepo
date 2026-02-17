@@ -21,19 +21,15 @@ export {
 
 // Mutation queue
 export {
-  MUTATION_TYPE,
   createMutationEntry,
   canProcessMutation,
   shouldRetry,
   prepareForRetry,
-  type MutationQueueEntry,
-  type CreateMutationOptions,
   type MutationQueueOperations,
 } from './mutation-queue';
 
 // OPFS metadata
 export {
-  OPFS_FILE_TYPE,
   createOpfsMetadata,
   sortByDependencies,
   type OpfsMetadataEntry,
@@ -52,17 +48,11 @@ export {
   DEFAULT_NETWORK_STATUS,
   DEFAULT_DUCKDB_VIEWS,
   type SyncStateEntry,
-  type DuckDBViewsValue,
-  type LastSyncValue,
   type SyncStateOperations,
   type GetSyncStateOptions,
 } from './sync-state';
 
 // Table sync metadata (parquet file sync tracking)
 export {
-  createTableSyncMetadataEntry,
-  needsTableUpdate,
-  getFilesNeedingDownload,
-  type TableSyncMetadataEntry,
   type TableSyncMetadataOperations,
 } from './table-sync-metadata';

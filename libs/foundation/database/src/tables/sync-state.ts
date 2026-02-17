@@ -18,8 +18,6 @@ import {
   networkStatusSchema,
 } from '../validation/schemas';
 
-export type { DuckDBViewsValue, LastSyncValue };
-
 /**
  * Sync state entry (key-value store)
  * @template TValue - Type of the state value (defaults to JsonValue)

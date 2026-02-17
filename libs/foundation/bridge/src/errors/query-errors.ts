@@ -5,11 +5,7 @@
  */
 
 import {
-  CANCELLATION_REASON,
   FOUNDATION_ERROR_CODE,
-  QueryCancelledError,
-  QueryExecutionError,
-  QueryTimeoutError,
 } from '@open-insights-web/foundation-data-model';
 
 import { BridgeError } from './base-error';
@@ -31,6 +27,3 @@ export class SqlValidationError extends BridgeError {
     });
   }
 }
-
-export { QueryTimeoutError, QueryCancelledError, QueryExecutionError, CANCELLATION_REASON };
-export type { CancellationReasonKind } from '@open-insights-web/foundation-data-model';

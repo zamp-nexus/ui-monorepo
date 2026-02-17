@@ -17,23 +17,6 @@
 export type { FilterValue } from './filter';
 
 // =============================================================================
-// Operations Types
-// =============================================================================
-
-export {
-  OPERATIONS,
-  READ_OPERATIONS,
-  WRITE_OPERATIONS,
-  type Operation,
-  type ReadOperation,
-  type WriteOperation,
-  isOperation,
-  isReadOperation,
-  isWriteOperation,
-  isMutationOperation,
-} from './operations';
-
-// =============================================================================
 // Dimension Types
 // =============================================================================
 
@@ -229,7 +212,6 @@ export {
   type TableSource,
   type TableLoadState,
   type TableFileType,
-  type AnalyticsFreshness,
   type TableConvexFunctions,
   type ParquetFileInfo,
   type TableConfig,
@@ -246,26 +228,6 @@ export {
   tableHasListApi,
   tableHasMutationApi,
 } from './table';
-
-// =============================================================================
-// DataSource Types
-// =============================================================================
-
-export {
-  type DataSourceFileInfo,
-  type DataSourceTableInfo,
-  type DataSourceResponse,
-  type DataSourceMetadata,
-  type DataSourceRequest,
-  isDataSourceFileInfo,
-  isDataSourceTableInfo,
-  isDataSourceResponse,
-  calculateTableSize,
-  calculateTotalRows,
-  calculateTotalSize,
-  getTablesNeedingUpdate,
-  hasExpiredUrls,
-} from './datasource';
 
 // =============================================================================
 // Decision Types

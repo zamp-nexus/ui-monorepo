@@ -15,8 +15,5 @@ export {
   DEFAULT_DATABASE_CONFIG,
   mergeConfig,
   SYNC_STATE_KEYS,
-  QUERY_CACHE_STATUS,
-  MUTATION_STATUS,
   type DatabaseConfig,
-  type SyncStateKey,
 } from './config';

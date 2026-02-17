@@ -19,20 +19,16 @@
 
 export {
   DatabaseFacade,
-  DATABASE_TRANSACTION_MODE,
-  DATABASE_TRANSACTION_TABLE,
   getDatabaseFacade,
   resetDatabaseFacade,
   hasDatabaseFacade,
 } from './facade';
 
-export type { DatabaseTransactionMode, DatabaseTransactionTable } from './facade';
-
 // ============================================================================
 // Configuration (used by data-layer, bridge)
 // ============================================================================
 
-export { SYNC_STATE_KEYS, MUTATION_STATUS, QUERY_CACHE_STATUS } from './core/config';
+export { SYNC_STATE_KEYS } from './core/config';
 
 // ============================================================================
 // Tables (used by data-layer, sync-engine, bridge)
@@ -45,30 +41,21 @@ export {
   type QueryCacheEntry,
 
   // Mutation queue (used by sync-engine, data-layer)
-  MUTATION_TYPE,
   createMutationEntry,
   canProcessMutation,
-  type MutationQueueEntry,
-  type CreateMutationOptions,
+  type MutationQueueOperations,
 
   // OPFS metadata (used by bridge)
-  OPFS_FILE_TYPE,
   createOpfsMetadata,
   type OpfsMetadataEntry,
   type OpfsFileSchema,
 
   // Sync state (used by bridge, sync-engine)
   // NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
-  createTableSyncMetadataEntry,
-  needsTableUpdate,
-  getFilesNeedingDownload,
   isDuckDBViewsValue,
   isNetworkStatus,
   DEFAULT_NETWORK_STATUS,
-  type DuckDBViewsValue,
   type SyncStateEntry,
-  type LastSyncValue,
-  type TableSyncMetadataEntry,
 } from './tables';
 
 // ============================================================================

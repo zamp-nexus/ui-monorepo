@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { OPERATIONS } from '@open-insights-web/foundation-data-model';
+
 import type { DecisionContext, DecisionTableConfig } from '../types/decision';
 import { DECISION_REASONS } from '../types/decision';
-import { OPERATIONS } from '../types/operations';
 import type { Query } from '../types/query';
 import type { DecisionEngine } from './decision-engine';
 import { createDecisionEngine, getDecisionEngine, resetDecisionEngine } from './decision-engine';

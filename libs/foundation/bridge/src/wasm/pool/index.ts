@@ -40,8 +40,6 @@ export type { WorkerStatus } from '../../types/pool';
 
 // Errors
 export {
-  QueryTimeoutError,
-  QueryCancelledError,
   WorkerError,
   PoolShutdownError,
 } from '../../errors';
