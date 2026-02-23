@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-adapters",
     "tags": [
-      "foundation:adapters"
+      "layer:foundation",
+      "foundation:adapters",
+      "platform:universal",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

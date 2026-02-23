@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-trackers",
     "tags": [
-      "foundation:trackers"
+      "layer:foundation",
+      "foundation:trackers",
+      "platform:universal",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

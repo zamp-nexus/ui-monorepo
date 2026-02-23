@@ -16,6 +16,12 @@
     }
   },
   "nx": {
+    "tags": [
+      "layer:tool",
+      "platform:node",
+      "scope:core",
+      "visibility:internal"
+    ],
     "targets": {
       "build": {
         "executor": "@nx/js:tsc",

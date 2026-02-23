@@ -1,20 +1,325 @@
+// eslint.config.mjs
+// Open Insights Monorepo — Enterprise ESLint Governance
+//
+// Architecture: 5 orthogonal tag dimensions (layer, foundation, platform, scope, visibility).
+// All constraints use AND semantics — a project must satisfy ALL matching rules.
+// Adding a non-foundation project requires ZERO changes to this file.
+// Adding a foundation project requires ONE new FOUNDATION_DAG entry.
+
 import convexPlugin from '@convex-dev/eslint-plugin';
 import nx from '@nx/eslint-plugin';
 import unusedImports from 'eslint-plugin-unused-imports';
 
+// ==================================================================
+// COMPOSABLE CONSTRAINT DEFINITIONS
+// Each dimension defined once, shared between production and test.
+// ==================================================================
+
+/**
+ * DIMENSION 1: Layer Hierarchy
+ * Controls vertical dependency direction between architectural layers.
+ */
+const LAYER_CONSTRAINTS = [
+  // Frontend apps: compose products, features, shared, and foundation.
+  // Cannot import other apps (compose via routing, not imports).
+  {
+    sourceTag: 'layer:app',
+    onlyDependOnLibsWithTags: [
+      'layer:product',
+      'layer:feature',
+      'layer:shared',
+      'layer:foundation',
+    ],
+  },
+  // Backend services + gateway: depend on shared contracts and foundation only.
+  // Cannot import other services (communicate via network, not imports).
+  // Cannot import product/feature (those are frontend composition layers).
+  {
+    sourceTag: 'layer:service',
+    onlyDependOnLibsWithTags: ['layer:shared', 'layer:foundation'],
+  },
+  {
+    sourceTag: 'layer:product',
+    onlyDependOnLibsWithTags: [
+      'layer:feature',
+      'layer:shared',
+      'layer:foundation',
+    ],
+  },
+  {
+    sourceTag: 'layer:feature',
+    onlyDependOnLibsWithTags: ['layer:shared', 'layer:foundation'],
+  },
+  {
+    sourceTag: 'layer:shared',
+    onlyDependOnLibsWithTags: ['layer:shared', 'layer:foundation'],
+  },
+  {
+    sourceTag: 'layer:foundation',
+    onlyDependOnLibsWithTags: ['layer:foundation'],
+  },
+  {
+    sourceTag: 'layer:tool',
+    onlyDependOnLibsWithTags: ['layer:tool'],
+  },
+];
+
+/**
+ * DIMENSION 2: Foundation DAG
+ * Intra-layer dependency graph for foundation libraries.
+ * ONLY section that changes when adding a new foundation lib.
+ *
+ * Tiers:
+ *   T0: data-model (leaf — zero deps)
+ *   T1: utils, trackers
+ *   T2: adapters, database, hooks, icons, auth, http
+ *   T3: sync-engine
+ *   T4: bridge
+ *   T5: data-layer, design-system, metrics
+ *   T6: query-engine (C-2: data-layer restricted to hooks/ via no-restricted-imports)
+ *   Special: mocks (depends on all foundation:*)
+ */
+const FOUNDATION_DAG_CONSTRAINTS = [
+  // T0
+  {
+    sourceTag: 'foundation:data-model',
+    onlyDependOnLibsWithTags: ['foundation:data-model'],
+  },
+  // T1
+  {
+    sourceTag: 'foundation:utils',
+    onlyDependOnLibsWithTags: ['foundation:utils', 'foundation:data-model'],
+  },
+  {
+    sourceTag: 'foundation:trackers',
+    onlyDependOnLibsWithTags: [
+      'foundation:trackers',
+      'foundation:data-model',
+    ],
+  },
+  // T2
+  {
+    sourceTag: 'foundation:adapters',
+    onlyDependOnLibsWithTags: [
+      'foundation:adapters',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+    ],
+  },
+  {
+    sourceTag: 'foundation:database',
+    onlyDependOnLibsWithTags: [
+      'foundation:database',
+      'foundation:data-model',
+      'foundation:utils',
+      'foundation:trackers',
+    ],
+  },
+  {
+    sourceTag: 'foundation:hooks',
+    onlyDependOnLibsWithTags: [
+      'foundation:hooks',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+    ],
+  },
+  {
+    sourceTag: 'foundation:icons',
+    onlyDependOnLibsWithTags: [
+      'foundation:icons',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+    ],
+  },
+  {
+    sourceTag: 'foundation:auth',
+    onlyDependOnLibsWithTags: [
+      'foundation:auth',
+      'foundation:utils',
+      'foundation:data-model',
+    ],
+  },
+  {
+    sourceTag: 'foundation:http',
+    onlyDependOnLibsWithTags: [
+      'foundation:http',
+      'foundation:utils',
+      'foundation:data-model',
+    ],
+  },
+  // T3
+  {
+    sourceTag: 'foundation:sync-engine',
+    onlyDependOnLibsWithTags: [
+      'foundation:sync-engine',
+      'foundation:database',
+      'foundation:data-model',
+      'foundation:utils',
+      'foundation:trackers',
+    ],
+  },
+  // T4
+  {
+    sourceTag: 'foundation:bridge',
+    onlyDependOnLibsWithTags: [
+      'foundation:bridge',
+      'foundation:sync-engine',
+      'foundation:database',
+      'foundation:data-model',
+      'foundation:utils',
+      'foundation:trackers',
+    ],
+  },
+  // T5
+  {
+    sourceTag: 'foundation:data-layer',
+    onlyDependOnLibsWithTags: [
+      'foundation:data-layer',
+      'foundation:sync-engine',
+      'foundation:bridge',
+      'foundation:database',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+      'foundation:hooks',
+    ],
+  },
+  {
+    sourceTag: 'foundation:design-system',
+    onlyDependOnLibsWithTags: [
+      'foundation:design-system',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+      'foundation:icons',
+    ],
+  },
+  {
+    sourceTag: 'foundation:metrics',
+    onlyDependOnLibsWithTags: [
+      'foundation:metrics',
+      'foundation:utils',
+      'foundation:data-model',
+      'foundation:trackers',
+      'foundation:http',
+    ],
+  },
+  // T6
+  {
+    sourceTag: 'foundation:query-engine',
+    onlyDependOnLibsWithTags: [
+      'foundation:query-engine',
+      'foundation:data-layer',
+      'foundation:bridge',
+      'foundation:data-model',
+      'foundation:utils',
+    ],
+  },
+  // Special: mocks can depend on any foundation lib (glob pattern)
+  {
+    sourceTag: 'foundation:mocks',
+    onlyDependOnLibsWithTags: ['foundation:*'],
+  },
+];
+
+/**
+ * DIMENSION 3: Platform Compatibility
+ * Prevents importing runtime-incompatible code.
+ * Hierarchy: universal < browser < react (superset chain)
+ * Node is a separate branch from browser/react.
+ * platform:any has no sourceTag rule = unconstrained.
+ */
+const PLATFORM_CONSTRAINTS = [
+  {
+    sourceTag: 'platform:universal',
+    onlyDependOnLibsWithTags: ['platform:universal', 'platform:any'],
+  },
+  {
+    sourceTag: 'platform:browser',
+    onlyDependOnLibsWithTags: [
+      'platform:universal',
+      'platform:browser',
+      'platform:any',
+    ],
+  },
+  {
+    sourceTag: 'platform:react',
+    onlyDependOnLibsWithTags: [
+      'platform:universal',
+      'platform:browser',
+      'platform:react',
+      'platform:any',
+    ],
+  },
+  {
+    sourceTag: 'platform:node',
+    onlyDependOnLibsWithTags: [
+      'platform:universal',
+      'platform:node',
+      'platform:any',
+    ],
+  },
+];
+
+/**
+ * DIMENSION 5: Visibility (production only)
+ * Prevents production code from importing internal-only libs (mocks, tools).
+ * Uses notDependOnLibsWithTags which also checks transitive deps.
+ * OMITTED from test context so tests can import mocks.
+ */
+const VISIBILITY_CONSTRAINTS = [
+  {
+    sourceTag: 'layer:foundation',
+    notDependOnLibsWithTags: ['visibility:internal'],
+  },
+  {
+    sourceTag: 'layer:shared',
+    notDependOnLibsWithTags: ['visibility:internal'],
+  },
+  {
+    sourceTag: 'layer:feature',
+    notDependOnLibsWithTags: ['visibility:internal'],
+  },
+  {
+    sourceTag: 'layer:product',
+    notDependOnLibsWithTags: ['visibility:internal'],
+  },
+  {
+    sourceTag: 'layer:service',
+    notDependOnLibsWithTags: ['visibility:internal'],
+  },
+];
+
+// ==================================================================
+// ESLINT FLAT CONFIG
+// ==================================================================
+
 export default [
+  // ================================================================
+  // JSON FILE SUPPORT
+  // ================================================================
   {
     files: ['**/*.json'],
-    // Override or add rules here
     rules: {},
     languageOptions: {
       parser: await import('jsonc-eslint-parser'),
     },
   },
+
+  // ================================================================
+  // NX + CONVEX BASE CONFIGS
+  // ================================================================
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   ...convexPlugin.configs.recommended,
+
+  // ================================================================
+  // GLOBAL IGNORES
+  // ================================================================
   {
     ignores: [
       '**/dist',
@@ -30,16 +335,13 @@ export default [
       '**/out-tsc',
     ],
   },
+
+  // ================================================================
+  // PRODUCTION CODE: Module boundaries + type imports
+  // ================================================================
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
     rules: {
-      // ============================================
-      // TYPE IMPORT RULES - Consistent type-only imports
-      // ============================================
-      // Enforce using `import type` for type-only imports (better tree-shaking)
-      // NOTE: consistent-type-exports is NOT enabled because it requires typed linting
-      // (parserOptions.project), which significantly slows down ESLint.
-      // For exports, follow the convention manually: `export type { X }` for types.
       '@typescript-eslint/consistent-type-imports': [
         'error',
         {
@@ -48,435 +350,28 @@ export default [
           fixStyle: 'separate-type-imports',
         },
       ],
-      // ============================================
-      // MODULE BOUNDARY RULES
-      // ============================================
       '@nx/enforce-module-boundaries': [
         'error',
         {
-          // enforceBuildableLibDependency: true,
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
-            // ============================================
-            // SCOPE RULES - Control library visibility
-            // ============================================
-            // scope:app → Can import products and foundation only
-            {
-              sourceTag: 'scope:app',
-              onlyDependOnLibsWithTags: [
-                'scope:product',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-              ],
-            },
-            // scope:product → Can import features, shared, and foundation
-            // NOTE: Removed self-import to prevent cross-product coupling
-            {
-              sourceTag: 'scope:product',
-              onlyDependOnLibsWithTags: [
-                'scope:feature',
-                'scope:shared',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-              ],
-            },
-            // scope:feature → Can import shared and foundation only
-            {
-              sourceTag: 'scope:feature',
-              onlyDependOnLibsWithTags: [
-                'scope:shared',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-              ],
-            },
-            // scope:shared → Can import other shared libraries and foundation
-            {
-              sourceTag: 'scope:shared',
-              onlyDependOnLibsWithTags: [
-                'scope:shared',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-              ],
-            },
-            // ============================================
-            // FOUNDATION RULES - Base layer isolation
-            // ============================================
-            // foundation:data-model → Can only import itself
-            {
-              sourceTag: 'foundation:data-model',
-              onlyDependOnLibsWithTags: ['foundation:data-model'],
-            },
-            // foundation:utils → Can import utils and data-model
-            {
-              sourceTag: 'foundation:utils',
-              onlyDependOnLibsWithTags: ['foundation:utils', 'foundation:data-model'],
-            },
-            // foundation:trackers → Can import itself and data-model (for typed events)
-            // FIX: Added data-model so tracking events can be properly typed
-            {
-              sourceTag: 'foundation:trackers',
-              onlyDependOnLibsWithTags: ['foundation:trackers', 'foundation:data-model'],
-            },
-            // foundation:adapters → Can import adapters, utils, data-model, and trackers
-            // FIX: Added trackers for API logging/monitoring
-            {
-              sourceTag: 'foundation:adapters',
-              onlyDependOnLibsWithTags: [
-                'foundation:adapters',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // foundation:database → Can import data-model, utils, trackers
-            {
-              sourceTag: 'foundation:database',
-              onlyDependOnLibsWithTags: [
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:database',
-              ],
-            },
-            // foundation:sync-engine → Can import database, data-model, utils, trackers
-            {
-              sourceTag: 'foundation:sync-engine',
-              onlyDependOnLibsWithTags: [
-                'foundation:sync-engine',
-                'foundation:database',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-              ],
-            },
-            // foundation:bridge → Can import sync-engine, database, data-model, utils, trackers
-            {
-              sourceTag: 'foundation:bridge',
-              onlyDependOnLibsWithTags: [
-                'foundation:bridge',
-                'foundation:sync-engine',
-                'foundation:database',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-              ],
-            },
-            // foundation:data-layer → Can import data-layer, sync-engine, bridge, database, utils, data-model, and trackers
-            // FIX: Added sync-engine and bridge for offline-first architecture
-            {
-              sourceTag: 'foundation:data-layer',
-              onlyDependOnLibsWithTags: [
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:database',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-                'foundation:hooks',
-              ],
-            },
-            // foundation:design-system → Can import components, utils, data-model, and trackers
-            {
-              sourceTag: 'foundation:design-system',
-              onlyDependOnLibsWithTags: [
-                'foundation:design-system',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-                'foundation:icons',
-              ],
-            },
-            // foundation:hooks → Can import hooks, utils, data-model, and trackers
-            {
-              sourceTag: 'foundation:hooks',
-              onlyDependOnLibsWithTags: [
-                'foundation:hooks',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // foundation:icons → Can import icons, utils, data-model, and trackers
-            {
-              sourceTag: 'foundation:icons',
-              onlyDependOnLibsWithTags: [
-                'foundation:icons',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // foundation:auth → Can import auth, utils, and data-model
-            {
-              sourceTag: 'foundation:auth',
-              onlyDependOnLibsWithTags: [
-                'foundation:auth',
-                'foundation:utils',
-                'foundation:data-model',
-              ],
-            },
-            // foundation:http → Can import http, utils, and data-model
-            {
-              sourceTag: 'foundation:http',
-              onlyDependOnLibsWithTags: [
-                'foundation:http',
-                'foundation:utils',
-                'foundation:data-model',
-              ],
-            },
-            // foundation:query-engine → Can import query-engine, data-layer, bridge, data-model, and utils
-            //
-            // ARCHITECTURE NOTE (C-2): The data-layer import is intentional and restricted.
-            // The core engine (engine/, compiler/, schema/, builder/) is Tier 2 with zero
-            // data-layer dependency. Only the hooks/ directory (Tier 4) imports from
-            // data-layer — it is a thin "bridge module" composing data-layer execution
-            // hooks with query-engine routing logic. This is enforced by the
-            // no-restricted-imports rule below targeting non-hooks files.
-            {
-              sourceTag: 'foundation:query-engine',
-              onlyDependOnLibsWithTags: [
-                'foundation:query-engine',
-                'foundation:data-layer',
-                'foundation:bridge',
-                'foundation:data-model',
-                'foundation:utils',
-              ],
-            },
-            // foundation:metrics → Can import metrics, utils, data-model, trackers, and http
-            {
-              sourceTag: 'foundation:metrics',
-              onlyDependOnLibsWithTags: [
-                'foundation:metrics',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-                'foundation:http',
-              ],
-            },
-            // foundation:mocks → Can import all foundation libraries
-            {
-              sourceTag: 'foundation:mocks',
-              onlyDependOnLibsWithTags: [
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-                'foundation:mocks',
-              ],
-            },
-            // ============================================
-            // TYPE RULES - Library layer hierarchy
-            // ============================================
-            // type:data-model → Can import type and foundation data-model
-            {
-              sourceTag: 'type:data-model',
-              onlyDependOnLibsWithTags: ['type:data-model', 'foundation:data-model'],
-            },
-            // type:utils → Can import type and foundation: utils, data-model, trackers
-            // FIX: Removed type:mocks - mocks should not be in production code
-            {
-              sourceTag: 'type:utils',
-              onlyDependOnLibsWithTags: [
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:trackers → Can import itself, data-model, and foundation equivalents
-            // FIX: Added data-model access for typed tracking events
-            {
-              sourceTag: 'type:trackers',
-              onlyDependOnLibsWithTags: [
-                'type:trackers',
-                'type:data-model',
-                'foundation:trackers',
-                'foundation:data-model',
-              ],
-            },
-            // type:adapters → Can import type and foundation: adapters, utils, data-model, trackers
-            // FIX: Added trackers for API logging; Removed type:mocks
-            {
-              sourceTag: 'type:adapters',
-              onlyDependOnLibsWithTags: [
-                'type:adapters',
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:adapters',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:data-layer → Can import type and foundation: data-layer, sync-engine, bridge, database, utils, data-model, trackers
-            // FIX: Added sync-engine and bridge for offline-first architecture
-            {
-              sourceTag: 'type:data-layer',
-              onlyDependOnLibsWithTags: [
-                'type:data-layer',
-                'type:sync-engine',
-                'type:bridge',
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:database',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:components → Can import type and foundation: components, data-layer, utils, data-model, trackers, hooks
-            // FIX: Removed type:mocks
-            {
-              sourceTag: 'type:components',
-              onlyDependOnLibsWithTags: [
-                'type:components',
-                'type:data-layer',
-                'type:hooks',
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:design-system',
-                'foundation:data-layer',
-                'foundation:hooks',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:hooks → Can import type and foundation: hooks, utils, data-model, trackers
-            {
-              sourceTag: 'type:hooks',
-              onlyDependOnLibsWithTags: [
-                'type:hooks',
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:hooks',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:core → Full orchestration access
-            // FIX: Added type:adapters for consistency with foundation:adapters access
-            // FIX: Removed type:mocks
-            {
-              sourceTag: 'type:core',
-              onlyDependOnLibsWithTags: [
-                'type:core',
-                'type:components',
-                'type:data-layer',
-                'type:hooks',
-                'type:adapters',
-                'type:utils',
-                'type:data-model',
-                'type:trackers',
-                'foundation:data-layer',
-                'foundation:database',
-                'foundation:hooks',
-                'foundation:adapters',
-                'foundation:utils',
-                'foundation:data-model',
-                'foundation:trackers',
-              ],
-            },
-            // type:mocks → Can ONLY import type:data-model and all foundation libraries
-            // This restriction ensures mocks stay purely data-driven with no logic dependencies
-            {
-              sourceTag: 'type:mocks',
-              onlyDependOnLibsWithTags: [
-                'type:data-model',
-                'type:mocks',
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:mocks',
-              ],
-            },
+            ...LAYER_CONSTRAINTS,
+            ...FOUNDATION_DAG_CONSTRAINTS,
+            ...PLATFORM_CONSTRAINTS,
+            ...VISIBILITY_CONSTRAINTS,
           ],
         },
       ],
     },
   },
-  // ============================================
-  // TEST FILE RULES - Allow mock imports in tests and configure test environment
-  // ============================================
+
+  // ================================================================
+  // TEST FILES: Relaxed visibility (can import mocks),
+  //             all other dimensions still enforced.
+  // Note: In flat config, this block REPLACES the production
+  // enforce-module-boundaries rule for test files (last-match-wins).
+  // Therefore we must re-declare all dimensions except visibility.
+  // ================================================================
   {
     files: [
       '**/*.spec.ts',
@@ -491,16 +386,7 @@ export default [
       '**/testing/**/*.tsx',
     ],
     rules: {
-      // Disable no-undef for test files - TypeScript handles this via tsconfig.spec.json
-      // which includes vitest/globals types and dom lib types
       'no-undef': 'off',
-      // For test files, we relax TypeScript strict rules that conflict with test patterns
-      // TypeScript compiler still performs full type checking via tsconfig.spec.json
-      // These rules are disabled to avoid false positives with:
-      // - DOM APIs in jsdom environment (@vitest-environment jsdom)
-      // - Testing library patterns (container.querySelector, etc.)
-      // - Mock functions and test utilities
-      // Note: TypeScript type checking still catches real type errors at compile time
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -510,56 +396,22 @@ export default [
           enforceBuildableLibDependency: false,
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
-            // In test files, allow importing mocks from any library
-            {
-              sourceTag: '*',
-              onlyDependOnLibsWithTags: [
-                // All scope tags
-                'scope:app',
-                'scope:product',
-                'scope:feature',
-                'scope:shared',
-                // All foundation tags
-                'foundation:data-model',
-                'foundation:utils',
-                'foundation:trackers',
-                'foundation:hooks',
-                'foundation:database',
-                'foundation:data-layer',
-                'foundation:sync-engine',
-                'foundation:bridge',
-                'foundation:adapters',
-                'foundation:design-system',
-                'foundation:icons',
-                'foundation:auth',
-                'foundation:http',
-                'foundation:metrics',
-                'foundation:query-engine',
-                'foundation:mocks',
-                // All type tags
-                'type:data-model',
-                'type:utils',
-                'type:trackers',
-                'type:hooks',
-                'type:adapters',
-                'type:data-layer',
-                'type:sync-engine',
-                'type:bridge',
-                'type:components',
-                'type:core',
-                'type:mocks',
-              ],
-            },
+            ...LAYER_CONSTRAINTS,
+            ...FOUNDATION_DAG_CONSTRAINTS,
+            ...PLATFORM_CONSTRAINTS,
+            // VISIBILITY_CONSTRAINTS intentionally omitted:
+            // test files may import visibility:internal libs (mocks)
           ],
         },
       ],
     },
   },
-  // ============================================
-  // QUERY-ENGINE BOUNDARY: Restrict data-layer imports to hooks/ only (C-2)
-  // The core engine modules must remain Tier 2 (no data-layer dependency).
-  // Only the hooks/ directory may import from data-layer as a "bridge module".
-  // ============================================
+
+  // ================================================================
+  // QUERY ENGINE INTRA-LIBRARY BOUNDARY (C-2)
+  // Core engine modules must NOT import data-layer.
+  // Only hooks/ directory may bridge to data-layer.
+  // ================================================================
   {
     files: [
       'libs/foundation/query-engine/src/**/*.ts',
@@ -583,6 +435,10 @@ export default [
       ],
     },
   },
+
+  // ================================================================
+  // UNUSED IMPORTS
+  // ================================================================
   {
     files: [
       '**/*.ts',

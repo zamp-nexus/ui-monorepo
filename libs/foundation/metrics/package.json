@@ -17,7 +17,11 @@
   "nx": {
     "name": "foundation-metrics",
     "tags": [
-      "foundation:metrics"
+      "layer:foundation",
+      "foundation:metrics",
+      "platform:browser",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

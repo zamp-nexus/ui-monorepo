@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-bridge",
     "tags": [
-      "foundation:bridge"
+      "layer:foundation",
+      "foundation:bridge",
+      "platform:browser",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

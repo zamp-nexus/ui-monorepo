@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-database",
     "tags": [
-      "foundation:database"
+      "layer:foundation",
+      "foundation:database",
+      "platform:browser",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

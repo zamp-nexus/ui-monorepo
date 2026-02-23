@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-icons",
     "tags": [
-      "foundation:icons"
+      "layer:foundation",
+      "foundation:icons",
+      "platform:react",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

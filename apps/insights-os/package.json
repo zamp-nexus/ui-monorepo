@@ -5,7 +5,9 @@
   "nx": {
     "name": "insights-os",
     "tags": [
-      "scope:app"
+      "layer:app",
+      "platform:react",
+      "scope:core"
     ],
     "targets": {
       "build": {

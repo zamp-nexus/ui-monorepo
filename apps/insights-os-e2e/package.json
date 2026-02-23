@@ -3,6 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "nx": {
+    "tags": [
+      "layer:e2e",
+      "platform:any",
+      "scope:core"
+    ],
     "implicitDependencies": [
       "insights-os"
     ]

@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-http",
     "tags": [
-      "foundation:http"
+      "layer:foundation",
+      "foundation:http",
+      "platform:browser",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

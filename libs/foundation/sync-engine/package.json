@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-sync-engine",
     "tags": [
-      "foundation:sync-engine"
+      "layer:foundation",
+      "foundation:sync-engine",
+      "platform:browser",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

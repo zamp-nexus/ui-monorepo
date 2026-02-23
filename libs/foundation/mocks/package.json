@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-mocks",
     "tags": [
-      "foundation:mocks"
+      "layer:foundation",
+      "foundation:mocks",
+      "platform:any",
+      "scope:core",
+      "visibility:internal"
     ]
   }
 }

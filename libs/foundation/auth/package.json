@@ -24,7 +24,11 @@
   "nx": {
     "name": "foundation-auth",
     "tags": [
-      "foundation:auth"
+      "layer:foundation",
+      "foundation:auth",
+      "platform:react",
+      "scope:core",
+      "visibility:public"
     ],
     "implicitDependencies": [
       "foundation-data-model",

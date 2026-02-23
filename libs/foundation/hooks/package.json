@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-hooks",
     "tags": [
-      "foundation:hooks"
+      "layer:foundation",
+      "foundation:hooks",
+      "platform:react",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

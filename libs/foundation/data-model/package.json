@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-data-model",
     "tags": [
-      "foundation:data-model"
+      "layer:foundation",
+      "foundation:data-model",
+      "platform:universal",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-data-layer",
     "tags": [
-      "foundation:data-layer"
+      "layer:foundation",
+      "foundation:data-layer",
+      "platform:react",
+      "scope:core",
+      "visibility:public"
     ]
   }
 }

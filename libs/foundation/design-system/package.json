@@ -14,7 +14,11 @@
   "nx": {
     "name": "foundation-design-system",
     "tags": [
-      "foundation:design-system"
+      "layer:foundation",
+      "foundation:design-system",
+      "platform:react",
+      "scope:core",
+      "visibility:public"
     ],
     "targets": {
       "storybook": {
