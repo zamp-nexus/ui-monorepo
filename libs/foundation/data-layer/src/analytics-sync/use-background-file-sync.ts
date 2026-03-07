@@ -78,10 +78,7 @@ export const useBackgroundFileSync = (
     () => hashPayloadSync([...new Set(tables)].sort()),
     [tables],
   );
-  const normalizedTables = useMemo(
-    () => [...new Set(tables)].sort(),
-    [normalizedTablesHash],
-  );
+  const normalizedTables = useMemo(() => [...new Set(tables)].sort(), [normalizedTablesHash]);
 
   const logger = useMemo(() => createDebugLogger('useBackgroundFileSync', debug), [debug]);
 

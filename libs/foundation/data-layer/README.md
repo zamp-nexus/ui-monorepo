@@ -3,6 +3,7 @@
 `@open-insights-web/foundation-data-layer` is the runtime composition layer for data access in Open Insights.
 
 It combines:
+
 - Convex query/mutation execution
 - Offline cache persistence via foundation-database
 - Offline queueing and sync orchestration via foundation-sync-engine
@@ -61,6 +62,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 ## Configuration
 
 `DataLayerConfig`:
+
 - `convexUrl` (required)
 - `tables` (`ReadonlyArray<UnifiedTableConfig>`)
 - `datasourceApi` (Convex datasource query for background parquet sync)
@@ -77,21 +79,25 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 ## Public API
 
 Provider and context:
+
 - `DataLayerProvider`
 - `useDataLayer`
 - `useDataLayerInternals` (advanced integrations)
 
 Query hooks:
+
 - `useDLGet`
 - `useDLGetList`
 - `useDLGetOne`
 
 Mutation hooks:
+
 - `useDLCreate`
 - `useDLUpdate`
 - `useDLDelete`
 
 Analytics hooks:
+
 - `useDLAnalytics`
 - `useDLAnalyticsMutation`
 - `useCreateAnalyticsView`
@@ -101,6 +107,7 @@ Analytics hooks:
 - `useCopyToParquet`
 
 Sync/conflict hooks:
+
 - `useSyncStatus`
 - `useSyncTrigger`
 - `useSyncEventListener`
@@ -109,6 +116,7 @@ Sync/conflict hooks:
 - `useBackgroundFileSync`
 
 Advanced composition:
+
 - `DataLayerContainer`
 - `createDataLayerContainer`
 - `TableRegistry`
@@ -129,6 +137,7 @@ flowchart TD
 ```
 
 Key design choices:
+
 - Single container instance owns dependency lifecycle
 - Analytics runtime initializes lazily on first analytics use
 - Table registry is the single runtime source for table metadata
@@ -137,6 +146,7 @@ Key design choices:
 ## Background Sync
 
 `useBackgroundFileSync` flow:
+
 1. Fetch datasource metadata
 2. Compare remote table metadata with local metadata
 3. Download changed parquet files with progress reporting
@@ -154,21 +164,26 @@ The hook now normalizes table lists to avoid unnecessary reruns when callers pas
 ## Migration Notes (Major Redesign)
 
 ### Shared contracts moved to data-model
+
 Import these from `@open-insights-web/foundation-data-model`:
+
 - `OPERATIONS`, `READ_OPERATIONS`, `WRITE_OPERATIONS`
 - `DATA_FRESHNESS`
 - `CONFLICT_RESOLUTION_TYPE`
 - `UnifiedTableConfig`, `TableAnalyticsConfig`
 
 ### Data-layer root exports simplified
+
 `foundation-data-layer` no longer acts as the canonical export surface for shared operation/freshness/conflict contracts. Use data-model for those contracts.
 
 ### Query-engine alignment
+
 `foundation-query-engine` now consumes the shared contract definitions from data-model, eliminating duplicated operation/freshness declarations.
 
 ## Contributing
 
 Development guidelines:
+
 - Keep strict TypeScript compatibility
 - Keep data-layer hooks thin and move reusable logic into `src/utils`
 - Prefer direct module imports over excessive barrel indirection

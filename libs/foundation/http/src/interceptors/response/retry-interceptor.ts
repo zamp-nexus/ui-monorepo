@@ -75,7 +75,10 @@ const executeRetry = async (
   const metadata = getRequestMetadata(config);
 
   if (retryCount >= retry.maxRetries) {
-    logger.debug(`Max retries (${retry.maxRetries}) exceeded for`, metadata.requestUrl ?? config.url);
+    logger.debug(
+      `Max retries (${retry.maxRetries}) exceeded for`,
+      metadata.requestUrl ?? config.url,
+    );
     return Promise.reject(new Error(`Max retries (${retry.maxRetries}) exceeded`));
   }
 

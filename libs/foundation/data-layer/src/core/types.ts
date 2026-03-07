@@ -19,8 +19,8 @@ import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex
 
 import type {
   ConflictStrategy,
-  SyncState,
   UnifiedTableConfig as SharedUnifiedTableConfig,
+  SyncState,
 } from '@open-insights-web/foundation-data-model';
 
 type ConvexFunctionVisibility = 'public' | 'internal';

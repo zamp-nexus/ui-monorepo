@@ -41,8 +41,7 @@ const isErrorLike = (value: unknown): value is { message: string; name?: string 
  * from Web Workers) are still detected.
  */
 export const isHttpError = (error: unknown): error is HttpError =>
-  error instanceof HttpError ||
-  (isErrorLike(error) && 'httpCode' in error && 'code' in error);
+  error instanceof HttpError || (isErrorLike(error) && 'httpCode' in error && 'code' in error);
 
 /** Check if an error has a specific HTTP error code */
 export const hasHttpErrorCode = (error: unknown, httpCode: HttpErrorCode): error is HttpError =>

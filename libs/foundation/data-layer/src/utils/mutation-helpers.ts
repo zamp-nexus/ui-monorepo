@@ -7,7 +7,12 @@
  * @module utils/mutation-helpers
  */
 
-import type { InvalidateQueryFilters, QueryClient, QueryKey, UseMutationResult } from '@tanstack/react-query';
+import type {
+  InvalidateQueryFilters,
+  QueryClient,
+  QueryKey,
+  UseMutationResult,
+} from '@tanstack/react-query';
 
 import {
   hashQueryKey,

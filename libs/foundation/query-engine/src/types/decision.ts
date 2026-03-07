@@ -6,8 +6,9 @@
  * @module types/decision
  */
 
-import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import type { DataFreshnessLevel, Operation } from '@open-insights-web/foundation-data-model';
+
+import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import type { Query } from './query';
 
 /**

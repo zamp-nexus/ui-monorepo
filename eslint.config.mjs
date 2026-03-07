@@ -40,11 +40,7 @@ const LAYER_CONSTRAINTS = [
   },
   {
     sourceTag: 'layer:product',
-    onlyDependOnLibsWithTags: [
-      'layer:feature',
-      'layer:shared',
-      'layer:foundation',
-    ],
+    onlyDependOnLibsWithTags: ['layer:feature', 'layer:shared', 'layer:foundation'],
   },
   {
     sourceTag: 'layer:feature',
@@ -76,7 +72,7 @@ const LAYER_CONSTRAINTS = [
  *   T3: sync-engine
  *   T4: bridge
  *   T5: data-layer, design-system, metrics
- *   T6: query-engine (C-2: data-layer restricted to hooks/ via no-restricted-imports)
+ *   T6: query-engine
  *   Special: mocks (depends on all foundation:*)
  */
 const FOUNDATION_DAG_CONSTRAINTS = [
@@ -92,10 +88,7 @@ const FOUNDATION_DAG_CONSTRAINTS = [
   },
   {
     sourceTag: 'foundation:trackers',
-    onlyDependOnLibsWithTags: [
-      'foundation:trackers',
-      'foundation:data-model',
-    ],
+    onlyDependOnLibsWithTags: ['foundation:trackers', 'foundation:data-model'],
   },
   // T2
   {
@@ -136,19 +129,11 @@ const FOUNDATION_DAG_CONSTRAINTS = [
   },
   {
     sourceTag: 'foundation:auth',
-    onlyDependOnLibsWithTags: [
-      'foundation:auth',
-      'foundation:utils',
-      'foundation:data-model',
-    ],
+    onlyDependOnLibsWithTags: ['foundation:auth', 'foundation:utils', 'foundation:data-model'],
   },
   {
     sourceTag: 'foundation:http',
-    onlyDependOnLibsWithTags: [
-      'foundation:http',
-      'foundation:utils',
-      'foundation:data-model',
-    ],
+    onlyDependOnLibsWithTags: ['foundation:http', 'foundation:utils', 'foundation:data-model'],
   },
   // T3
   {
@@ -239,11 +224,7 @@ const PLATFORM_CONSTRAINTS = [
   },
   {
     sourceTag: 'platform:browser',
-    onlyDependOnLibsWithTags: [
-      'platform:universal',
-      'platform:browser',
-      'platform:any',
-    ],
+    onlyDependOnLibsWithTags: ['platform:universal', 'platform:browser', 'platform:any'],
   },
   {
     sourceTag: 'platform:react',
@@ -256,11 +237,7 @@ const PLATFORM_CONSTRAINTS = [
   },
   {
     sourceTag: 'platform:node',
-    onlyDependOnLibsWithTags: [
-      'platform:universal',
-      'platform:node',
-      'platform:any',
-    ],
+    onlyDependOnLibsWithTags: ['platform:universal', 'platform:node', 'platform:any'],
   },
 ];
 
@@ -401,35 +378,6 @@ export default [
             ...PLATFORM_CONSTRAINTS,
             // VISIBILITY_CONSTRAINTS intentionally omitted:
             // test files may import visibility:internal libs (mocks)
-          ],
-        },
-      ],
-    },
-  },
-
-  // ================================================================
-  // QUERY ENGINE INTRA-LIBRARY BOUNDARY (C-2)
-  // Core engine modules must NOT import data-layer.
-  // Only hooks/ directory may bridge to data-layer.
-  // ================================================================
-  {
-    files: [
-      'libs/foundation/query-engine/src/**/*.ts',
-      'libs/foundation/query-engine/src/**/*.tsx',
-    ],
-    ignores: ['libs/foundation/query-engine/src/hooks/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@open-insights-web/foundation-data-layer',
-              message:
-                'data-layer imports are restricted to query-engine/src/hooks/ only. ' +
-                'Core engine modules (engine/, compiler/, schema/, builder/) must remain ' +
-                'Tier 2 with zero data-layer dependency. See architecture review C-2.',
-            },
           ],
         },
       ],

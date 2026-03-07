@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createEmitter } from './create-emitter';
 import { EmitterProvider } from './emitter-provider';
-import { useEmitter } from './use-emitter';
 import type { TypedEmitter } from './types';
+import { useEmitter } from './use-emitter';
 
 type AppEvents = {
   'toast:show': [message: string];
@@ -25,7 +25,7 @@ describe('EmitterProvider', () => {
     render(
       <EmitterProvider emitter={injectedEmitter}>
         <Consumer />
-      </EmitterProvider>
+      </EmitterProvider>,
     );
 
     expect(resolvedEmitter).toBe(injectedEmitter);
@@ -49,13 +49,13 @@ describe('EmitterProvider', () => {
     const { rerender } = render(
       <EmitterProvider>
         <Consumer />
-      </EmitterProvider>
+      </EmitterProvider>,
     );
 
     rerender(
       <EmitterProvider>
         <Consumer />
-      </EmitterProvider>
+      </EmitterProvider>,
     );
 
     expect(firstEmitter).not.toBeNull();
@@ -90,7 +90,7 @@ describe('EmitterProvider', () => {
       <EmitterProvider>
         <Publisher />
         <Subscriber />
-      </EmitterProvider>
+      </EmitterProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'publish' }));

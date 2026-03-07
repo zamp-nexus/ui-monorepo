@@ -17,16 +17,16 @@
  */
 
 import {
-  createSingletonFactory,
-  DisposedError,
-  type IDisposable,
-} from '@open-insights-web/foundation-utils';
-import {
   DATA_FRESHNESS,
   isMutationOperation,
   OPERATIONS,
   WRITE_OPERATIONS,
 } from '@open-insights-web/foundation-data-model';
+import {
+  createSingletonFactory,
+  DisposedError,
+  type IDisposable,
+} from '@open-insights-web/foundation-utils';
 
 import type {
   DecisionContext,

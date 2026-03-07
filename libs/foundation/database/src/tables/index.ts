@@ -53,6 +53,4 @@ export {
 } from './sync-state';
 
 // Table sync metadata (parquet file sync tracking)
-export {
-  type TableSyncMetadataOperations,
-} from './table-sync-metadata';
+export { type TableSyncMetadataOperations } from './table-sync-metadata';

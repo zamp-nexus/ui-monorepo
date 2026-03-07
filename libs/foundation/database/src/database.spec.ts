@@ -10,9 +10,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  createTableSyncMetadataEntry,
   DATABASE_TRANSACTION_MODE,
   DATABASE_TRANSACTION_TABLE,
-  createTableSyncMetadataEntry,
   FOUNDATION_ERROR_CODE,
   getFilesNeedingDownload as getSharedFilesNeedingDownload,
   hasErrorCode,

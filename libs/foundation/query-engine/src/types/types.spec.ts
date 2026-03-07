@@ -7,10 +7,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  MemberRef,
   isOperation,
   isReadOperation,
   isWriteOperation,
+  MemberRef,
   OPERATIONS,
   QueryId,
   SqlTableName as TableName,

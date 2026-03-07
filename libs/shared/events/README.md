@@ -18,7 +18,12 @@ npm install
 ## Quickstart
 
 ```tsx
-import { HotkeysProvider, useHotkeys, EmitterProvider, useEmitter } from '@open-insights-web/shared-events';
+import {
+  EmitterProvider,
+  HotkeysProvider,
+  useEmitter,
+  useHotkeys,
+} from '@open-insights-web/shared-events';
 
 type AppEvents = {
   'toast:show': [message: string];

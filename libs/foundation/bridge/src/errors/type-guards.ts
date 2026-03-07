@@ -27,9 +27,7 @@ import {
   WorkerError,
   WorkerInitializationError,
 } from './pool-errors';
-import {
-  SqlValidationError,
-} from './query-errors';
+import { SqlValidationError } from './query-errors';
 
 // NOTE: OpfsNotSupportedError and isOpfsNotSupportedError - import from '@open-insights-web/foundation-database'
 

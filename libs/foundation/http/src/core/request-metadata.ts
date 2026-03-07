@@ -51,10 +51,7 @@ export const resolveRequestUrl = (
 /**
  * Extract a host key from request URL/baseURL.
  */
-export const extractHostKey = (
-  url: string | undefined,
-  baseUrl: string | undefined,
-): string => {
+export const extractHostKey = (url: string | undefined, baseUrl: string | undefined): string => {
   const resolvedUrl = resolveRequestUrl(url, baseUrl);
   if (!resolvedUrl) {
     return UNKNOWN_HOST_KEY;

@@ -219,7 +219,10 @@ export class FileDownloadService {
       if (signal !== undefined) {
         requestConfig.signal = signal;
       }
-      const response = await this.axiosInstance.get<ArrayBuffer | Uint8Array>(file.url, requestConfig);
+      const response = await this.axiosInstance.get<ArrayBuffer | Uint8Array>(
+        file.url,
+        requestConfig,
+      );
 
       const normalizedData = toArrayBuffer(response.data);
       this.logger.debug(`Downloaded file: ${file.filename} (${normalizedData.byteLength} bytes)`);
@@ -346,7 +349,7 @@ export class FileDownloadService {
           (bytesLoaded) => {
             onProgress?.({
               isDownloading: true,
-              progress: (filesCompleted + safeDivide(bytesLoaded, file.size)) / total * 100,
+              progress: ((filesCompleted + safeDivide(bytesLoaded, file.size)) / total) * 100,
               filesTotal: total,
               filesCompleted,
               currentFile: file.filename,

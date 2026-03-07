@@ -49,10 +49,8 @@ const handleCreateError = createScopedErrorHandler('useDLCreate');
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const getStringField = (
-  value: Record<string, unknown>,
-  key: 'id' | '_id',
-): string | null => (typeof value[key] === 'string' ? (value[key] as string) : null);
+const getStringField = (value: Record<string, unknown>, key: 'id' | '_id'): string | null =>
+  typeof value[key] === 'string' ? (value[key] as string) : null;
 
 const getResultEntityId = (result: unknown): string | null => {
   if (!isRecord(result)) {

@@ -10,6 +10,8 @@ const Consumer = () => {
 
 describe('useEmitter', () => {
   it('throws when used outside EmitterProvider', () => {
-    expect(() => render(<Consumer />)).toThrowError('useEmitter must be used within an EmitterProvider');
+    expect(() => render(<Consumer />)).toThrowError(
+      'useEmitter must be used within an EmitterProvider',
+    );
   });
 });

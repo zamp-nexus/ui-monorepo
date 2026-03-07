@@ -11,8 +11,8 @@
 import {
   FOUNDATION_ERROR_CODE,
   FoundationError,
-  type HttpMethod,
   type ErrorContext,
+  type HttpMethod,
 } from '@open-insights-web/foundation-data-model';
 
 import {

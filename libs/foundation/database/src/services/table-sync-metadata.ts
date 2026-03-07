@@ -9,9 +9,7 @@
 
 import type { TableSyncMetadataEntry } from '@open-insights-web/foundation-data-model';
 
-import type {
-  TableSyncMetadataOperations,
-} from '../tables/table-sync-metadata';
+import type { TableSyncMetadataOperations } from '../tables/table-sync-metadata';
 import { assertValid } from '../validation/assert-valid';
 import { tableSyncMetadataEntrySchema } from '../validation/schemas';
 import { BaseService } from './base';

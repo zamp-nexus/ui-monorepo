@@ -39,7 +39,4 @@ export { WORKER_STATUS } from '../../types/pool';
 export type { WorkerStatus } from '../../types/pool';
 
 // Errors
-export {
-  WorkerError,
-  PoolShutdownError,
-} from '../../errors';
+export { WorkerError, PoolShutdownError } from '../../errors';

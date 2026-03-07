@@ -47,8 +47,8 @@ export const DEFAULT_HTTP_RETRY_CONFIG: Readonly<HttpRetryConfig> = Object.freez
 // =============================================================================
 
 /** Default circuit-breaker configuration */
-export const DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG: Readonly<HttpCircuitBreakerConfig> = Object.freeze(
-  {
+export const DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG: Readonly<HttpCircuitBreakerConfig> =
+  Object.freeze({
     enabled: false,
     failureThreshold: 5,
     resetTimeoutMs: 30_000,
@@ -58,8 +58,7 @@ export const DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG: Readonly<HttpCircuitBreakerCon
     maxHosts: 250,
     hostTtlMs: 10 * 60_000,
     debug: false,
-  },
-);
+  });
 
 // =============================================================================
 // Auth Defaults

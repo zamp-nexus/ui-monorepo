@@ -12,7 +12,11 @@ import { isAxiosError } from 'axios';
 
 import { createDebugLogger } from '@open-insights-web/foundation-utils';
 
-import { AXIOS_ERROR_CODE, DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG, HTTP_STATUS } from '../../core/constants';
+import {
+  AXIOS_ERROR_CODE,
+  DEFAULT_HTTP_CIRCUIT_BREAKER_CONFIG,
+  HTTP_STATUS,
+} from '../../core/constants';
 import { extractHostKey, getRequestMetadata } from '../../core/request-metadata';
 import type { HttpCircuitBreakerConfig } from '../../core/types';
 import { HttpServerError } from '../../errors/http-errors';

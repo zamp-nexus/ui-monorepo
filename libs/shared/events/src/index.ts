@@ -1,4 +1,9 @@
-export { HotkeysProvider, type HotkeysProviderProps, useHotkeys, type UseHotkeys } from './hotkeys/index';
+export {
+  HotkeysProvider,
+  type HotkeysProviderProps,
+  useHotkeys,
+  type UseHotkeys,
+} from './hotkeys/index';
 export {
   createEmitter,
   EmitterProvider,

@@ -8,6 +8,7 @@ import {
   SYNC_EVENT_TYPE,
   type SyncEvent,
 } from '@open-insights-web/foundation-data-model';
+
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useConflictResolution } from './use-conflict-resolution';

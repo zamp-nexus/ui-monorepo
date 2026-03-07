@@ -166,12 +166,12 @@ Import these directly from `@open-insights-web/foundation-data-model`:
 
 ### Ownership matrix
 
-| Contract                                                  | Canonical owner         | Import from                                      |
-| --------------------------------------------------------- | ----------------------- | ------------------------------------------------ |
-| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
-| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
-| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
-| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `@open-insights-web/foundation-data-model`       |
+| Contract                                                  | Canonical owner         | Import from                                |
+| --------------------------------------------------------- | ----------------------- | ------------------------------------------ |
+| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
+| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
+| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
+| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
 
 ### Singleton safety
 
