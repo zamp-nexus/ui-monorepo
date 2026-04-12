@@ -1,13 +1,13 @@
 /**
  * Table Sync Service
  *
- * Fetches table metadata from Convex datasource API
+ * Fetches table metadata from the datasource API
  * and compares with local metadata to determine sync needs.
  *
  * @module analytics-sync/table-sync-service
  */
 
-import type { ConvexReactClient } from 'convex/react';
+import type { AxiosInstance } from 'axios';
 
 import {
   isDataSourceResponse,
@@ -17,7 +17,8 @@ import {
 } from '@open-insights-web/foundation-data-model';
 import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
 
-import type { ConvexQueryReference } from '../core/types';
+import type { DataSourceEndpointDescriptor } from '../core/types';
+import { executeQueryDescriptor } from '../core/http-descriptor';
 
 /**
  * Local table metadata stored in IndexedDB.
@@ -59,8 +60,8 @@ export interface TableSyncDatabaseOperations {
  * Table Sync Service Configuration
  */
 export interface TableSyncServiceConfig {
-  readonly convexClient: ConvexReactClient;
-  readonly datasourceApi: ConvexQueryReference | null;
+  readonly axiosInstance: AxiosInstance;
+  readonly datasourceEndpoint: DataSourceEndpointDescriptor | null;
   readonly database: TableSyncDatabaseOperations;
   readonly debug?: boolean;
 }
@@ -69,14 +70,14 @@ export interface TableSyncServiceConfig {
  * Table Sync Service
  */
 export class TableSyncService {
-  private readonly convexClient: ConvexReactClient;
-  private readonly datasourceApi: ConvexQueryReference | null;
+  private readonly axiosInstance: AxiosInstance;
+  private readonly datasourceEndpoint: DataSourceEndpointDescriptor | null;
   private readonly database: TableSyncDatabaseOperations;
   private readonly logger: Logger;
 
   constructor(config: TableSyncServiceConfig) {
-    this.convexClient = config.convexClient;
-    this.datasourceApi = config.datasourceApi;
+    this.axiosInstance = config.axiosInstance;
+    this.datasourceEndpoint = config.datasourceEndpoint;
     this.database = config.database;
     this.logger = createDebugLogger('TableSyncService', config.debug ?? false);
   }
@@ -85,20 +86,22 @@ export class TableSyncService {
    * Check if service is configured (has datasource API)
    */
   isConfigured = (): boolean => {
-    return this.datasourceApi !== null;
+    return this.datasourceEndpoint !== null;
   };
 
   /**
-   * Fetch table info from Convex datasource.list API (batch)
+   * Fetch table info from the datasource endpoint (batch)
    */
   fetchTablesInfo = async (tables: ReadonlyArray<string>): Promise<DataSourceResponse> => {
-    if (!this.datasourceApi) {
-      throw new Error('No datasource API configured. Set datasourceApi in DataLayerConfig.');
+    if (!this.datasourceEndpoint) {
+      throw new Error(
+        'No datasource endpoint configured. Set datasourceEndpoint in DataLayerConfig.',
+      );
     }
 
     this.logger.debug('Fetching table info for:', tables);
 
-    const response = await this.convexClient.query(this.datasourceApi, {
+    const response = await executeQueryDescriptor(this.axiosInstance, this.datasourceEndpoint, {
       tables: [...tables],
     });
 

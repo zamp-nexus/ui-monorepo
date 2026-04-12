@@ -40,7 +40,7 @@ export const buildQueryKey = (table: string, entityId?: string, args?: unknown):
  * @param hasData - Whether the query has data
  * @param isOnline - Whether the client is online
  * @param isFetching - Whether a fetch is in progress
- * @returns The data source: 'convex', 'cache', or 'none'
+ * @returns The data source: 'api', 'cache', or 'none'
  */
 export const getDataSource = (
   hasData: boolean,
@@ -50,5 +50,5 @@ export const getDataSource = (
   if (!hasData) return DATA_SOURCE.NONE;
   if (!isOnline) return DATA_SOURCE.CACHE;
   if (isFetching) return DATA_SOURCE.CACHE;
-  return DATA_SOURCE.CONVEX;
+  return DATA_SOURCE.API;
 };

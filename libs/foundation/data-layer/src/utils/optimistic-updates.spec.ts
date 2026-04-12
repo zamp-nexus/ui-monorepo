@@ -143,10 +143,10 @@ describe('optimistic-updates utilities', () => {
       ]);
     });
 
-    it('should remove item by _id', () => {
+    it('should remove only the matching id', () => {
       const existingData = [
-        { id: '1', _id: 'convex_1', name: 'User 1' },
-        { id: '2', _id: 'convex_2', name: 'User 2' },
+        { id: 'user_1', name: 'User 1' },
+        { id: 'user_2', name: 'User 2' },
       ];
       mockQueryClient.getQueryData.mockReturnValue(existingData);
 
@@ -155,10 +155,10 @@ describe('optimistic-updates utilities', () => {
         capturedUpdater = updater;
       });
 
-      optimisticRemoveFromList(mockQueryClient as never, ['users'], 'convex_1');
+      optimisticRemoveFromList(mockQueryClient as never, ['users'], 'user_1');
 
       const result = capturedUpdater?.(existingData);
-      expect(result).toEqual([{ id: '2', _id: 'convex_2', name: 'User 2' }]);
+      expect(result).toEqual([{ id: 'user_2', name: 'User 2' }]);
     });
 
     it('should return unchanged list when no match', () => {
@@ -216,10 +216,10 @@ describe('optimistic-updates utilities', () => {
       expect(result[1].name).toBe('User 2');
     });
 
-    it('should update item by _id', () => {
+    it('should update only the matching id', () => {
       const existingData = [
-        { id: '1', _id: 'convex_1', name: 'User 1' },
-        { id: '2', _id: 'convex_2', name: 'User 2' },
+        { id: 'user_1', name: 'User 1' },
+        { id: 'user_2', name: 'User 2' },
       ];
       mockQueryClient.getQueryData.mockReturnValue(existingData);
 
@@ -231,13 +231,13 @@ describe('optimistic-updates utilities', () => {
       optimisticUpdateInList(
         mockQueryClient as never,
         ['users'],
-        'convex_2',
-        (user: { id: string; _id: string; name: string }) => ({ ...user, name: 'Updated via _id' }),
+        'user_2',
+        (user: { id: string; name: string }) => ({ ...user, name: 'Updated User 2' }),
       );
 
       const result = capturedUpdater?.(existingData) as { name: string }[];
       expect(result[0].name).toBe('User 1');
-      expect(result[1].name).toBe('Updated via _id');
+      expect(result[1].name).toBe('Updated User 2');
     });
 
     it('should handle undefined list', () => {
@@ -332,17 +332,18 @@ describe('optimistic-updates utilities', () => {
 
       const result = capturedUpdater?.(existingData) as {
         id: string;
-        _id?: string;
         name: string;
       }[];
       expect(result[0].id).toBe('server_456');
-      expect(result[0]._id).toBe('server_456');
       expect(result[0].name).toBe('New User');
       expect(result[1].id).toBe('2');
     });
 
-    it('should replace provisional id matching _id', () => {
-      const existingData = [{ id: 'prov_123', _id: 'prov_123', name: 'New User' }];
+    it('should replace repeated provisional ids consistently', () => {
+      const existingData = [
+        { id: 'prov_123', name: 'New User' },
+        { id: 'prov_123', name: 'Draft Copy' },
+      ];
       mockQueryClient.getQueryData.mockReturnValue(existingData);
 
       let capturedUpdater: ((old: unknown[]) => unknown) | undefined;
@@ -352,15 +353,15 @@ describe('optimistic-updates utilities', () => {
 
       replaceProvisionalId(mockQueryClient as never, ['users'], 'prov_123', 'server_789');
 
-      const result = capturedUpdater?.(existingData) as { id: string; _id: string }[];
+      const result = capturedUpdater?.(existingData) as { id: string; name: string }[];
       expect(result[0].id).toBe('server_789');
-      expect(result[0]._id).toBe('server_789');
+      expect(result[1].id).toBe('server_789');
     });
 
     it('should not modify non-matching items', () => {
       const existingData = [
-        { id: '1', _id: 'convex_1', name: 'User 1' },
-        { id: '2', _id: 'convex_2', name: 'User 2' },
+        { id: '1', name: 'User 1' },
+        { id: '2', name: 'User 2' },
       ];
       mockQueryClient.getQueryData.mockReturnValue(existingData);
 

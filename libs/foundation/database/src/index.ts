@@ -54,6 +54,7 @@ export {
   // NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
   isDuckDBViewsValue,
   isNetworkStatus,
+  isRealtimeCursorStore,
   DEFAULT_NETWORK_STATUS,
   type SyncStateEntry,
 } from './tables';

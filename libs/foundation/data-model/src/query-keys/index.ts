@@ -13,8 +13,8 @@ export type {
   QueryHash,
   QueryKeyMeta,
   EntityTableName,
-  ConvexFunctionPath,
-  QueryFunctionRef,
+  ApiEndpointPath,
+  ApiEndpointRef,
 } from './types';
 
 export { TABLE_NAMES, QUERY_SCOPE } from './types';

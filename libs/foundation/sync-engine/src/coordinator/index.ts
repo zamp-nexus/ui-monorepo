@@ -5,7 +5,6 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
-import type { ConvexReactClient } from 'convex/react';
 
 import {
   CROSS_TAB_MESSAGE_TYPE,
@@ -14,6 +13,9 @@ import {
   type NetworkStatus,
   type ProcessingResult,
   type QueryKeyBase,
+  type RealtimeConnectionSnapshot,
+  type RealtimeServerMessage,
+  type RealtimeSubscriptionSnapshot,
   type SyncEvent,
   type SyncEventListener,
   type SyncState,
@@ -33,8 +35,6 @@ import {
 
 import type { ConflictResolver } from '../conflicts/resolver';
 import { createConflictResolver } from '../conflicts/resolver';
-import type { ConvexSyncAdapter } from '../convex/adapter';
-import { createConvexAdapter, type ConvexMutationOptions } from '../convex/adapter';
 import {
   DEFAULT_AUTO_START,
   DEFAULT_CONFLICT_STRATEGY,
@@ -46,14 +46,17 @@ import type {
   INetworkMonitor,
   IQueueManager,
   ISyncCoordinator,
+  SyncTableConfig,
 } from '../core/interfaces';
 import type { CrossTabManager } from '../cross-tab/manager';
 import { createCrossTabManager } from '../cross-tab/manager';
+import { createHttpMutationAdapter, type HttpMutationAdapter } from '../http/adapter';
 import type { NetworkStatusMonitor } from '../network/index';
 import { createNetworkMonitor } from '../network/index';
 import type { OfflineQueueManager } from '../queue/manager';
 import { createQueueManager } from '../queue/manager';
 import { QueueProcessor } from '../queue/processor';
+import { createRealtimeEventBridge, type RealtimeEventBridge } from '../realtime/bridge';
 
 /**
  * Sync coordinator configuration
@@ -61,14 +64,12 @@ import { QueueProcessor } from '../queue/processor';
 export interface SyncCoordinatorConfig {
   /** TanStack Query client */
   queryClient: QueryClient;
-  /** Convex client */
-  convexClient: ConvexReactClient;
+  /** Unified table configs used to resolve HTTP descriptors */
+  tables?: ReadonlyArray<SyncTableConfig>;
   /** Database instance */
   database?: InsightsDatabase;
   /** Conflict resolution strategy */
   conflictStrategy?: ConflictStrategy;
-  /** Mutation map for queue processing */
-  mutationMap?: Record<string, ConvexMutationOptions>;
   /** Auto-start on creation */
   autoStart?: boolean;
   /** Enable cross-tab sync */
@@ -77,8 +78,8 @@ export interface SyncCoordinatorConfig {
   healthCheckUrl?: string;
   /** Health check interval */
   healthCheckInterval?: number;
-  /** Optional shared Axios instance for health checks */
-  axiosInstance?: AxiosInstance;
+  /** Shared Axios instance for mutation execution and health checks */
+  axiosInstance: AxiosInstance;
   /** Enable debug logging */
   debug?: boolean;
   /** Error callback for centralized error handling */
@@ -109,7 +110,8 @@ const SYNC_DEBOUNCE_DELAY_MS = DEFAULT_SYNC_DEBOUNCE_DELAY_MS;
  */
 export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator {
   private queryClient: QueryClient;
-  private convexAdapter: ConvexSyncAdapter;
+  private httpMutationAdapter: HttpMutationAdapter;
+  private realtimeBridge: RealtimeEventBridge;
   private db: InsightsDatabase;
   private networkMonitor: NetworkStatusMonitor;
   private queueManager: OfflineQueueManager;
@@ -141,9 +143,9 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
     this.db = config.database ?? getDatabase();
     this.logger = createDebugLogger('SyncCoordinator', this.config.debug);
 
-    // Initialize components
-    this.convexAdapter = createConvexAdapter({
-      client: config.convexClient,
+    this.httpMutationAdapter = createHttpMutationAdapter({
+      axiosInstance: config.axiosInstance,
+      tables: config.tables,
       debug: this.config.debug,
     });
 
@@ -171,43 +173,53 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
       });
     }
 
-    // Initialize queue processor if mutation map provided
-    if (config.mutationMap) {
-      this.queueProcessor = new QueueProcessor({
-        queueManager: this.queueManager,
-        conflictResolver: this.conflictResolver,
-        executor: this.convexAdapter.createMutationExecutor(config.mutationMap),
-        onSuccess: (mutation, result) => {
-          this.logger.debug('Mutation succeeded:', mutation.id);
-          // Invalidate related queries
-          if (mutation.invalidateKeys) {
-            for (const keyStr of mutation.invalidateKeys) {
-              try {
-                const key = JSON.parse(keyStr);
-                this.queryClient.invalidateQueries({ queryKey: key });
-              } catch {
-                // Ignore parse errors
+    this.realtimeBridge = createRealtimeEventBridge({
+      queryClient: this.queryClient,
+      crossTabManager: this.crossTabManager,
+      debug: this.config.debug,
+    });
+
+    this.queueProcessor = new QueueProcessor({
+      queueManager: this.queueManager,
+      conflictResolver: this.conflictResolver,
+      executor: this.httpMutationAdapter.createMutationExecutor(),
+      onSuccess: (mutation, result) => {
+        this.logger.debug('Mutation succeeded:', mutation.id);
+        const queryKeys: QueryKeyBase[] = [];
+        if (mutation.invalidateKeys) {
+          for (const keyStr of mutation.invalidateKeys) {
+            try {
+              const key = JSON.parse(keyStr);
+              if (Array.isArray(key)) {
+                queryKeys.push(key);
               }
+            } catch {
+              // Ignore parse errors
             }
           }
-        },
-        onFailure: (mutation, error) => {
-          this.logger.warn('Mutation failed:', mutation.id, error);
-        },
-        onConflict: (mutation, context) => {
-          this.logger.debug('Conflict detected:', mutation.id);
-          this.emit({
-            type: SYNC_EVENT_TYPE.CONFLICT_DETECTED,
-            timestamp: Date.now(),
-            data: { conflictCount: 1 },
-          });
-        },
-        onError: (error, mutation) => {
-          this.handleError(error, mutation ? `Mutation ${mutation.id}` : 'Queue processing');
-        },
-        debug: this.config.debug,
-      });
-    }
+        }
+
+        this.realtimeBridge.apply({
+          table: mutation.tableName,
+          queryKeys,
+        });
+      },
+      onFailure: (mutation, error) => {
+        this.logger.warn('Mutation failed:', mutation.id, error);
+      },
+      onConflict: (mutation) => {
+        this.logger.debug('Conflict detected:', mutation.id);
+        this.emit({
+          type: SYNC_EVENT_TYPE.CONFLICT_DETECTED,
+          timestamp: Date.now(),
+          data: { conflictCount: 1 },
+        });
+      },
+      onError: (error, mutation) => {
+        this.handleError(error, mutation ? `Mutation ${mutation.id}` : 'Queue processing');
+      },
+      debug: this.config.debug,
+    });
 
     // Constructor has no side effects. Use createAndStartSyncCoordinator()
     // or createSyncCoordinator({ autoStart: true }) to start automatically.
@@ -480,10 +492,120 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
   }
 
   /**
-   * Get Convex adapter instance
+   * Broadcast realtime connection state to follower tabs.
    */
-  getConvexAdapter(): ConvexSyncAdapter {
-    return this.convexAdapter;
+  broadcastRealtimeState(snapshot: RealtimeConnectionSnapshot): void {
+    this.ensureNotDisposed();
+    this.crossTabManager?.notifyRealtimeState(snapshot);
+  }
+
+  /**
+   * Broadcast a validated realtime server message to follower tabs.
+   */
+  broadcastRealtimeMessage(message: RealtimeServerMessage): void {
+    this.ensureNotDisposed();
+    this.crossTabManager?.notifyRealtimeEvent(message);
+  }
+
+  /**
+   * Broadcast realtime subscription state to follower tabs.
+   */
+  broadcastRealtimeSubscriptionState(snapshot: RealtimeSubscriptionSnapshot): void {
+    this.ensureNotDisposed();
+    this.crossTabManager?.notifyRealtimeSubscriptionState(snapshot);
+  }
+
+  /**
+   * Broadcast a realtime resync request to follower tabs.
+   */
+  broadcastRealtimeResync(topic: string, table: string, reason: string): void {
+    this.ensureNotDisposed();
+    this.crossTabManager?.notifyRealtimeResync(topic, table, reason);
+  }
+
+  /**
+   * Subscribe to realtime connection state broadcasts from the leader tab.
+   */
+  subscribeRealtimeState(listener: (snapshot: RealtimeConnectionSnapshot) => void): () => void {
+    this.ensureNotDisposed();
+    if (!this.crossTabManager) {
+      return () => undefined;
+    }
+
+    return this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.REALTIME_STATE, (message) => {
+      if (message.payload?.realtimeConnection) {
+        listener(message.payload.realtimeConnection);
+      }
+    });
+  }
+
+  /**
+   * Subscribe to validated realtime messages broadcast by the leader tab.
+   */
+  subscribeRealtimeMessages(listener: (message: RealtimeServerMessage) => void): () => void {
+    this.ensureNotDisposed();
+    if (!this.crossTabManager) {
+      return () => undefined;
+    }
+
+    return this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.REALTIME_EVENT, (message) => {
+      if (message.payload?.realtimeMessage) {
+        listener(message.payload.realtimeMessage);
+      }
+    });
+  }
+
+  /**
+   * Subscribe to realtime subscription state broadcasts from the leader tab.
+   */
+  subscribeRealtimeSubscriptionState(
+    listener: (snapshot: RealtimeSubscriptionSnapshot) => void,
+  ): () => void {
+    this.ensureNotDisposed();
+    if (!this.crossTabManager) {
+      return () => undefined;
+    }
+
+    return this.crossTabManager.subscribe(
+      CROSS_TAB_MESSAGE_TYPE.REALTIME_SUBSCRIPTION_STATE,
+      (message) => {
+        if (message.payload?.realtimeSubscription) {
+          listener(message.payload.realtimeSubscription);
+        }
+      },
+    );
+  }
+
+  /**
+   * Subscribe to realtime resync requests broadcast by the leader tab.
+   */
+  subscribeRealtimeResync(
+    listener: (payload: { topic: string; table: string; reason: string }) => void,
+  ): () => void {
+    this.ensureNotDisposed();
+    if (!this.crossTabManager) {
+      return () => undefined;
+    }
+
+    return this.crossTabManager.subscribe(CROSS_TAB_MESSAGE_TYPE.REALTIME_RESYNC, (message) => {
+      const topic = message.payload?.topic;
+      const table = message.payload?.tableName;
+      const reason = message.payload?.reason;
+      if (topic && table && reason) {
+        listener({ topic, table, reason });
+      }
+    });
+  }
+
+  /**
+   * Publish a realtime-originated sync event to sync listeners.
+   */
+  reportRealtimeEvent(event: Omit<SyncEvent, 'timestamp'> & { timestamp?: number }): void {
+    this.ensureNotDisposed();
+    this.emit({
+      ...event,
+      timestamp: event.timestamp ?? Date.now(),
+    });
   }
 
   /**
@@ -512,7 +634,8 @@ export class SyncCoordinator extends AsyncDisposable implements ISyncCoordinator
     this.conflictResolver.dispose();
     this.crossTabManager?.dispose();
     this.queueProcessor?.dispose();
-    this.convexAdapter.dispose();
+    this.realtimeBridge.dispose();
+    this.httpMutationAdapter.dispose();
 
     this.logger.debug('Disposed');
   }

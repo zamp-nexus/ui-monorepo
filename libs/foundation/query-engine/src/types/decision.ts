@@ -36,7 +36,7 @@ export type ExecutionPath = (typeof DECISION_PATHS)[keyof typeof DECISION_PATHS]
  */
 export const DECISION_REASONS = {
   // API Path reasons
-  MUTATION_USES_API: 'Mutation operations always use Convex API',
+  MUTATION_USES_API: 'Mutation operations always use HTTP API',
   SIMPLE_QUERY_WITH_API: 'Simple query on single table with list API available',
 
   // DuckDB Path reasons
@@ -117,8 +117,8 @@ export interface DecisionFactors {
   readonly hasMeasures: boolean;
   /** Number of tables involved */
   readonly tableCount: number;
-  /** Are all tables Convex-sourced? */
-  readonly allTablesConvex: boolean;
+  /** Are all tables API-backed? */
+  readonly allTablesApi: boolean;
   /** Do all tables have list API? */
   readonly allTablesHaveApi: boolean;
   /** Is client currently online? */
@@ -168,7 +168,7 @@ export interface DecisionContext {
  */
 export interface DecisionTableConfig {
   readonly source?: string;
-  readonly convex?: {
+  readonly api?: {
     readonly list?: unknown;
     readonly get?: unknown;
     readonly create?: unknown;

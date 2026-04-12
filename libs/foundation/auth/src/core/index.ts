@@ -44,7 +44,6 @@ export { USER_ROLES, isValidRole, getUserPermissions } from './types';
 export type {
   // Configuration
   OryConfig,
-  ConvexAuthConfig,
   AuthConfig,
   // Session
   AuthSession,

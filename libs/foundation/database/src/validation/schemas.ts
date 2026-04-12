@@ -14,6 +14,7 @@ import {
   MUTATION_STATUS,
   MUTATION_TYPE,
   OPFS_FILE_TYPE,
+  realtimeCursorStoreSchema,
   Result,
 } from '@open-insights-web/foundation-data-model';
 
@@ -167,6 +168,8 @@ export const duckDBViewsValueSchema = z.object({
   ),
   lastUpdatedAt: nonNegativeTimestampSchema,
 });
+
+export { realtimeCursorStoreSchema };
 
 // =============================================================================
 // Table Sync Metadata Entry Schema

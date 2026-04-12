@@ -1,7 +1,7 @@
 /**
  * @foundation/sync-engine
  *
- * Offline-first sync engine with Convex integration, conflict resolution, and cross-tab sync.
+ * Offline-first sync engine with HTTP mutation replay, conflict resolution, and cross-tab sync.
  * Depends on: @foundation/database, @foundation/data-model
  *
  * NOTE: Sync-related types (ConflictStrategy, ConflictContext, ConflictResult, MergeConfig,

@@ -2,9 +2,8 @@ import React, { type PropsWithChildren } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { FunctionReference } from 'convex/server';
 
-import { DATA_SOURCE } from '@open-insights-web/foundation-data-model';
+import { DATA_SOURCE, type ApiQueryDescriptor } from '@open-insights-web/foundation-data-model';
 
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
@@ -12,12 +11,24 @@ import { useDLGet } from './use-dl-get';
 
 const createInternals = (overrides: Partial<DataLayerInternals> = {}): DataLayerInternals => {
   const queryClient = overrides.queryClient ?? new QueryClient();
+  const axiosInstance =
+    overrides.axiosInstance ??
+    ({
+      request: vi.fn(),
+      defaults: {},
+    } as unknown as DataLayerInternals['axiosInstance']);
   const defaultInternals = {
     queryClient,
-    convexClient: {
-      query: vi.fn(),
+    axiosInstance,
+    realtimeClient: {
+      subscribeStatus: vi.fn(() => vi.fn()),
+      subscribeMessages: vi.fn(() => vi.fn()),
+      connect: vi.fn(async () => undefined),
+      close: vi.fn(),
+      send: vi.fn(),
     },
-    convexQueryClient: {},
+    realtimeStatus: 'idle',
+    lastRealtimeMessage: null,
     database: {
       queries: {
         get: vi.fn().mockResolvedValue(undefined),
@@ -40,7 +51,7 @@ const createInternals = (overrides: Partial<DataLayerInternals> = {}): DataLayer
       analyticsGcTime: 300_000,
     },
     tableRegistry: {},
-    datasourceApi: null,
+    datasourceEndpoint: null,
     getTableSyncService: vi.fn(),
     getFileDownloadService: vi.fn().mockResolvedValue(null),
   } satisfies Record<string, unknown>;
@@ -64,24 +75,27 @@ const createWrapper = (internals: DataLayerInternals) => {
 };
 
 describe('useDLGet', () => {
-  it('loads data from convex when online', async () => {
-    const convexResult = { id: 'evt_1', type: 'click' };
-    const convexQuery = vi.fn().mockResolvedValue(convexResult);
+  it('loads data from the API when online', async () => {
+    const apiResult = { id: 'evt_1', type: 'click' };
+    const request = vi.fn().mockResolvedValue({ data: apiResult });
     const internals = createInternals({
       isOnline: true,
-      convexClient: { query: convexQuery } as unknown as DataLayerInternals['convexClient'],
+      axiosInstance: {
+        request,
+        defaults: {},
+      } as unknown as DataLayerInternals['axiosInstance'],
     });
 
-    const queryRef = {} as FunctionReference<'query'>;
+    const queryRef = { path: '/events/evt_1' } as ApiQueryDescriptor<{ id: string }, typeof apiResult>;
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_1' } }),
       { wrapper: createWrapper(internals) },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(convexQuery).toHaveBeenCalledTimes(1);
-    expect(result.current.data).toEqual(convexResult);
-    expect(result.current.dataSource).toBe(DATA_SOURCE.CONVEX);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(result.current.data).toEqual(apiResult);
+    expect(result.current.dataSource).toBe(DATA_SOURCE.API);
   });
 
   it('falls back to cache when offline', async () => {
@@ -96,7 +110,10 @@ describe('useDLGet', () => {
       database: { queries } as unknown as DataLayerInternals['database'],
     });
 
-    const queryRef = {} as FunctionReference<'query'>;
+    const queryRef = { path: '/events/evt_cached' } as ApiQueryDescriptor<
+      { id: string },
+      typeof cachedResult
+    >;
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_cached' } }),
       { wrapper: createWrapper(internals) },

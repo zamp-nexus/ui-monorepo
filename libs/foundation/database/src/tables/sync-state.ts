@@ -9,6 +9,7 @@ import type {
   DuckDBViewsValue,
   LastSyncValue,
   NetworkStatus,
+  RealtimeCursorStore,
   SyncStateKey,
 } from '@open-insights-web/foundation-data-model';
 
@@ -16,6 +17,7 @@ import {
   duckDBViewsValueSchema,
   lastSyncValueSchema,
   networkStatusSchema,
+  realtimeCursorStoreSchema,
 } from '../validation/schemas';
 
 /**
@@ -93,6 +95,10 @@ export interface SyncStateOperations {
   getSchemaVersion(): Promise<number>;
   /** Set schema version */
   setSchemaVersion(version: number): Promise<void>;
+  /** Get realtime topic cursors */
+  getRealtimeCursors(): Promise<RealtimeCursorStore | undefined>;
+  /** Set realtime topic cursors */
+  setRealtimeCursors(value: RealtimeCursorStore): Promise<void>;
 }
 
 /**
@@ -134,6 +140,13 @@ export const isNetworkStatus = (value: unknown): value is NetworkStatus => {
  */
 export const isDuckDBViewsValue = (value: unknown): value is DuckDBViewsValue => {
   return duckDBViewsValueSchema.safeParse(value).success;
+};
+
+/**
+ * Type guard for RealtimeCursorStore using Zod schema validation.
+ */
+export const isRealtimeCursorStore = (value: unknown): value is RealtimeCursorStore => {
+  return realtimeCursorStoreSchema.safeParse(value).success;
 };
 
 // NOTE: SYNC_STATE_KEYS is NOT re-exported here.

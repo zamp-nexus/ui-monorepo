@@ -6,7 +6,7 @@
  * @module types/config
  */
 
-import type { FunctionReference } from 'convex/server';
+import type { ApiQueryDescriptor, DataSourceResponse } from '@open-insights-web/foundation-data-model';
 
 // =============================================================================
 // QUERY ENGINE CONFIG
@@ -20,16 +20,16 @@ import type { FunctionReference } from 'convex/server';
  */
 export interface QueryEngineConfig {
   /**
-   * DataSource API for fetching Parquet file metadata.
+   * Datasource endpoint for fetching Parquet file metadata.
    *
-   * This Convex query should return DataSourceResponse with:
+   * This HTTP descriptor should return DataSourceResponse with:
    * - Table file URLs
    * - lastIngestedAt timestamps
    * - Schema information
    *
    * Required for DuckDB analytics path.
    */
-  readonly dataSourceApi?: FunctionReference<'query'>;
+  readonly datasourceEndpoint?: ApiQueryDescriptor<{ tables: string[] }, DataSourceResponse>;
 
   /**
    * Default stale time for queries (ms).
@@ -69,9 +69,9 @@ export interface QueryEngineConfig {
  */
 export interface ResolvedQueryEngineConfig {
   /**
-   * DataSource API reference (null if not configured).
+   * Datasource endpoint descriptor (null if not configured).
    */
-  readonly dataSourceApi: FunctionReference<'query'> | null;
+  readonly datasourceEndpoint: ApiQueryDescriptor<{ tables: string[] }, DataSourceResponse> | null;
 
   /**
    * Resolved stale time (ms).
@@ -106,7 +106,7 @@ export const DEFAULT_STALE_TIME = 6 * 60 * 60 * 1000;
 /**
  * Default configuration values.
  */
-export const DEFAULT_CONFIG: Omit<ResolvedQueryEngineConfig, 'dataSourceApi'> = {
+export const DEFAULT_CONFIG: Omit<ResolvedQueryEngineConfig, 'datasourceEndpoint'> = {
   defaultStaleTime: DEFAULT_STALE_TIME,
   autoRefreshOnUpdate: false,
   backgroundPollInterval: 0,
@@ -121,7 +121,7 @@ export const DEFAULT_CONFIG: Omit<ResolvedQueryEngineConfig, 'dataSourceApi'> = 
  * Resolve configuration with defaults.
  */
 export const resolveQueryEngineConfig = (config: QueryEngineConfig): ResolvedQueryEngineConfig => ({
-  dataSourceApi: config.dataSourceApi ?? null,
+  datasourceEndpoint: config.datasourceEndpoint ?? null,
   defaultStaleTime: config.defaultStaleTime ?? DEFAULT_STALE_TIME,
   autoRefreshOnUpdate: config.autoRefreshOnUpdate ?? false,
   backgroundPollInterval: config.backgroundPollInterval ?? 0,

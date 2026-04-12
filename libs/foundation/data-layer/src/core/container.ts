@@ -2,26 +2,18 @@
  * Data Layer Container
  *
  * Centralized dependency injection container for the data layer.
- * Manages initialization, disposal, and lifecycle of all dependencies.
- *
- * Key features:
- * - Single database instance shared across all components
- * - Proper async disposal with mutex protection
- * - Centralized error handling
- * - Factory overrides for testing
  *
  * @module core/container
  */
 
-import { ConvexQueryClient } from '@convex-dev/react-query';
 import { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
-import { ConvexReactClient } from 'convex/react';
-import type { FunctionReference } from 'convex/server';
 
 import { DuckDBRouter } from '@open-insights-web/foundation-bridge';
 import {
   CONFLICT_STRATEGY,
+  type ApiMutationDescriptor,
+  type ApiQueryDescriptor,
   type ConflictStrategy,
   type UnifiedTableConfig as SharedUnifiedTableConfig,
 } from '@open-insights-web/foundation-data-model';
@@ -34,6 +26,7 @@ import { createLogger, Mutex, type Logger } from '@open-insights-web/foundation-
 
 import { FileDownloadService } from '../analytics-sync/file-download-service';
 import { TableSyncService } from '../analytics-sync/table-sync-service';
+import { RealtimeSocketClient } from '../realtime';
 import { pickDefined } from './config-normalization';
 import {
   OFFLINE_NETWORK_MODE,
@@ -43,124 +36,76 @@ import {
   resolveCacheConfig,
 } from './constants';
 import { createTableRegistry, type TableRegistry } from './table-registry';
-import type { CacheConfig, ConvexQueryReference, ResolvedCacheConfig } from './types';
+import type {
+  CacheConfig,
+  DataSourceEndpointDescriptor,
+  RealtimeSocketConfig,
+  ResolvedCacheConfig,
+} from './types';
 
-type UnifiedTableConfig = SharedUnifiedTableConfig<
-  FunctionReference<'query'>,
-  FunctionReference<'mutation'>
->;
+type UnifiedTableConfig = SharedUnifiedTableConfig<ApiQueryDescriptor, ApiMutationDescriptor>;
 
-/**
- * Dependencies managed by the container
- */
 export interface DataLayerDependencies {
-  /** Database facade from foundation-database */
   readonly database: DatabaseFacade;
-  /** Sync coordinator from foundation-sync-engine */
   readonly syncCoordinator: SyncCoordinator;
-  /** DuckDB router from foundation-bridge (null if not available) */
   readonly duckdbRouter: DuckDBRouter | null;
-  /** OPFS manager from foundation-database (null if not available) */
   readonly opfsManager: OpfsManager | null;
-  /** Whether analytics runtime is enabled in config */
   readonly analyticsEnabled: boolean;
-  /**
-   * Lazily initialize analytics runtime.
-   * Creates DuckDB and OPFS resources only when analytics is first used.
-   */
   readonly initializeAnalytics: () => Promise<{
     readonly duckdbRouter: DuckDBRouter;
     readonly opfsManager: OpfsManager | null;
   } | null>;
-  /** TanStack Query client */
   readonly queryClient: QueryClient;
-  /** Convex React client */
-  readonly convexClient: ConvexReactClient;
-  /** Convex Query client for TanStack integration */
-  readonly convexQueryClient: ConvexQueryClient;
-  /** Resolved cache configuration */
+  readonly axiosInstance: AxiosInstance;
+  readonly realtimeClient: RealtimeSocketClient;
   readonly cacheConfig: ResolvedCacheConfig;
-  /** Unified table registry - single source of truth for table metadata */
   readonly tableRegistry: TableRegistry;
-  /** Global datasource API reference for background file sync (null if not configured) */
-  readonly datasourceApi: ConvexQueryReference | null;
-  /** Container-scoped singleton accessor for table sync service */
+  readonly datasourceEndpoint: DataSourceEndpointDescriptor | null;
   readonly getTableSyncService: () => TableSyncService;
-  /** Container-scoped singleton accessor for file download service */
   readonly getFileDownloadService: () => Promise<FileDownloadService | null>;
 }
 
-/**
- * Factory functions for creating dependencies (for testing)
- */
 export interface DependencyFactories {
-  /** Create database facade */
   readonly database: () => DatabaseFacade;
-  /** Create sync coordinator */
   readonly syncCoordinator: (config: {
     queryClient: QueryClient;
-    convexClient: ConvexReactClient;
+    tables?: ReadonlyArray<UnifiedTableConfig>;
     database: DatabaseFacade;
     conflictStrategy: ConflictStrategy;
     enableCrossTab: boolean;
     autoStart: boolean;
     debug: boolean;
-    axiosInstance?: AxiosInstance;
+    axiosInstance: AxiosInstance;
     onError?: (error: Error, context?: string) => void;
   }) => SyncCoordinator;
-  /** Create DuckDB router */
   readonly duckdbRouter: () => DuckDBRouter;
-  /** Create OPFS manager */
   readonly opfsManager: (database: DatabaseFacade) => OpfsManager;
+  readonly realtimeClient: (
+    config: RealtimeSocketConfig,
+    deps: {
+      readonly axiosInstance: AxiosInstance;
+      readonly database: DatabaseFacade;
+      readonly debug?: boolean;
+    },
+  ) => RealtimeSocketClient;
 }
 
-/**
- * Container configuration
- */
 export interface ContainerConfig {
-  /** Convex deployment URL */
-  readonly convexUrl: string;
-  /**
-   * Unified table registry - single source of truth for table metadata.
-   * Tables defined here are shared across DataLayer, SyncEngine, and QueryEngine.
-   */
   readonly tables?: ReadonlyArray<UnifiedTableConfig>;
-  /**
-   * Global datasource API reference for background file sync.
-   * Used by useBackgroundFileSync to fetch parquet file metadata.
-   */
-  readonly datasourceApi?: ConvexQueryReference;
-  /** Conflict resolution strategy */
+  readonly datasourceEndpoint?: DataSourceEndpointDescriptor;
   readonly conflictStrategy?: ConflictStrategy;
-  /** Enable cross-tab sync */
   readonly enableCrossTab?: boolean;
-  /** Enable DuckDB analytics */
   readonly enableAnalytics?: boolean;
-  /** Default stale time for queries */
   readonly defaultStaleTime?: number;
-  /** Default GC time for queries */
   readonly defaultGcTime?: number;
-  /** Cache configuration */
   readonly cache?: CacheConfig;
-  /** Optional shared Axios instance for transport-dependent components */
-  readonly axiosInstance?: AxiosInstance;
-  /** Enable debug logging */
+  readonly axiosInstance: AxiosInstance;
+  readonly websocket: RealtimeSocketConfig;
   readonly debug?: boolean;
-  /** Sync error callback */
   readonly onSyncError?: (error: Error, context?: string) => void;
-  /** Factory overrides for testing */
   readonly factories?: Partial<DependencyFactories>;
 }
 
-/**
- * Data Layer Container - Manages all data layer dependencies
- *
- * Provides:
- * - Single database instance (no double creation)
- * - Centralized initialization
- * - Proper async disposal with mutex protection
- * - Factory overrides for testing
- */
 export class DataLayerContainer {
   private deps: DataLayerDependencies | null = null;
   private disposed = false;
@@ -179,40 +124,26 @@ export class DataLayerContainer {
 
   constructor(config: ContainerConfig) {
     this.config = config;
-    // Use 'debug' level when debug is enabled (shows all messages),
-    // otherwise 'warn' level (only shows warnings and errors, which are critical during disposal).
     this.logger = createLogger('DataLayerContainer', { level: config.debug ? 'debug' : 'warn' });
   }
 
-  /**
-   * Log helper using foundation-utils logger
-   */
   private log = (message: string, ...args: unknown[]): void => {
     this.logger.debug(message, ...args);
   };
 
-  /**
-   * Initialize all dependencies
-   *
-   * - Idempotent: multiple calls return the same promise
-   * - Returns existing deps if already initialized
-   */
   initialize = async (): Promise<DataLayerDependencies> => {
     if (this.disposed) {
       throw new Error('[DataLayerContainer] Container is disposed');
     }
 
-    // Already initialized
     if (this.deps) {
       return this.deps;
     }
 
-    // Already initializing
     if (this.initPromise) {
       return this.initPromise;
     }
 
-    // Start initialization
     this.initPromise = this.doInitialize();
 
     try {
@@ -224,107 +155,67 @@ export class DataLayerContainer {
     }
   };
 
-  /**
-   * Internal initialization logic
-   */
   private doInitialize = async (): Promise<DataLayerDependencies> => {
     this.log('Initializing container');
 
-    // Resolve cache config first
     const cacheConfig = resolveCacheConfig({
       ...this.config.cache,
       defaultStaleTime: this.config.defaultStaleTime ?? this.config.cache?.defaultStaleTime,
       defaultGcTime: this.config.defaultGcTime ?? this.config.cache?.defaultGcTime,
     });
 
-    // Create TableRegistry from unified table config
-    const tableRegistryDefaults: {
-      staleTime: number;
-      gcTime: number;
-      conflictStrategy: ConflictStrategy;
-      debug?: boolean;
-    } = {
+    const tableRegistry = createTableRegistry(this.config.tables ?? [], {
       staleTime: cacheConfig.defaultStaleTime,
       gcTime: cacheConfig.defaultGcTime,
       conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
       ...pickDefined({
         debug: this.config.debug,
       }),
-    };
+    });
 
-    const tableRegistry = createTableRegistry(this.config.tables ?? [], tableRegistryDefaults);
-    this.log('Table registry created with', tableRegistry.getTableNames().length, 'tables');
+    const queryClient = this.createQueryClient(cacheConfig);
 
-    // Create Convex clients
-    const convexClient = new ConvexReactClient(this.config.convexUrl);
-    const convexQueryClient = new ConvexQueryClient(convexClient);
-
-    // Create QueryClient with Convex integration
-    const queryClient = this.createQueryClient(convexQueryClient, cacheConfig);
-
-    // Create database facade - instance scoped (no shared singleton reset hazards)
     const databaseConfig =
       this.config.debug === undefined ? undefined : { debug: this.config.debug };
     const database = this.config.factories?.database?.() ?? DatabaseFacade.create(databaseConfig);
 
-    // Create sync coordinator using SAME database instance
-    // Pass the underlying InsightsDatabase from facade to prevent duplicate instances
-    const syncCoordinatorFactoryConfig: {
-      queryClient: QueryClient;
-      convexClient: ConvexReactClient;
-      database: DatabaseFacade;
-      conflictStrategy: ConflictStrategy;
-      enableCrossTab: boolean;
-      autoStart: boolean;
-      debug: boolean;
-      axiosInstance?: AxiosInstance;
-      onError?: (error: Error, context?: string) => void;
-    } = {
-      queryClient,
-      convexClient,
-      database,
-      conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
-      enableCrossTab: this.config.enableCrossTab ?? true,
-      autoStart: true,
-      debug: this.config.debug ?? false,
-      ...pickDefined({
+    const syncCoordinator =
+      this.config.factories?.syncCoordinator?.({
+        queryClient,
+        tables: this.config.tables,
+        database,
+        conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
+        enableCrossTab: this.config.enableCrossTab ?? true,
+        autoStart: true,
+        debug: this.config.debug ?? false,
         axiosInstance: this.config.axiosInstance,
         onError: this.config.onSyncError,
-      }),
-    };
-
-    const syncCoordinatorConfig: {
-      queryClient: QueryClient;
-      convexClient: ConvexReactClient;
-      database: ReturnType<DatabaseFacade['getDatabase']>;
-      conflictStrategy: ConflictStrategy;
-      enableCrossTab: boolean;
-      autoStart: boolean;
-      axiosInstance?: AxiosInstance;
-      debug?: boolean;
-      onError?: (error: Error, context?: string) => void;
-    } = {
-      queryClient,
-      convexClient,
-      database: database.getDatabase(),
-      conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
-      enableCrossTab: this.config.enableCrossTab ?? true,
-      autoStart: true,
-      ...pickDefined({
+      }) ??
+      createSyncCoordinator({
+        queryClient,
+        tables: this.config.tables,
+        database: database.getDatabase(),
+        conflictStrategy: this.config.conflictStrategy ?? CONFLICT_STRATEGY.LAST_WRITE_WINS,
+        enableCrossTab: this.config.enableCrossTab ?? true,
+        autoStart: true,
         axiosInstance: this.config.axiosInstance,
         debug: this.config.debug,
         onError: this.config.onSyncError,
-      }),
-    };
+      });
 
-    const syncCoordinator =
-      this.config.factories?.syncCoordinator?.(syncCoordinatorFactoryConfig) ??
-      createSyncCoordinator(syncCoordinatorConfig);
+    const realtimeClient =
+      this.config.factories?.realtimeClient?.(this.config.websocket, {
+        axiosInstance: this.config.axiosInstance,
+        database,
+        debug: this.config.debug,
+      }) ??
+      new RealtimeSocketClient(this.config.websocket, {
+        axiosInstance: this.config.axiosInstance,
+        syncState: database.syncState,
+        debug: this.config.debug,
+      });
 
-    // Start auto-cleanup for expired cache entries
     database.startCleanup();
-
-    this.log('Container initialized');
 
     return {
       database,
@@ -334,36 +225,28 @@ export class DataLayerContainer {
       analyticsEnabled: this.config.enableAnalytics !== false,
       initializeAnalytics: () => this.ensureAnalyticsRuntime(database),
       queryClient,
-      convexClient,
-      convexQueryClient,
+      axiosInstance: this.config.axiosInstance,
+      realtimeClient,
       cacheConfig,
       tableRegistry,
-      datasourceApi: this.config.datasourceApi ?? null,
-      getTableSyncService: () => this.getOrCreateTableSyncService(database, convexClient),
+      datasourceEndpoint: this.config.datasourceEndpoint ?? null,
+      getTableSyncService: () => this.getOrCreateTableSyncService(database),
       getFileDownloadService: () => this.getOrCreateFileDownloadService(database),
     };
   };
 
-  private getOrCreateTableSyncService = (
-    database: DatabaseFacade,
-    convexClient: ConvexReactClient,
-  ): TableSyncService => {
+  private getOrCreateTableSyncService = (database: DatabaseFacade): TableSyncService => {
     if (!this.tableSyncService) {
-      const tableSyncConfig: {
-        convexClient: ConvexReactClient;
-        datasourceApi: ConvexQueryReference | null;
-        database: DatabaseFacade['tableSyncMetadata'];
-        debug?: boolean;
-      } = {
-        convexClient,
-        datasourceApi: this.config.datasourceApi ?? null,
+      this.tableSyncService = new TableSyncService({
+        axiosInstance: this.config.axiosInstance,
+        datasourceEndpoint: this.config.datasourceEndpoint ?? null,
         database: database.tableSyncMetadata,
         ...pickDefined({
           debug: this.config.debug,
         }),
-      };
-      this.tableSyncService = new TableSyncService(tableSyncConfig);
+      });
     }
+
     return this.tableSyncService;
   };
 
@@ -377,30 +260,19 @@ export class DataLayerContainer {
     }
 
     if (!this.fileDownloadService || this.fileDownloadServiceOpfsManager !== runtimeOpfsManager) {
-      const fileDownloadConfig: {
-        opfsManager: OpfsManager;
-        axiosInstance?: AxiosInstance;
-        debug?: boolean;
-      } = {
+      this.fileDownloadService = new FileDownloadService({
         opfsManager: runtimeOpfsManager,
+        axiosInstance: this.config.axiosInstance,
         ...pickDefined({
-          axiosInstance: this.config.axiosInstance,
           debug: this.config.debug,
         }),
-      };
-      this.fileDownloadService = new FileDownloadService(fileDownloadConfig);
+      });
       this.fileDownloadServiceOpfsManager = runtimeOpfsManager;
     }
 
     return this.fileDownloadService;
   };
 
-  /**
-   * Lazily initialize analytics runtime (DuckDB + OPFS).
-   *
-   * This keeps provider initialization light and defers large analytics costs
-   * until the first analytics hook actually needs them.
-   */
   private ensureAnalyticsRuntime = async (
     database: DatabaseFacade,
   ): Promise<{
@@ -421,22 +293,21 @@ export class DataLayerContainer {
       }
 
       try {
-        const duckdbRouterConfig: { debug?: boolean } = pickDefined({
-          debug: this.config.debug,
-        });
         const duckdbRouter =
-          this.config.factories?.duckdbRouter?.() ?? new DuckDBRouter(duckdbRouterConfig);
-        const opfsManagerConfig: {
-          database: ReturnType<DatabaseFacade['getDatabase']>;
-          debug?: boolean;
-        } = {
-          database: database.getDatabase(),
-          ...pickDefined({
-            debug: this.config.debug,
-          }),
-        };
+          this.config.factories?.duckdbRouter?.() ??
+          new DuckDBRouter(
+            pickDefined({
+              debug: this.config.debug,
+            }),
+          );
         const opfsManager =
-          this.config.factories?.opfsManager?.(database) ?? new OpfsManager(opfsManagerConfig);
+          this.config.factories?.opfsManager?.(database) ??
+          new OpfsManager({
+            database: database.getDatabase(),
+            ...pickDefined({
+              debug: this.config.debug,
+            }),
+          });
 
         this.analyticsRuntime = { duckdbRouter, opfsManager };
         this.log('Analytics runtime initialized lazily');
@@ -449,20 +320,10 @@ export class DataLayerContainer {
     });
   };
 
-  /**
-   * Create QueryClient with Convex integration
-   */
-  private createQueryClient = (
-    convexQueryClient: ConvexQueryClient,
-    cacheConfig: ResolvedCacheConfig,
-  ): QueryClient => {
-    const client = new QueryClient({
+  private createQueryClient = (cacheConfig: ResolvedCacheConfig): QueryClient =>
+    new QueryClient({
       defaultOptions: {
         queries: {
-          // Wire up Convex for live subscriptions
-          queryKeyHashFn: convexQueryClient.hashFn(),
-          queryFn: convexQueryClient.queryFn(),
-          // Offline-first defaults
           staleTime: cacheConfig.defaultStaleTime,
           gcTime: cacheConfig.defaultGcTime,
           retry: QUERY_RETRY_MAX,
@@ -479,60 +340,37 @@ export class DataLayerContainer {
       },
     });
 
-    // Connect ConvexQueryClient to QueryClient for live updates
-    convexQueryClient.connect(client);
-
-    return client;
-  };
-
-  /**
-   * Dispose all dependencies with proper cleanup
-   *
-   * - Mutex protected to prevent concurrent disposal
-   * - Disposes in reverse order of initialization
-   * - Safe to call multiple times
-   */
   dispose = async (): Promise<void> => {
     const release = await this.disposeMutex.acquire();
     try {
-      // Already disposed
       if (this.disposed) {
         return;
       }
 
-      // Wait for initialization to complete if in progress
       if (this.initPromise) {
         try {
           await this.initPromise;
         } catch {
-          // Ignore initialization errors during disposal
+          // Ignore initialization failures during disposal
         }
       }
 
-      // Nothing to dispose
       if (!this.deps) {
         this.disposed = true;
         return;
       }
 
-      this.log('Disposing container');
+      const { syncCoordinator, database, realtimeClient } = this.deps;
 
-      // Dispose in reverse order of initialization
-      const { syncCoordinator, database, convexClient, convexQueryClient } = this.deps;
-
-      // 1. Dispose sync coordinator
       try {
         await syncCoordinator.disposeAsync();
-        this.log('Sync coordinator disposed');
       } catch (error) {
         this.logger.error('Error disposing sync coordinator:', error);
       }
 
-      // 2. Shutdown analytics runtime if it was initialized
       if (this.analyticsRuntime?.duckdbRouter) {
         try {
           await this.analyticsRuntime.duckdbRouter.shutdown();
-          this.log('DuckDB router shutdown');
         } catch (error) {
           this.logger.error('Error shutting down DuckDB router:', error);
         }
@@ -541,30 +379,22 @@ export class DataLayerContainer {
       if (this.analyticsRuntime?.opfsManager) {
         try {
           await this.analyticsRuntime.opfsManager.dispose();
-          this.log('OPFS manager disposed');
         } catch (error) {
           this.logger.error('Error disposing OPFS manager:', error);
         }
       }
 
-      // 3. Stop cleanup and close database
       try {
         database.stopCleanup();
         database.close();
-        this.log('Database closed');
       } catch (error) {
         this.logger.error('Error closing database:', error);
       }
 
-      // 4. Close Convex clients (prevents WebSocket connection leaks)
       try {
-        // Unsubscribe ConvexQueryClient from QueryCache events
-        convexQueryClient.unsubscribe?.();
-        // Close ConvexReactClient WebSocket connection
-        convexClient.close();
-        this.log('Convex clients closed');
+        realtimeClient.disconnect();
       } catch (error) {
-        this.logger.error('Error closing Convex clients:', error);
+        this.logger.error('Error closing realtime client:', error);
       }
 
       this.analyticsRuntime = null;
@@ -573,23 +403,15 @@ export class DataLayerContainer {
       this.fileDownloadServiceOpfsManager = null;
       this.deps = null;
       this.disposed = true;
-
-      this.log('Container disposed');
     } finally {
       release();
     }
   };
 
-  /**
-   * Check if container is disposed
-   */
   get isDisposed(): boolean {
     return this.disposed;
   }
 
-  /**
-   * Get dependencies (throws if not initialized or disposed)
-   */
   getDependencies = (): DataLayerDependencies => {
     if (this.disposed) {
       throw new Error('[DataLayerContainer] Container is disposed');
@@ -600,16 +422,10 @@ export class DataLayerContainer {
     return this.deps;
   };
 
-  /**
-   * Check if container is initialized
-   */
   get isInitialized(): boolean {
     return this.deps !== null && !this.disposed;
   }
 }
 
-/**
- * Create a new DataLayerContainer
- */
 export const createDataLayerContainer = (config: ContainerConfig): DataLayerContainer =>
   new DataLayerContainer(config);

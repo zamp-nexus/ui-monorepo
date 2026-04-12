@@ -79,8 +79,8 @@ describe('query-key utilities', () => {
       expect(getDataSource(true, true, true)).toBe('cache');
     });
 
-    it('should return "convex" when online, has data, not fetching', () => {
-      expect(getDataSource(true, true, false)).toBe('convex');
+    it('should return "api" when online, has data, not fetching', () => {
+      expect(getDataSource(true, true, false)).toBe('api');
     });
 
     it('should prioritize hasData check', () => {

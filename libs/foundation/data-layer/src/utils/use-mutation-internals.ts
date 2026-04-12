@@ -10,6 +10,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import type { AxiosInstance } from 'axios';
 
 import type { WithId } from '@open-insights-web/foundation-data-model';
 import type { DatabaseFacade } from '@open-insights-web/foundation-database';
@@ -30,6 +31,8 @@ import type { OptimisticContext, rollbackOptimisticUpdate } from './optimistic-u
 export interface MutationInternals {
   /** TanStack Query client */
   readonly queryClient: QueryClient;
+  /** Shared Axios instance */
+  readonly axiosInstance: AxiosInstance;
   /** Database facade for cache operations */
   readonly database: DatabaseFacade;
   /** Sync coordinator for offline queue management */
@@ -55,13 +58,14 @@ export interface MutationInternals {
  */
 export const useMutationInternals = (): MutationInternals => {
   const queryClient = useQueryClient();
-  const { database, syncCoordinator, isOnline } = useDataLayerInternals();
+  const { axiosInstance, database, syncCoordinator, isOnline } = useDataLayerInternals();
 
   // Memoize queue manager to avoid repeated access
   const queueManager = useMemo(() => syncCoordinator.getQueueManager(), [syncCoordinator]);
 
   return {
     queryClient,
+    axiosInstance,
     database,
     syncCoordinator,
     isOnline,
@@ -340,6 +344,5 @@ export const prepareResolvedVariables = <TVariables>(
   return {
     ...variables,
     id: resolvedId,
-    _id: resolvedId,
   };
 };

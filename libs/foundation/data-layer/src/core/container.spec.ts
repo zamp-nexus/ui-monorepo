@@ -6,24 +6,6 @@
 
 import { createDataLayerContainer, DataLayerContainer } from './container';
 
-vi.mock('convex/react', () => {
-  class MockConvexReactClient {
-    readonly close = vi.fn();
-    readonly query = vi.fn();
-  }
-  return { ConvexReactClient: MockConvexReactClient };
-});
-
-vi.mock('@convex-dev/react-query', () => {
-  class MockConvexQueryClient {
-    readonly hashFn = vi.fn(() => vi.fn());
-    readonly queryFn = vi.fn(() => vi.fn());
-    readonly connect = vi.fn();
-    readonly unsubscribe = vi.fn();
-  }
-  return { ConvexQueryClient: MockConvexQueryClient };
-});
-
 // ---------------------------------------------------------------------------
 // Mock helpers
 // ---------------------------------------------------------------------------
@@ -65,10 +47,19 @@ const createConfig = (overrides: Record<string, unknown> = {}) => {
 
   return {
     config: {
-      convexUrl: 'https://test.convex.cloud',
+      axiosInstance: { request: vi.fn(), defaults: {} },
+      websocket: { url: 'wss://example.test/realtime' },
       factories: {
         database: () => mockDatabase as never,
         syncCoordinator: () => mockSyncCoordinator as never,
+        realtimeClient: () =>
+          ({
+            subscribeStatus: vi.fn(() => vi.fn()),
+            subscribeMessages: vi.fn(() => vi.fn()),
+            connect: vi.fn(async () => undefined),
+            close: vi.fn(),
+            send: vi.fn(),
+          }) as never,
       },
       ...overrides,
     },
@@ -113,8 +104,8 @@ describe('DataLayerContainer', () => {
       expect(deps.database).toBeDefined();
       expect(deps.syncCoordinator).toBeDefined();
       expect(deps.queryClient).toBeDefined();
-      expect(deps.convexClient).toBeDefined();
-      expect(deps.convexQueryClient).toBeDefined();
+      expect(deps.axiosInstance).toBeDefined();
+      expect(deps.realtimeClient).toBeDefined();
       expect(deps.cacheConfig).toBeDefined();
       expect(deps.tableRegistry).toBeDefined();
       expect(typeof deps.initializeAnalytics).toBe('function');

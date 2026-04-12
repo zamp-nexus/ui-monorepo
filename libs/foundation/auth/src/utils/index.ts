@@ -6,6 +6,8 @@
  * @module utils
  */
 
+export { createRealtimeTicketFetcher, type RealtimeAuthTicket } from './realtime-ticket';
+
 export {
   // Decoding
   decodeJwt,

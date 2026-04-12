@@ -11,7 +11,7 @@
  * - Query invalidation
  *
  * NOTE: This hook delegates ALL execution to foundation-data-layer.
- * It does NOT directly access Convex.
+ * It does NOT directly access the HTTP transport directly.
  *
  * @module hooks/use-dl-mutate-query-engine
  */
@@ -151,7 +151,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
   const operation: MutationOperation = resolveMutationOperation(query.operation);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // GET CONVEX MUTATION REFS
+  // GET MUTATION DESCRIPTORS
   // ─────────────────────────────────────────────────────────────────────────
 
   const mutationRefs = useMemo(() => {
@@ -179,8 +179,17 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
   // List query key for optimistic updates
   const listQueryKey = useMemo(() => {
     if (!table) return undefined;
-    return ['convex', table, 'list'] as const;
+    return [table] as const;
   }, [table]);
+
+  const mutationInvalidateKeys = useMemo(() => {
+    const keys = toQueryKeyArray(invalidateKeys);
+    if (!table) {
+      return keys;
+    }
+
+    return [['query-engine', 'transactional', table] as const, ...keys];
+  }, [invalidateKeys, table]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // SHARED CALLBACKS
@@ -237,7 +246,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
     table,
     onOptimistic: createOptimistic,
     listQueryKey: isCreateEnabled ? listQueryKey : undefined,
-    invalidateKeys: toQueryKeyArray(invalidateKeys),
+    invalidateKeys: mutationInvalidateKeys,
     onSuccess: handleSuccess,
     onError: handleError,
     onSettled: handleSettled,
@@ -272,7 +281,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
     getEntityId: resolveEntityId,
     onOptimistic: updateOptimistic,
     listQueryKey: isUpdateEnabled ? listQueryKey : undefined,
-    invalidateKeys: toQueryKeyArray(invalidateKeys),
+    invalidateKeys: mutationInvalidateKeys,
     onSuccess: handleSuccess,
     onError: handleError,
     onSettled: handleSettled,
@@ -290,7 +299,7 @@ export const useDLMutateQueryEngine = <TData = unknown, TVariables = unknown>(
     table,
     getEntityId: resolveEntityId,
     listQueryKey: isDeleteEnabled ? listQueryKey : undefined,
-    invalidateKeys: toQueryKeyArray(invalidateKeys),
+    invalidateKeys: mutationInvalidateKeys,
     onSuccess: handleSuccess,
     onError: handleError,
     onSettled: handleSettled,

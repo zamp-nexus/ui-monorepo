@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { CRUD_OPERATION } from '../convex/functions';
+import { OPERATIONS } from '@open-insights-web/foundation-data-model';
+
 import { NETWORK_STATUS_EVENT } from '../network/index';
 import { SyncEngineContainer, SyncEngineFactory } from './container';
 
@@ -18,10 +19,10 @@ describe('sync-engine api contract', () => {
   });
 
   it('exports UPPER_SNAKE_CASE CRUD operation constants', () => {
-    expect(CRUD_OPERATION.LIST).toBe('list');
-    expect(CRUD_OPERATION.GET).toBe('get');
-    expect(CRUD_OPERATION.CREATE).toBe('create');
-    expect(CRUD_OPERATION.UPDATE).toBe('update');
-    expect(CRUD_OPERATION.DELETE).toBe('delete');
+    expect(OPERATIONS.LIST).toBe('list');
+    expect(OPERATIONS.GET).toBe('get');
+    expect(OPERATIONS.CREATE).toBe('create');
+    expect(OPERATIONS.UPDATE).toBe('update');
+    expect(OPERATIONS.DELETE).toBe('delete');
   });
 });

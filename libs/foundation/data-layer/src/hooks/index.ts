@@ -2,7 +2,7 @@
  * Data Layer Hooks
  *
  * Clean, simplified hooks for data operations:
- * - useDLGet: Query with Convex real-time + offline cache
+ * - useDLGet: Query with HTTP + offline cache fallback
  * - useDLCreate: Create with optimistic updates
  * - useDLUpdate: Update with optimistic updates
  * - useDLDelete: Delete with optimistic removal

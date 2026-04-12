@@ -8,6 +8,11 @@
  */
 
 import type { IdMapping } from './base';
+import type {
+  RealtimeConnectionSnapshot,
+  RealtimeServerMessage,
+  RealtimeSubscriptionSnapshot,
+} from './realtime';
 import type { ValueOf } from './utility';
 
 // =============================================================================
@@ -164,6 +169,12 @@ export const SYNC_EVENT_TYPE = {
   QUEUE_PROCESSED: 'queue-processed',
   CONFLICT_DETECTED: 'conflict-detected',
   LEADER_CHANGED: 'leader-changed',
+  REALTIME_AUTH_FAILURE: 'realtime-auth-failure',
+  REALTIME_PROTOCOL_ERROR: 'realtime-protocol-error',
+  REALTIME_HEARTBEAT_TIMEOUT: 'realtime-heartbeat-timeout',
+  REALTIME_RESUME_FAILED: 'realtime-resume-failed',
+  REALTIME_RESYNC_REQUIRED: 'realtime-resync-required',
+  REALTIME_SUBSCRIPTION_FAILED: 'realtime-subscription-failed',
 } as const;
 
 export type SyncEventType = ValueOf<typeof SYNC_EVENT_TYPE>;
@@ -213,6 +224,10 @@ export const CROSS_TAB_MESSAGE_TYPE = {
   LEADER_HEARTBEAT: 'leader-heartbeat',
   LEADER_RESIGN: 'leader-resign',
   LEADER_CANDIDATE: 'leader-candidate',
+  REALTIME_STATE: 'realtime-state',
+  REALTIME_EVENT: 'realtime-event',
+  REALTIME_RESYNC: 'realtime-resync',
+  REALTIME_SUBSCRIPTION_STATE: 'realtime-subscription-state',
 } as const;
 
 export type CrossTabMessageType = ValueOf<typeof CROSS_TAB_MESSAGE_TYPE>;
@@ -235,6 +250,16 @@ export interface CrossTabMessagePayload {
   leaderId?: string;
   /** Election term number for Raft-style leader election */
   term?: number;
+  /** Realtime connection snapshot fanout */
+  realtimeConnection?: RealtimeConnectionSnapshot;
+  /** Realtime server message fanout */
+  realtimeMessage?: RealtimeServerMessage;
+  /** Realtime subscription state fanout */
+  realtimeSubscription?: RealtimeSubscriptionSnapshot;
+  /** Realtime topic identifier */
+  topic?: string;
+  /** Reason for resync request */
+  reason?: string;
 }
 
 /**
@@ -280,6 +305,14 @@ export interface SyncEvent {
     idMappings?: IdMapping[];
     /** Whether this tab is the leader (for leader-changed events) */
     isLeader?: boolean;
+    /** Realtime topic associated with the event */
+    topic?: string;
+    /** Realtime connection state snapshot */
+    realtimeConnection?: RealtimeConnectionSnapshot;
+    /** Realtime subscription state snapshot */
+    realtimeSubscription?: RealtimeSubscriptionSnapshot;
+    /** Last validated realtime server message */
+    realtimeMessage?: RealtimeServerMessage;
   };
 }
 

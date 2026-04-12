@@ -121,16 +121,13 @@ export const TABLE_NAMES = {
  */
 export type EntityTableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];
 
-/**
- * Convex function path type
- */
-export type ConvexFunctionPath = `${string}:${string}`;
+export type ApiEndpointPath = string;
 
 /**
- * Query function reference
+ * API query reference
  */
-export interface QueryFunctionRef<TInput = unknown, TOutput = unknown> {
-  path: ConvexFunctionPath;
+export interface ApiEndpointRef<TInput = unknown, TOutput = unknown> {
+  path: ApiEndpointPath;
   input?: TInput;
   _output?: TOutput; // Phantom type for inference
 }

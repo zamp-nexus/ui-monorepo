@@ -38,7 +38,7 @@ import {
  * - Session initialization and checking
  * - Session refresh (manual and automatic)
  * - Logout
- * - Access token retrieval (for Convex/API calls)
+ * - Access token retrieval (for authenticated API and WebSocket calls)
  * - State change notifications
  */
 export class SessionService implements SessionServiceInterface {

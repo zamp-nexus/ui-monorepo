@@ -38,7 +38,6 @@ import { AuthInternalsContext } from './auth-internals-context';
  * <AuthProvider
  *   config={{
  *     ory: { kratosUrl: 'https://your-project.ory.cloud' },
- *     convex: { issuer: '...', applicationId: '...' },
  *   }}
  *   loadingComponent={<LoadingSpinner />}
  *   errorComponent={(error) => <ErrorMessage error={error} />}

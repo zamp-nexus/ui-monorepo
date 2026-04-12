@@ -4,20 +4,55 @@
  * @module contracts/table-config
  */
 
+import type { ZodType } from 'zod';
+
 import type { ConflictStrategy } from '../types';
+import type { RealtimeApplyStrategy, RealtimeDataKind } from '../types/realtime';
 import type { DataFreshnessLevel } from './analytics';
 
 /**
- * Convex function references for a table.
- *
- * Generics keep this contract independent from Convex runtime types.
+ * HTTP query descriptor for a table operation.
  */
-export interface UnifiedTableConvexConfig<TQueryRef = unknown, TMutationRef = unknown> {
+export interface ApiQueryDescriptor<TArgs = unknown, TData = unknown> {
+  readonly path: string | ((args: TArgs) => string);
+  readonly method?: 'GET';
+  readonly params?: (args: TArgs) => Record<string, unknown>;
+  readonly mapResponse?: (response: unknown) => TData;
+}
+
+/**
+ * HTTP mutation descriptor for a table operation.
+ */
+export interface ApiMutationDescriptor<TArgs = unknown, TData = unknown> {
+  readonly method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  readonly path: string | ((args: TArgs) => string);
+  readonly params?: (args: TArgs) => Record<string, unknown>;
+  readonly body?: (args: TArgs) => unknown;
+  readonly mapResponse?: (response: unknown) => TData;
+}
+
+/**
+ * API operation descriptors for a table.
+ */
+export interface UnifiedTableApiConfig<TQueryRef = unknown, TMutationRef = unknown> {
   readonly list?: TQueryRef;
   readonly get?: TQueryRef;
   readonly create?: TMutationRef;
   readonly update?: TMutationRef;
   readonly delete?: TMutationRef;
+}
+
+/**
+ * Real-time configuration for a table.
+ */
+export interface UnifiedTableRealtimeConfig<TEntity = unknown, TSnapshot = unknown> {
+  readonly topic: string;
+  readonly events?: ReadonlyArray<RealtimeDataKind>;
+  readonly entitySchema: ZodType<TEntity>;
+  readonly snapshotSchema: ZodType<TSnapshot>;
+  readonly versionField?: string;
+  readonly getVersion?: (entity: TEntity) => number | null | undefined;
+  readonly applyStrategy?: RealtimeApplyStrategy;
 }
 
 /**
@@ -42,9 +77,13 @@ export interface TableAnalyticsConfig {
 /**
  * Canonical table configuration shared across foundation layers.
  */
-export interface UnifiedTableConfig<TQueryRef = unknown, TMutationRef = unknown> {
+export interface UnifiedTableConfig<
+  TQueryRef = ApiQueryDescriptor,
+  TMutationRef = ApiMutationDescriptor,
+> {
   readonly name: string;
-  readonly convex?: UnifiedTableConvexConfig<TQueryRef, TMutationRef>;
+  readonly api?: UnifiedTableApiConfig<TQueryRef, TMutationRef>;
+  readonly realtime?: UnifiedTableRealtimeConfig;
   readonly staleTime?: number;
   readonly gcTime?: number;
   readonly conflictStrategy?: ConflictStrategy;

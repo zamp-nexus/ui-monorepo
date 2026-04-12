@@ -293,10 +293,10 @@ export const useConflictResolution = (): {
 
       // Also update the list query if it exists
       const listQueryKey = [conflict.tableName];
-      queryClient.setQueryData<Array<{ id?: string; _id?: string }>>(listQueryKey, (old) => {
+      queryClient.setQueryData<Array<{ id?: string }>>(listQueryKey, (old) => {
         if (!old) return old;
         return old.map((item) => {
-          if (item.id === conflict.entityId || item._id === conflict.entityId) {
+          if (item.id === conflict.entityId) {
             if (resolvedData !== null && typeof resolvedData === 'object') {
               return { ...item, ...resolvedData };
             }

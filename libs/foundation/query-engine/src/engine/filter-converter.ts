@@ -2,7 +2,7 @@
  * Filter Converter
  *
  * Converts Query filters to simple args for data-layer hooks (useDLGetList).
- * Only converts simple equality filters that can be passed to Convex APIs.
+ * Only converts simple equality filters that can be passed to HTTP APIs.
  * Complex filters (comparison, string operators, groups) require DuckDB.
  *
  * This is a lightweight replacement for the deleted ApiParamsConverter.
@@ -57,7 +57,7 @@ const isConvertibleFilter = (filter: FilterExpression): boolean => {
  * Queries with complex filters should use the DuckDB path.
  *
  * @param query - The Query object to convert
- * @returns Args object for Convex query
+ * @returns Args object for an API-backed query
  *
  * @example
  * ```typescript

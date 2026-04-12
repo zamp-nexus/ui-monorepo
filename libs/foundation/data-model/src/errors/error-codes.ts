@@ -108,8 +108,8 @@ export const FOUNDATION_ERROR_CODE = {
   SYNC_MUTATION_NOT_FOUND: 'SYNC_MUTATION_NOT_FOUND',
   /** Invalid mutation format */
   SYNC_INVALID_MUTATION: 'SYNC_INVALID_MUTATION',
-  /** Convex adapter error */
-  SYNC_CONVEX_ERROR: 'SYNC_CONVEX_ERROR',
+  /** API mutation adapter error */
+  SYNC_API_ERROR: 'SYNC_API_ERROR',
   /** Network monitor error */
   SYNC_NETWORK_MONITOR_ERROR: 'SYNC_NETWORK_MONITOR_ERROR',
   /** Offline queue is full */
@@ -118,6 +118,18 @@ export const FOUNDATION_ERROR_CODE = {
   SYNC_ID_MAPPING_FAILED: 'SYNC_ID_MAPPING_FAILED',
   /** Rehydration from storage failed */
   SYNC_REHYDRATION_FAILED: 'SYNC_REHYDRATION_FAILED',
+  /** Realtime authentication failed */
+  REALTIME_AUTH_FAILED: 'REALTIME_AUTH_FAILED',
+  /** Realtime protocol validation failed */
+  REALTIME_PROTOCOL_VALIDATION_FAILED: 'REALTIME_PROTOCOL_VALIDATION_FAILED',
+  /** Realtime heartbeat timed out */
+  REALTIME_HEARTBEAT_TIMEOUT: 'REALTIME_HEARTBEAT_TIMEOUT',
+  /** Realtime resume failed */
+  REALTIME_RESUME_FAILED: 'REALTIME_RESUME_FAILED',
+  /** Realtime stream requires resync */
+  REALTIME_RESYNC_REQUIRED: 'REALTIME_RESYNC_REQUIRED',
+  /** Realtime subscription failed */
+  REALTIME_SUBSCRIPTION_FAILED: 'REALTIME_SUBSCRIPTION_FAILED',
 
   // ===========================================================================
   // Database/Storage Errors
@@ -264,6 +276,9 @@ export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
     case FOUNDATION_ERROR_CODE.SYNC_CROSS_TAB_ERROR:
     case FOUNDATION_ERROR_CODE.SYNC_NETWORK_MONITOR_ERROR:
     case FOUNDATION_ERROR_CODE.SYNC_REHYDRATION_FAILED:
+    case FOUNDATION_ERROR_CODE.REALTIME_HEARTBEAT_TIMEOUT:
+    case FOUNDATION_ERROR_CODE.REALTIME_RESUME_FAILED:
+    case FOUNDATION_ERROR_CODE.REALTIME_RESYNC_REQUIRED:
     case FOUNDATION_ERROR_CODE.DATABASE_CONNECTION_FAILED:
     case FOUNDATION_ERROR_CODE.RESOURCE_BUSY:
     case FOUNDATION_ERROR_CODE.RESOURCE_LOCKED:
@@ -280,6 +295,7 @@ export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
     case FOUNDATION_ERROR_CODE.QUERY_INVALID_PARAMS:
     case FOUNDATION_ERROR_CODE.SYNC_INVALID_MUTATION:
     case FOUNDATION_ERROR_CODE.BRIDGE_SQL_VALIDATION_FAILED:
+    case FOUNDATION_ERROR_CODE.REALTIME_PROTOCOL_VALIDATION_FAILED:
       return ERROR_CATEGORY.USER_INPUT;
 
     // Configuration errors
@@ -289,6 +305,7 @@ export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
     case FOUNDATION_ERROR_CODE.BRIDGE_NOT_INITIALIZED:
     case FOUNDATION_ERROR_CODE.BRIDGE_ALREADY_INITIALIZED:
     case FOUNDATION_ERROR_CODE.DATABASE_NOT_INITIALIZED:
+    case FOUNDATION_ERROR_CODE.REALTIME_SUBSCRIPTION_FAILED:
       return ERROR_CATEGORY.CONFIGURATION;
 
     // Infrastructure errors
@@ -306,6 +323,7 @@ export function getErrorCategory(code: FoundationErrorCode): ErrorCategory {
     case FOUNDATION_ERROR_CODE.DATABASE_QUOTA_EXCEEDED:
     case FOUNDATION_ERROR_CODE.DATABASE_OPERATION_FAILED:
     case FOUNDATION_ERROR_CODE.DATABASE_DUPLICATE_ENTRY:
+    case FOUNDATION_ERROR_CODE.REALTIME_AUTH_FAILED:
       return ERROR_CATEGORY.INFRASTRUCTURE;
 
     // Permanent/unrecoverable errors

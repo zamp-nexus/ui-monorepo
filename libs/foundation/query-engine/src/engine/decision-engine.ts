@@ -2,10 +2,10 @@
  * Decision Engine
  *
  * Intelligent routing engine that decides whether a query should be executed
- * via Convex API (real-time) or DuckDB (analytics).
+ * via HTTP API (transactional) or DuckDB (analytics).
  *
  * Decision Rules (in priority order):
- * 1. Mutations → API (create/update/delete always via Convex)
+ * 1. Mutations → API (create/update/delete always via HTTP)
  * 2. Has joins → DuckDB (SQL required for joins)
  * 3. Has measures/aggregations → DuckDB (SQL required for aggregations)
  * 4. Multiple tables → DuckDB (implies joins needed)
@@ -61,7 +61,7 @@ import { TableExtractor } from './table-extractor';
  * });
  *
  * if (decision.path === 'api') {
- *   // Execute via Convex API
+ *   // Execute via HTTP API
  * } else {
  *   // Execute via DuckDB
  * }
@@ -194,24 +194,24 @@ export class DecisionEngine implements IDisposable {
     const hasJoins = (query.joins?.length ?? 0) > 0;
     const hasMeasures = (query.measures?.length ?? 0) > 0;
 
-    let allTablesConvex = true;
+    let allTablesApi = true;
     let allTablesHaveApi = true;
     let hasLocalTables = false;
 
     for (const tableName of tables) {
       const config = tableConfigs.get(tableName);
       if (!config) {
-        allTablesConvex = false;
+        allTablesApi = false;
         allTablesHaveApi = false;
         continue;
       }
 
       if (config.source === 'local') {
         hasLocalTables = true;
-        allTablesConvex = false;
+        allTablesApi = false;
       }
 
-      if (!config.convex?.list && !config.convex?.get) {
+      if (!config.api?.list && !config.api?.get) {
         allTablesHaveApi = false;
       }
     }
@@ -221,7 +221,7 @@ export class DecisionEngine implements IDisposable {
       hasJoins,
       hasMeasures,
       tableCount: tables.length,
-      allTablesConvex,
+      allTablesApi,
       allTablesHaveApi,
       isOnline,
       hasLocalTables,
@@ -241,7 +241,7 @@ export class DecisionEngine implements IDisposable {
 
     if (!config) return false;
     if (config.source === 'local') return false;
-    if (!config.convex?.list && !config.convex?.get) return false;
+    if (!config.api?.list && !config.api?.get) return false;
 
     return true;
   };
@@ -275,11 +275,11 @@ const mutationRule: DecisionRule = {
     const mutationRef = (() => {
       switch (operation) {
         case WRITE_OPERATIONS.CREATE:
-          return config?.convex?.create;
+          return config?.api?.create;
         case WRITE_OPERATIONS.UPDATE:
-          return config?.convex?.update;
+          return config?.api?.update;
         case WRITE_OPERATIONS.DELETE:
-          return config?.convex?.delete;
+          return config?.api?.delete;
         default:
           return undefined;
       }
@@ -378,8 +378,8 @@ const noApiRule: DecisionRule = {
     const primaryTable = context.tables[0];
     const config = context.tableConfigs.get(primaryTable);
     const wantsGet = !!query.entityId || context.operation === OPERATIONS.GET;
-    const hasListApi = !!config?.convex?.list;
-    const hasGetApi = !!config?.convex?.get;
+    const hasListApi = !!config?.api?.list;
+    const hasGetApi = !!config?.api?.get;
 
     if (!wantsGet && !hasListApi) return true;
     if (wantsGet && !hasGetApi && !hasListApi) return true;

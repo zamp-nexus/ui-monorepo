@@ -248,56 +248,56 @@ describe('TableRegistry', () => {
     });
   });
 
-  // ─── CONVEX REF ACCESSORS ─────────────────────────────────────────────────
+  // ─── API DESCRIPTOR ACCESSORS ─────────────────────────────────────────────
 
-  describe('convex ref accessors', () => {
-    it('should return undefined for getConvexRef when table has no convex config', () => {
+  describe('api descriptor accessors', () => {
+    it('should return undefined for getApiDescriptor when table has no api config', () => {
       const registry = new TableRegistry([mockTable]);
 
-      expect(registry.getConvexRef('users', 'list')).toBeUndefined();
-      expect(registry.getConvexRef('users', 'get')).toBeUndefined();
-      expect(registry.getConvexRef('users', 'create')).toBeUndefined();
-      expect(registry.getConvexRef('users', 'update')).toBeUndefined();
-      expect(registry.getConvexRef('users', 'delete')).toBeUndefined();
+      expect(registry.getApiDescriptor('users', 'list')).toBeUndefined();
+      expect(registry.getApiDescriptor('users', 'get')).toBeUndefined();
+      expect(registry.getApiDescriptor('users', 'create')).toBeUndefined();
+      expect(registry.getApiDescriptor('users', 'update')).toBeUndefined();
+      expect(registry.getApiDescriptor('users', 'delete')).toBeUndefined();
     });
 
-    it('should return undefined for getConvexRef when table does not exist', () => {
+    it('should return undefined for getApiDescriptor when table does not exist', () => {
       const registry = new TableRegistry();
 
-      expect(registry.getConvexRef('nonexistent', 'list')).toBeUndefined();
+      expect(registry.getApiDescriptor('nonexistent', 'list')).toBeUndefined();
     });
 
-    it('should return empty mutation refs when table has no convex config', () => {
+    it('should return empty mutation descriptors when table has no api config', () => {
       const registry = new TableRegistry([mockTable]);
 
-      const refs = registry.getMutationRefs('users');
+      const refs = registry.getMutationDescriptors('users');
 
       expect(refs.create).toBeUndefined();
       expect(refs.update).toBeUndefined();
       expect(refs.delete).toBeUndefined();
     });
 
-    it('should return empty mutation refs when table does not exist', () => {
+    it('should return empty mutation descriptors when table does not exist', () => {
       const registry = new TableRegistry();
 
-      const refs = registry.getMutationRefs('nonexistent');
+      const refs = registry.getMutationDescriptors('nonexistent');
 
       expect(refs.create).toBeUndefined();
       expect(refs.update).toBeUndefined();
       expect(refs.delete).toBeUndefined();
     });
 
-    it('should return false for hasConvexRef when table has no convex config', () => {
+    it('should return false for hasApiDescriptor when table has no api config', () => {
       const registry = new TableRegistry([mockTable]);
 
-      expect(registry.hasConvexRef('users', 'list')).toBe(false);
-      expect(registry.hasConvexRef('users', 'create')).toBe(false);
+      expect(registry.hasApiDescriptor('users', 'list')).toBe(false);
+      expect(registry.hasApiDescriptor('users', 'create')).toBe(false);
     });
 
-    it('should return false for hasConvexRef when table does not exist', () => {
+    it('should return false for hasApiDescriptor when table does not exist', () => {
       const registry = new TableRegistry();
 
-      expect(registry.hasConvexRef('nonexistent', 'list')).toBe(false);
+      expect(registry.hasApiDescriptor('nonexistent', 'list')).toBe(false);
     });
   });
 

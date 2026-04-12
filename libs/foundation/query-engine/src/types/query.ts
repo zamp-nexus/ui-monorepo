@@ -32,7 +32,7 @@ import type { TimeDimensionSpec } from './time';
 export const QUERY_BACKENDS = {
   /** DuckDB analytical backend for complex queries */
   ANALYTICAL: 'analytical',
-  /** Convex transactional backend for CRUD operations */
+  /** HTTP transactional backend for CRUD operations */
   TRANSACTIONAL: 'transactional',
 } as const;
 
@@ -45,7 +45,7 @@ export type QueryBackend = (typeof QUERY_BACKENDS)[keyof typeof QUERY_BACKENDS];
  * Data sources for query execution results.
  */
 export const QUERY_DATA_SOURCES = {
-  CONVEX: 'convex',
+  API: 'api',
   DUCKDB: 'duckdb',
   CACHE: 'cache',
   NONE: 'none',

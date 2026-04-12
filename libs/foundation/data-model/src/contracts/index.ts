@@ -22,8 +22,11 @@ export { DATA_FRESHNESS, type DataFreshnessLevel } from './analytics';
 export { CONFLICT_RESOLUTION_TYPE, type ConflictResolutionType } from './conflict-resolution';
 
 export type {
+  ApiQueryDescriptor,
+  ApiMutationDescriptor,
   UnifiedTableConfig,
-  UnifiedTableConvexConfig,
+  UnifiedTableApiConfig,
+  UnifiedTableRealtimeConfig,
   UnifiedTableMergeConfig,
   TableAnalyticsConfig,
 } from './table-config';

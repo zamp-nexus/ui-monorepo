@@ -8,9 +8,15 @@ import { z } from 'zod';
 import type { QueryKeyBase } from '@open-insights-web/foundation-data-model';
 import {
   CROSS_TAB_MESSAGE_TYPE,
+  realtimeConnectionSnapshotSchema,
+  realtimeServerMessageSchema,
+  realtimeSubscriptionSnapshotSchema,
   type CrossTabMessage,
   type CrossTabMessageHandler,
   type CrossTabMessageType,
+  type RealtimeConnectionSnapshot,
+  type RealtimeServerMessage,
+  type RealtimeSubscriptionSnapshot,
 } from '@open-insights-web/foundation-data-model';
 import {
   createDebugLogger,
@@ -52,6 +58,10 @@ const CrossTabMessageTypeSchema = z.enum([
   CROSS_TAB_MESSAGE_TYPE.LEADER_HEARTBEAT,
   CROSS_TAB_MESSAGE_TYPE.LEADER_RESIGN,
   CROSS_TAB_MESSAGE_TYPE.LEADER_CANDIDATE,
+  CROSS_TAB_MESSAGE_TYPE.REALTIME_STATE,
+  CROSS_TAB_MESSAGE_TYPE.REALTIME_EVENT,
+  CROSS_TAB_MESSAGE_TYPE.REALTIME_RESYNC,
+  CROSS_TAB_MESSAGE_TYPE.REALTIME_SUBSCRIPTION_STATE,
 ]);
 
 /**
@@ -66,6 +76,11 @@ const CrossTabMessagePayloadSchema = z
     data: z.unknown().optional(),
     leaderId: z.string().optional(),
     term: z.number().optional(),
+    realtimeConnection: realtimeConnectionSnapshotSchema.optional(),
+    realtimeMessage: realtimeServerMessageSchema.optional(),
+    realtimeSubscription: realtimeSubscriptionSnapshotSchema.optional(),
+    topic: z.string().optional(),
+    reason: z.string().optional(),
   })
   .optional();
 
@@ -369,6 +384,48 @@ export class CrossTabManager extends Disposable implements ICrossTabManager {
    */
   notifySyncCompleted(): void {
     this.broadcast(CROSS_TAB_MESSAGE_TYPE.SYNC_COMPLETED);
+  }
+
+  /**
+   * Broadcast realtime connection state
+   */
+  notifyRealtimeState(snapshot: RealtimeConnectionSnapshot): void {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.REALTIME_STATE, {
+      realtimeConnection: snapshot,
+    });
+  }
+
+  /**
+   * Broadcast a validated realtime server message
+   */
+  notifyRealtimeEvent(message: RealtimeServerMessage): void {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.REALTIME_EVENT, {
+      realtimeMessage: message,
+      topic: 'topic' in message ? message.topic : undefined,
+      tableName: 'table' in message ? message.table : undefined,
+    });
+  }
+
+  /**
+   * Broadcast realtime subscription state
+   */
+  notifyRealtimeSubscriptionState(snapshot: RealtimeSubscriptionSnapshot): void {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.REALTIME_SUBSCRIPTION_STATE, {
+      realtimeSubscription: snapshot,
+      topic: snapshot.topic,
+      tableName: snapshot.table,
+    });
+  }
+
+  /**
+   * Broadcast a realtime resync request
+   */
+  notifyRealtimeResync(topic: string, table: string, reason: string): void {
+    this.broadcast(CROSS_TAB_MESSAGE_TYPE.REALTIME_RESYNC, {
+      topic,
+      tableName: table,
+      reason,
+    });
   }
 
   /**

@@ -115,7 +115,6 @@ export const optimisticAddToList = <T extends WithId>(
  * Remove an item from a list optimistically
  *
  * Filters out an item by ID from an existing list in the cache.
- * Checks both `id` and `_id` properties for matching.
  *
  * @param queryClient - TanStack Query client instance
  * @param queryKey - Query key of the list
@@ -146,7 +145,6 @@ export const optimisticRemoveFromList = <T extends WithId>(
  * Update an item in a list optimistically
  *
  * Applies an updater function to a specific item in a list.
- * Matches items by both `id` and `_id` properties.
  *
  * @param queryClient - TanStack Query client instance
  * @param queryKey - Query key of the list
@@ -220,7 +218,7 @@ export const optimisticUpdateItem = <T>(
  * Replace provisional ID with server ID in a list
  *
  * After a create mutation succeeds, updates the provisional ID
- * with the actual server-assigned ID in both `id` and `_id` fields.
+ * with the actual server-assigned ID in the canonical `id` field.
  *
  * @param queryClient - TanStack Query client instance
  * @param queryKey - Query key of the list
@@ -241,8 +239,6 @@ export const replaceProvisionalId = <T extends WithId>(
 ): void => {
   queryClient.setQueryData<T[]>(queryKey, (old) => {
     if (!old) return old;
-    return old.map((item) =>
-      matchesEntityId(item, provisionalId) ? { ...item, id: serverId, _id: serverId } : item,
-    );
+    return old.map((item) => (matchesEntityId(item, provisionalId) ? { ...item, id: serverId } : item));
   });
 };

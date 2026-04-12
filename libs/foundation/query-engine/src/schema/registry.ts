@@ -5,8 +5,8 @@
  * Follows the singleton pattern from foundation libraries.
  *
  * NOTE: This is distinct from TableRegistry in data-layer:
- * - **TableRegistry** (data-layer): API functions, conflict strategies, cache config
- *   Used for: Convex API calls, offline sync, cache management
+ * - **TableRegistry** (data-layer): API descriptors, conflict strategies, cache config
+ *   Used for: HTTP API calls, offline sync, cache management
  *
  * - **SchemaRegistry** (query-engine): Dimension/measure definitions, validation rules
  *   Used for: Query validation, member resolution, type checking

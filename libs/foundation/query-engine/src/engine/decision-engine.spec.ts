@@ -19,8 +19,8 @@ const makeContext = (overrides: Partial<DecisionContext> = {}): DecisionContext 
     [
       'users',
       {
-        source: 'convex',
-        convex: {
+        source: 'api',
+        api: {
           list: {} as unknown,
           get: {} as unknown,
           create: {} as unknown,
@@ -70,7 +70,7 @@ describe('DecisionEngine', () => {
   it('warns when mutation API is not defined', () => {
     const ctx = makeContext({
       operation: OPERATIONS.DELETE,
-      tableConfigs: new Map([['users', { source: 'convex', convex: { list: {} as unknown } }]]),
+      tableConfigs: new Map([['users', { source: 'api', api: { list: {} as unknown } }]]),
     });
 
     const result = engine.decide(simpleQuery, ctx);
@@ -119,8 +119,8 @@ describe('DecisionEngine', () => {
     const ctx = makeContext({
       tables: ['users', 'orders'],
       tableConfigs: new Map([
-        ['users', { source: 'convex', convex: { list: {} as unknown } }],
-        ['orders', { source: 'convex', convex: { list: {} as unknown } }],
+        ['users', { source: 'api', api: { list: {} as unknown } }],
+        ['orders', { source: 'api', api: { list: {} as unknown } }],
       ]),
     });
     const result = engine.decide(simpleQuery, ctx);
@@ -149,7 +149,7 @@ describe('DecisionEngine', () => {
 
   it('routes to DuckDB when no list API is defined', () => {
     const ctx = makeContext({
-      tableConfigs: new Map([['users', { source: 'convex' }]]),
+      tableConfigs: new Map([['users', { source: 'api' }]]),
     });
     const result = engine.decide(simpleQuery, ctx);
 
@@ -161,7 +161,7 @@ describe('DecisionEngine', () => {
     const query: Query = { dimensions: [{ member: 'users.name' }], entityId: '123' };
     const ctx = makeContext({
       operation: OPERATIONS.GET,
-      tableConfigs: new Map([['users', { source: 'convex' }]]),
+      tableConfigs: new Map([['users', { source: 'api' }]]),
     });
     const result = engine.decide(query, ctx);
 
@@ -179,8 +179,8 @@ describe('DecisionEngine', () => {
         [
           'users',
           {
-            source: 'convex',
-            convex: { list: {} as unknown },
+            source: 'api',
+            api: { list: {} as unknown },
             analytics: { freshness: 'eventual' },
           },
         ],

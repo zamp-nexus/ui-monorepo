@@ -1,22 +1,23 @@
 /**
  * useDLUpdate - Update mutation with optimistic updates
  *
- * Implements local-first optimistic update pattern for modifications.
- * Uses foundation-database for caching and foundation-sync-engine for offline queueing.
- *
  * @module hooks/use-dl-update
  */
 
 import { useCallback } from 'react';
 
-import { useConvexMutation } from '@convex-dev/react-query';
 import { useMutation, type QueryKey } from '@tanstack/react-query';
-import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
 
-import { toJsonSerializable } from '@open-insights-web/foundation-data-model';
+import { toJsonSerializable, type ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
 import type { WithId } from '@open-insights-web/foundation-data-model';
 
-import type { BaseMutationOptions, DLMutationResult } from '../core/types';
+import { executeMutationDescriptor } from '../core/http-descriptor';
+import type {
+  BaseMutationOptions,
+  DLMutationResult,
+  MutationDescriptorArgs,
+  MutationDescriptorData,
+} from '../core/types';
 import { createScopedErrorHandler } from '../utils/error-handler';
 import {
   buildMutationResult,
@@ -39,65 +40,28 @@ import {
   useQueueState,
 } from '../utils/use-mutation-internals';
 
-// Scoped error handler for this hook
 const handleUpdateError = createScopedErrorHandler('useDLUpdate');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Options for useDLUpdate hook
- */
 export interface UseDLUpdateOptions<
-  TMutation extends FunctionReference<'mutation'>,
-  TData = FunctionReturnType<TMutation>,
-  TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
+  TMutation extends ApiMutationDescriptor,
+  TData = MutationDescriptorData<TMutation>,
+  TVariables extends MutationDescriptorArgs<TMutation> = MutationDescriptorArgs<TMutation>,
 > extends BaseMutationOptions<TMutation, TData, TVariables> {
-  /** Generate optimistic data from variables and previous data */
-  onOptimistic: (variables: TVariables, previousData?: TData) => TData;
-  /** Extract entity ID from variables */
-  getEntityId: (variables: TVariables) => string;
-  /** Query key for the single item being updated */
-  itemQueryKey?: (entityId: string) => QueryKey;
-  /** Query key of the list to optimistically update */
-  listQueryKey?: QueryKey;
+  readonly onOptimistic: (variables: TVariables, previousData?: TData) => TData;
+  readonly getEntityId: (variables: TVariables) => string;
+  readonly itemQueryKey?: (entityId: string) => QueryKey;
+  readonly listQueryKey?: QueryKey;
 }
 
-/**
- * Update mutation hook with local-first optimistic updates
- *
- * @example
- * ```tsx
- * const updateUser = useDLUpdate({
- *   mutation: api.users.update,
- *   table: 'users',
- *   getEntityId: (vars) => vars.id,
- *   onOptimistic: (vars, prev) => ({
- *     ...prev,
- *     ...vars,
- *     updatedAt: new Date().toISOString(),
- *   }),
- *   listQueryKey: ['users'],
- *   itemQueryKey: (id) => ['users', id],
- * });
- *
- * // Usage
- * updateUser.mutate({ id: '123', name: 'Jane' });
- * ```
- */
 export const useDLUpdate = <
-  TMutation extends FunctionReference<'mutation'>,
-  TData = FunctionReturnType<TMutation>,
-  TVariables extends FunctionArgs<TMutation> = FunctionArgs<TMutation>,
+  TMutation extends ApiMutationDescriptor,
+  TData = MutationDescriptorData<TMutation>,
+  TVariables extends MutationDescriptorArgs<TMutation> = MutationDescriptorArgs<TMutation>,
 >(
   options: UseDLUpdateOptions<TMutation, TData, TVariables>,
 ): DLMutationResult<TData, TVariables> => {
-  // Use shared mutation internals
   const internals = useMutationInternals();
-  const { queryClient, database, queueManager, isOnline } = internals;
-
-  // Use shared state and refs
+  const { queryClient, database, queueManager, isOnline, axiosInstance } = internals;
   const { isQueued, setIsQueued } = useQueueState();
   const { listContextRef, itemContextRef, entityIdRef, clearRefs } = useOptimisticContextRefs<
     WithId,
@@ -117,39 +81,29 @@ export const useDLUpdate = <
     onSettled,
   } = options;
 
-  // Get Convex mutation function
-  const convexMutation = useConvexMutation(mutation);
-
-  // Mutation function
   const mutationFn = useCallback(
     async (variables: TVariables): Promise<TData> => {
-      // Get entity ID
       const entityId = getEntityId(variables);
       entityIdRef.current = entityId;
 
-      // Resolve provisional ID to server ID if available
       const resolvedId = resolveEntityId(queueManager, entityId);
 
-      // Get current item data for optimistic update
       const currentItemKey = itemQueryKey?.(resolvedId);
       const currentData = currentItemKey
         ? queryClient.getQueryData<TData>(currentItemKey)
         : undefined;
 
-      // Create optimistic data
       const optimisticData = onOptimistic(variables, currentData);
 
-      // Step 1: Optimistically update TanStack cache (list)
       if (listQueryKey) {
         listContextRef.current = optimisticUpdateInList<WithId>(
           queryClient,
           listQueryKey,
           resolvedId,
-          (item) => ({ ...item, ...optimisticData }),
+          (item) => ({ ...item, ...(optimisticData as object) }),
         );
       }
 
-      // Step 1b: Optimistically update single item cache
       if (currentItemKey) {
         itemContextRef.current = optimisticUpdateItem<TData>(
           queryClient,
@@ -158,7 +112,6 @@ export const useDLUpdate = <
         );
       }
 
-      // Step 2: Persist optimistic data to DatabaseFacade
       await persistToCache(database, table, resolvedId, optimisticData, true);
 
       return executeLocalFirstMutation<TData>({
@@ -177,12 +130,16 @@ export const useDLUpdate = <
         },
         executeOnline: async () => {
           const resolvedVariables = prepareResolvedVariables(variables, entityId, resolvedId);
-          return convexMutation(resolvedVariables);
+          return (await executeMutationDescriptor(
+            axiosInstance,
+            mutation,
+            resolvedVariables,
+          )) as TData;
         },
       });
     },
     [
-      convexMutation,
+      axiosInstance,
       database,
       entityIdRef,
       getEntityId,
@@ -192,6 +149,7 @@ export const useDLUpdate = <
       itemQueryKey,
       listContextRef,
       listQueryKey,
+      mutation,
       onOptimistic,
       queryClient,
       queueManager,
@@ -200,7 +158,6 @@ export const useDLUpdate = <
     ],
   );
 
-  // Create shared callbacks
   const handleSuccess = createOnSuccessCallback({
     internals,
     invalidateKeys,
@@ -215,7 +172,6 @@ export const useDLUpdate = <
     onSettled,
   });
 
-  // Create shared error handler using utility
   const handleError = createOnErrorCallback<TData, TVariables, WithId, TData>({
     internals,
     listContextRef,
@@ -226,21 +182,17 @@ export const useDLUpdate = <
     onError,
   });
 
-  // TanStack mutation
   const mutationResult = useMutation<TData, Error, TVariables>({
     mutationFn,
-
     onSuccess: handleSuccess,
-
     onError: handleError,
-
     onSettled: handleSettled,
   });
 
   return buildMutationResult({
     mutationResult,
     isQueued,
-    provisionalId: null, // Updates don't create provisional IDs
+    provisionalId: null,
     isOffline: !isOnline,
   });
 };

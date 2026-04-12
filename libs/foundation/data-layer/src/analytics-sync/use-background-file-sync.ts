@@ -2,7 +2,7 @@
  * useBackgroundFileSync Hook
  *
  * Orchestrates background file synchronization:
- * 1. Fetches table info from Convex datasource.list API
+ * 1. Fetches table info from the datasource endpoint
  * 2. Compares with local metadata to find tables needing updates
  * 3. Downloads parquet files to OPFS
  * 4. Updates local metadata
@@ -68,7 +68,7 @@ export const useBackgroundFileSync = (
 ): UseBackgroundFileSyncResult => {
   const { tables, enabled = true, onProgress, onComplete, onError, debug = false } = options;
 
-  const { queryClient, datasourceApi, getTableSyncService, getFileDownloadService } =
+  const { queryClient, datasourceEndpoint, getTableSyncService, getFileDownloadService } =
     useDataLayerInternals();
   const [state, setState] = useState<BackgroundSyncState>(INITIAL_SYNC_STATE);
   const isSyncingRef = useRef(false);
@@ -82,10 +82,10 @@ export const useBackgroundFileSync = (
 
   const logger = useMemo(() => createDebugLogger('useBackgroundFileSync', debug), [debug]);
 
-  const isConfigured = datasourceApi !== null;
+  const isConfigured = datasourceEndpoint !== null;
 
   const triggerSync = useCallback(async (): Promise<void> => {
-    if (!enabled || normalizedTables.length === 0 || !datasourceApi) {
+    if (!enabled || normalizedTables.length === 0 || !datasourceEndpoint) {
       logger.debug('Sync skipped: not configured or disabled');
       return;
     }
@@ -227,7 +227,7 @@ export const useBackgroundFileSync = (
   }, [
     enabled,
     normalizedTables,
-    datasourceApi,
+    datasourceEndpoint,
     getTableSyncService,
     getFileDownloadService,
     queryClient,
@@ -238,10 +238,10 @@ export const useBackgroundFileSync = (
   ]);
 
   useEffect(() => {
-    if (enabled && datasourceApi && normalizedTables.length > 0) {
+    if (enabled && datasourceEndpoint && normalizedTables.length > 0) {
       void triggerSync();
     }
-  }, [enabled, datasourceApi, normalizedTables, triggerSync]);
+  }, [enabled, datasourceEndpoint, normalizedTables, triggerSync]);
 
   useEffect(() => {
     return () => {

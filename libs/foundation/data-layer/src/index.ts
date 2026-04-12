@@ -65,6 +65,7 @@ export {
   type ConflictInfo,
   type ConflictResolution,
 } from './hooks/use-conflict-resolution';
+export { useRealtimeSocket, type UseRealtimeSocketResult } from './realtime';
 
 // Convenience state hooks
 export { useIsOnline } from './hooks/use-is-online';
@@ -86,8 +87,31 @@ export type {
   BaseMutationOptions,
   DLMutationResult,
   OptimisticMetadata,
-  ConvexQueryReference,
-  AnyFunctionReference,
+  DataLayerQueryDescriptor,
+  DataLayerMutationDescriptor,
+  DataSourceEndpointDescriptor,
+  QueryDescriptorArgs,
+  QueryDescriptorData,
+  MutationDescriptorArgs,
+  MutationDescriptorData,
+  RealtimeSocketAuthConfig,
+  RealtimeTicketAuthConfig,
+  RealtimeCookieAuthConfig,
+  RealtimeAccessTokenAuthConfig,
+  RealtimeSocketConfig,
+  RealtimeSocketHeartbeatConfig,
+  RealtimeSocketReconnectConfig,
+  RealtimeSocketResumeConfig,
+  RealtimeWebSocketTicket,
+  RealtimeSocketLeaderMode,
+  RealtimeMessageEnvelope,
+  RealtimeMessageType,
+  RealtimeOutboundMessage,
+  RealtimeAckMessage,
+  RealtimeConnectionStateSnapshot,
+  RealtimeSubscriptionStateMap,
+  RealtimeResumeCursorStore,
+  RealtimeTopicSubscription,
 } from './core/types';
 export {
   DEFAULT_CACHE_TTL,
@@ -101,6 +125,7 @@ export {
   resolveCacheConfig,
   TableRegistry,
   createTableRegistry,
+  REALTIME_MESSAGE_TYPES,
 } from './core';
 
 // Advanced instance composition

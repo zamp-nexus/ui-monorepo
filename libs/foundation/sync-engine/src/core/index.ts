@@ -67,7 +67,7 @@ export {
   // TanStack Query
   DEFAULT_CACHE_TTL_MS,
   DEFAULT_STALE_WHILE_REVALIDATE,
-  // Convex Adapter
+  // Realtime / transport
   DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS,
   // Queue Processor
   DEFAULT_BATCH_SIZE,

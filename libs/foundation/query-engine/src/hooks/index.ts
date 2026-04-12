@@ -7,7 +7,7 @@
  *
  * These hooks delegate ALL execution to Data Layer hooks:
  * - useDLAnalytics for DuckDB queries
- * - useDLGetList for Convex queries
+ * - useDLGetList for transactional API queries
  * - useDLCreate, useDLUpdate, useDLDelete for mutations
  *
  * Query Engine handles routing, SQL compilation, and conversion only.

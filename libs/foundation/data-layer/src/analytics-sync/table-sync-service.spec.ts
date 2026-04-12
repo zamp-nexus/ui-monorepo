@@ -4,9 +4,8 @@
  * @module analytics-sync/table-sync-service.spec
  */
 
-import type { ConvexReactClient } from 'convex/react';
-
 import type {
+  ApiQueryDescriptor,
   DataSourceFileInfo,
   DataSourceResponse,
   DataSourceTableInfo,
@@ -23,13 +22,9 @@ import {
 // Helpers & Mocks
 // ---------------------------------------------------------------------------
 
-function createMockConvexClient(): ConvexReactClient {
-  return { query: vi.fn() } as unknown as ConvexReactClient;
-}
-
 const MOCK_DATASOURCE_API = {
-  _type: 'function',
-} as unknown as TableSyncServiceConfig['datasourceApi'];
+  path: '/datasource',
+} as ApiQueryDescriptor<{ tables: string[] }, DataSourceResponse>;
 
 function createMockDatabase(): TableSyncDatabaseOperations {
   return {
@@ -84,8 +79,8 @@ function createService(overrides: Partial<TableSyncServiceConfig> = {}): {
 } {
   const database = createMockDatabase();
   const service = new TableSyncService({
-    convexClient: createMockConvexClient(),
-    datasourceApi: MOCK_DATASOURCE_API,
+    axiosInstance: { request: vi.fn(), defaults: {} } as TableSyncServiceConfig['axiosInstance'],
+    datasourceEndpoint: MOCK_DATASOURCE_API,
     database,
     debug: false,
     ...overrides,
@@ -101,13 +96,13 @@ describe('TableSyncService', () => {
   // ── isConfigured ────────────────────────────────────────────────────────
 
   describe('isConfigured', () => {
-    it('returns true when datasourceApi is set', () => {
+    it('returns true when datasourceEndpoint is set', () => {
       const { service } = createService();
       expect(service.isConfigured()).toBe(true);
     });
 
-    it('returns false when datasourceApi is null', () => {
-      const { service } = createService({ datasourceApi: null });
+    it('returns false when datasourceEndpoint is null', () => {
+      const { service } = createService({ datasourceEndpoint: null });
       expect(service.isConfigured()).toBe(false);
     });
   });

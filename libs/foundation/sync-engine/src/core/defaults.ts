@@ -154,11 +154,11 @@ export const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 export const DEFAULT_STALE_WHILE_REVALIDATE = true;
 
 // ============================================================================
-// Convex Adapter Defaults
+// Realtime / transport defaults
 // ============================================================================
 
 /**
- * Default polling interval for Convex subscriptions (ms)
+ * Default polling interval for realtime subscriptions (ms)
  * @default 5000 (5 seconds)
  */
 export const DEFAULT_SUBSCRIPTION_POLL_INTERVAL_MS = 5000;

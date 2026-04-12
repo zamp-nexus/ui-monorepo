@@ -107,6 +107,7 @@ export const SYNC_STATE_KEY = {
   SCHEMA_VERSION: 'schemaVersion',
   CONFLICTS: 'conflicts',
   ID_MAPPINGS: 'idMappings',
+  REALTIME_CURSORS: 'realtimeCursors',
 } as const;
 
 export type SyncStateKey = ValueOf<typeof SYNC_STATE_KEY>;

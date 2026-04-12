@@ -2,7 +2,7 @@
  * Unified Table Registry
  *
  * Single source of truth for table metadata used across:
- * - DataLayer (Convex API calls, caching)
+ * - DataLayer (HTTP API calls, caching)
  * - SyncEngine (conflict resolution, offline sync)
  * - QueryEngine (routing decisions, analytics)
  *
@@ -11,9 +11,9 @@
  * @module core/table-registry
  */
 
-import type { FunctionReference } from 'convex/server';
-
 import {
+  type ApiMutationDescriptor,
+  type ApiQueryDescriptor,
   CONFLICT_STRATEGY,
   DATA_FRESHNESS,
   type ConflictStrategy,
@@ -24,8 +24,8 @@ import {
 import { createDebugLogger, TIME_MS, type Logger } from '@open-insights-web/foundation-utils';
 
 type UnifiedTableConfig = SharedUnifiedTableConfig<
-  FunctionReference<'query'>,
-  FunctionReference<'mutation'>
+  ApiQueryDescriptor,
+  ApiMutationDescriptor
 >;
 
 // =============================================================================
@@ -36,7 +36,7 @@ type UnifiedTableConfig = SharedUnifiedTableConfig<
  * TableRegistry - centralized access to table configurations.
  *
  * Provides typed accessors for different use cases:
- * - DataLayer hooks: getConvexRef, getStaleTime
+ * - DataLayer hooks: getApiDescriptor, getStaleTime
  * - SyncEngine: getConflictStrategy, getMergeConfig
  * - QueryEngine: isAnalyticsEnabled, getAnalyticsFreshness
  */
@@ -156,45 +156,45 @@ export class TableRegistry {
    */
   unregisterTable = (name: string): boolean => this.tables.delete(name);
 
-  // ─── CONVEX API ACCESSORS (DataLayer, QueryEngine) ──────────────────────────
+  // ─── API ACCESSORS (DataLayer, QueryEngine) ─────────────────────────────────
 
   /**
-   * Get Convex function reference for a table and operation.
+   * Get API descriptor for a table and operation.
    * Returns undefined if not defined.
    */
-  getConvexRef = (
+  getApiDescriptor = (
     tableName: string,
     operation: Operation,
-  ): FunctionReference<'query'> | FunctionReference<'mutation'> | undefined => {
+  ): ApiQueryDescriptor | ApiMutationDescriptor | undefined => {
     const table = this.tables.get(tableName);
-    return table?.convex?.[operation];
+    return table?.api?.[operation];
   };
 
   /**
-   * Get mutation references for a table (create, update, delete).
+   * Get mutation descriptors for a table (create, update, delete).
    * Used by DataLayer hooks and SyncEngine.
    */
-  getMutationRefs = (
+  getMutationDescriptors = (
     tableName: string,
   ): {
-    create?: FunctionReference<'mutation'>;
-    update?: FunctionReference<'mutation'>;
-    delete?: FunctionReference<'mutation'>;
+    create?: ApiMutationDescriptor;
+    update?: ApiMutationDescriptor;
+    delete?: ApiMutationDescriptor;
   } => {
     const table = this.tables.get(tableName);
     const refs: {
-      create?: FunctionReference<'mutation'>;
-      update?: FunctionReference<'mutation'>;
-      delete?: FunctionReference<'mutation'>;
+      create?: ApiMutationDescriptor;
+      update?: ApiMutationDescriptor;
+      delete?: ApiMutationDescriptor;
     } = {};
-    if (table?.convex?.create) {
-      refs.create = table.convex.create;
+    if (table?.api?.create) {
+      refs.create = table.api.create;
     }
-    if (table?.convex?.update) {
-      refs.update = table.convex.update;
+    if (table?.api?.update) {
+      refs.update = table.api.update;
     }
-    if (table?.convex?.delete) {
-      refs.delete = table.convex.delete;
+    if (table?.api?.delete) {
+      refs.delete = table.api.delete;
     }
     return refs;
   };
@@ -202,8 +202,8 @@ export class TableRegistry {
   /**
    * Check if table has a specific API operation defined.
    */
-  hasConvexRef = (tableName: string, operation: Operation): boolean =>
-    this.getConvexRef(tableName, operation) !== undefined;
+  hasApiDescriptor = (tableName: string, operation: Operation): boolean =>
+    this.getApiDescriptor(tableName, operation) !== undefined;
 
   // ─── CACHE ACCESSORS (DataLayer, QueryEngine) ───────────────────────────────
 

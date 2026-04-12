@@ -4,28 +4,28 @@
  * @module hooks/internal/data-layer-adapters
  */
 
-import type { FunctionReference } from 'convex/server';
-
 import {
   isMutationOperation,
   WRITE_OPERATIONS,
+  type ApiMutationDescriptor,
+  type ApiQueryDescriptor,
   type Operation,
   type WriteOperation,
 } from '@open-insights-web/foundation-data-model';
 
-type QueryFunctionReference = FunctionReference<'query'>;
-type MutationFunctionReference = FunctionReference<'mutation'>;
+type QueryDescriptor = ApiQueryDescriptor;
+type MutationDescriptor = ApiMutationDescriptor;
 
-interface ConvexFunctionMap {
-  readonly list?: QueryFunctionReference;
-  readonly get?: QueryFunctionReference;
-  readonly create?: MutationFunctionReference;
-  readonly update?: MutationFunctionReference;
-  readonly delete?: MutationFunctionReference;
+interface ApiDescriptorMap {
+  readonly list?: QueryDescriptor;
+  readonly get?: QueryDescriptor;
+  readonly create?: MutationDescriptor;
+  readonly update?: MutationDescriptor;
+  readonly delete?: MutationDescriptor;
 }
 
 interface TableRegistryLike {
-  getTable: (tableName: string) => { readonly convex?: ConvexFunctionMap } | undefined;
+  getTable: (tableName: string) => { readonly api?: ApiDescriptorMap } | undefined;
   getTableNames?: () => ReadonlyArray<string>;
 }
 
@@ -35,28 +35,36 @@ interface TableRegistryLike {
 export const getListQueryReference = (
   tableRegistry: TableRegistryLike,
   tableName: string,
-): QueryFunctionReference | undefined => tableRegistry.getTable(tableName)?.convex?.list;
+): QueryDescriptor | undefined => tableRegistry.getTable(tableName)?.api?.list;
+
+/**
+ * Resolve get query descriptor for a table.
+ */
+export const getGetQueryReference = (
+  tableRegistry: TableRegistryLike,
+  tableName: string,
+): QueryDescriptor | undefined => tableRegistry.getTable(tableName)?.api?.get;
 
 /**
  * Return the first available query reference in the registry.
  */
 export const getAnyQueryReference = (
   tableRegistry: TableRegistryLike,
-): QueryFunctionReference | undefined => {
+): QueryDescriptor | undefined => {
   const tableNames = tableRegistry.getTableNames?.() ?? [];
 
   for (const tableName of tableNames) {
-    const convexFunctions = tableRegistry.getTable(tableName)?.convex;
-    if (!convexFunctions) {
+    const apiDescriptors = tableRegistry.getTable(tableName)?.api;
+    if (!apiDescriptors) {
       continue;
     }
 
-    if (convexFunctions.list) {
-      return convexFunctions.list;
+    if (apiDescriptors.list) {
+      return apiDescriptors.list;
     }
 
-    if (convexFunctions.get) {
-      return convexFunctions.get;
+    if (apiDescriptors.get) {
+      return apiDescriptors.get;
     }
   }
 
@@ -70,19 +78,19 @@ export const getMutationReference = (
   tableRegistry: TableRegistryLike,
   tableName: string,
   operation: WriteOperation,
-): MutationFunctionReference | undefined => {
-  const convexFunctions = tableRegistry.getTable(tableName)?.convex;
-  if (!convexFunctions) {
+): MutationDescriptor | undefined => {
+  const apiDescriptors = tableRegistry.getTable(tableName)?.api;
+  if (!apiDescriptors) {
     return undefined;
   }
 
   switch (operation) {
     case WRITE_OPERATIONS.CREATE:
-      return convexFunctions.create;
+      return apiDescriptors.create;
     case WRITE_OPERATIONS.UPDATE:
-      return convexFunctions.update;
+      return apiDescriptors.update;
     case WRITE_OPERATIONS.DELETE:
-      return convexFunctions.delete;
+      return apiDescriptors.delete;
     default:
       return undefined;
   }
@@ -94,13 +102,13 @@ export const getMutationReference = (
 export const getAnyMutationReference = (
   tableRegistry: TableRegistryLike,
   tableName: string,
-): MutationFunctionReference | undefined => {
-  const convexFunctions = tableRegistry.getTable(tableName)?.convex;
-  if (!convexFunctions) {
+): MutationDescriptor | undefined => {
+  const apiDescriptors = tableRegistry.getTable(tableName)?.api;
+  if (!apiDescriptors) {
     return undefined;
   }
 
-  return convexFunctions.create ?? convexFunctions.update ?? convexFunctions.delete;
+  return apiDescriptors.create ?? apiDescriptors.update ?? apiDescriptors.delete;
 };
 
 /**
@@ -108,7 +116,7 @@ export const getAnyMutationReference = (
  */
 export const getAnyMutationReferenceFromRegistry = (
   tableRegistry: TableRegistryLike,
-): MutationFunctionReference | undefined => {
+): MutationDescriptor | undefined => {
   const tableNames = tableRegistry.getTableNames?.() ?? [];
 
   for (const tableName of tableNames) {

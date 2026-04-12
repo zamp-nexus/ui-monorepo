@@ -9,7 +9,6 @@ export {
   TimestampsSchema,
   SoftDeleteSchema,
   TenantScopedSchema,
-  ConvexIdSchema,
   PaginationParamsSchema,
   SortDirectionSchema,
   DateRangeSchema,

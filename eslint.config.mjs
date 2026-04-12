@@ -6,7 +6,6 @@
 // Adding a non-foundation project requires ZERO changes to this file.
 // Adding a foundation project requires ONE new FOUNDATION_DAG entry.
 
-import convexPlugin from '@convex-dev/eslint-plugin';
 import nx from '@nx/eslint-plugin';
 import unusedImports from 'eslint-plugin-unused-imports';
 
@@ -287,12 +286,11 @@ export default [
   },
 
   // ================================================================
-  // NX + CONVEX BASE CONFIGS
+  // NX BASE CONFIGS
   // ================================================================
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
-  ...convexPlugin.configs.recommended,
 
   // ================================================================
   // GLOBAL IGNORES

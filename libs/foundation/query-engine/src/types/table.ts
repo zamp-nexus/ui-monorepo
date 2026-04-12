@@ -9,11 +9,11 @@
  * @module types/table
  */
 
-import type { FunctionReference } from 'convex/server';
-
 // ConflictStrategy is both a const object (value) and a type in data-model.
 // We need the value import for the type guard `isConflictStrategy`.
 import {
+  type ApiMutationDescriptor,
+  type ApiQueryDescriptor,
   CONFLICT_STRATEGY,
   DATA_FRESHNESS,
   WRITE_OPERATIONS,
@@ -29,11 +29,11 @@ import {
 /**
  * Source of table data.
  *
- * - `convex`: Data from Convex backend (real-time via WebSocket)
+ * - `api`: Data from HTTP APIs with realtime updates
  * - `local`: Local file uploaded by user (only in DuckDB)
  */
 export const TABLE_SOURCES = {
-  CONVEX: 'convex',
+  API: 'api',
   LOCAL: 'local',
 } as const;
 
@@ -98,24 +98,24 @@ export const ANALYTICS_FRESHNESS_LEVELS = {
 } as const;
 
 // =============================================================================
-// CONVEX FUNCTION REFERENCES
+// API DESCRIPTORS
 // =============================================================================
 
 /**
- * Convex API function references for a table.
- * Used for real-time queries and mutations.
+ * HTTP API descriptors for a table.
+ * Used for transactional reads and mutations.
  */
-export interface TableConvexFunctions {
+export interface TableApiFunctions {
   /** List/query function */
-  readonly list?: FunctionReference<'query'>;
+  readonly list?: ApiQueryDescriptor;
   /** Get single item function */
-  readonly get?: FunctionReference<'query'>;
+  readonly get?: ApiQueryDescriptor;
   /** Create function */
-  readonly create?: FunctionReference<'mutation'>;
+  readonly create?: ApiMutationDescriptor;
   /** Update function */
-  readonly update?: FunctionReference<'mutation'>;
+  readonly update?: ApiMutationDescriptor;
   /** Delete function */
-  readonly delete?: FunctionReference<'mutation'>;
+  readonly delete?: ApiMutationDescriptor;
 }
 
 // =============================================================================
@@ -150,7 +150,7 @@ export interface ParquetFileInfo {
  * Complete configuration for a table in the query engine.
  *
  * This combines:
- * - Source information (Convex, local file)
+ * - Source information (API, local file)
  * - Load state tracking
  * - Parquet file metadata (for DuckDB path)
  * - Schema information
@@ -163,15 +163,15 @@ export interface TableConfig {
   readonly name: string;
 
   /**
-   * Source of data: 'convex' or 'local'.
+   * Source of data: 'api' or 'local'.
    */
   readonly source: TableSource;
 
   /**
-   * Convex API function references.
-   * Required for Convex-sourced tables that need API access.
+   * API descriptors for query and mutation access.
+   * Required for API-backed tables that need transactional access.
    */
-  readonly convex?: TableConvexFunctions;
+  readonly api?: TableApiFunctions;
 
   /**
    * Current load state.
@@ -269,10 +269,10 @@ export interface TableConfig {
 export interface RegisterTableOptions {
   /** Table name (unique identifier) */
   readonly name: string;
-  /** Source: 'convex' or 'local' */
+  /** Source: 'api' or 'local' */
   readonly source: TableSource;
-  /** Convex API function references */
-  readonly convex?: TableConvexFunctions;
+  /** HTTP API descriptors */
+  readonly api?: TableApiFunctions;
   /** File type for local files */
   readonly fileType?: TableFileType;
   /** Whether this is a user-uploaded file */
@@ -382,7 +382,7 @@ export const hasNewerServerData = (table: TableConfig): boolean => {
  * Check if table can use API path (has list API defined).
  */
 export const tableHasListApi = (table: TableConfig): boolean => {
-  return !!table.convex?.list;
+  return !!table.api?.list;
 };
 
 /**
@@ -391,11 +391,11 @@ export const tableHasListApi = (table: TableConfig): boolean => {
 export const tableHasMutationApi = (table: TableConfig, operation: WriteOperation): boolean => {
   switch (operation) {
     case WRITE_OPERATIONS.CREATE:
-      return !!table.convex?.create;
+      return !!table.api?.create;
     case WRITE_OPERATIONS.UPDATE:
-      return !!table.convex?.update;
+      return !!table.api?.update;
     case WRITE_OPERATIONS.DELETE:
-      return !!table.convex?.delete;
+      return !!table.api?.delete;
     default:
       return false;
   }

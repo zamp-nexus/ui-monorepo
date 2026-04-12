@@ -7,7 +7,7 @@
  * NOTE: For utility types (WithId, WithRequiredId, ExtractId, PartialBy, OfflineMetadata, OfflineDataSource),
  * import directly from @open-insights-web/foundation-data-model.
  *
- * NOTE: For type guards (hasId, has_Id, hasAnyId, getEntityId, matchesEntityId),
+ * NOTE: For type guards (hasId, hasAnyId, getEntityId, matchesEntityId),
  * import directly from @open-insights-web/foundation-data-model.
  *
  * @module core/types
@@ -15,40 +15,48 @@
 
 import type { QueryKey } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
-import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
 
+import { REALTIME_SERVER_MESSAGE_TYPE } from '@open-insights-web/foundation-data-model';
 import type {
+  ApiMutationDescriptor,
+  ApiQueryDescriptor,
   ConflictStrategy,
+  DataSourceResponse,
+  RealtimeAckServerMessage,
+  RealtimeClientMessage,
+  RealtimeConnectionSnapshot,
+  RealtimeCursorStore,
+  RealtimeProtocolVersion,
+  RealtimeServerMessage,
+  RealtimeSubscriptionMap,
+  RealtimeTopicDescriptor,
   UnifiedTableConfig as SharedUnifiedTableConfig,
   SyncState,
 } from '@open-insights-web/foundation-data-model';
 
-type ConvexFunctionVisibility = 'public' | 'internal';
-
-/**
- * Generic Convex query function reference type.
- * Used for typing datasource API and other query references.
- *
- * Note: We use a generic signature here because Convex function references
- * have complex internal types that vary by deployment.
- */
-export type ConvexQueryReference = FunctionReference<
-  'query',
-  'public',
-  Record<string, unknown>,
-  unknown
->;
-
-/**
- * Generic Convex function reference for any visibility and args.
- * Used when the specific function signature is not known at compile time.
- */
-export type AnyFunctionReference = FunctionReference<'query', ConvexFunctionVisibility>;
-
 type DataLayerUnifiedTableConfig = SharedUnifiedTableConfig<
-  FunctionReference<'query'>,
-  FunctionReference<'mutation'>
+  ApiQueryDescriptor,
+  ApiMutationDescriptor
 >;
+
+export type DataLayerQueryDescriptor = ApiQueryDescriptor;
+export type DataLayerMutationDescriptor = ApiMutationDescriptor;
+export type DataSourceEndpointDescriptor = ApiQueryDescriptor<
+  { tables: string[] },
+  DataSourceResponse
+>;
+
+export type QueryDescriptorArgs<TQuery extends ApiQueryDescriptor> =
+  TQuery extends ApiQueryDescriptor<infer TArgs, unknown> ? TArgs : never;
+
+export type QueryDescriptorData<TQuery extends ApiQueryDescriptor> =
+  TQuery extends ApiQueryDescriptor<unknown, infer TData> ? TData : never;
+
+export type MutationDescriptorArgs<TMutation extends ApiMutationDescriptor> =
+  TMutation extends ApiMutationDescriptor<infer TArgs, unknown> ? TArgs : never;
+
+export type MutationDescriptorData<TMutation extends ApiMutationDescriptor> =
+  TMutation extends ApiMutationDescriptor<unknown, infer TData> ? TData : never;
 
 // =============================================================================
 // Configuration
@@ -78,13 +86,83 @@ export interface ResolvedCacheConfig {
   readonly analyticsGcTime: number;
 }
 
+export interface RealtimeSocketReconnectConfig {
+  readonly enabled?: boolean;
+  readonly maxAttempts?: number;
+  readonly initialDelayMs?: number;
+  readonly maxDelayMs?: number;
+}
+
+export interface RealtimeSocketHeartbeatConfig {
+  readonly enabled?: boolean;
+  readonly intervalMs?: number;
+  readonly timeoutMs?: number;
+}
+
+export interface RealtimeSocketResumeConfig {
+  readonly enabled?: boolean;
+  readonly persistCursors?: boolean;
+}
+
+export interface RealtimeWebSocketTicket {
+  readonly ticket: string;
+  readonly expiresAt?: number;
+  readonly queryParam?: string;
+  readonly url?: string;
+  readonly protocols?: string[];
+}
+
+export interface RealtimeTicketAuthConfig {
+  readonly mode: 'ticket';
+  readonly getTicket?: () => Promise<string | RealtimeWebSocketTicket | null>;
+  readonly ticketEndpoint?: ApiQueryDescriptor<unknown, string | RealtimeWebSocketTicket>;
+  readonly queryParam?: string;
+}
+
+export interface RealtimeCookieAuthConfig {
+  readonly mode: 'cookie';
+}
+
+export interface RealtimeAccessTokenAuthConfig {
+  readonly mode: 'access_token';
+  readonly getAccessToken: () => Promise<string | null>;
+  readonly queryParam?: string;
+}
+
+export type RealtimeSocketAuthConfig =
+  | RealtimeTicketAuthConfig
+  | RealtimeCookieAuthConfig
+  | RealtimeAccessTokenAuthConfig;
+
+export type RealtimeSocketLeaderMode = 'sync-engine' | 'standalone';
+
+export interface RealtimeSocketConfig {
+  readonly url: string;
+  readonly protocols?: string[];
+  readonly protocolVersion?: RealtimeProtocolVersion;
+  readonly auth?: RealtimeSocketAuthConfig;
+  readonly heartbeat?: RealtimeSocketHeartbeatConfig;
+  readonly reconnect?: RealtimeSocketReconnectConfig;
+  readonly resume?: RealtimeSocketResumeConfig;
+  readonly leaderMode?: RealtimeSocketLeaderMode;
+  readonly requestTimeoutMs?: number;
+}
+
+export const REALTIME_MESSAGE_TYPES = REALTIME_SERVER_MESSAGE_TYPE;
+
+export type RealtimeMessageType = RealtimeServerMessage['type'];
+export type RealtimeMessageEnvelope = RealtimeServerMessage;
+export type RealtimeOutboundMessage = RealtimeClientMessage;
+export type RealtimeAckMessage = RealtimeAckServerMessage;
+export type RealtimeConnectionStateSnapshot = RealtimeConnectionSnapshot;
+export type RealtimeSubscriptionStateMap = RealtimeSubscriptionMap;
+export type RealtimeResumeCursorStore = RealtimeCursorStore;
+export type RealtimeTopicSubscription = RealtimeTopicDescriptor;
+
 /**
  * Data layer configuration
  */
 export interface DataLayerConfig {
-  /** Convex deployment URL */
-  readonly convexUrl: string;
-
   /**
    * Unified table registry - single source of truth.
    * Define table configs here and they'll be shared across:
@@ -95,19 +173,12 @@ export interface DataLayerConfig {
   readonly tables?: ReadonlyArray<DataLayerUnifiedTableConfig>;
 
   /**
-   * Global datasource API reference for background file sync.
+   * Global datasource endpoint descriptor for background file sync.
    *
-   * This Convex query returns parquet file metadata for requested tables.
+   * This endpoint returns parquet file metadata for requested tables.
    * Used by useBackgroundFileSync hook to download analytics data files.
-   *
-   * Signature: (args: { tables: string[] }) => DataSourceResponse
-   *
-   * @example
-   * ```typescript
-   * datasourceApi: api.datasource.list
-   * ```
    */
-  readonly datasourceApi?: ConvexQueryReference;
+  readonly datasourceEndpoint?: DataSourceEndpointDescriptor;
 
   /** Conflict resolution strategy (default: CONFLICT_STRATEGY.LAST_WRITE_WINS) */
   readonly conflictStrategy?: ConflictStrategy;
@@ -127,8 +198,11 @@ export interface DataLayerConfig {
   /** Cache configuration overrides */
   readonly cache?: CacheConfig;
 
-  /** Optional shared Axios instance used for network paths in dependent foundation libs */
-  readonly axiosInstance?: AxiosInstance;
+  /** Shared Axios instance used for all networked data-layer operations */
+  readonly axiosInstance: AxiosInstance;
+
+  /** Realtime WebSocket configuration */
+  readonly websocket: RealtimeSocketConfig;
 
   /** Enable debug logging */
   readonly debug?: boolean;
@@ -176,11 +250,11 @@ export interface DataLayerContextValue {
  * Base mutation options shared across create/update/delete
  */
 export interface BaseMutationOptions<
-  TMutation extends FunctionReference<'mutation'>,
-  TData = FunctionReturnType<TMutation>,
-  TVariables = FunctionArgs<TMutation>,
+  TMutation extends ApiMutationDescriptor,
+  TData = MutationDescriptorData<TMutation>,
+  TVariables = MutationDescriptorArgs<TMutation>,
 > {
-  /** Convex mutation function reference */
+  /** HTTP mutation descriptor */
   readonly mutation: TMutation;
   /** Table name for caching and offline queue */
   readonly table: string;

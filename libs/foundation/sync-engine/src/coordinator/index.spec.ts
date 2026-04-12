@@ -54,8 +54,13 @@ const mockCrossTabManager = {
   invalidateQueries: vi.fn(() => undefined),
 };
 
-const mockConvexAdapter = {
+const mockHttpMutationAdapter = {
   createMutationExecutor: vi.fn(() => vi.fn()),
+  dispose: vi.fn(() => undefined),
+};
+
+const mockRealtimeBridge = {
+  apply: vi.fn(() => undefined),
   dispose: vi.fn(() => undefined),
 };
 
@@ -75,8 +80,12 @@ vi.mock('../cross-tab/manager', () => ({
   createCrossTabManager: vi.fn(() => mockCrossTabManager),
 }));
 
-vi.mock('../convex/adapter', () => ({
-  createConvexAdapter: vi.fn(() => mockConvexAdapter),
+vi.mock('../http/adapter', () => ({
+  createHttpMutationAdapter: vi.fn(() => mockHttpMutationAdapter),
+}));
+
+vi.mock('../realtime/bridge', () => ({
+  createRealtimeEventBridge: vi.fn(() => mockRealtimeBridge),
 }));
 
 describe('SyncCoordinator lifecycle', () => {
@@ -100,13 +109,14 @@ describe('SyncCoordinator lifecycle', () => {
     mockCrossTabManager.stop.mockClear();
     mockCrossTabManager.dispose.mockClear();
     mockCrossTabManager.subscribe.mockClear();
-    mockConvexAdapter.dispose.mockClear();
+    mockHttpMutationAdapter.dispose.mockClear();
+    mockRealtimeBridge.dispose.mockClear();
   });
 
   it('does not leak subscriptions across start-stop cycles', async () => {
     const coordinator = new SyncCoordinator({
       queryClient: { invalidateQueries: vi.fn() } as never,
-      convexClient: {} as never,
+      axiosInstance: { request: vi.fn(), defaults: {} } as never,
       autoStart: false,
       enableCrossTab: true,
       debug: false,

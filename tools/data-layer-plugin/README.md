@@ -11,46 +11,16 @@ nx g @open-insights-web/data-layer-plugin:crud product \
   --endpoint=/api/products
 ```
 
-## Options
+## What It Generates
 
-| Option       | Description                                            | Required | Default |
-| ------------ | ------------------------------------------------------ | -------- | ------- |
-| `name`       | Entity name (for example `product`)                    | Yes      | -       |
-| `directory`  | Output directory                                       | Yes      | -       |
-| `dataModel`  | Import path for data-model types                       | Yes      | -       |
-| `endpoint`   | Logical endpoint label used in generated docs/comments | Yes      | -       |
-| `idField`    | Entity ID field name                                   | No       | `id`    |
-| `pagination` | Include pagination-oriented list input helpers         | No       | `false` |
-| `skipList`   | Skip list hook file                                    | No       | `false` |
-| `skipDetail` | Skip detail hook file                                  | No       | `false` |
-| `skipCreate` | Skip create hook file                                  | No       | `false` |
-| `skipUpdate` | Skip update hook file                                  | No       | `false` |
-| `skipDelete` | Skip delete hook file                                  | No       | `false` |
+- query-key helpers
+- detail/list hooks backed by `ApiQueryDescriptor`
+- create/update/delete hooks backed by `ApiMutationDescriptor`
+- default endpoint descriptors using the provided `--endpoint`
 
-## Generated Files
+The generated wrappers provide:
 
-```
-libs/products/data-layer/src/
-├── product-keys.ts
-├── use-dl-product.ts
-├── use-dl-product-list.ts
-├── use-dl-create-product.ts
-├── use-dl-update-product.ts
-├── use-dl-delete-product.ts
-└── index.ts
-```
-
-## Generated API Shape
-
-- `useDLGet<Product>Query`
-- `useDLGet<Product>ListQuery`
-- `useDLCreate<Product>`
-- `useDLUpdate<Product>`
-- `useDLDelete<Product>`
-
-The generated hooks are wrappers around:
-
-- `useDLGet` / `useDLGetList` / `useDLGetOne`
-- `useDLCreate` / `useDLUpdate` / `useDLDelete`
-
-You provide Convex `query` / `mutation` references and optional args; wrappers provide table naming and query-key defaults.
+- table naming
+- default query keys
+- default HTTP descriptor scaffolding
+- a clean extension point if you want to override the generated descriptor

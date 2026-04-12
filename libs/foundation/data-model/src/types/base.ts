@@ -90,7 +90,7 @@ export interface MutationResult<T> {
  * Data source identifiers for query results.
  */
 export const DATA_SOURCE = {
-  CONVEX: 'convex',
+  API: 'api',
   CACHE: 'cache',
   NONE: 'none',
 } as const;
@@ -105,7 +105,7 @@ export type DataSource = (typeof DATA_SOURCE)[keyof typeof DATA_SOURCE];
  *
  * Composes {@link DataSource} with additional offline-specific sources.
  *
- * - 'convex': Data from Convex real-time subscription (via DataSource)
+ * - 'api': Data from HTTP or WebSocket-backed API flows (via DataSource)
  * - 'cache': Data from local cache / TanStack Query cache (via DataSource)
  * - 'none': No data source / initial state (via DataSource)
  * - 'network': Data from network request

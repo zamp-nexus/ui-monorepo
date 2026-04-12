@@ -45,6 +45,7 @@ export {
   isLastSyncValue,
   isNetworkStatus,
   isDuckDBViewsValue,
+  isRealtimeCursorStore,
   DEFAULT_NETWORK_STATUS,
   DEFAULT_DUCKDB_VIEWS,
   type SyncStateEntry,

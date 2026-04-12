@@ -14,9 +14,8 @@
 
 import { createContext, useContext } from 'react';
 
-import type { ConvexQueryClient } from '@convex-dev/react-query';
 import type { QueryClient } from '@tanstack/react-query';
-import type { ConvexReactClient } from 'convex/react';
+import type { AxiosInstance } from 'axios';
 
 import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
 import type { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
@@ -25,7 +24,14 @@ import type { SyncCoordinator } from '@open-insights-web/foundation-sync-engine'
 import type { FileDownloadService } from '../analytics-sync/file-download-service';
 import type { TableSyncService } from '../analytics-sync/table-sync-service';
 import type { TableRegistry } from '../core/table-registry';
-import type { ConvexQueryReference, ResolvedCacheConfig } from '../core/types';
+import type {
+  DataSourceEndpointDescriptor,
+  RealtimeConnectionStateSnapshot,
+  RealtimeMessageEnvelope,
+  RealtimeSubscriptionStateMap,
+  ResolvedCacheConfig,
+} from '../core/types';
+import type { RealtimeSocketClient, RealtimeSocketStatus } from '../realtime';
 
 /**
  * Internal data layer state accessible by hooks
@@ -40,11 +46,23 @@ export interface DataLayerInternals {
   /** TanStack Query client */
   readonly queryClient: QueryClient;
 
-  /** Convex React client */
-  readonly convexClient: ConvexReactClient;
+  /** Shared Axios instance */
+  readonly axiosInstance: AxiosInstance;
 
-  /** Convex Query client for TanStack integration */
-  readonly convexQueryClient: ConvexQueryClient;
+  /** Realtime socket client */
+  readonly realtimeClient: RealtimeSocketClient;
+
+  /** Current realtime socket status */
+  readonly realtimeStatus: RealtimeSocketStatus;
+
+  /** Current realtime connection snapshot */
+  readonly realtimeConnection: RealtimeConnectionStateSnapshot;
+
+  /** Current realtime subscription states */
+  readonly realtimeSubscriptions: RealtimeSubscriptionStateMap;
+
+  /** Last realtime message received */
+  readonly lastRealtimeMessage: RealtimeMessageEnvelope | null;
 
   /** Database facade from foundation-database */
   readonly database: DatabaseFacade;
@@ -83,11 +101,11 @@ export interface DataLayerInternals {
   readonly tableRegistry: TableRegistry;
 
   /**
-   * Global datasource API reference for background file sync.
+   * Global datasource endpoint descriptor for background file sync.
    * Used by useBackgroundFileSync to fetch parquet file metadata.
    * Null if not configured.
    */
-  readonly datasourceApi: ConvexQueryReference | null;
+  readonly datasourceEndpoint: DataSourceEndpointDescriptor | null;
   /** Container-scoped table sync service accessor */
   readonly getTableSyncService: () => TableSyncService;
   /** Container-scoped file download service accessor */

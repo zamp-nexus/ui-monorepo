@@ -1,7 +1,7 @@
 /**
  * useDLQueryEngine - Unified Query Hook
  *
- * Main query hook that routes between analytics (DuckDB) and transactional (Convex)
+ * Main query hook that routes between analytics (DuckDB) and transactional (HTTP API)
  * paths based on query structure. Uses Data Layer hooks for actual execution.
  *
  * Features:
@@ -12,7 +12,7 @@
  * - Background file sync for analytics tables (stale-while-revalidate)
  *
  * NOTE: This hook delegates ALL execution to foundation-data-layer.
- * It does NOT directly access DuckDB or Convex.
+ * It does NOT directly access DuckDB or the HTTP transport directly.
  *
  * @module hooks/use-dl-query-engine
  */
@@ -24,8 +24,9 @@ import {
   useBackgroundFileSync,
   useDataLayerInternals,
   useDLAnalytics,
-  useDLGetList,
+  useDLGet,
 } from '@open-insights-web/foundation-data-layer';
+import type { ApiQueryDescriptor } from '@open-insights-web/foundation-data-model';
 import { OPERATIONS } from '@open-insights-web/foundation-data-model';
 import { EMPTY_ARRAY, EMPTY_OBJECT, hashPayloadSync } from '@open-insights-web/foundation-utils';
 
@@ -41,7 +42,11 @@ import {
   type DecisionTableConfig,
 } from '../types/decision';
 import type { Query } from '../types/query';
-import { getAnyQueryReference, getListQueryReference } from './internal/data-layer-adapters';
+import {
+  getAnyQueryReference,
+  getGetQueryReference,
+  getListQueryReference,
+} from './internal/data-layer-adapters';
 import {
   DATA_SOURCES,
   EXECUTION_PATHS,
@@ -56,11 +61,15 @@ import {
 const selectQueryResultData = <TData>(rawData: unknown, select?: (data: unknown) => TData): TData =>
   select ? select(rawData) : (rawData as TData);
 
+const NOOP_QUERY_DESCRIPTOR: ApiQueryDescriptor<unknown, unknown> = {
+  path: '/__query-engine_unreachable__',
+};
+
 /**
  * useDLQueryEngine
  *
  * Unified query hook with intelligent routing between analytics (DuckDB)
- * and transactional (Convex) paths.
+ * and transactional (HTTP API) paths.
  *
  * Uses singleton engine components for better memory efficiency:
  * - TableExtractor: Shared singleton for extracting tables from queries
@@ -69,7 +78,7 @@ const selectQueryResultData = <TData>(rawData: unknown, select?: (data: unknown)
  *
  * Delegates execution to data-layer hooks:
  * - useDLAnalytics: For DuckDB analytics queries
- * - useDLGetList: For Convex transactional queries
+ * - useDLGetList: For transactional API queries
  *
  * @typeParam TQuery - Query type (inferred from query prop)
  * @typeParam TData - Result data type (inferred or specified via select)
@@ -84,7 +93,7 @@ const selectQueryResultData = <TData>(rawData: unknown, select?: (data: unknown)
  *   },
  * });
  *
- * // Transactional query (auto-routed to Convex)
+ * // Transactional query (auto-routed to the API layer)
  * const { data } = useDLQueryEngine({
  *   query: {
  *     dimensions: [{ member: 'users.name' }],
@@ -133,7 +142,8 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
       const config = tableRegistry.getTable(tableName);
       if (config) {
         configs.set(tableName, {
-          convex: config.convex,
+          api: config.api,
+          source: config.api ? 'api' : 'local',
           ...(config.analytics?.freshness !== undefined
             ? { analytics: { freshness: config.analytics.freshness } }
             : {}),
@@ -261,11 +271,24 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   // Convert query filters to args using the new filter-converter
   const transactionalArgs = useMemo(() => {
     if (!isTransactionalPath || !primaryTable) return EMPTY_OBJECT;
-    return convertFiltersToArgs(query);
+    const args: Record<string, unknown> = { ...convertFiltersToArgs(query) };
+    if (query.entityId) {
+      args.id = query.entityId;
+    }
+    return args;
   }, [isTransactionalPath, primaryTable, query]);
 
-  // Get Convex query function reference from TableRegistry
+  const wantsGet = Boolean(query.entityId) || query.operation === OPERATIONS.GET;
+
+  // Get query descriptor from TableRegistry
   const fallbackQueryRef = useMemo(() => getAnyQueryReference(tableRegistry), [tableRegistry]);
+
+  const getQueryRef = useMemo(() => {
+    if (!primaryTable) {
+      return undefined;
+    }
+    return getGetQueryReference(tableRegistry, primaryTable);
+  }, [primaryTable, tableRegistry]);
 
   const listQueryRef = useMemo(() => {
     if (!primaryTable) {
@@ -274,27 +297,31 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
     return getListQueryReference(tableRegistry, primaryTable);
   }, [primaryTable, tableRegistry]);
 
-  const transactionalQueryRef = listQueryRef ?? fallbackQueryRef;
+  const preferredTransactionalQueryRef = wantsGet
+    ? getQueryRef ?? listQueryRef
+    : listQueryRef ?? getQueryRef;
+
+  const transactionalQueryRef =
+    preferredTransactionalQueryRef ?? fallbackQueryRef ?? NOOP_QUERY_DESCRIPTOR;
 
   const transactionalEnabled =
-    enabled && isTransactionalPath && !!primaryTable && listQueryRef !== undefined;
+    enabled &&
+    isTransactionalPath &&
+    !!primaryTable &&
+    preferredTransactionalQueryRef !== undefined;
 
-  if (!transactionalQueryRef) {
-    throw new Error(
-      'useDLQueryEngine requires at least one query API reference in the table registry',
-    );
-  }
-
-  const transactionalResult = useDLGetList({
+  const transactionalResult = useDLGet({
     query: transactionalQueryRef,
     args: transactionalArgs,
     table: primaryTable ?? '',
+    entityId: wantsGet ? query.entityId : undefined,
     enabled: transactionalEnabled,
     staleTime:
       staleTime ??
       (primaryTable ? tableRegistry.getStaleTime(primaryTable) : cacheConfig.defaultStaleTime),
     gcTime:
       gcTime ?? (primaryTable ? tableRegistry.getGcTime(primaryTable) : cacheConfig.defaultGcTime),
+    queryKey: transactionalQueryKey,
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -400,7 +427,7 @@ export const useDLQueryEngine = <TQuery extends Query, TData = unknown>(
   if (isTransactionalPath) {
     const dataSource = transactionalResult.data
       ? isOnline
-        ? DATA_SOURCES.CONVEX
+        ? DATA_SOURCES.API
         : DATA_SOURCES.CACHE
       : DATA_SOURCES.NONE;
 

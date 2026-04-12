@@ -2,17 +2,11 @@ import React, { type PropsWithChildren } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { FunctionReference } from 'convex/server';
 
+import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useDLUpdate } from './use-dl-update';
-
-const convexMutationMock = vi.fn();
-
-vi.mock('@convex-dev/react-query', () => ({
-  useConvexMutation: () => convexMutationMock,
-}));
 
 const createInternals = (): DataLayerInternals => {
   const queryClient = new QueryClient();
@@ -23,8 +17,16 @@ const createInternals = (): DataLayerInternals => {
 
   const base = {
     queryClient,
-    convexClient: {},
-    convexQueryClient: {},
+    axiosInstance: { request: vi.fn(), defaults: {} },
+    realtimeClient: {
+      subscribeStatus: vi.fn(() => vi.fn()),
+      subscribeMessages: vi.fn(() => vi.fn()),
+      connect: vi.fn(async () => undefined),
+      close: vi.fn(),
+      send: vi.fn(),
+    },
+    realtimeStatus: 'idle',
+    lastRealtimeMessage: null,
     database: {
       queries: {
         set: vi.fn().mockResolvedValue(undefined),
@@ -45,7 +47,7 @@ const createInternals = (): DataLayerInternals => {
       analyticsGcTime: 300_000,
     },
     tableRegistry: {},
-    datasourceApi: null,
+    datasourceEndpoint: null,
     getTableSyncService: vi.fn(),
     getFileDownloadService: vi.fn().mockResolvedValue(null),
   } satisfies Record<string, unknown>;
@@ -65,10 +67,6 @@ const createWrapper = (internals: DataLayerInternals) => {
 };
 
 describe('useDLUpdate', () => {
-  beforeEach(() => {
-    convexMutationMock.mockReset();
-  });
-
   it('queues update mutation and returns optimistic data when offline', async () => {
     const internals = createInternals();
     const queueManager = internals.syncCoordinator.getQueueManager();
@@ -78,7 +76,11 @@ describe('useDLUpdate', () => {
     const { result } = renderHook(
       () =>
         useDLUpdate({
-          mutation: {} as FunctionReference<'mutation'>,
+          mutation: {
+            method: 'PATCH',
+            path: ({ id }: { id: string }) => `/events/${id}`,
+            body: ({ id: _entityId, ...payload }: { id: string; name?: string }) => payload,
+          } as ApiMutationDescriptor<{ id: string; name?: string }, { id: string; name: string }>,
           table: 'events',
           listQueryKey: ['events'],
           itemQueryKey: (id) => ['events', id],
@@ -98,7 +100,6 @@ describe('useDLUpdate', () => {
     });
 
     await waitFor(() => expect(queueManager.enqueue).toHaveBeenCalledTimes(1));
-    expect(convexMutationMock).not.toHaveBeenCalled();
     expect(response).toEqual({ id: 'evt_1', name: 'new-name' });
     expect(result.current.isQueued).toBe(true);
   });

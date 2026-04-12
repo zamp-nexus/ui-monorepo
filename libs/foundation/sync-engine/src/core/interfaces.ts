@@ -13,9 +13,10 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
-import type { ConvexReactClient } from 'convex/react';
 
 import type {
+  ApiMutationDescriptor,
+  ApiQueryDescriptor,
   ConflictContext,
   ConflictResult,
   ConflictStrategy,
@@ -31,11 +32,18 @@ import type {
   ProcessingResult,
   QueryKeyBase,
   QueueStats,
+  RealtimeConnectionSnapshot,
+  RealtimeServerMessage,
+  RealtimeSubscriptionSnapshot,
+  SyncEvent,
   SyncEventListener,
   SyncState,
+  UnifiedTableConfig,
 } from '@open-insights-web/foundation-data-model';
 import type { InsightsDatabase } from '@open-insights-web/foundation-database';
 import type { IAsyncDisposable, IDisposable } from '@open-insights-web/foundation-utils';
+
+export type SyncTableConfig = UnifiedTableConfig<ApiQueryDescriptor, ApiMutationDescriptor>;
 
 // ============================================================================
 // Network Monitor Interface
@@ -210,6 +218,14 @@ export interface ICrossTabManager extends IDisposable {
   notifySyncStarted(): void;
   /** Notify sync completed */
   notifySyncCompleted(): void;
+  /** Broadcast realtime connection state */
+  notifyRealtimeState(snapshot: RealtimeConnectionSnapshot): void;
+  /** Broadcast a validated realtime server message */
+  notifyRealtimeEvent(message: RealtimeServerMessage): void;
+  /** Broadcast realtime subscription state */
+  notifyRealtimeSubscriptionState(snapshot: RealtimeSubscriptionSnapshot): void;
+  /** Broadcast a realtime resync request */
+  notifyRealtimeResync(topic: string, table: string, reason: string): void;
 }
 
 // ============================================================================
@@ -238,6 +254,28 @@ export interface ISyncCoordinator extends IAsyncDisposable {
   getQueueManager(): IQueueManager;
   /** Get conflict resolver */
   getConflictResolver(): IConflictResolver;
+  /** Broadcast realtime connection state to follower tabs */
+  broadcastRealtimeState(snapshot: RealtimeConnectionSnapshot): void;
+  /** Broadcast a validated realtime server message to follower tabs */
+  broadcastRealtimeMessage(message: RealtimeServerMessage): void;
+  /** Broadcast realtime subscription state to follower tabs */
+  broadcastRealtimeSubscriptionState(snapshot: RealtimeSubscriptionSnapshot): void;
+  /** Broadcast a realtime resync request to follower tabs */
+  broadcastRealtimeResync(topic: string, table: string, reason: string): void;
+  /** Subscribe to realtime connection state from the leader tab */
+  subscribeRealtimeState(listener: (snapshot: RealtimeConnectionSnapshot) => void): () => void;
+  /** Subscribe to validated realtime messages from the leader tab */
+  subscribeRealtimeMessages(listener: (message: RealtimeServerMessage) => void): () => void;
+  /** Subscribe to realtime subscription state from the leader tab */
+  subscribeRealtimeSubscriptionState(
+    listener: (snapshot: RealtimeSubscriptionSnapshot) => void,
+  ): () => void;
+  /** Subscribe to realtime resync broadcasts from the leader tab */
+  subscribeRealtimeResync(
+    listener: (payload: { topic: string; table: string; reason: string }) => void,
+  ): () => void;
+  /** Publish a realtime-originated sync event to sync listeners */
+  reportRealtimeEvent(event: Omit<SyncEvent, 'timestamp'> & { timestamp?: number }): void;
 }
 
 // ============================================================================
@@ -250,8 +288,8 @@ export interface ISyncCoordinator extends IAsyncDisposable {
 export interface SyncEngineConfig {
   /** TanStack Query client */
   queryClient: QueryClient;
-  /** Convex client */
-  convexClient: ConvexReactClient;
+  /** Unified table configs used to resolve HTTP mutation descriptors */
+  tables?: ReadonlyArray<SyncTableConfig>;
   /** Database instance */
   database?: InsightsDatabase;
   /** Conflict resolution strategy */
@@ -264,8 +302,8 @@ export interface SyncEngineConfig {
   healthCheckUrl?: string;
   /** Health check interval */
   healthCheckInterval?: number;
-  /** Optional shared Axios instance for network health checks */
-  axiosInstance?: AxiosInstance;
+  /** Shared Axios instance for mutation execution and health checks */
+  axiosInstance: AxiosInstance;
   /** Enable debug logging */
   debug?: boolean;
 }

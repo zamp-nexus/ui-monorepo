@@ -27,21 +27,19 @@ export const pickDefined = <T extends UnknownRecord>(input: T): Partial<T> => {
 };
 
 /**
- * Create a stable, hashable fingerprint for datasource API references.
+ * Create a stable, hashable fingerprint for datasource endpoint descriptors.
  */
-export const getDatasourceApiFingerprint = (
-  datasourceApi: DataLayerConfig['datasourceApi'],
+export const getDatasourceEndpointFingerprint = (
+  datasourceEndpoint: DataLayerConfig['datasourceEndpoint'],
 ): Record<string, unknown> | null => {
-  if (!datasourceApi || typeof datasourceApi !== 'object') {
+  if (!datasourceEndpoint || typeof datasourceEndpoint !== 'object') {
     return null;
   }
 
-  const value = datasourceApi as Record<string, unknown>;
+  const value = datasourceEndpoint as unknown as Record<string, unknown>;
   return {
-    type: value['_type'] ?? null,
-    visibility: value['_visibility'] ?? null,
-    name: value['_name'] ?? null,
-    path: value['_path'] ?? null,
+    path: value['path'] ?? null,
+    method: value['method'] ?? null,
   };
 };
 
@@ -49,18 +47,18 @@ export const getDatasourceApiFingerprint = (
  * Normalize provider config before constructing the container.
  */
 export const createContainerConfig = (config: DataLayerConfig): DataLayerConfig => ({
-  convexUrl: config.convexUrl,
   ...pickDefined({
     tables: config.tables,
-    datasourceApi: config.datasourceApi,
+    datasourceEndpoint: config.datasourceEndpoint,
     conflictStrategy: config.conflictStrategy,
     enableCrossTab: config.enableCrossTab,
     enableAnalytics: config.enableAnalytics,
     defaultStaleTime: config.defaultStaleTime,
     defaultGcTime: config.defaultGcTime,
     cache: config.cache,
-    axiosInstance: config.axiosInstance,
     debug: config.debug,
     onSyncError: config.onSyncError,
   }),
+  axiosInstance: config.axiosInstance,
+  websocket: config.websocket,
 });

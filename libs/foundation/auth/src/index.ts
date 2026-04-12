@@ -1,7 +1,7 @@
 /**
  * @open-insights-web/foundation-auth
  *
- * Enterprise-grade authentication library integrating Ory with Convex.
+ * Enterprise-grade authentication library integrating Ory with the Open Insights stack.
  *
  * @packageDocumentation
  */
@@ -96,7 +96,6 @@ export { USER_ROLES, isValidRole, getUserPermissions } from './core';
 export type {
   // Configuration
   OryConfig,
-  ConvexAuthConfig,
   AuthConfig,
   // Session
   AuthSession,
@@ -191,6 +190,8 @@ export {
 // =============================================================================
 
 export {
+  createRealtimeTicketFetcher,
+  type RealtimeAuthTicket,
   // Token decoding
   decodeJwt,
   decodeJwtPayload,

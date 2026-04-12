@@ -269,39 +269,25 @@ export type ArrayElement<T extends readonly unknown[]> = T[number];
 /**
  * Entity with ID - base interface for entities that have an identifier
  *
- * Supports both Convex's `_id` pattern and standard `id` pattern.
- * At least one of `id` or `_id` must be present.
- *
- * - Convex documents always have `_id`
- * - Some applications also add an `id` field for convenience
- * - The hooks support both patterns transparently
+ * Uses a standard `id` field across the workspace.
  *
  * @example
  * ```typescript
- * // Convex document (has _id)
- * const convexDoc: WithId = { _id: 'abc123', name: 'John' };
- *
  * // Standard document (has id)
  * const standardDoc: WithId = { id: 'abc123', name: 'John' };
- *
- * // Both (common pattern)
- * const bothDoc: WithId = { id: 'abc123', _id: 'abc123', name: 'John' };
  * ```
  */
 export interface WithId {
-  /** Standard ID field (optional if _id is present) */
+  /** Standard ID field */
   id?: string;
-  /** Convex internal ID field (optional if id is present) */
-  _id?: string;
 }
 
 /**
- * Entity with a guaranteed ID (at least one of id or _id must be present)
- *
- * This is a stricter type that guarantees at least one ID field exists.
- * Use this when you need to ensure the entity can be identified.
+ * Entity with a guaranteed ID.
  */
-export type WithRequiredId = { id: string; _id?: string } | { id?: string; _id: string };
+export interface WithRequiredId {
+  id: string;
+}
 
 /**
  * Extract ID from entity - returns string if entity has any ID field

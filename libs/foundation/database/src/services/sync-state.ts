@@ -15,6 +15,7 @@ import {
   type DuckDBViewsValue,
   type LastSyncValue,
   type NetworkStatus,
+  type RealtimeCursorStore,
   type SyncStateKey,
 } from '@open-insights-web/foundation-data-model';
 
@@ -24,6 +25,7 @@ import {
   duckDBViewsValueSchema,
   lastSyncValueSchema,
   networkStatusSchema,
+  realtimeCursorStoreSchema,
   syncStateEntrySchema,
 } from '../validation/schemas';
 import { BaseService } from './base';
@@ -191,5 +193,19 @@ export class SyncStateService extends BaseService implements SyncStateOperations
    */
   setSchemaVersion = async (version: number): Promise<void> => {
     await this.set(SYNC_STATE_KEY.SCHEMA_VERSION, version);
+  };
+
+  /**
+   * Get realtime cursor store with Zod schema validation
+   */
+  getRealtimeCursors = async (): Promise<RealtimeCursorStore | undefined> => {
+    return this.get(SYNC_STATE_KEY.REALTIME_CURSORS, { schema: realtimeCursorStoreSchema });
+  };
+
+  /**
+   * Set realtime cursor store
+   */
+  setRealtimeCursors = async (value: RealtimeCursorStore): Promise<void> => {
+    await this.set(SYNC_STATE_KEY.REALTIME_CURSORS, value);
   };
 }

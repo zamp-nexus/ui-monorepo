@@ -4,7 +4,7 @@
  * NOTE: For utility types (WithId, WithRequiredId, ExtractId, PartialBy, OfflineMetadata, OfflineDataSource),
  * import directly from @open-insights-web/foundation-data-model.
  *
- * NOTE: For type guards (hasId, has_Id, hasAnyId, getEntityId, matchesEntityId),
+ * NOTE: For type guards (hasId, hasAnyId, getEntityId, matchesEntityId),
  * import directly from @open-insights-web/foundation-data-model.
  *
  * @module core
@@ -25,11 +25,33 @@ export type {
   BaseMutationOptions,
   DLMutationResult,
   OptimisticMetadata,
-
-  // Convex function reference types
-  ConvexQueryReference,
-  AnyFunctionReference,
+  DataLayerQueryDescriptor,
+  DataLayerMutationDescriptor,
+  DataSourceEndpointDescriptor,
+  QueryDescriptorArgs,
+  QueryDescriptorData,
+  MutationDescriptorArgs,
+  MutationDescriptorData,
+  RealtimeSocketAuthConfig,
+  RealtimeTicketAuthConfig,
+  RealtimeCookieAuthConfig,
+  RealtimeAccessTokenAuthConfig,
+  RealtimeSocketConfig,
+  RealtimeSocketHeartbeatConfig,
+  RealtimeSocketReconnectConfig,
+  RealtimeSocketResumeConfig,
+  RealtimeWebSocketTicket,
+  RealtimeSocketLeaderMode,
+  RealtimeMessageEnvelope,
+  RealtimeMessageType,
+  RealtimeOutboundMessage,
+  RealtimeAckMessage,
+  RealtimeConnectionStateSnapshot,
+  RealtimeSubscriptionStateMap,
+  RealtimeResumeCursorStore,
+  RealtimeTopicSubscription,
 } from './types';
+export { REALTIME_MESSAGE_TYPES } from './types';
 
 // =============================================================================
 // Constants

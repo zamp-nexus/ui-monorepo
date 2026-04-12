@@ -2,17 +2,11 @@ import React, { type PropsWithChildren } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { FunctionReference } from 'convex/server';
 
+import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';
 import { useDLDelete } from './use-dl-delete';
-
-const convexMutationMock = vi.fn();
-
-vi.mock('@convex-dev/react-query', () => ({
-  useConvexMutation: () => convexMutationMock,
-}));
 
 const createInternals = (): DataLayerInternals => {
   const queryClient = new QueryClient();
@@ -23,8 +17,16 @@ const createInternals = (): DataLayerInternals => {
 
   const base = {
     queryClient,
-    convexClient: {},
-    convexQueryClient: {},
+    axiosInstance: { request: vi.fn(), defaults: {} },
+    realtimeClient: {
+      subscribeStatus: vi.fn(() => vi.fn()),
+      subscribeMessages: vi.fn(() => vi.fn()),
+      connect: vi.fn(async () => undefined),
+      close: vi.fn(),
+      send: vi.fn(),
+    },
+    realtimeStatus: 'idle',
+    lastRealtimeMessage: null,
     database: {
       queries: {
         delete: vi.fn().mockResolvedValue(undefined),
@@ -46,7 +48,7 @@ const createInternals = (): DataLayerInternals => {
       analyticsGcTime: 300_000,
     },
     tableRegistry: {},
-    datasourceApi: null,
+    datasourceEndpoint: null,
     getTableSyncService: vi.fn(),
     getFileDownloadService: vi.fn().mockResolvedValue(null),
   } satisfies Record<string, unknown>;
@@ -66,10 +68,6 @@ const createWrapper = (internals: DataLayerInternals) => {
 };
 
 describe('useDLDelete', () => {
-  beforeEach(() => {
-    convexMutationMock.mockReset();
-  });
-
   it('queues delete mutation and returns undefined when offline', async () => {
     const internals = createInternals();
     const queueManager = internals.syncCoordinator.getQueueManager();
@@ -77,7 +75,10 @@ describe('useDLDelete', () => {
     const { result } = renderHook(
       () =>
         useDLDelete({
-          mutation: {} as FunctionReference<'mutation'>,
+          mutation: {
+            method: 'DELETE',
+            path: ({ id }: { id: string }) => `/events/${id}`,
+          } as ApiMutationDescriptor<{ id: string }>,
           table: 'events',
           listQueryKey: ['events'],
           itemQueryKey: (id) => ['events', id],
@@ -92,7 +93,6 @@ describe('useDLDelete', () => {
     });
 
     await waitFor(() => expect(queueManager.enqueue).toHaveBeenCalledTimes(1));
-    expect(convexMutationMock).not.toHaveBeenCalled();
     expect(response).toBeUndefined();
     expect(result.current.isQueued).toBe(true);
   });

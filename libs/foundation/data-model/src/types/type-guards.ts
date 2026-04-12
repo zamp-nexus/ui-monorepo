@@ -486,82 +486,17 @@ export const hasId = (obj: unknown): obj is { id: string } => {
 };
 
 /**
- * Type guard to check if an object has an _id property (Convex pattern)
- *
- * @param obj - Value to check
- * @returns True if object has a string `_id` property
- *
- * @example
- * ```typescript
- * if (has_Id(entity)) {
- *   console.log(entity._id); // Type-safe access to Convex ID
- * }
- * ```
+ * Type guard to check if an object has a valid ID.
  */
-export const has_Id = (obj: unknown): obj is { _id: string } => {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    '_id' in obj &&
-    typeof (obj as { _id: unknown })._id === 'string'
-  );
-};
+export const hasAnyId = (obj: unknown): obj is WithRequiredId => hasId(obj);
 
 /**
- * Type guard to check if an object has any valid ID (id or _id)
- *
- * @param obj - Value to check
- * @returns True if object has either `id` or `_id` as string
- *
- * @example
- * ```typescript
- * if (hasAnyId(entity)) {
- *   const id = getEntityId(entity); // Safe to call
- * }
- * ```
+ * Get the ID from an object.
  */
-export const hasAnyId = (obj: unknown): obj is WithRequiredId => {
-  return hasId(obj) || has_Id(obj);
-};
+export const getEntityId = (obj: unknown): string | undefined => (hasId(obj) ? obj.id : undefined);
 
 /**
- * Get the ID from an object (checks both id and _id)
- *
- * Prefers `id` over `_id` if both exist.
- * Returns undefined if neither exists.
- *
- * @param obj - Object to get ID from
- * @returns The entity ID or undefined
- *
- * @example
- * ```typescript
- * getEntityId({ id: '1', _id: '2' }); // '1' (prefers id)
- * getEntityId({ _id: '2' }); // '2'
- * getEntityId({ id: '1' }); // '1'
- * getEntityId({}); // undefined
- * ```
+ * Check if an entity's ID matches a given entityId.
  */
-export const getEntityId = (obj: unknown): string | undefined => {
-  if (hasId(obj)) return obj.id;
-  if (has_Id(obj)) return obj._id;
-  return undefined;
-};
-
-/**
- * Check if an entity's ID matches a given entityId
- *
- * Handles both `id` and `_id` properties.
- *
- * @param item - The entity to check
- * @param entityId - The ID to match against
- * @returns True if item.id === entityId OR item._id === entityId
- *
- * @example
- * ```typescript
- * const items = [{ id: '1' }, { _id: '2' }];
- * items.filter(item => !matchesEntityId(item, '1')); // Removes item with id '1'
- * ```
- */
-export const matchesEntityId = (item: WithId | WithRequiredId, entityId: string): boolean => {
-  return item.id === entityId || item._id === entityId;
-};
+export const matchesEntityId = (item: WithId | WithRequiredId, entityId: string): boolean =>
+  item.id === entityId;

@@ -18,8 +18,16 @@ const createInternals = (): DataLayerInternals => {
   };
   const base = {
     queryClient,
-    convexClient: {},
-    convexQueryClient: {},
+    axiosInstance: { request: vi.fn(), defaults: {} },
+    realtimeClient: {
+      subscribeStatus: vi.fn(() => vi.fn()),
+      subscribeMessages: vi.fn(() => vi.fn()),
+      connect: vi.fn(async () => undefined),
+      close: vi.fn(),
+      send: vi.fn(),
+    },
+    realtimeStatus: 'idle',
+    lastRealtimeMessage: null,
     database: {},
     syncCoordinator: {},
     duckdbRouter,
@@ -34,7 +42,7 @@ const createInternals = (): DataLayerInternals => {
       analyticsGcTime: 300_000,
     },
     tableRegistry: {},
-    datasourceApi: null,
+    datasourceEndpoint: null,
     getTableSyncService: vi.fn(),
     getFileDownloadService: vi.fn().mockResolvedValue(null),
   } satisfies Record<string, unknown>;

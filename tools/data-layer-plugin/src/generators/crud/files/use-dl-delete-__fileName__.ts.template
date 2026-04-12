@@ -4,27 +4,59 @@
  * Deletes a <%= name %> by ID.
  */
 
-import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
-import { useDLDelete, type UseDLDeleteOptions } from '@open-insights-web/foundation-data-layer';
+import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
+import {
+  useDLDelete,
+  type MutationDescriptorArgs,
+  type MutationDescriptorData,
+  type UseDLDeleteOptions,
+} from '@open-insights-web/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
+
+type <%= className %>DeleteArgs = Readonly<Record<string, unknown>> & {
+  readonly <%= idField %>: string;
+};
+
+export const default<%= className %>DeleteMutation: ApiMutationDescriptor<
+  <%= className %>DeleteArgs
+> = {
+  method: 'DELETE',
+  path: (args) => `<%= endpoint %>/${String(args.<%= idField %>)}`,
+};
 
 /**
  * Options for useDLDelete<%= className %>
  */
-export type UseDLDelete<%= className %>Options<TMutation extends FunctionReference<'mutation'>> = Omit<
-  UseDLDeleteOptions<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>,
-  'table'
->;
+export type UseDLDelete<%= className %>Options<
+  TMutation extends ApiMutationDescriptor<<%= className %>DeleteArgs> = typeof default<%= className %>DeleteMutation
+> = Omit<
+  UseDLDeleteOptions<TMutation, MutationDescriptorData<TMutation>, MutationDescriptorArgs<TMutation>>,
+  'mutation' | 'table' | 'getEntityId'
+> & {
+  readonly mutation?: TMutation;
+  readonly getEntityId?: (variables: MutationDescriptorArgs<TMutation>) => string;
+};
 
 /**
  * Delete a <%= name %> by ID
  */
-export function useDLDelete<%= className %><TMutation extends FunctionReference<'mutation'>>(
+export function useDLDelete<%= className %><
+  TMutation extends ApiMutationDescriptor<<%= className %>DeleteArgs> = typeof default<%= className %>DeleteMutation
+>(
   options: UseDLDelete<%= className %>Options<TMutation>
 ) {
-  return useDLDelete<TMutation, FunctionReturnType<TMutation>, FunctionArgs<TMutation>>({
-    ...options,
+  const {
+    mutation = default<%= className %>DeleteMutation as TMutation,
+    getEntityId = (variables: MutationDescriptorArgs<TMutation>) =>
+      String((variables as <%= className %>DeleteArgs).<%= idField %>),
+    ...rest
+  } = options;
+
+  return useDLDelete<TMutation, MutationDescriptorData<TMutation>, MutationDescriptorArgs<TMutation>>({
+    ...rest,
+    mutation,
     table: '<%= propertyName %>s',
+    getEntityId,
     listQueryKey: options.listQueryKey ?? <%= propertyName %>Keys.list(),
     itemQueryKey: options.itemQueryKey ?? ((id: string) => <%= propertyName %>Keys.detail(id)),
   });

@@ -122,23 +122,11 @@ export interface OryConfig {
 }
 
 /**
- * Convex authentication configuration
- */
-export interface ConvexAuthConfig {
-  /** OIDC issuer URL (Ory Hydra) */
-  issuer: string;
-  /** Convex application ID */
-  applicationId: string;
-}
-
-/**
  * Combined authentication configuration
  */
 export interface AuthConfig {
   /** Ory configuration */
   ory: OryConfig;
-  /** Convex authentication configuration (optional) */
-  convex?: ConvexAuthConfig;
   /** Session refresh interval in milliseconds */
   sessionRefreshIntervalMs?: number;
   /** Enable automatic session refresh */

@@ -212,7 +212,7 @@ export {
   type TableSource,
   type TableLoadState,
   type TableFileType,
-  type TableConvexFunctions,
+  type TableApiFunctions,
   type ParquetFileInfo,
   type TableConfig,
   type RegisterTableOptions,

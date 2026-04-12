@@ -9,11 +9,6 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./convex": {
-      "types": "./src/convex/index.ts",
-      "import": "./src/convex/index.ts",
-      "default": "./src/convex/index.ts"
-    },
     "./internal": {
       "types": "./src/internal.ts",
       "import": "./src/internal.ts",
@@ -38,8 +33,7 @@
   "peerDependencies": {
     "@ory/client-fetch": "^1.x",
     "@ory/elements-react": "^1.x",
-    "react": "^18.x || ^19.x",
-    "convex": "^1.x"
+    "react": "^18.x || ^19.x"
   },
   "peerDependenciesMeta": {
     "@ory/elements-react": {
