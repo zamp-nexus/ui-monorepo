@@ -67,7 +67,7 @@ const ProfilePage = () => {
 - any caller that still uses bearer-token transport
 - any other authenticated HTTP client
 
-For enterprise realtime ticket auth, use `createRealtimeTicketFetcher(...)` with your shared `axios` instance and pass the resulting callback to `DataLayerConfig.websocket.auth`.
+For enterprise realtime ticket auth, use `createRealtimeTicketFetcher(...)` with your shared `axios` instance and pass the resulting callback to `DataLayerConfig.websocket.auth`. Same-origin cookie/session setups are supported by making the HTTP ticket request with those cookies; the websocket itself no longer has a separate cookie-auth mode.
 
 ## Validation
 

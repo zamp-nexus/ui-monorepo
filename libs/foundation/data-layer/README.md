@@ -21,7 +21,9 @@ npm install @open-insights-web/foundation-data-layer @tanstack/react-query axios
 
 ```tsx
 import axios from 'axios';
+import { z } from 'zod';
 
+import { createRealtimeTicketFetcher } from '@open-insights-web/foundation-auth';
 import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
 import {
   CONFLICT_STRATEGY,
@@ -103,7 +105,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 `DataLayerConfig`:
 
 - `axiosInstance` (required)
-- `websocket` (required)
+- `websocket` (required, ticket auth only)
 - `tables`
 - `datasourceEndpoint`
 - `conflictStrategy`
@@ -114,6 +116,8 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 - `cache`
 - `debug`
 - `onSyncError`
+
+`websocket.auth` is required and must use `mode: 'ticket'`. Same-origin cookie deployments still work by fetching the realtime ticket over authenticated HTTP.
 
 ## Public API
 

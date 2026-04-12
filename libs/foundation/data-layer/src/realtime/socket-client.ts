@@ -92,49 +92,39 @@ const createInitialConnectionSnapshot = (
 const resolveTicket = async (
   config: RealtimeSocketConfig,
   axiosInstance: AxiosInstance,
-): Promise<RealtimeWebSocketTicket | null> => {
+): Promise<RealtimeWebSocketTicket> => {
   const auth = config.auth;
   if (!auth) {
-    return null;
+    throw new Error('Realtime websocket auth is required and must use ticket mode.');
   }
 
-  if (auth.mode === 'ticket') {
-    const ticketValue =
-      (await auth.getTicket?.()) ??
-      (auth.ticketEndpoint
-        ? await executeQueryDescriptor(axiosInstance, auth.ticketEndpoint, undefined as never)
-        : null);
+  if (auth.mode !== 'ticket') {
+    throw new Error('Realtime websocket auth supports only ticket mode.');
+  }
 
-    if (!ticketValue) {
-      return null;
-    }
+  const ticketValue =
+    (await auth.getTicket?.()) ??
+    (auth.ticketEndpoint
+      ? await executeQueryDescriptor(axiosInstance, auth.ticketEndpoint, undefined as never)
+      : null);
 
-    if (typeof ticketValue === 'string') {
-      return {
-        ticket: ticketValue,
-        queryParam: auth.queryParam ?? RESUME_QUERY_PARAM,
-      };
-    }
+  if (!ticketValue) {
+    throw new Error(
+      'Realtime websocket ticket auth requires getTicket or ticketEndpoint to return a ticket.',
+    );
+  }
 
+  if (typeof ticketValue === 'string') {
     return {
-      ...ticketValue,
-      queryParam: ticketValue.queryParam ?? auth.queryParam ?? RESUME_QUERY_PARAM,
+      ticket: ticketValue,
+      queryParam: auth.queryParam ?? RESUME_QUERY_PARAM,
     };
   }
 
-  if (auth.mode === 'access_token') {
-    const token = await auth.getAccessToken();
-    if (!token) {
-      return null;
-    }
-
-    return {
-      ticket: token,
-      queryParam: auth.queryParam ?? 'access_token',
-    };
-  }
-
-  return null;
+  return {
+    ...ticketValue,
+    queryParam: ticketValue.queryParam ?? auth.queryParam ?? RESUME_QUERY_PARAM,
+  };
 };
 
 const resolveSocketUrl = async (
@@ -142,14 +132,7 @@ const resolveSocketUrl = async (
   axiosInstance: AxiosInstance,
 ): Promise<{ readonly url: string; readonly protocols: string[] | undefined }> => {
   const ticket = await resolveTicket(config, axiosInstance);
-  const baseUrl = ticket?.url ?? config.url;
-
-  if (!ticket) {
-    return {
-      url: baseUrl,
-      protocols: config.protocols,
-    };
-  }
+  const baseUrl = ticket.url ?? config.url;
 
   const url = new URL(baseUrl);
   url.searchParams.set(ticket.queryParam ?? RESUME_QUERY_PARAM, ticket.ticket);

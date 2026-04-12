@@ -112,27 +112,22 @@ export interface RealtimeWebSocketTicket {
   readonly protocols?: string[];
 }
 
-export interface RealtimeTicketAuthConfig {
+interface RealtimeTicketAuthConfigBase {
   readonly mode: 'ticket';
-  readonly getTicket?: () => Promise<string | RealtimeWebSocketTicket | null>;
-  readonly ticketEndpoint?: ApiQueryDescriptor<unknown, string | RealtimeWebSocketTicket>;
   readonly queryParam?: string;
 }
 
-export interface RealtimeCookieAuthConfig {
-  readonly mode: 'cookie';
-}
-
-export interface RealtimeAccessTokenAuthConfig {
-  readonly mode: 'access_token';
-  readonly getAccessToken: () => Promise<string | null>;
-  readonly queryParam?: string;
-}
-
-export type RealtimeSocketAuthConfig =
-  | RealtimeTicketAuthConfig
-  | RealtimeCookieAuthConfig
-  | RealtimeAccessTokenAuthConfig;
+export type RealtimeTicketAuthConfig = RealtimeTicketAuthConfigBase &
+  (
+    | {
+        readonly getTicket: () => Promise<string | RealtimeWebSocketTicket | null>;
+        readonly ticketEndpoint?: ApiQueryDescriptor<unknown, string | RealtimeWebSocketTicket>;
+      }
+    | {
+        readonly getTicket?: () => Promise<string | RealtimeWebSocketTicket | null>;
+        readonly ticketEndpoint: ApiQueryDescriptor<unknown, string | RealtimeWebSocketTicket>;
+      }
+  );
 
 export type RealtimeSocketLeaderMode = 'sync-engine' | 'standalone';
 
@@ -140,7 +135,7 @@ export interface RealtimeSocketConfig {
   readonly url: string;
   readonly protocols?: string[];
   readonly protocolVersion?: RealtimeProtocolVersion;
-  readonly auth?: RealtimeSocketAuthConfig;
+  readonly auth: RealtimeTicketAuthConfig;
   readonly heartbeat?: RealtimeSocketHeartbeatConfig;
   readonly reconnect?: RealtimeSocketReconnectConfig;
   readonly resume?: RealtimeSocketResumeConfig;

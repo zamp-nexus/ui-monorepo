@@ -48,7 +48,13 @@ const createConfig = (overrides: Record<string, unknown> = {}) => {
   return {
     config: {
       axiosInstance: { request: vi.fn(), defaults: {} },
-      websocket: { url: 'wss://example.test/realtime' },
+      websocket: {
+        url: 'wss://example.test/realtime',
+        auth: {
+          mode: 'ticket',
+          getTicket: vi.fn(async () => 'ticket_123'),
+        },
+      },
       factories: {
         database: () => mockDatabase as never,
         syncCoordinator: () => mockSyncCoordinator as never,
@@ -57,9 +63,9 @@ const createConfig = (overrides: Record<string, unknown> = {}) => {
             subscribeStatus: vi.fn(() => vi.fn()),
             subscribeMessages: vi.fn(() => vi.fn()),
             connect: vi.fn(async () => undefined),
-            close: vi.fn(),
+            disconnect: vi.fn(),
             send: vi.fn(),
-          }) as never,
+          } as never),
       },
       ...overrides,
     },

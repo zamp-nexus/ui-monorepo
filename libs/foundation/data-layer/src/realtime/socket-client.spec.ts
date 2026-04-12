@@ -71,10 +71,15 @@ describe('RealtimeSocketClient', () => {
 
   it('completes hello + subscribe handshake and persists cursors', async () => {
     const setRealtimeCursors = vi.fn().mockResolvedValue(undefined);
+    const getTicket = vi.fn().mockResolvedValue('ticket_123');
     const client = new RealtimeSocketClient(
       {
         url: 'wss://example.test/realtime',
         protocolVersion: '1.0',
+        auth: {
+          mode: 'ticket',
+          getTicket,
+        },
       },
       {
         axiosInstance: { request: vi.fn(), defaults: {} } as never,
@@ -90,6 +95,8 @@ describe('RealtimeSocketClient', () => {
     const connectPromise = client.connect();
     await new Promise((resolve) => setTimeout(resolve, 0));
     const socket = FakeWebSocket.instances[0];
+    expect(getTicket).toHaveBeenCalledTimes(1);
+    expect(socket.url).toContain('ticket=ticket_123');
 
     socket.emit('open', {});
 
@@ -153,10 +160,15 @@ describe('RealtimeSocketClient', () => {
   });
 
   it('turns sequence gaps into resync-required state', async () => {
+    const getTicket = vi.fn().mockResolvedValue('ticket_gap');
     const client = new RealtimeSocketClient(
       {
         url: 'wss://example.test/realtime',
         protocolVersion: '1.0',
+        auth: {
+          mode: 'ticket',
+          getTicket,
+        },
       },
       {
         axiosInstance: { request: vi.fn(), defaults: {} } as never,
@@ -224,5 +236,165 @@ describe('RealtimeSocketClient', () => {
       REALTIME_SUBSCRIPTION_STATE.RESYNC_REQUIRED,
     );
     client.disconnect();
+  });
+
+  it('fetches tickets through ticketEndpoint when getTicket is not provided', async () => {
+    const axiosRequest = vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          ticket: 'endpoint_ticket',
+          queryParam: 'rt',
+        },
+      },
+    });
+
+    const client = new RealtimeSocketClient(
+      {
+        url: 'wss://example.test/realtime',
+        protocolVersion: '1.0',
+        auth: {
+          mode: 'ticket',
+          ticketEndpoint: {
+            path: '/auth/realtime-ticket',
+          },
+        },
+      },
+      {
+        axiosInstance: { request: axiosRequest, defaults: {} } as never,
+        syncState: {
+          getRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+          setRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    );
+
+    const connectPromise = client.connect();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const socket = FakeWebSocket.instances[0];
+    expect(axiosRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'GET',
+        url: '/auth/realtime-ticket',
+      }),
+    );
+    expect(socket.url).toContain('rt=endpoint_ticket');
+
+    socket.emit('open', {});
+    const hello = JSON.parse(socket.sent[0]);
+    socket.emit('message', {
+      data: JSON.stringify({
+        type: REALTIME_SERVER_MESSAGE_TYPE.HELLO_ACK,
+        messageId: 'hello_ack_ep',
+        requestId: hello.requestId,
+        connectionId: 'conn_ep',
+        protocolVersion: '1.0',
+        negotiatedProtocolVersion: '1.0',
+        heartbeatIntervalMs: 10_000,
+        capabilities: ['resume'],
+        resumeAccepted: true,
+        serverTime: Date.now(),
+      }),
+    });
+
+    await connectPromise;
+    client.disconnect();
+  });
+
+  it('prefers getTicket over ticketEndpoint when both are configured', async () => {
+    const getTicket = vi.fn().mockResolvedValue('preferred_ticket');
+    const axiosRequest = vi.fn();
+
+    const client = new RealtimeSocketClient(
+      {
+        url: 'wss://example.test/realtime',
+        protocolVersion: '1.0',
+        auth: {
+          mode: 'ticket',
+          getTicket,
+          ticketEndpoint: {
+            path: '/auth/realtime-ticket',
+          },
+        },
+      },
+      {
+        axiosInstance: { request: axiosRequest, defaults: {} } as never,
+        syncState: {
+          getRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+          setRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    );
+
+    const connectPromise = client.connect();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const socket = FakeWebSocket.instances[0];
+    expect(getTicket).toHaveBeenCalledTimes(1);
+    expect(axiosRequest).not.toHaveBeenCalled();
+    expect(socket.url).toContain('ticket=preferred_ticket');
+
+    socket.emit('open', {});
+    const hello = JSON.parse(socket.sent[0]);
+    socket.emit('message', {
+      data: JSON.stringify({
+        type: REALTIME_SERVER_MESSAGE_TYPE.HELLO_ACK,
+        messageId: 'hello_ack_pref',
+        requestId: hello.requestId,
+        connectionId: 'conn_pref',
+        protocolVersion: '1.0',
+        negotiatedProtocolVersion: '1.0',
+        heartbeatIntervalMs: 10_000,
+        capabilities: ['resume'],
+        resumeAccepted: true,
+        serverTime: Date.now(),
+      }),
+    });
+
+    await connectPromise;
+    client.disconnect();
+  });
+
+  it('fails fast when websocket auth is missing', async () => {
+    const client = new RealtimeSocketClient(
+      {
+        url: 'wss://example.test/realtime',
+        protocolVersion: '1.0',
+      } as never,
+      {
+        axiosInstance: { request: vi.fn(), defaults: {} } as never,
+        syncState: {
+          getRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+          setRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    );
+
+    await expect(client.connect()).rejects.toThrow(
+      'Realtime websocket auth is required and must use ticket mode.',
+    );
+  });
+
+  it('fails fast when ticket auth has no ticket source', async () => {
+    const client = new RealtimeSocketClient(
+      {
+        url: 'wss://example.test/realtime',
+        protocolVersion: '1.0',
+        auth: {
+          mode: 'ticket',
+        } as never,
+      },
+      {
+        axiosInstance: { request: vi.fn(), defaults: {} } as never,
+        syncState: {
+          getRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+          setRealtimeCursors: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    );
+
+    await expect(client.connect()).rejects.toThrow(
+      'Realtime websocket ticket auth requires getTicket or ticketEndpoint to return a ticket.',
+    );
   });
 });
