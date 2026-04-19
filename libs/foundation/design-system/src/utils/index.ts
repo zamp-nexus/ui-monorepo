@@ -1,21 +1,21 @@
 /**
- * OpenInsights Design System - Utilities
+ * OpenZentra Design System - Utilities
  * @module utils
  */
 
 // Class name utilities
 export { cn, type ClassValue } from './cn';
 
-// Open Insights ID utilities
+// Open Zentra ID utilities
 export {
-  OIID_SEPARATOR,
-  slotOiid,
-  isValidOiid,
-  parseSlotOiid,
-  createOiidGenerator,
-  type WithOiid,
-  type WithBaseOiid,
-} from './oiid';
+  OZID_SEPARATOR,
+  slotOzid,
+  isValidOzid,
+  parseSlotOzid,
+  createOzidGenerator,
+  type WithOzid,
+  type WithBaseOzid,
+} from './ozid';
 
 // Slot utilities
 export {

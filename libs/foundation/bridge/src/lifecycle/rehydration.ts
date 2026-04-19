@@ -7,14 +7,14 @@ import {
   SYNC_STATE_KEY,
   Timestamp,
   type DuckDBViewsValue,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { getDatabase, SyncStateService } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
+import { getDatabase, SyncStateService } from '@open-zentra/foundation-database';
 import {
   createDebugLogger,
   topologicalSort,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { DuckDBRouter } from '../duckdb/router';
 import type { ViewDefinition } from '../types/bridge';

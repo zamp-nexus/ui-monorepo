@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Checkbox as CheckboxPrimitive } from '@base-ui/react/checkbox';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import type { CheckboxComponent, CheckboxProps } from './types';
@@ -50,7 +50,7 @@ export const Checkbox: CheckboxComponent = React.forwardRef<HTMLButtonElement, C
   function Checkbox(
     {
       className,
-      oiid,
+      ozid,
       size = 'md',
       disabled,
       checked,
@@ -75,7 +75,7 @@ export const Checkbox: CheckboxComponent = React.forwardRef<HTMLButtonElement, C
           checked: !!checked,
           indeterminate: !!indeterminate,
         })}
-        data-oiid={oiid}
+        data-ozid={ozid}
         disabled={disabled}
         checked={checked === 'indeterminate' ? false : checked}
         defaultChecked={defaultChecked}
@@ -87,7 +87,7 @@ export const Checkbox: CheckboxComponent = React.forwardRef<HTMLButtonElement, C
       >
         <CheckboxPrimitive.Indicator
           className={theme.indicator?.({ size }) ?? ''}
-          data-oiid={oiid ? `${oiid}__indicator` : undefined}
+          data-ozid={ozid ? `${ozid}__indicator` : undefined}
         >
           {indeterminate || checked === 'indeterminate' ? <MinusIcon /> : <CheckIcon />}
         </CheckboxPrimitive.Indicator>

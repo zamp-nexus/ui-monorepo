@@ -3,7 +3,7 @@
  * @module compliance/field-allowlist
  */
 
-import { isPlainObject } from '@open-insights-web/foundation-data-model';
+import { isPlainObject } from '@open-zentra/foundation-data-model';
 
 import type { FieldListConfig } from '../types';
 

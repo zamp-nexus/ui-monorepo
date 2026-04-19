@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { createDebugLogger, hashPayloadSync } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, hashPayloadSync } from '@open-zentra/foundation-utils';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { invalidateQueries } from '../utils/mutation-helpers';

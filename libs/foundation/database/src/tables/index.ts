@@ -2,7 +2,7 @@
  * Table definitions exports
  *
  * NOTE: JsonSerializable and related utilities should be imported directly from
- * @open-insights-web/foundation-data-model
+ * @open-zentra/foundation-data-model
  *
  * @module tables
  */
@@ -39,7 +39,7 @@ export {
 
 // Sync state
 // NOTE: SYNC_STATE_KEYS is exported from core/config (single source of truth)
-// NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
+// NOTE: NetworkStatus should be imported directly from @open-zentra/foundation-data-model
 export {
   createSyncStateEntry,
   isLastSyncValue,

@@ -8,7 +8,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 
 import type { OIComponentModifiers, OIComponentSlot, OIComponentVariants } from '../types';
-import { slotOiid } from '../utils/oiid';
+import { slotOzid } from '../utils/ozid';
 import { normalizeSlot } from '../utils/slot-helpers';
 import { ensureVariantsStructure, testModifiers, testVariants } from './describe-component';
 import { randomString } from './random';
@@ -31,62 +31,62 @@ function testCommonSlot(
   { allowMultiple = false }: { allowMultiple?: boolean } = {},
 ) {
   it('supports children prop', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const childrenContent = randomString();
     const { getAllByTestId, getByTestId } = render(
       React.cloneElement(element, {
-        oiid,
+        ozid,
         [slot]: { children: childrenContent },
       }),
     );
     if (allowMultiple) {
-      const renderedElements = getAllByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElements = getAllByTestId(slotOzid(ozid, slot) ?? '');
       for (const renderedElement of renderedElements) {
         expect(renderedElement).toHaveTextContent(childrenContent);
       }
     } else {
-      const renderedElement = getByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElement = getByTestId(slotOzid(ozid, slot) ?? '');
       expect(renderedElement).toHaveTextContent(childrenContent);
     }
   });
 
   it('supports component prop', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const { getAllByTestId, getByTestId } = render(
       React.cloneElement(element, {
-        oiid,
+        ozid,
         [slot]: { children: 'Test slot', component: 'span' },
       }),
     );
     if (allowMultiple) {
-      const renderedElements = getAllByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElements = getAllByTestId(slotOzid(ozid, slot) ?? '');
       for (const renderedElement of renderedElements) {
         expect(renderedElement).toBeInstanceOf(HTMLSpanElement);
       }
     } else {
-      const renderedElement = getByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElement = getByTestId(slotOzid(ozid, slot) ?? '');
       expect(renderedElement).toBeInstanceOf(HTMLSpanElement);
     }
   });
 
   it('supports component prop with custom component', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const testContent = randomString();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const Component = (props: any) => <div {...props}>{testContent}</div>;
     const { getAllByTestId, getByTestId } = render(
       React.cloneElement(element, {
-        oiid,
+        ozid,
         [slot]: { component: Component },
       }),
     );
     if (allowMultiple) {
-      const renderedElements = getAllByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElements = getAllByTestId(slotOzid(ozid, slot) ?? '');
       for (const renderedElement of renderedElements) {
         expect(renderedElement).toHaveTextContent(testContent);
       }
     } else {
-      const renderedElement = getByTestId(slotOiid(oiid, slot) ?? '');
+      const renderedElement = getByTestId(slotOzid(ozid, slot) ?? '');
       expect(renderedElement).toHaveTextContent(testContent);
     }
   });

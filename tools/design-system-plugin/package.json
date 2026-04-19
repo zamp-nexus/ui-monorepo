@@ -1,5 +1,5 @@
 {
-  "name": "@open-insights-web/design-system-plugin",
+  "name": "@open-zentra/design-system-plugin",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -8,7 +8,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "@open-insights-web/source": "./src/index.ts",
+      "@open-zentra/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"

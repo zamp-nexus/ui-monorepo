@@ -1,6 +1,6 @@
 # Foundation Metrics Library
 
-`@open-insights-web/foundation-metrics` is the frontend observability library for OpenInsights. It provides OpenTelemetry-based instrumentation for browser applications with first-class support for:
+`@open-zentra/foundation-metrics` is the frontend observability library for OpenZentra. It provides OpenTelemetry-based instrumentation for browser applications with first-class support for:
 
 - Errors
 - Performance signals (web vitals, page load, SPA navigation, long tasks)
@@ -22,7 +22,7 @@ From the monorepo, this package is consumed via workspace linking.
 For external package consumers:
 
 ```bash
-npm install @open-insights-web/foundation-metrics
+npm install @open-zentra/foundation-metrics
 ```
 
 Peer/runtime expectations:
@@ -33,8 +33,8 @@ Peer/runtime expectations:
 ## Quick start
 
 ```ts
-import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-insights-web/foundation-data-model';
-import { FoundationMetrics } from '@open-insights-web/foundation-metrics';
+import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-zentra/foundation-data-model';
+import { FoundationMetrics } from '@open-zentra/foundation-metrics';
 
 FoundationMetrics.init({
   serviceName: 'insights-web',
@@ -72,7 +72,7 @@ import {
   getInstance,
   init,
   isInitialized,
-} from '@open-insights-web/foundation-metrics';
+} from '@open-zentra/foundation-metrics';
 
 init(config);
 
@@ -108,7 +108,7 @@ span.end();
 sdk.trackInteraction({
   type: 'click',
   targetTag: 'button',
-  targetOiid: 'checkout-submit',
+  targetOzid: 'checkout-submit',
   timestamp: Date.now(),
   route: '/checkout',
 });

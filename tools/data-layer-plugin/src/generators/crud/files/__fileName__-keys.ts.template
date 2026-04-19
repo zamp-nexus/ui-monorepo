@@ -4,7 +4,7 @@
  * Type-safe query key factory for <%= name %> entity.
  */
 
-import { createQueryKeys } from '@open-insights-web/foundation-data-model';
+import { createQueryKeys } from '@open-zentra/foundation-data-model';
 
 /**
  * Query keys for <%= name %> entity

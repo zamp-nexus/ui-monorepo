@@ -13,9 +13,9 @@ import {
   SCHEMA_VERSION,
   toJsonSerializable,
   type ApiMutationDescriptor,
-} from '@open-insights-web/foundation-data-model';
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import { createCacheEntry } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { WithId } from '@open-zentra/foundation-data-model';
+import { createCacheEntry } from '@open-zentra/foundation-database';
 
 import { executeMutationDescriptor } from '../core/http-descriptor';
 import { DEFAULT_CACHE_TTL } from '../core/constants';

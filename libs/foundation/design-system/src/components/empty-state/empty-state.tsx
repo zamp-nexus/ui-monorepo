@@ -30,7 +30,7 @@ import { emptyStateDefaultTheme } from './types';
  * </EmptyState>
  */
 const EmptyStateRoot = React.forwardRef(function EmptyState<T extends React.ElementType = 'div'>(
-  { component, className, children, oiid, size = 'md', compact, icon, ...rest }: EmptyStateProps<T>,
+  { component, className, children, ozid, size = 'md', compact, icon, ...rest }: EmptyStateProps<T>,
   ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);
@@ -40,14 +40,14 @@ const EmptyStateRoot = React.forwardRef(function EmptyState<T extends React.Elem
     <Element
       ref={ref}
       className={theme.root({ className, size, compact })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       role="status"
       {...rest}
     >
       {/* Icon slot */}
       {icon && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.icon?.({ size }) ?? ''}
           slotName="icon"
           slot={icon}

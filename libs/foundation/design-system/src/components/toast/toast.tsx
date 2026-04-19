@@ -4,7 +4,7 @@
  */
 import React from 'react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -60,7 +60,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
     component,
     className,
     children,
-    oiid,
+    ozid,
     feedback = 'info',
     closable,
     start,
@@ -82,7 +82,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
     <Element
       ref={ref}
       className={theme.root({ className, feedback, closable })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-feedback={feedback}
       role="alert"
       aria-live="assertive"
@@ -92,7 +92,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
       {/* Start slot (icon) */}
       {(start || showDefaultIcon) && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.start?.({ feedback }) ?? ''}
           slotName="start"
           slot={start}
@@ -109,7 +109,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
       {/* End slot */}
       {end && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.end?.({}) ?? ''}
           slotName="end"
           slot={end}
@@ -120,7 +120,7 @@ const ToastRoot = React.forwardRef(function Toast<T extends React.ElementType = 
       {/* Close button */}
       {closable && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.close?.({ feedback }) ?? ''}
           slotName="close"
           slot={close}

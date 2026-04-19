@@ -12,8 +12,8 @@ import {
   type MutationType,
   type OfflineMutationResult,
   type QueryKeyBase,
-} from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, isNetworkError } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createDebugLogger, isNetworkError } from '@open-zentra/foundation-utils';
 
 import type { NetworkStatusMonitor } from '../network/index';
 import { getNetworkMonitor } from '../network/index';

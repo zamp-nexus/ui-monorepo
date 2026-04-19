@@ -20,7 +20,7 @@ import { badgeDefaultTheme } from './types';
  * <Badge intent="danger" size="sm">3</Badge>
  */
 export const Badge = React.forwardRef(function Badge<T extends React.ElementType = 'span'>(
-  { component, className, children, oiid, intent = 'default', size = 'md', ...rest }: BadgeProps<T>,
+  { component, className, children, ozid, intent = 'default', size = 'md', ...rest }: BadgeProps<T>,
   ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('badge', badgeDefaultTheme);
@@ -30,7 +30,7 @@ export const Badge = React.forwardRef(function Badge<T extends React.ElementType
     <Element
       ref={ref}
       className={theme.root({ className, intent, size })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       {...rest}
     >
       {children}

@@ -2,10 +2,10 @@
  * Core exports
  *
  * NOTE: For utility types (WithId, WithRequiredId, ExtractId, PartialBy, OfflineMetadata, OfflineDataSource),
- * import directly from @open-insights-web/foundation-data-model.
+ * import directly from @open-zentra/foundation-data-model.
  *
  * NOTE: For type guards (hasId, hasAnyId, getEntityId, matchesEntityId),
- * import directly from @open-insights-web/foundation-data-model.
+ * import directly from @open-zentra/foundation-data-model.
  *
  * @module core
  */

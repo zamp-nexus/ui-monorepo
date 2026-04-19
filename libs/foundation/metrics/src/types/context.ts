@@ -3,7 +3,7 @@
  * @module types/context
  */
 
-import type { BrowserInfo } from '@open-insights-web/foundation-utils';
+import type { BrowserInfo } from '@open-zentra/foundation-utils';
 
 import type { EnricherSignalType } from './constants';
 

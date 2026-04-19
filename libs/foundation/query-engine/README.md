@@ -1,6 +1,6 @@
 # Foundation Query Engine
 
-`@open-insights-web/foundation-query-engine` models queries, compiles analytics SQL, and routes work between DuckDB analytics and API-backed transactional reads and writes.
+`@open-zentra/foundation-query-engine` models queries, compiles analytics SQL, and routes work between DuckDB analytics and API-backed transactional reads and writes.
 
 ## Responsibilities
 
@@ -15,7 +15,7 @@
 Wrap your app in `DataLayerProvider` and register tables with `api` descriptors plus optional analytics config.
 
 ```tsx
-import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
+import { DataLayerProvider } from '@open-zentra/foundation-data-layer';
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (
   <DataLayerProvider config={{ axiosInstance, websocket, tables }}>{children}</DataLayerProvider>
@@ -25,7 +25,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 ## Usage
 
 ```tsx
-import { useDLQueryEngine } from '@open-insights-web/foundation-query-engine';
+import { useDLQueryEngine } from '@open-zentra/foundation-query-engine';
 
 const result = useDLQueryEngine({
   query: {

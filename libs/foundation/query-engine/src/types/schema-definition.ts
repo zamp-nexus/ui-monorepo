@@ -12,7 +12,7 @@
 import type {
   MemberRef,
   SqlTableName as TableName,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { Aggregation } from './aggregation';
 import type { JoinType } from './join';

@@ -13,7 +13,7 @@
  *
  * For generic error utilities (normalizeError, formatErrorMessage,
  * isErrorType, isAbortError, isNetworkError), import directly from
- * @open-insights-web/foundation-utils
+ * @open-zentra/foundation-utils
  *
  * @module utils/error-handler
  */
@@ -22,7 +22,7 @@ import {
   createLogger,
   formatErrorMessage,
   normalizeError,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 // =============================================================================
 // CONST PATTERNS (replaces union types)

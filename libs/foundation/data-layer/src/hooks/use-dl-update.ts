@@ -8,8 +8,8 @@ import { useCallback } from 'react';
 
 import { useMutation, type QueryKey } from '@tanstack/react-query';
 
-import { toJsonSerializable, type ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
-import type { WithId } from '@open-insights-web/foundation-data-model';
+import { toJsonSerializable, type ApiMutationDescriptor } from '@open-zentra/foundation-data-model';
+import type { WithId } from '@open-zentra/foundation-data-model';
 
 import { executeMutationDescriptor } from '../core/http-descriptor';
 import type {

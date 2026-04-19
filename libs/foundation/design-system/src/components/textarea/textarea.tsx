@@ -32,7 +32,7 @@ export const Textarea: TextareaComponent = React.forwardRef<HTMLTextAreaElement,
   function Textarea(
     {
       className,
-      oiid,
+      ozid,
       size = 'md',
       disabled,
       invalid,
@@ -49,7 +49,7 @@ export const Textarea: TextareaComponent = React.forwardRef<HTMLTextAreaElement,
       <textarea
         ref={ref}
         className={theme.root({ className, size, disabled, invalid, readOnly })}
-        data-oiid={oiid}
+        data-ozid={ozid}
         disabled={disabled}
         readOnly={readOnly}
         aria-invalid={invalid || undefined}

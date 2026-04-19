@@ -19,8 +19,8 @@ import {
   toJsonSerializable,
   type ApiQueryDescriptor,
   type DataSource,
-} from '@open-insights-web/foundation-data-model';
-import { createCacheEntry } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import { createCacheEntry } from '@open-zentra/foundation-database';
 
 import { executeQueryDescriptor } from '../core/http-descriptor';
 import type { QueryDescriptorArgs, QueryDescriptorData } from '../core/types';

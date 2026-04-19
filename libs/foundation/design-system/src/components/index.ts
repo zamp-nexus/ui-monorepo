@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System - Components
+ * OpenZentra Design System - Components
  * @module components
  */
 

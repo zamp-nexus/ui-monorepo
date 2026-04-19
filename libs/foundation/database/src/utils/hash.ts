@@ -4,12 +4,12 @@
  * Functions for generating idempotency keys for mutations.
  *
  * NOTE: For generic hash functions (hashPayloadSync, hashPayloadAsync),
- * import directly from @open-insights-web/foundation-utils
+ * import directly from @open-zentra/foundation-utils
  *
  * @module utils/hash
  */
 
-import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
+import { hashPayloadAsync, hashPayloadSync } from '@open-zentra/foundation-utils';
 
 // =============================================================================
 // Idempotency Key Generation

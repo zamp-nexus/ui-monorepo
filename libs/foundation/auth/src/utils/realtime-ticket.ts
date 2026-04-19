@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios';
 
-import type { ApiQueryDescriptor } from '@open-insights-web/foundation-data-model';
+import type { ApiQueryDescriptor } from '@open-zentra/foundation-data-model';
 
 export interface RealtimeAuthTicket {
   readonly ticket: string;

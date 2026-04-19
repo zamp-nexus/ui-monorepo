@@ -4,7 +4,7 @@
  * @module errors/query-errors
  */
 
-import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+import { FOUNDATION_ERROR_CODE } from '@open-zentra/foundation-data-model';
 
 import { BridgeError } from './base-error';
 

@@ -1,4 +1,4 @@
-import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
+import type { DuckDBRouter } from '@open-zentra/foundation-bridge';
 
 export interface AnalyticsRuntimeResolverOptions {
   readonly duckdbRouter: DuckDBRouter | null;

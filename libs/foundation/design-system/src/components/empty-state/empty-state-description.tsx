@@ -16,14 +16,14 @@ import { emptyStateDefaultTheme } from './types';
 export const EmptyStateDescription: React.FC<EmptyStateDescriptionProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);
 
   return (
     <p
       className={theme.description?.({ className, size: 'md' }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="description"
     >
       {children}

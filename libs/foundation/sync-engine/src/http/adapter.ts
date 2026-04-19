@@ -11,12 +11,12 @@ import {
   type ApiQueryDescriptor,
   type MutationQueueEntry,
   type UnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   Disposable,
   getErrorMessage,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { MutationExecutorResult } from '../queue/processor';
 

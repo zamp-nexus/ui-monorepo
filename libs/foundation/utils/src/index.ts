@@ -1,10 +1,10 @@
 /**
  * Foundation Utils
  *
- * Common utility functions for the Open Insights Web platform.
+ * Common utility functions for the Open Zentra Web platform.
  * Contains only generic, widely-applicable utilities.
  *
- * @module @open-insights-web/foundation-utils
+ * @module @open-zentra/foundation-utils
  */
 
 // Browser utilities

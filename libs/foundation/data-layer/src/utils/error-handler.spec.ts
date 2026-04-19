@@ -11,7 +11,7 @@ import {
   isErrorType,
   isNetworkError,
   normalizeError,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { createScopedErrorHandler, handleError, safeAsync, tryCatchAsync } from './error-handler';
 

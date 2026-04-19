@@ -21,7 +21,7 @@ export const TabsContent: React.FC<TabContentProps> = ({
   forceMount,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('tabs', tabsDefaultTheme);
   const { size } = useTabsContext();
@@ -31,7 +31,7 @@ export const TabsContent: React.FC<TabContentProps> = ({
       value={value}
       keepMounted={forceMount}
       className={theme.content?.({ className, size }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="content"
     >
       {children}

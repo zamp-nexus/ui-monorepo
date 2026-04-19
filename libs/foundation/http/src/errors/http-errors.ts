@@ -13,7 +13,7 @@ import {
   FoundationError,
   type ErrorContext,
   type HttpMethod,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import {
   HTTP_ERROR_CODE,

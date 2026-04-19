@@ -22,7 +22,7 @@ export const SelectContent: SelectContentComponent = React.forwardRef<
 >(function SelectContent(
   {
     className,
-    oiid: propOiid,
+    ozid: propOzid,
     children,
     side = 'bottom',
     align = 'start',
@@ -31,9 +31,9 @@ export const SelectContent: SelectContentComponent = React.forwardRef<
   },
   ref: React.ForwardedRef<HTMLDivElement>,
 ) {
-  const { size, oiid: contextOiid } = useSelectContext();
+  const { size, ozid: contextOzid } = useSelectContext();
   const theme = useTheme('select', selectDefaultTheme);
-  const oiid = propOiid ?? (contextOiid ? `${contextOiid}__content` : undefined);
+  const ozid = propOzid ?? (contextOzid ? `${contextOzid}__content` : undefined);
 
   return (
     <SelectPrimitive.Portal>
@@ -41,7 +41,7 @@ export const SelectContent: SelectContentComponent = React.forwardRef<
         <SelectPrimitive.Popup
           ref={ref}
           className={theme.content?.({ className, size }) ?? ''}
-          data-oiid={oiid}
+          data-ozid={ozid}
           {...rest}
         >
           <div className="p-1">{children}</div>

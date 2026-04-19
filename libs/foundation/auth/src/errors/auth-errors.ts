@@ -11,7 +11,7 @@ import {
   FOUNDATION_ERROR_CODE,
   FoundationError,
   type ErrorContext,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { AUTH_ERROR_CODE, type AuthErrorCode } from '../core/constants';
 

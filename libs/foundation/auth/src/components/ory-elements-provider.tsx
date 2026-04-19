@@ -73,7 +73,7 @@ OryElementsContext.displayName = 'OryElementsContext';
  *
  * @example
  * ```tsx
- * import { OryElementsProvider } from '@open-insights-web/foundation-auth';
+ * import { OryElementsProvider } from '@open-zentra/foundation-auth';
  *
  * <OryElementsProvider
  *   config={{

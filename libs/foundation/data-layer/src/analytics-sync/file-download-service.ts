@@ -19,10 +19,10 @@ import {
   FoundationError,
   OPFS_FILE_TYPE,
   type OpfsFileType,
-} from '@open-insights-web/foundation-data-model';
-import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
-import { type OpfsManager } from '@open-insights-web/foundation-database';
-import { createDebugLogger, Semaphore, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import type { DataSourceFileInfo } from '@open-zentra/foundation-data-model';
+import { type OpfsManager } from '@open-zentra/foundation-database';
+import { createDebugLogger, Semaphore, type Logger } from '@open-zentra/foundation-utils';
 
 /**
  * Download progress state

@@ -1,5 +1,5 @@
 /**
- * Utility types for the OpenInsights Design System
+ * Utility types for the OpenZentra Design System
  * @module types/utils
  */
 

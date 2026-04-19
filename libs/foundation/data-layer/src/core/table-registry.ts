@@ -20,8 +20,8 @@ import {
   type DataFreshnessLevel,
   type Operation,
   type UnifiedTableConfig as SharedUnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, TIME_MS, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createDebugLogger, TIME_MS, type Logger } from '@open-zentra/foundation-utils';
 
 type UnifiedTableConfig = SharedUnifiedTableConfig<
   ApiQueryDescriptor,

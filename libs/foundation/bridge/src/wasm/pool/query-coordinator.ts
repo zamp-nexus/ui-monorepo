@@ -16,14 +16,14 @@ import {
   QueryId,
   QueryTimeoutError,
   Timestamp,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   createDeferred,
   getErrorMessage,
   normalizeError,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { PRIORITY, QUERY_MODE } from '../../constants';
 import { PoolCapacityError, PoolShutdownError } from '../../errors/pool-errors';

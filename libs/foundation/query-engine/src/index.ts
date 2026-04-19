@@ -3,12 +3,12 @@
  *
  * Curated root API for common usage patterns.
  * Prefer explicit module subpaths for advanced/internal usage:
- * - `@open-insights-web/foundation-query-engine/builder`
- * - `@open-insights-web/foundation-query-engine/compiler`
- * - `@open-insights-web/foundation-query-engine/engine`
- * - `@open-insights-web/foundation-query-engine/hooks`
- * - `@open-insights-web/foundation-query-engine/schema`
- * - `@open-insights-web/foundation-query-engine/types`
+ * - `@open-zentra/foundation-query-engine/builder`
+ * - `@open-zentra/foundation-query-engine/compiler`
+ * - `@open-zentra/foundation-query-engine/engine`
+ * - `@open-zentra/foundation-query-engine/hooks`
+ * - `@open-zentra/foundation-query-engine/schema`
+ * - `@open-zentra/foundation-query-engine/types`
  *
  * @packageDocumentation
  */

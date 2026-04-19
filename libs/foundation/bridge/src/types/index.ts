@@ -2,7 +2,7 @@
  * Type exports
  *
  * NOTE: Branded types (QueryId, WorkerId, SqlIdentifier, SqlTableName, Milliseconds, Timestamp)
- * should be imported directly from '@open-insights-web/foundation-data-model'.
+ * should be imported directly from '@open-zentra/foundation-data-model'.
  *
  * NOTE: Const objects (BRIDGE_TYPE, PRIORITY, QUERY_MODE) from '../constants'; WORKER_STATUS from './pool'.
  * Types: BridgeType, PriorityLevel, QueryLockMode from '../constants'; WorkerStatus from './pool'.

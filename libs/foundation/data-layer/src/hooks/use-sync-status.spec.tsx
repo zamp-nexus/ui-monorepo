@@ -3,7 +3,7 @@ import React, { type PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-insights-web/foundation-data-model';
+import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-zentra/foundation-data-model';
 
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';

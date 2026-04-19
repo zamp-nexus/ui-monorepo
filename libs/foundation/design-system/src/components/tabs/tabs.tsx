@@ -30,7 +30,7 @@ import { tabsDefaultTheme } from './types';
  * </Tabs>
  */
 const TabsRoot: TabsComponent = ({
-  oiid,
+  ozid,
   size = 'md',
   variant = 'default',
   fullWidth,
@@ -62,7 +62,7 @@ const TabsRoot: TabsComponent = ({
           }
         }}
         className={theme.root?.({ size, variant, fullWidth }) ?? ''}
-        data-oiid={oiid}
+        data-ozid={ozid}
       >
         {children}
       </TabsPrimitive.Root>

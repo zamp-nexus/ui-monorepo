@@ -1,6 +1,6 @@
 # Foundation Utils
 
-`@open-insights-web/foundation-utils` provides framework-agnostic utilities shared across foundation libraries.
+`@open-zentra/foundation-utils` provides framework-agnostic utilities shared across foundation libraries.
 
 ## Scope
 
@@ -28,7 +28,7 @@ Use this library for pure helpers that do not depend on React, app state, or dom
 ## Usage
 
 ```ts
-import { createLogger, hashPayloadSync, Mutex } from '@open-insights-web/foundation-utils';
+import { createLogger, hashPayloadSync, Mutex } from '@open-zentra/foundation-utils';
 
 const logger = createLogger('Example', { level: 'debug' });
 const lock = new Mutex();

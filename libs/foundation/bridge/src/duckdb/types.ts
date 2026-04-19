@@ -3,7 +3,7 @@
  *
  * For other types, import directly from their source:
  * - Bridge types: import from '../types/bridge'
- * - Branded types: import from '@open-insights-web/foundation-data-model'
+ * - Branded types: import from '@open-zentra/foundation-data-model'
  *
  * @module duckdb/types
  */

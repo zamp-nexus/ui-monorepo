@@ -16,14 +16,14 @@ import { tabsDefaultTheme } from './types';
  *
  * Container for tab triggers.
  */
-export const TabsList: React.FC<TabsListProps> = ({ children, className, oiid }) => {
+export const TabsList: React.FC<TabsListProps> = ({ children, className, ozid }) => {
   const theme = useTheme('tabs', tabsDefaultTheme);
   const { variant, fullWidth } = useTabsContext();
 
   return (
     <TabsPrimitive.List
       className={theme.list?.({ className, variant, fullWidth }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="list"
     >
       {children}

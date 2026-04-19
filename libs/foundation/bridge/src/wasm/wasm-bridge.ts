@@ -18,13 +18,13 @@ import {
   QueryExecutionError,
   QueryId,
   Timestamp,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { convertArrowToQueryResult } from '../duckdb/arrow-converter';
 import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';

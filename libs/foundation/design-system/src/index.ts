@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System
+ * OpenZentra Design System
  *
  * A fully extensible, enterprise-grade design system built with
  * Base UI primitives, Tailwind CSS, and TypeScript.
@@ -40,11 +40,11 @@ export type { CreateThemeConfigOptions, SlotResolverProps } from './theme';
 // ============================================
 export {
   cn,
-  slotOiid,
-  isValidOiid,
-  parseSlotOiid,
-  createOiidGenerator,
-  OIID_SEPARATOR,
+  slotOzid,
+  isValidOzid,
+  parseSlotOzid,
+  createOzidGenerator,
+  OZID_SEPARATOR,
   normalizeSlot,
   normalizeSlots,
   getSlotNames,
@@ -71,8 +71,8 @@ export {
 } from './utils';
 export type {
   ClassValue,
-  WithOiid,
-  WithBaseOiid,
+  WithOzid,
+  WithBaseOzid,
   A11yKey,
   FocusableElement,
   DisableableProps,

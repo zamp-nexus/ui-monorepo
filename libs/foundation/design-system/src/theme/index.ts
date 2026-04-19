@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System - Theme
+ * OpenZentra Design System - Theme
  * @module theme
  */
 

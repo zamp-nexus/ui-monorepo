@@ -13,13 +13,13 @@ import { bannerDefaultTheme } from './types';
  *
  * Container for action buttons in the banner
  */
-export const BannerActions: React.FC<BannerActionsProps> = ({ children, className, oiid }) => {
+export const BannerActions: React.FC<BannerActionsProps> = ({ children, className, ozid }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
 
   return (
     <div
       className={theme.actions?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="actions"
     >
       {children}

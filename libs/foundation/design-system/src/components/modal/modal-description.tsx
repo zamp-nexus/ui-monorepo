@@ -19,7 +19,7 @@ import { modalDefaultTheme } from './types';
 export const ModalDescription: React.FC<ModalDescriptionProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('modal', modalDefaultTheme);
   const { descriptionId } = useModalContext();
@@ -28,7 +28,7 @@ export const ModalDescription: React.FC<ModalDescriptionProps> = ({
     <Dialog.Description
       id={descriptionId}
       className={theme.description?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="description"
     >
       {children}

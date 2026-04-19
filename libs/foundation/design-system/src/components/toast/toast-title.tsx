@@ -13,13 +13,13 @@ import { toastDefaultTheme } from './types';
  *
  * Title text for the toast notification
  */
-export const ToastTitle: React.FC<ToastTitleProps> = ({ children, className, oiid }) => {
+export const ToastTitle: React.FC<ToastTitleProps> = ({ children, className, ozid }) => {
   const theme = useTheme('toast', toastDefaultTheme);
 
   return (
     <div
       className={theme.title?.({ className, feedback: 'info' }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="title"
     >
       {children}

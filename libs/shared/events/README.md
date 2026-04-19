@@ -1,6 +1,6 @@
-# @open-insights-web/shared-events
+# @open-zentra/shared-events
 
-`@open-insights-web/shared-events` provides thin, TypeScript-first React wrappers around:
+`@open-zentra/shared-events` provides thin, TypeScript-first React wrappers around:
 
 - `react-hotkeys-hook`
 - `eventemitter3`
@@ -23,7 +23,7 @@ import {
   HotkeysProvider,
   useEmitter,
   useHotkeys,
-} from '@open-insights-web/shared-events';
+} from '@open-zentra/shared-events';
 
 type AppEvents = {
   'toast:show': [message: string];
@@ -70,7 +70,7 @@ const App = () => (
 ## TypeScript Usage
 
 ```ts
-import { createEmitter } from '@open-insights-web/shared-events';
+import { createEmitter } from '@open-zentra/shared-events';
 
 type AppEvents = {
   'toast:show': [message: string, level: 'info' | 'error'];
@@ -83,7 +83,7 @@ emitter.emit('toast:show', 'Saved', 'info');
 
 ## Migration Guidance
 
-1. Replace direct `react-hotkeys-hook` imports with `@open-insights-web/shared-events` hotkeys exports.
+1. Replace direct `react-hotkeys-hook` imports with `@open-zentra/shared-events` hotkeys exports.
 2. Replace ad-hoc `eventemitter3` instances with `createEmitter<T>()`.
 3. Move emitter wiring into `EmitterProvider` and consume via `useEmitter<T>()`.
 

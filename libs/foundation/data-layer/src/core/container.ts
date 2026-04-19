@@ -9,20 +9,20 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
-import { DuckDBRouter } from '@open-insights-web/foundation-bridge';
+import { DuckDBRouter } from '@open-zentra/foundation-bridge';
 import {
   CONFLICT_STRATEGY,
   type ApiMutationDescriptor,
   type ApiQueryDescriptor,
   type ConflictStrategy,
   type UnifiedTableConfig as SharedUnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
-import { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import { DatabaseFacade, OpfsManager } from '@open-zentra/foundation-database';
 import {
   createSyncCoordinator,
   type SyncCoordinator,
-} from '@open-insights-web/foundation-sync-engine';
-import { createLogger, Mutex, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-sync-engine';
+import { createLogger, Mutex, type Logger } from '@open-zentra/foundation-utils';
 
 import { FileDownloadService } from '../analytics-sync/file-download-service';
 import { TableSyncService } from '../analytics-sync/table-sync-service';

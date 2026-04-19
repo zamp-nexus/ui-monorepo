@@ -10,7 +10,7 @@ import type {
   Milliseconds,
   SqlIdentifier,
   Timestamp,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { BridgeType } from '../constants';
 

@@ -4,14 +4,14 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { ValidationResultData } from '@open-insights-web/foundation-data-model';
+import type { ValidationResultData } from '@open-zentra/foundation-data-model';
 import {
   assert,
   assertDefined,
   deepFreeze,
   isNonNegative,
   isPositiveInteger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { resolvePoolConfig, validatePoolConfig, validateRouterConfig } from './validation';
 

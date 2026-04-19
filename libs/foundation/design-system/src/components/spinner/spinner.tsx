@@ -30,7 +30,7 @@ export const Spinner: SpinnerComponent = React.forwardRef(function Spinner<
   {
     component,
     className,
-    oiid,
+    ozid,
     size = 'md',
     'aria-label': ariaLabel = 'Loading',
     ...rest
@@ -47,7 +47,7 @@ export const Spinner: SpinnerComponent = React.forwardRef(function Spinner<
       aria-label={ariaLabel}
       aria-live="polite"
       className={theme.root({ className, size })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       {...rest}
     />
   );

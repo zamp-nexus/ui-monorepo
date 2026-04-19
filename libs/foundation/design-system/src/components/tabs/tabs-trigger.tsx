@@ -24,7 +24,7 @@ export const TabsTrigger: React.FC<TabTriggerProps> = ({
   end,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('tabs', tabsDefaultTheme);
   const { size, variant, fullWidth } = useTabsContext();
@@ -34,13 +34,13 @@ export const TabsTrigger: React.FC<TabTriggerProps> = ({
       value={value}
       disabled={disabled}
       className={theme.trigger?.({ className, size, variant, fullWidth }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="trigger"
     >
       {/* Start slot */}
       {start && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.triggerStart?.({ size }) ?? ''}
           slotName="start"
           slot={start}
@@ -54,7 +54,7 @@ export const TabsTrigger: React.FC<TabTriggerProps> = ({
       {/* End slot */}
       {end && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.triggerEnd?.({ size }) ?? ''}
           slotName="end"
           slot={end}

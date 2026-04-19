@@ -106,7 +106,7 @@ export const WithLabel: Story = {
  * Controlled switch.
  */
 export const Controlled: Story = {
-  render: () => {
+  render: function ControlledRender() {
     const [checked, setChecked] = useState(false);
 
     return (
@@ -149,7 +149,7 @@ export const AllSizes: Story = {
  * Settings form example.
  */
 export const SettingsForm: Story = {
-  render: () => {
+  render: function SettingsFormRender() {
     const [settings, setSettings] = useState({
       notifications: true,
       marketing: false,

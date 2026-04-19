@@ -44,7 +44,7 @@ export const Skeleton: SkeletonComponent = React.forwardRef(function Skeleton<
   {
     component,
     className,
-    oiid,
+    ozid,
     animated = true,
     width,
     height,
@@ -67,7 +67,7 @@ export const Skeleton: SkeletonComponent = React.forwardRef(function Skeleton<
     <Element
       ref={ref}
       className={cn(theme.root({ animated }), RADIUS_MAP[radius], className)}
-      data-oiid={oiid}
+      data-ozid={ozid}
       style={combinedStyle}
       aria-hidden="true"
       {...rest}

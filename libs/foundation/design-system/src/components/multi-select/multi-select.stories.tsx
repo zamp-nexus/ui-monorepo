@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { Meta, StoryFn } from '@storybook/react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { MultiSelect } from './multi-select';
 import type { MultiSelectProps } from './types';

@@ -1,5 +1,5 @@
 // eslint.config.mjs
-// Open Insights Monorepo — Enterprise ESLint Governance
+// Open Zentra Monorepo — Enterprise ESLint Governance
 //
 // Architecture: 5 orthogonal tag dimensions (layer, foundation, platform, scope, visibility).
 // All constraints use AND semantics — a project must satisfy ALL matching rules.

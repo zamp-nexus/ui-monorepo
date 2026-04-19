@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import '@open-insights-web/foundation-database';
+import '@open-zentra/foundation-database';
 
 import {
   generateProvisionalId,
   MUTATION_STATUS,
   MUTATION_TYPE,
   type MutationQueueEntry,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { ConflictResolver } from '../conflicts/resolver';
 import type { OfflineQueueManager } from './manager';

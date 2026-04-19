@@ -6,7 +6,7 @@
  * @module utils/member-ref
  */
 
-import { MemberRef as MemberRefUtil } from '@open-insights-web/foundation-data-model';
+import { MemberRef as MemberRefUtil } from '@open-zentra/foundation-data-model';
 
 /**
  * Parsed member reference.

@@ -12,14 +12,14 @@ import {
   tryToJsonSerializable,
   type OfflineQueryContext,
   type QueryKeyBase,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
 import {
   createCacheEntry,
   getDatabase,
   isCacheExpired,
-} from '@open-insights-web/foundation-database';
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-database';
+import { createDebugLogger } from '@open-zentra/foundation-utils';
 
 import { DEFAULT_CACHE_TTL_MS, DEFAULT_STALE_WHILE_REVALIDATE } from '../core/defaults';
 import type { NetworkStatusMonitor } from '../network/index';

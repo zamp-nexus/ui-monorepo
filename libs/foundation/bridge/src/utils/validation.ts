@@ -2,8 +2,8 @@
  * Configuration validation utilities
  *
  * Import generic utilities directly from their source packages:
- * - From '@open-insights-web/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
- * - From '@open-insights-web/foundation-data-model': ValidationResult, ValidationResultData
+ * - From '@open-zentra/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
+ * - From '@open-zentra/foundation-data-model': ValidationResult, ValidationResultData
  *
  * @module utils/validation
  */
@@ -12,7 +12,7 @@ import {
   Milliseconds,
   ValidationResult,
   type ValidationResultData,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { BRIDGE_TYPE, DEFAULTS } from '../constants';
 import type { BridgeType } from '../constants';

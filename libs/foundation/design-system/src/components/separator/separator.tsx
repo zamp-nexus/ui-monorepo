@@ -29,7 +29,7 @@ export const Separator = React.forwardRef(function Separator<T extends React.Ele
   {
     component,
     className,
-    oiid,
+    ozid,
     orientation = 'horizontal',
     decorative = false,
     ...rest
@@ -50,7 +50,7 @@ export const Separator = React.forwardRef(function Separator<T extends React.Ele
     <Element
       ref={ref}
       className={theme.root({ className, orientation, decorative })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-orientation={orientation}
       {...semanticProps}
       {...rest}

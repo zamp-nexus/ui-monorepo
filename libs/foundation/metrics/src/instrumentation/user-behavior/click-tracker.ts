@@ -3,7 +3,7 @@
  * @module instrumentation/user-behavior/click-tracker
  */
 
-import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+import { getCurrentRoute } from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter } from '../../core/otel-provider';
@@ -85,7 +85,7 @@ function handleClick(event: MouseEvent): void {
     targetClasses: meaningfulTarget.className
       ? meaningfulTarget.className.split(' ').filter(Boolean)
       : undefined,
-    targetOiid: meaningfulTarget.getAttribute('data-oiid') || undefined,
+    targetOzid: meaningfulTarget.getAttribute('data-ozid') || undefined,
     timestamp: Date.now(),
     route: getCurrentRoute(),
     metadata: getElementMetadata(meaningfulTarget),
@@ -116,8 +116,8 @@ function findMeaningfulTarget(element: HTMLElement): HTMLElement {
       return current;
     }
 
-    // Check for data-oiid (our tracking attribute)
-    if (current.hasAttribute('data-oiid')) {
+    // Check for data-ozid (our tracking attribute)
+    if (current.hasAttribute('data-ozid')) {
       return current;
     }
 
@@ -161,7 +161,7 @@ function getElementMetadata(element: HTMLElement): Record<string, unknown> {
   }
 
   // Get data attributes (non-sensitive)
-  const safeDataAttributes = ['testid', 'oiid', 'action', 'component', 'section'];
+  const safeDataAttributes = ['testid', 'ozid', 'action', 'component', 'section'];
   for (const attr of safeDataAttributes) {
     const value = element.getAttribute(`data-${attr}`);
     if (value) {
@@ -189,7 +189,7 @@ function recordClickEvent(event: InteractionEvent): void {
       ...spanAttributes,
       'interaction.type': event.type,
       'interaction.target_tag': event.targetTag,
-      'interaction.target_oiid': event.targetOiid || 'unknown',
+      'interaction.target_ozid': event.targetOzid || 'unknown',
       'page.route': event.route,
     });
   } catch (e) {
@@ -204,7 +204,7 @@ export function trackClick(
   targetTag: string,
   options?: {
     targetId?: string;
-    targetOiid?: string;
+    targetOzid?: string;
     metadata?: Record<string, unknown>;
   },
 ): void {
@@ -216,7 +216,7 @@ export function trackClick(
     type: 'click',
     targetTag,
     targetId: options?.targetId,
-    targetOiid: options?.targetOiid,
+    targetOzid: options?.targetOzid,
     timestamp: Date.now(),
     route: getCurrentRoute(),
     metadata: options?.metadata,

@@ -5,7 +5,7 @@
 
 import { SpanKind } from '@opentelemetry/api';
 
-import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+import { getCurrentRoute } from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter, getTracer } from '../../core/otel-provider';

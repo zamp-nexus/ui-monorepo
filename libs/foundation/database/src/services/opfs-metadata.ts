@@ -7,7 +7,7 @@
  * @module services/opfs-metadata
  */
 
-import { OPFS_FILE_TYPE } from '@open-insights-web/foundation-data-model';
+import { OPFS_FILE_TYPE } from '@open-zentra/foundation-data-model';
 
 import type { OpfsMetadataEntry, OpfsMetadataOperations } from '../tables/opfs-metadata';
 import { sortByDependencies } from '../tables/opfs-metadata';

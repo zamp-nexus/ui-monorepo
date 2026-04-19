@@ -9,7 +9,7 @@ import type { RadioGroupVariants } from './types';
 interface RadioGroupContextValue {
   size: (typeof RadioGroupVariants.size)[number];
   disabled?: boolean;
-  oiid?: string;
+  ozid?: string;
 }
 
 const RadioGroupContext = createContext<RadioGroupContextValue | null>(null);

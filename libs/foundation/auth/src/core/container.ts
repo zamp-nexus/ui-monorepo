@@ -7,7 +7,7 @@
  * @module core/container
  */
 
-import { Mutex } from '@open-insights-web/foundation-utils';
+import { Mutex } from '@open-zentra/foundation-utils';
 
 import { createOryClientConfig, getOryClient, type OryClientInstance } from './ory-client';
 import type {

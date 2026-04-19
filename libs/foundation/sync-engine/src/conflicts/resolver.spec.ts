@@ -8,7 +8,7 @@ import {
   CONFLICT_STRATEGY,
   CONFLICT_WINNER,
   type ConflictContext,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { ConflictResolver } from './resolver';
 

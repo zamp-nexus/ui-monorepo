@@ -1,5 +1,5 @@
 {
-  "name": "@open-insights-web/foundation-hooks",
+  "name": "@open-zentra/foundation-hooks",
   "version": "0.0.1",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

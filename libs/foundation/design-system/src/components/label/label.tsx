@@ -4,7 +4,7 @@
  */
 import React from 'react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -56,7 +56,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
     component,
     className,
     children,
-    oiid,
+    ozid,
     size = 'md',
     required,
     disabled,
@@ -79,7 +79,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
     <Element
       ref={ref}
       className={theme.root({ className, size, required, disabled, error })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       htmlFor={Element === 'label' ? htmlFor : undefined}
       {...rest}
     >
@@ -88,7 +88,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
         {/* Icon slot */}
         {icon && (
           <Slot
-            baseOiid={oiid}
+            baseOzid={ozid}
             className={theme.icon?.({ size }) ?? ''}
             slotName="icon"
             slot={icon}
@@ -103,7 +103,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
         {/* Required indicator */}
         {required && (
           <Slot
-            baseOiid={oiid}
+            baseOzid={ozid}
             className={theme.requiredIndicator?.({ size }) ?? ''}
             slotName="requiredIndicator"
             slot={requiredIndicator}
@@ -118,7 +118,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
         {tooltip && (
           <Tooltip content={tooltip}>
             <Slot
-              baseOiid={oiid}
+              baseOzid={ozid}
               className={theme.tooltipTrigger?.({ size }) ?? ''}
               slotName="tooltipContent"
               slot={tooltipContent}
@@ -134,7 +134,7 @@ export const Label = React.forwardRef(function Label<T extends React.ElementType
       {/* Description */}
       {description && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.description?.({ size, error }) ?? ''}
           slotName="description"
           slot={description}

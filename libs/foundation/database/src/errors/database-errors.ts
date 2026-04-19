@@ -13,7 +13,7 @@ import {
   isFoundationError,
   type ErrorContext,
   type FoundationErrorCode,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Database Error Classes
@@ -194,7 +194,7 @@ export const isDatabaseError = (error: unknown): error is DatabaseError => {
   return error instanceof DatabaseError;
 };
 
-// NOTE: hasErrorCode should be imported directly from @open-insights-web/foundation-data-model
+// NOTE: hasErrorCode should be imported directly from @open-zentra/foundation-data-model
 // Do NOT define it here to avoid duplication
 
 /**
@@ -213,5 +213,5 @@ export const isQuotaExceededError = (error: unknown): boolean => {
   return false;
 };
 
-// NOTE: FoundationErrorCode should be imported directly from @open-insights-web/foundation-data-model
+// NOTE: FoundationErrorCode should be imported directly from @open-zentra/foundation-data-model
 // Do NOT re-export it here to maintain single source of truth

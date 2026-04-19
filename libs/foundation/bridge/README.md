@@ -199,7 +199,7 @@ Query Request
 ## Installation
 
 ```bash
-npm install @open-insights-web/foundation-bridge
+npm install @open-zentra/foundation-bridge
 ```
 
 ### Peer Dependencies
@@ -207,9 +207,9 @@ npm install @open-insights-web/foundation-bridge
 Ensure the following peer dependencies are installed:
 
 ```bash
-npm install @open-insights-web/foundation-data-model
-npm install @open-insights-web/foundation-utils
-npm install @open-insights-web/foundation-database  # Optional, for OPFS metadata
+npm install @open-zentra/foundation-data-model
+npm install @open-zentra/foundation-utils
+npm install @open-zentra/foundation-database  # Optional, for OPFS metadata
 ```
 
 ---
@@ -219,7 +219,7 @@ npm install @open-insights-web/foundation-database  # Optional, for OPFS metadat
 ### Basic Query Execution
 
 ```typescript
-import { getDuckDBRouter } from '@open-insights-web/foundation-bridge';
+import { getDuckDBRouter } from '@open-zentra/foundation-bridge';
 
 // Get singleton router instance
 const router = getDuckDBRouter({ debug: true });
@@ -253,8 +253,8 @@ const result = await router.query<User>('SELECT * FROM users WHERE id = ?', { pa
 ### View Management
 
 ```typescript
-import { getDuckDBRouter } from '@open-insights-web/foundation-bridge';
-import { Timestamp } from '@open-insights-web/foundation-data-model';
+import { getDuckDBRouter } from '@open-zentra/foundation-bridge';
+import { Timestamp } from '@open-zentra/foundation-data-model';
 
 const router = getDuckDBRouter();
 
@@ -297,7 +297,7 @@ try {
 ### Query Cancellation
 
 ```typescript
-import { isQueryCancelledError } from '@open-insights-web/foundation-bridge';
+import { isQueryCancelledError } from '@open-zentra/foundation-bridge';
 
 const controller = new AbortController();
 
@@ -330,8 +330,8 @@ The library supports two DuckDB implementations. **Constants use CAPITAL_SNAKE_C
 | Native | `BRIDGE_TYPE.NATIVE` | Electron    | Native file system access, better performance |
 
 ```typescript
-import { BRIDGE_TYPE } from '@open-insights-web/foundation-bridge';
-import type { BridgeType } from '@open-insights-web/foundation-bridge';
+import { BRIDGE_TYPE } from '@open-zentra/foundation-bridge';
+import type { BridgeType } from '@open-zentra/foundation-bridge';
 
 // Force a specific bridge type
 const router = getDuckDBRouter({
@@ -354,8 +354,8 @@ When using the worker pool, queries specify their lock mode. Use **constants** (
 | Write | `QUERY_MODE.WRITE` | Exclusive access, blocks all other operations |
 
 ```typescript
-import { QUERY_MODE } from '@open-insights-web/foundation-bridge';
-import type { QueryLockMode } from '@open-insights-web/foundation-bridge';
+import { QUERY_MODE } from '@open-zentra/foundation-bridge';
+import type { QueryLockMode } from '@open-zentra/foundation-bridge';
 
 // Read queries can run concurrently
 await pool.query({
@@ -383,8 +383,8 @@ Queries are processed in priority order. Use **PRIORITY** (constant) for values 
 | Low      | `PRIORITY.LOW`    | 1             | Maintenance, cleanup, analytics   |
 
 ```typescript
-import { PRIORITY, QUERY_MODE } from '@open-insights-web/foundation-bridge';
-import type { PriorityLevel } from '@open-insights-web/foundation-bridge';
+import { PRIORITY, QUERY_MODE } from '@open-zentra/foundation-bridge';
+import type { PriorityLevel } from '@open-zentra/foundation-bridge';
 
 // High-priority user request
 await pool.query({
@@ -405,7 +405,7 @@ The router manages bridge lifecycle automatically:
 4. **Resource Cleanup**: Proper disposal of connections, workers, and timers
 
 ```typescript
-import { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { Milliseconds } from '@open-zentra/foundation-data-model';
 
 const router = getDuckDBRouter({
   idleTimeout: Milliseconds.from(60_000), // 60 seconds
@@ -585,7 +585,7 @@ interface DuckDBPool {
 
 ### Branded Types
 
-Import branded types from `@open-insights-web/foundation-data-model`:
+Import branded types from `@open-zentra/foundation-data-model`:
 
 ```typescript
 import {
@@ -595,7 +595,7 @@ import {
   SqlTableName,
   Milliseconds,
   Timestamp,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // Create IDs
 const queryId = QueryId.create();       // "q_1234567890_abc"
@@ -662,11 +662,11 @@ import type {
   ViewDefinition,
   WorkerInfo,
   WorkerStatus,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 // WORKER_STATUS const, WorkerStatus type - from types/pool or internal
-import { WORKER_STATUS } from '@open-insights-web/foundation-bridge';
+import { WORKER_STATUS } from '@open-zentra/foundation-bridge';
 // Const objects (values) - from bridge constants
-import { BridgeType, Priority, QueryMode } from '@open-insights-web/foundation-bridge/constants';
+import { BridgeType, Priority, QueryMode } from '@open-zentra/foundation-bridge/constants';
 import {
   Milliseconds,
   QueryId,
@@ -674,7 +674,7 @@ import {
   SqlTableName,
   Timestamp,
   WorkerId,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // Or from internal.ts for foundation libraries:
 import { BridgeType, Priority, QueryMode } from './constants';
@@ -690,12 +690,12 @@ Foundation **Utils** provides **generic** error utilities; Foundation **Bridge**
 
 | Concern                                             | Use                                                                                                             | Source                                     |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Normalize `unknown` to `Error`, get message/name    | `normalizeError`, `getErrorMessage`, `getErrorName`, `formatErrorMessage`                                       | `@open-insights-web/foundation-utils`      |
-| Generic guards (abort, network, timeout by message) | `isAbortError`, `isTimeoutError`, `isNetworkError`, `hasErrorCode` (generic)                                    | `@open-insights-web/foundation-utils`      |
-| Error handling strategy (retry/report/log)          | `categorizeError`, `getErrorStrategy`, `createErrorHandler`, `handleErrorByCategory`                            | `@open-insights-web/foundation-utils`      |
+| Normalize `unknown` to `Error`, get message/name    | `normalizeError`, `getErrorMessage`, `getErrorName`, `formatErrorMessage`                                       | `@open-zentra/foundation-utils`      |
+| Generic guards (abort, network, timeout by message) | `isAbortError`, `isTimeoutError`, `isNetworkError`, `hasErrorCode` (generic)                                    | `@open-zentra/foundation-utils`      |
+| Error handling strategy (retry/report/log)          | `categorizeError`, `getErrorStrategy`, `createErrorHandler`, `handleErrorByCategory`                            | `@open-zentra/foundation-utils`      |
 | Domain error classes (Bridge)                       | `QueryTimeoutError`, `BridgeNotInitializedError`, etc.                                                          | This library                               |
 | Domain type guards (Bridge)                         | `isQueryTimeoutError`, `isQueryCancelledError`, etc.                                                            | This library                               |
-| Foundation error base and codes                     | `FoundationError`, `FOUNDATION_ERROR_CODE`, `isFoundationError`, `hasErrorCode(error, FOUNDATION_ERROR_CODE.*)` | `@open-insights-web/foundation-data-model` |
+| Foundation error base and codes                     | `FoundationError`, `FOUNDATION_ERROR_CODE`, `isFoundationError`, `hasErrorCode(error, FOUNDATION_ERROR_CODE.*)` | `@open-zentra/foundation-data-model` |
 
 **Why Bridge has its own error “things”:**
 
@@ -748,7 +748,7 @@ import {
   QueryExecutionError,
   QueryTimeoutError,
   SqlValidationError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 // QueryTimeoutError - query exceeded timeout
 const error = new QueryTimeoutError(queryId, timeoutMs, sql);
@@ -782,7 +782,7 @@ import {
   PoolShutdownError,
   WorkerError,
   WorkerInitializationError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 // PoolShutdownError - pool is shutting down
 const error = new PoolShutdownError(pendingQueries);
@@ -810,10 +810,10 @@ import {
   OpfsNotFoundError,
   OpfsPermissionError,
   OpfsWriteError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 // OpfsNotSupportedError should be imported from foundation-database
 // (OPFS is fundamentally a database concern)
-import { OpfsNotSupportedError } from '@open-insights-web/foundation-database';
+import { OpfsNotSupportedError } from '@open-zentra/foundation-database';
 ```
 
 ### Type Guards
@@ -836,9 +836,9 @@ import {
   isSqlValidationError,
   isWorkerError,
   isWorkerInitializationError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
-// OpfsNotSupportedError and isOpfsNotSupportedError: import from '@open-insights-web/foundation-database'
+// OpfsNotSupportedError and isOpfsNotSupportedError: import from '@open-zentra/foundation-database'
 
 if (isQueryTimeoutError(error)) {
   console.error(`Query ${error.queryId} timed out after ${error.timeoutMs}ms`);
@@ -853,12 +853,12 @@ import {
   isQueryCancelledError,
   isQueryTimeoutError,
   isSqlValidationError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 import {
   FOUNDATION_ERROR_CODE,
   hasErrorCode,
   isFoundationError,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 try {
   const result = await router.query(sql);
@@ -905,7 +905,7 @@ import {
   isValidIdentifier,
   validateIdentifier,
   validateTableName,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 // Validate and create branded type (throws on invalid)
 const safeName = validateIdentifier('users'); // SqlIdentifier
@@ -934,7 +934,7 @@ import {
   buildParameterizedSql,
   escapeString,
   quoteIdentifier,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 // Quote identifier (handles double-quotes)
 quoteIdentifier(validateIdentifier('users'));
@@ -1002,8 +1002,8 @@ const name2 = validateIdentifier('users'); // Cache hit!
 | `autoInit`        | `boolean`      | `true`      | Initialize on first query                     |
 
 ```typescript
-import { BridgeType, getDuckDBRouter } from '@open-insights-web/foundation-bridge';
-import { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { BridgeType, getDuckDBRouter } from '@open-zentra/foundation-bridge';
+import { Milliseconds } from '@open-zentra/foundation-data-model';
 
 const router = getDuckDBRouter({
   forceBridgeType: BRIDGE_TYPE.WASM,
@@ -1028,8 +1028,8 @@ const router = getDuckDBRouter({
 | `debug`                | `boolean`              | `false`                       | Enable debug logging         |
 
 ```typescript
-import { getDuckDBPool } from '@open-insights-web/foundation-bridge';
-import { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { getDuckDBPool } from '@open-zentra/foundation-bridge';
+import { Milliseconds } from '@open-zentra/foundation-data-model';
 
 const pool = await getDuckDBPool({
   workerCount: 4,
@@ -1050,7 +1050,7 @@ import {
   resolvePoolConfig,
   validatePoolConfig,
   validateRouterConfig,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 // Validate configuration
 const poolResult = validatePoolConfig(config);
@@ -1134,7 +1134,7 @@ const result = await router.query('SELECT * FROM users WHERE id = ?', { params: 
 The central orchestrator for the pool:
 
 ```typescript
-import { QueryCoordinator } from '@open-insights-web/foundation-bridge';
+import { QueryCoordinator } from '@open-zentra/foundation-bridge';
 
 const coordinator = new QueryCoordinator({
   workerCount: 4,
@@ -1161,7 +1161,7 @@ Lock acquisition is performed at dispatch time (right before worker execution), 
 Individual worker wrapper:
 
 ```typescript
-import { WorkerInstance } from '@open-insights-web/foundation-bridge';
+import { WorkerInstance } from '@open-zentra/foundation-bridge';
 
 const worker = new WorkerInstance(WorkerId.create(1), { debug: true });
 await worker.initialize();
@@ -1177,7 +1177,7 @@ await worker.shutdown();
 O(1) priority queue implementation:
 
 ```typescript
-import { PriorityQueue } from '@open-insights-web/foundation-bridge';
+import { PriorityQueue } from '@open-zentra/foundation-bridge';
 
 const queue = new PriorityQueue<QueryItem>();
 
@@ -1204,7 +1204,7 @@ queue.clear();
 Readers-writer lock implementation:
 
 ```typescript
-import { TableLockManager } from '@open-insights-web/foundation-bridge';
+import { TableLockManager } from '@open-zentra/foundation-bridge';
 
 const lockManager = new TableLockManager({ debug: true });
 
@@ -1305,9 +1305,9 @@ controller.abort();
 // ✅ Good - direct imports
 
 // ❌ Bad - importing from wrong package
-import { Milliseconds } from '@open-insights-web/foundation-bridge';
-import { Milliseconds, Timestamp } from '@open-insights-web/foundation-data-model';
-import { sleep, withTimeout } from '@open-insights-web/foundation-utils';
+import { Milliseconds } from '@open-zentra/foundation-bridge';
+import { Milliseconds, Timestamp } from '@open-zentra/foundation-data-model';
+import { sleep, withTimeout } from '@open-zentra/foundation-utils';
 ```
 
 ### 7. Clean Up Resources
@@ -1352,7 +1352,7 @@ nx test foundation-bridge --coverage
 ```typescript
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { getDuckDBRouter, resetDuckDBRouter } from '@open-insights-web/foundation-bridge';
+import { getDuckDBRouter, resetDuckDBRouter } from '@open-zentra/foundation-bridge';
 
 describe('DuckDBRouter', () => {
   beforeEach(async () => {
@@ -1401,7 +1401,7 @@ await router.query(sql, {
 #### OPFS Not Supported
 
 ```typescript
-import { isOpfsSupported } from '@open-insights-web/foundation-utils';
+import { isOpfsSupported } from '@open-zentra/foundation-utils';
 
 if (!isOpfsSupported()) {
   console.warn('OPFS not supported in this browser');
@@ -1491,8 +1491,8 @@ libs/foundation/bridge/
 | Package                                    | Purpose                      |
 | ------------------------------------------ | ---------------------------- |
 | `@duckdb/duckdb-wasm`                      | DuckDB WASM runtime          |
-| `@open-insights-web/foundation-data-model` | Branded types, error classes |
-| `@open-insights-web/foundation-utils`      | Utility functions            |
+| `@open-zentra/foundation-data-model` | Branded types, error classes |
+| `@open-zentra/foundation-utils`      | Utility functions            |
 | `apache-arrow`                             | Arrow format support         |
 | `react-fast-compare`                       | Deep equality comparison     |
 
@@ -1500,7 +1500,7 @@ libs/foundation/bridge/
 
 | Package                                  | Purpose                           |
 | ---------------------------------------- | --------------------------------- |
-| `@open-insights-web/foundation-database` | IndexedDB for metadata (optional) |
+| `@open-zentra/foundation-database` | IndexedDB for metadata (optional) |
 
 ### Dev Dependencies
 
@@ -1542,12 +1542,12 @@ import {
   PRIORITY,
   QUERY_MODE,
   QueryMode,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 import type {
   BridgeType,
   PriorityLevel,
   QueryLockMode,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 mode: QueryMode; // type
 priority: Priority.HIGH;
@@ -1565,12 +1565,12 @@ priority: PRIORITY.HIGH; // value
 import {
   isOpfsNotSupportedError,
   OpfsNotSupportedError,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 // After
 import {
   isOpfsNotSupportedError,
   OpfsNotSupportedError,
-} from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-database';
 ```
 
 #### Removed Re-exports (OpfsNotSupportedError class)
@@ -1579,9 +1579,9 @@ import {
 
 ```typescript
 // Before
-import { OpfsNotSupportedError } from '@open-insights-web/foundation-bridge';
+import { OpfsNotSupportedError } from '@open-zentra/foundation-bridge';
 // After
-import { OpfsNotSupportedError } from '@open-insights-web/foundation-database';
+import { OpfsNotSupportedError } from '@open-zentra/foundation-database';
 ```
 
 #### Removed Factory Functions
@@ -1591,7 +1591,7 @@ Factory functions for error classes have been removed. Use direct instantiation:
 ```typescript
 // Before
 // After
-import { createQueryTimeoutError, QueryTimeoutError } from '@open-insights-web/foundation-bridge';
+import { createQueryTimeoutError, QueryTimeoutError } from '@open-zentra/foundation-bridge';
 
 const error = createQueryTimeoutError(queryId, timeoutMs, sql);
 
@@ -1621,11 +1621,11 @@ Removed factory functions:
 Runtime and storage constants use CAPITAL_SNAKE_CASE; use the matching PascalCase types when needed:
 
 ```typescript
-import { RUNTIME_ENVIRONMENT, STORAGE_STRATEGY } from '@open-insights-web/foundation-bridge';
+import { RUNTIME_ENVIRONMENT, STORAGE_STRATEGY } from '@open-zentra/foundation-bridge';
 import type {
   RuntimeEnvironmentKind,
   StorageStrategyKind,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 if (environment === RUNTIME_ENVIRONMENT.ELECTRON) {
   // Electron-specific logic
@@ -1642,9 +1642,9 @@ const strategy: StorageStrategyKind = STORAGE_STRATEGY.OPFS;
 // Before
 
 // After (v3: use CAPITAL_SNAKE constants and PascalCase types)
-import { PRIORITY, QUERY_MODE } from '@open-insights-web/foundation-bridge';
-import type { PriorityLevel, QueryLockMode } from '@open-insights-web/foundation-bridge';
-import { Priority, QueryMode } from '@open-insights-web/foundation-bridge/types/pool';
+import { PRIORITY, QUERY_MODE } from '@open-zentra/foundation-bridge';
+import type { PriorityLevel, QueryLockMode } from '@open-zentra/foundation-bridge';
+import { Priority, QueryMode } from '@open-zentra/foundation-bridge/types/pool';
 ```
 
 #### Removed Re-exports

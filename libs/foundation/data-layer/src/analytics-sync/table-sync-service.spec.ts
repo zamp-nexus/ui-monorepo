@@ -9,7 +9,7 @@ import type {
   DataSourceFileInfo,
   DataSourceResponse,
   DataSourceTableInfo,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import {
   TableSyncService,

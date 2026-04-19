@@ -13,11 +13,11 @@ import { drawerDefaultTheme } from './types';
  *
  * Container for action buttons at the bottom of the drawer.
  */
-export const DrawerFooter: React.FC<DrawerFooterProps> = ({ children, className, oiid }) => {
+export const DrawerFooter: React.FC<DrawerFooterProps> = ({ children, className, ozid }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
 
   return (
-    <div className={theme.footer?.({ className }) ?? className} data-oiid={oiid} data-slot="footer">
+    <div className={theme.footer?.({ className }) ?? className} data-ozid={ozid} data-slot="footer">
       {children}
     </div>
   );

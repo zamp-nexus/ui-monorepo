@@ -8,9 +8,9 @@ import '@testing-library/jest-dom';
 import { configure } from '@testing-library/react';
 
 /**
- * Configure Testing Library to use `data-oiid` as the test ID attribute
+ * Configure Testing Library to use `data-ozid` as the test ID attribute
  * This allows us to use a single attribute for both testing and analytics
  */
 configure({
-  testIdAttribute: 'data-oiid',
+  testIdAttribute: 'data-ozid',
 });

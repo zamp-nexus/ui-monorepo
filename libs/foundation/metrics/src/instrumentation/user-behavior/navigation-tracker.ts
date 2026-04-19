@@ -3,7 +3,7 @@
  * @module instrumentation/user-behavior/navigation-tracker
  */
 
-import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+import { getCurrentRoute } from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter } from '../../core/otel-provider';

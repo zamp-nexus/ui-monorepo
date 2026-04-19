@@ -4,7 +4,7 @@
  */
 import React from 'react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import { useBannerContext } from './banner.context';
@@ -16,7 +16,7 @@ import { bannerDefaultTheme } from './types';
  *
  * Close button for dismissible banners. Uses context to access dismiss handler.
  */
-export const BannerClose: React.FC<BannerCloseProps> = ({ className, oiid }) => {
+export const BannerClose: React.FC<BannerCloseProps> = ({ className, ozid }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
   const { variant, onDismiss } = useBannerContext();
 
@@ -30,7 +30,7 @@ export const BannerClose: React.FC<BannerCloseProps> = ({ className, oiid }) => 
       className={theme.close?.({ className, variant }) ?? className}
       onClick={onDismiss}
       aria-label="Dismiss banner"
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="close"
     >
       <Icon name="x" size="sm" />

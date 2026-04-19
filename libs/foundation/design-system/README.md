@@ -1,4 +1,4 @@
-# OpenInsights Design System
+# OpenZentra Design System
 
 A fully extensible, enterprise-grade design system built with Base UI primitives, Tailwind CSS, and TypeScript.
 
@@ -9,20 +9,20 @@ A fully extensible, enterprise-grade design system built with Base UI primitives
 - **Enterprise-Grade** - WCAG 2.1 AA accessibility, strict TypeScript, SSR/RSC compatible
 - **Fully Extensible** - Module augmentation for custom components, nested themes for overrides
 - **Zero Runtime CSS** - Pure Tailwind utilities, no CSS-in-JS overhead
-- **Open Insights ID (oiid)** - Every component supports `data-oiid` for testing, analytics, and debugging
+- **Open Zentra ID (ozid)** - Every component supports `data-ozid` for testing, analytics, and debugging
 
 ## Installation
 
 ```bash
-npm install @open-insights-web/foundation-design-system
+npm install @open-zentra/foundation-design-system
 ```
 
 ## Quick Start
 
 ```tsx
-import { Button, ThemeProvider } from '@open-insights-web/foundation-design-system';
+import { Button, ThemeProvider } from '@open-zentra/foundation-design-system';
 
-import '@open-insights-web/foundation-design-system/tokens/tokens.scss';
+import '@open-zentra/foundation-design-system/tokens/tokens.scss';
 
 const theme = {
   components: {
@@ -52,7 +52,7 @@ const theme = {
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Button intent="primary" oiid="main-action">
+      <Button intent="primary" ozid="main-action">
         Click me
       </Button>
     </ThemeProvider>
@@ -134,7 +134,7 @@ const theme = {
 Generate new components:
 
 ```bash
-npx nx g @open-insights-web/design-system-plugin:component MyComponent \
+npx nx g @open-zentra/design-system-plugin:component MyComponent \
   --variants="intent:primary,secondary;size:sm,md,lg" \
   --modifiers="disabled,loading" \
   --slots="icon" \

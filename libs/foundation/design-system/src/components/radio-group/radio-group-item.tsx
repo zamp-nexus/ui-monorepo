@@ -29,26 +29,26 @@ export const RadioGroupItem: RadioGroupItemComponent = React.forwardRef<
   HTMLButtonElement,
   RadioGroupItemProps
 >(function RadioGroupItem(
-  { className, oiid: propOiid, disabled, value, id },
+  { className, ozid: propOzid, disabled, value, id },
   ref: React.ForwardedRef<HTMLButtonElement>,
 ) {
-  const { size, disabled: groupDisabled, oiid: contextOiid } = useRadioGroupContext();
+  const { size, disabled: groupDisabled, ozid: contextOzid } = useRadioGroupContext();
   const theme = useTheme('radioGroup', radioGroupDefaultTheme);
   const isDisabled = disabled || groupDisabled;
-  const oiid = propOiid ?? (contextOiid ? `${contextOiid}__item-${value}` : undefined);
+  const ozid = propOzid ?? (contextOzid ? `${contextOzid}__item-${value}` : undefined);
 
   return (
     <Radio.Root
       ref={ref}
       className={theme.item?.({ className, size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       disabled={isDisabled}
       value={value}
       id={id}
     >
       <Radio.Indicator
         className={theme.indicator?.({ size }) ?? ''}
-        data-oiid={oiid ? `${oiid}__indicator` : undefined}
+        data-ozid={ozid ? `${ozid}__indicator` : undefined}
       >
         <CircleIndicator />
       </Radio.Indicator>

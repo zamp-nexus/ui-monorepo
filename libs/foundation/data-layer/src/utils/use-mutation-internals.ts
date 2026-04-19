@@ -12,9 +12,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import type { DatabaseFacade } from '@open-insights-web/foundation-database';
-import type { IQueueManager, SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
+import type { WithId } from '@open-zentra/foundation-data-model';
+import type { DatabaseFacade } from '@open-zentra/foundation-database';
+import type { IQueueManager, SyncCoordinator } from '@open-zentra/foundation-sync-engine';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import type { ErrorSeverityValue } from './error-handler';

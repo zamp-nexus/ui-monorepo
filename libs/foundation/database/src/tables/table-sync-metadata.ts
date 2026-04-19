@@ -3,7 +3,7 @@
  * @module tables/table-sync-metadata
  */
 
-import type { TableSyncMetadataEntry } from '@open-insights-web/foundation-data-model';
+import type { TableSyncMetadataEntry } from '@open-zentra/foundation-data-model';
 
 /**
  * Table sync metadata operations interface

@@ -9,20 +9,20 @@
 
 import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import type { QueryId, WorkerId } from '@open-insights-web/foundation-data-model';
+import type { QueryId, WorkerId } from '@open-zentra/foundation-data-model';
 import {
   QueryCancelledError,
   QueryExecutionError,
   Timestamp,
-} from '@open-insights-web/foundation-data-model';
-import type { Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import type { Logger } from '@open-zentra/foundation-utils';
 import {
   createDebugLogger,
   createDeferred,
   getErrorMessage,
   normalizeError,
   type Deferred,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { convertArrowToQueryResult } from '../../duckdb/arrow-converter';
 import { WorkerError, WorkerInitializationError } from '../../errors/pool-errors';

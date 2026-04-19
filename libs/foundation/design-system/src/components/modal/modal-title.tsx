@@ -16,7 +16,7 @@ import { modalDefaultTheme } from './types';
  *
  * Title text for the modal. Connected to Dialog.Title for accessibility.
  */
-export const ModalTitle: React.FC<ModalTitleProps> = ({ children, className, oiid }) => {
+export const ModalTitle: React.FC<ModalTitleProps> = ({ children, className, ozid }) => {
   const theme = useTheme('modal', modalDefaultTheme);
   const { titleId } = useModalContext();
 
@@ -24,7 +24,7 @@ export const ModalTitle: React.FC<ModalTitleProps> = ({ children, className, oii
     <Dialog.Title
       id={titleId}
       className={theme.title?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="title"
     >
       {children}

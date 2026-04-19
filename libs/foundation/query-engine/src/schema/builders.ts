@@ -6,11 +6,11 @@
  * @module schema/builders
  */
 
-import type { Mutable } from '@open-insights-web/foundation-data-model';
+import type { Mutable } from '@open-zentra/foundation-data-model';
 import {
   MemberRef as MemberRefUtil,
   SqlTableName as TableNameUtil,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { AGGREGATIONS, type Aggregation } from '../types/aggregation';
 import { JOIN_TYPES, type JoinType } from '../types/join';

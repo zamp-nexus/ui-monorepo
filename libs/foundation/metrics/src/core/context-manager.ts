@@ -12,7 +12,7 @@ import {
   getCurrentRoute,
   hashStringSync,
   type BrowserInfo,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type {
   AppContext,

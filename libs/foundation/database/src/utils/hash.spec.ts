@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
+import { hashPayloadAsync, hashPayloadSync } from '@open-zentra/foundation-utils';
 
 import { generateIdempotencyKey, generateIdempotencyKeyAsync } from './hash';
 
@@ -174,4 +174,4 @@ describe('generateIdempotencyKeyAsync', () => {
   });
 });
 
-// Note: hashQueryKey tests are in @open-insights-web/foundation-data-model
+// Note: hashQueryKey tests are in @open-zentra/foundation-data-model

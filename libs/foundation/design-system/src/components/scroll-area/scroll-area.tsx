@@ -41,7 +41,7 @@ export const ScrollArea = React.forwardRef(function ScrollArea<T extends React.E
   {
     component: _component,
     className,
-    oiid,
+    ozid,
     orientation = 'vertical',
     type = 'hover',
     height,
@@ -66,14 +66,14 @@ export const ScrollArea = React.forwardRef(function ScrollArea<T extends React.E
     <ScrollAreaPrimitive.Root
       ref={ref as React.Ref<HTMLDivElement>}
       className={cn(theme.root?.({ orientation, type }), type === 'hover' && 'group', className)}
-      data-oiid={oiid}
+      data-ozid={ozid}
       style={style}
       {...rest}
     >
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         className={theme.viewport?.({ orientation }) ?? ''}
-        data-oiid={oiid ? `${oiid}__viewport` : undefined}
+        data-ozid={ozid ? `${ozid}__viewport` : undefined}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

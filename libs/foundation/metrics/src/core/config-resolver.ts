@@ -3,7 +3,7 @@
  * @module core/config-resolver
  */
 
-import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-insights-web/foundation-data-model';
+import { COMPLIANCE_REGION, ENVIRONMENT } from '@open-zentra/foundation-data-model';
 
 import type {
   ErrorSignalConfig,

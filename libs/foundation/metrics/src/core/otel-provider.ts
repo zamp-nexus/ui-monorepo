@@ -31,11 +31,11 @@ import {
   ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions';
 
-import { detectBrowser } from '@open-insights-web/foundation-utils';
+import { detectBrowser } from '@open-zentra/foundation-utils';
 
 import type { ResolvedConfig, ResourceAttributes } from '../types';
 
-const SDK_NAME = '@open-insights-web/foundation-metrics';
+const SDK_NAME = '@open-zentra/foundation-metrics';
 const SDK_VERSION = '0.0.1';
 
 /**

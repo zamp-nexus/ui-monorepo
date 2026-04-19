@@ -12,7 +12,7 @@ import type {
   QueryId,
   Timestamp,
   WorkerId,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { PriorityLevel, QueryLockMode } from '../constants';
 import type { QueryResult } from './bridge';

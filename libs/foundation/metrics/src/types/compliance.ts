@@ -3,8 +3,8 @@
  * @module types/compliance
  */
 
-import type { ComplianceRegion, HashAlgorithm } from '@open-insights-web/foundation-data-model';
-import type { URLSanitizationOptions } from '@open-insights-web/foundation-utils';
+import type { ComplianceRegion, HashAlgorithm } from '@open-zentra/foundation-data-model';
+import type { URLSanitizationOptions } from '@open-zentra/foundation-utils';
 
 import type { AuditLogAction, PiiFieldType } from './constants';
 

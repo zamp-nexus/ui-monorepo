@@ -12,7 +12,7 @@ import type { QueryKey } from '@tanstack/react-query';
 import {
   isMutationOperation as isCoreMutationOperation,
   WRITE_OPERATIONS,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { QUERY_ENGINE_PATHS } from '../internal/constants';
 import { QUERY_DATA_SOURCES, type Query, type DataSource as QueryDataSource } from '../types/query';

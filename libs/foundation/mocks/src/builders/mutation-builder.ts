@@ -12,7 +12,7 @@ import {
   ProvisionalId,
   Timestamp,
   type JsonSerializable,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Types

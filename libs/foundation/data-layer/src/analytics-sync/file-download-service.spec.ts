@@ -2,8 +2,8 @@ import {
   FOUNDATION_ERROR_CODE,
   FoundationError,
   OPFS_FILE_TYPE,
-} from '@open-insights-web/foundation-data-model';
-import type { DataSourceFileInfo } from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
+import type { DataSourceFileInfo } from '@open-zentra/foundation-data-model';
 
 import {
   DownloadError,

@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -23,7 +23,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
   icon,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('accordion', accordionDefaultTheme);
   const { disabled } = useAccordionContext();
@@ -32,12 +32,12 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
     <AccordionPrimitive.Header>
       <AccordionPrimitive.Trigger
         className={theme.trigger?.({ className, disabled }) ?? className}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-slot="trigger"
       >
         {children}
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.icon?.({}) ?? ''}
           slotName="icon"
           slot={icon}

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { OPERATIONS } from '@open-insights-web/foundation-data-model';
+import { OPERATIONS } from '@open-zentra/foundation-data-model';
 
 import type { DecisionContext, DecisionTableConfig } from '../types/decision';
 import { DECISION_REASONS } from '../types/decision';

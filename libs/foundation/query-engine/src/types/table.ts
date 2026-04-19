@@ -4,7 +4,7 @@
  * Table source, load state, and configuration types.
  *
  * NOTE: For ConflictStrategy type, import directly from
- * @open-insights-web/foundation-data-model
+ * @open-zentra/foundation-data-model
  *
  * @module types/table
  */
@@ -20,7 +20,7 @@ import {
   type ConflictStrategy,
   type DataFreshnessLevel,
   type WriteOperation,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // TABLE SOURCE

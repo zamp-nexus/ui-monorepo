@@ -4,7 +4,7 @@
  */
 import React, { useId, useMemo } from 'react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -57,7 +57,7 @@ const BannerRoot = React.forwardRef(function Banner<T extends React.ElementType 
     component,
     className,
     children,
-    oiid,
+    ozid,
     variant = 'info',
     type = 'inline',
     spotlight,
@@ -96,7 +96,7 @@ const BannerRoot = React.forwardRef(function Banner<T extends React.ElementType 
       <Element
         ref={ref}
         className={theme.root({ className, variant, type, spotlight, dismissible })}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-variant={variant}
         role="alert"
         aria-labelledby={titleId}
@@ -106,7 +106,7 @@ const BannerRoot = React.forwardRef(function Banner<T extends React.ElementType 
         {/* Icon slot */}
         {(icon || showDefaultIcon) && (
           <Slot
-            baseOiid={oiid}
+            baseOzid={ozid}
             className={theme.icon?.({ variant }) ?? ''}
             slotName="icon"
             slot={icon}

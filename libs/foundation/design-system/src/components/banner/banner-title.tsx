@@ -14,7 +14,7 @@ import { bannerDefaultTheme } from './types';
  *
  * Title text for the banner. Uses context to provide proper ARIA labeling.
  */
-export const BannerTitle: React.FC<BannerTitleProps> = ({ children, className, oiid }) => {
+export const BannerTitle: React.FC<BannerTitleProps> = ({ children, className, ozid }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
   const { titleId, variant } = useBannerContext();
 
@@ -22,7 +22,7 @@ export const BannerTitle: React.FC<BannerTitleProps> = ({ children, className, o
     <div
       id={titleId}
       className={theme.title?.({ className, variant }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="title"
     >
       {children}

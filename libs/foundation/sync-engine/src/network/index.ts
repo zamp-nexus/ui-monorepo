@@ -9,16 +9,16 @@ import {
   SYNC_STATE_KEY,
   type NetworkStatus,
   type NetworkStatusListener,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { DEFAULT_NETWORK_STATUS, getDatabase } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
+import { DEFAULT_NETWORK_STATUS, getDatabase } from '@open-zentra/foundation-database';
 import {
   AsyncDisposable,
   createDebugLogger,
   createSingletonFactory,
   ManagedInterval,
   normalizeError,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import {
   DEFAULT_HEALTH_CHECK_INTERVAL_MS,

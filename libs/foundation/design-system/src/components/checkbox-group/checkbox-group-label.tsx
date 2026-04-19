@@ -34,7 +34,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
   selectAll,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('checkboxGroup', checkboxGroupDefaultTheme);
   const {
@@ -71,7 +71,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
     return (
       <label
         className={theme.groupLabel?.({ className, size }) ?? className}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-slot="label"
       >
         <Checkbox
@@ -80,7 +80,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
           disabled={disabled || allItemValues.length === 0}
           size={checkboxSize}
           indeterminate={isIndeterminate}
-          oiid={oiid ? `${oiid}__select-all` : undefined}
+          ozid={ozid ? `${ozid}__select-all` : undefined}
         />
         <span className={theme.label?.({ size }) ?? ''}>{children}</span>
       </label>
@@ -90,7 +90,7 @@ export const CheckboxGroupLabel: React.FC<CheckboxGroupLabelProps> = ({
   return (
     <div
       className={theme.groupLabel?.({ className, size }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="label"
     >
       <span className={theme.label?.({ size }) ?? ''}>{children}</span>

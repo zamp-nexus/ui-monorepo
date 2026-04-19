@@ -1,6 +1,6 @@
-# @open-insights-web/foundation-data-model
+# @open-zentra/foundation-data-model
 
-Canonical contract package for Open Insights foundation libraries.
+Canonical contract package for Open Zentra foundation libraries.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Consumers include `foundation-database`, `foundation-sync-engine`, `foundation-d
 ## Installation
 
 ```bash
-npm i @open-insights-web/foundation-data-model
+npm i @open-zentra/foundation-data-model
 ```
 
 ## Constants-Only Contract Model
@@ -36,7 +36,7 @@ Examples:
 Pattern:
 
 ```ts
-import type { ValueOf } from '@open-insights-web/foundation-data-model';
+import type { ValueOf } from '@open-zentra/foundation-data-model';
 
 export const MY_DOMAIN = {
   A: 'a',
@@ -85,7 +85,7 @@ import {
   MUTATION_TYPE,
   OPFS_FILE_TYPE,
   SYNC_STATE_KEY,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 const entry = createTableSyncMetadataEntry('events', Date.now(), {
   'events-2026-01.parquet': 'abc123',
@@ -136,7 +136,7 @@ import {
   OFFLINE_QUERY_SOURCE,
   type ConflictResult,
   type OfflineQueryContext,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 const result: ConflictResult<{ id: string }> = {
   resolvedData: { id: '1' },

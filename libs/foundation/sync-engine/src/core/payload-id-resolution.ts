@@ -3,7 +3,7 @@
  * @module core/payload-id-resolution
  */
 
-import { isProvisionalId } from '@open-insights-web/foundation-data-model';
+import { isProvisionalId } from '@open-zentra/foundation-data-model';
 
 const isPlainObjectRecord = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {

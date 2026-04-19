@@ -6,11 +6,11 @@
  * @module wasm/pool/factory
  */
 
-import { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { Milliseconds } from '@open-zentra/foundation-data-model';
 import {
   createAsyncSingletonFactory,
   type ConfigComparisonResult,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { DuckDBPoolConfig } from '../../types/pool';
 import { QueryCoordinator } from './query-coordinator';

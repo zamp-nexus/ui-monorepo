@@ -4,7 +4,7 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/tools/design-system-plugin',
   test: {
-    name: '@open-insights-web/design-system-plugin',
+    name: '@open-zentra/design-system-plugin',
     watch: false,
     globals: true,
     environment: 'jsdom',

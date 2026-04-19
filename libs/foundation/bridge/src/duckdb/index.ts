@@ -2,7 +2,7 @@
  * DuckDB exports
  *
  * For bridge types, import directly from '../types/bridge'.
- * For branded types, import from '@open-insights-web/foundation-data-model'.
+ * For branded types, import from '@open-zentra/foundation-data-model'.
  *
  * @module duckdb
  */

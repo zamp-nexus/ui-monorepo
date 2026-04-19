@@ -10,7 +10,7 @@
  * these modules, please use the public API instead.
  *
  * NOTE: Branded types (QueryId, WorkerId, SqlIdentifier, SqlTableName, Milliseconds, Timestamp)
- * should be imported directly from '@open-insights-web/foundation-data-model'.
+ * should be imported directly from '@open-zentra/foundation-data-model'.
  *
  * @packageDocumentation
  */
@@ -60,7 +60,7 @@ export {
   PoolCapacityError,
 } from './errors/pool-errors';
 
-// NOTE: For OpfsNotSupportedError, import directly from '@open-insights-web/foundation-database'
+// NOTE: For OpfsNotSupportedError, import directly from '@open-zentra/foundation-database'
 export {
   BridgeNotInitializedError,
   BridgeInitializationError,
@@ -91,11 +91,11 @@ export { validatePoolConfig, validateRouterConfig, resolvePoolConfig } from './u
 export type { RouterConfigForValidation } from './utils/validation';
 
 // NOTE: For async utilities (sleep, withTimeout), import directly from:
-// '@open-insights-web/foundation-utils'
+// '@open-zentra/foundation-utils'
 
 // NOTE: For generic utilities, import directly from source packages:
-// - From '@open-insights-web/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
-// - From '@open-insights-web/foundation-data-model': ValidationResult, ValidationResultData
+// - From '@open-zentra/foundation-utils': deepFreeze, assert, assertDefined, isPositiveInteger, isNonNegative
+// - From '@open-zentra/foundation-data-model': ValidationResult, ValidationResultData
 
 // ============================================================================
 // All Constants (Internal Access)

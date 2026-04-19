@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { OPFS_FILE_TYPE } from '@open-insights-web/foundation-data-model';
+import { OPFS_FILE_TYPE } from '@open-zentra/foundation-data-model';
 
 import type { DatabaseConfig } from '../core/config';
 import { OpfsMetadataService } from './opfs-metadata';

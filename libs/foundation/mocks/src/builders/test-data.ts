@@ -12,7 +12,7 @@ import {
   ProvisionalId,
   Timestamp,
   type UserRole,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Random Value Generators

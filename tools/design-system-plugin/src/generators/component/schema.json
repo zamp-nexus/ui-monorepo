@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/schema",
   "$id": "Component",
-  "title": "OpenInsights Design System Component Generator",
-  "description": "Generate a new OpenInsights design system component with variants, modifiers, and slots",
+  "title": "OpenZentra Design System Component Generator",
+  "description": "Generate a new OpenZentra design system component with variants, modifiers, and slots",
   "type": "object",
   "properties": {
     "name": {

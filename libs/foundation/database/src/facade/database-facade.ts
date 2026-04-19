@@ -15,12 +15,12 @@ import {
   DATABASE_TRANSACTION_TABLE,
   type DatabaseTransactionMode,
   type DatabaseTransactionTable,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   assertNever,
   createDeepEqualComparison,
   createSingletonFactory,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { DatabaseConfig } from '../core/config';
 import { getDatabase, resetDatabase, type DatabaseStats } from '../core/database';

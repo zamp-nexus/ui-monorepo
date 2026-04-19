@@ -1,13 +1,13 @@
 /**
  * Bridge and OPFS error classes
  *
- * NOTE: For OpfsNotSupportedError, import directly from '@open-insights-web/foundation-database'.
+ * NOTE: For OpfsNotSupportedError, import directly from '@open-zentra/foundation-database'.
  * OPFS is fundamentally a database concern, so that is the canonical source.
  *
  * @module errors/bridge-errors
  */
 
-import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+import { FOUNDATION_ERROR_CODE } from '@open-zentra/foundation-data-model';
 
 import { BridgeError } from './base-error';
 

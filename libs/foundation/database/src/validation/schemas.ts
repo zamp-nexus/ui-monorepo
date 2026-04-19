@@ -16,7 +16,7 @@ import {
   OPFS_FILE_TYPE,
   realtimeCursorStoreSchema,
   Result,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Reusable Base Schemas (DRY)

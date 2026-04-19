@@ -19,8 +19,8 @@ import {
   MUTATION_STATUS,
   MUTATION_TYPE,
   needsTableUpdate as needsSharedTableUpdate,
-} from '@open-insights-web/foundation-data-model';
-import { hashPayloadAsync, hashPayloadSync } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { hashPayloadAsync, hashPayloadSync } from '@open-zentra/foundation-utils';
 
 import { DEFAULT_DATABASE_CONFIG, mergeConfig } from './core/config';
 import { getDatabase, hasDatabase, resetDatabase } from './core/database';
@@ -233,7 +233,7 @@ describe('Hash Utilities', () => {
     });
   });
 
-  // Note: hashQueryKey tests are in @open-insights-web/foundation-data-model
+  // Note: hashQueryKey tests are in @open-zentra/foundation-data-model
 });
 
 // =============================================================================
@@ -376,7 +376,7 @@ describe('Validation Schemas', () => {
 
 describe('Config', () => {
   it('should provide default config', () => {
-    expect(DEFAULT_DATABASE_CONFIG.name).toBe('open-insights-db');
+    expect(DEFAULT_DATABASE_CONFIG.name).toBe('open-zentra-db');
     expect(DEFAULT_DATABASE_CONFIG.version).toBe(1);
     expect(DEFAULT_DATABASE_CONFIG.queryCacheTTL).toBe(5 * 60 * 1000);
     expect(DEFAULT_DATABASE_CONFIG.maxRetryAttempts).toBe(3);

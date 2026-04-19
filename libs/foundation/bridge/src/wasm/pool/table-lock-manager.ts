@@ -15,7 +15,7 @@
  * @module wasm/pool/table-lock-manager
  */
 
-import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, type Logger } from '@open-zentra/foundation-utils';
 
 import { QUERY_MODE } from '../../constants';
 import type { QueryLockMode } from '../../constants';

@@ -9,7 +9,7 @@
 
 import type { AxiosRequestConfig } from 'axios';
 
-import { HTTP_METHOD, type HttpMethod } from '@open-insights-web/foundation-data-model';
+import { HTTP_METHOD, type HttpMethod } from '@open-zentra/foundation-data-model';
 
 const UNKNOWN_HOST_KEY = '__unknown__';
 

@@ -2,8 +2,8 @@ import {
   CONFLICT_STRATEGY,
   DATA_FRESHNESS,
   type UnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
-import { TIME_MS } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { TIME_MS } from '@open-zentra/foundation-utils';
 
 import { createTableRegistry, TableRegistry } from './table-registry';
 

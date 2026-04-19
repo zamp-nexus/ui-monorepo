@@ -16,7 +16,7 @@ import { modalDefaultTheme } from './types';
  *
  * Container for the modal content. Renders backdrop and popup.
  */
-export const ModalContent: React.FC<ModalContentProps> = ({ children, className, oiid }) => {
+export const ModalContent: React.FC<ModalContentProps> = ({ children, className, ozid }) => {
   const theme = useTheme('modal', modalDefaultTheme);
   const { size, fillContainer, fitContent, titleId, descriptionId } = useModalContext();
 
@@ -24,11 +24,11 @@ export const ModalContent: React.FC<ModalContentProps> = ({ children, className,
     <Dialog.Portal>
       <Dialog.Backdrop
         className={theme.backdrop?.({}) ?? ''}
-        data-oiid={oiid ? `${oiid}__backdrop` : undefined}
+        data-ozid={ozid ? `${ozid}__backdrop` : undefined}
       />
       <Dialog.Popup
         className={theme.popup?.({ className, size, fillContainer, fitContent }) ?? className}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-slot="content"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}

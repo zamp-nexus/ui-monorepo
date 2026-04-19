@@ -12,7 +12,7 @@ import isEqual from 'react-fast-compare';
 import {
   createDeepEqualComparison,
   createSingletonFactory,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { OryConfig } from './types';
 

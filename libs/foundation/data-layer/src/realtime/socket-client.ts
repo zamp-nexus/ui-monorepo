@@ -19,8 +19,8 @@ import {
   type RealtimeSubscriptionSnapshot,
   type RealtimeTopicCursor,
   type RealtimeTopicDescriptor,
-} from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, SafeTimer, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createDebugLogger, SafeTimer, type Logger } from '@open-zentra/foundation-utils';
 
 import { executeQueryDescriptor } from '../core/http-descriptor';
 import type { RealtimeSocketConfig, RealtimeWebSocketTicket } from '../core/types';

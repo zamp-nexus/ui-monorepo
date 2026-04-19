@@ -1,5 +1,5 @@
 /**
- * Theme context for the OpenInsights Design System
+ * Theme context for the OpenZentra Design System
  * @module theme/theme-context
  */
 

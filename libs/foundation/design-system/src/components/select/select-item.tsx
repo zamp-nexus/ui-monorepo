@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import { useSelectContext } from './select.context';
@@ -20,7 +20,7 @@ import { selectDefaultTheme } from './types';
  */
 export const SelectItem: SelectItemComponent = React.forwardRef<HTMLDivElement, SelectItemProps>(
   function SelectItem(
-    { className, oiid, children, value, disabled, ...rest },
+    { className, ozid, children, value, disabled, ...rest },
     ref: React.ForwardedRef<HTMLDivElement>,
   ) {
     const { size } = useSelectContext();
@@ -30,7 +30,7 @@ export const SelectItem: SelectItemComponent = React.forwardRef<HTMLDivElement, 
       <SelectPrimitive.Item
         ref={ref}
         className={theme.item?.({ className, size }) ?? ''}
-        data-oiid={oiid}
+        data-ozid={ozid}
         value={value}
         disabled={disabled}
         {...rest}

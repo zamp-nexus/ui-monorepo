@@ -4,7 +4,7 @@
  * Extends FoundationError to provide consistent error handling
  * across all foundation libraries.
  *
- * Import error utilities directly from '@open-insights-web/foundation-data-model':
+ * Import error utilities directly from '@open-zentra/foundation-data-model':
  * - FoundationError, ErrorContext, FoundationErrorCode
  * - isFoundationError, hasErrorCode, isErrorCategory, toFoundationError
  *
@@ -14,7 +14,7 @@
 import {
   FoundationError,
   type FoundationErrorCode,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Bridge Error Base Class

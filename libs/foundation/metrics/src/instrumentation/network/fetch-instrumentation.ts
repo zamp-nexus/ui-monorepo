@@ -5,13 +5,13 @@
 
 import { context, propagation, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
-import type { HttpMethod } from '@open-insights-web/foundation-data-model';
+import type { HttpMethod } from '@open-zentra/foundation-data-model';
 import {
   extractRoute,
   sanitizeUrl,
   shouldIgnoreUrl,
   shouldPropagateTraceContext,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter, getTracer } from '../../core/otel-provider';

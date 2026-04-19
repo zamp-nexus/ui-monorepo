@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { SqlIdentifier } from '@open-insights-web/foundation-data-model';
+import type { SqlIdentifier } from '@open-zentra/foundation-data-model';
 
 import { SqlValidationError } from '../errors/query-errors';
 import {

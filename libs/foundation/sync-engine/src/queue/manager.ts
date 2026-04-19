@@ -14,15 +14,15 @@ import {
   type MutationQueueEntry,
   type MutationStatus,
   type QueueStats,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { createMutationEntry, getDatabase } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
+import { createMutationEntry, getDatabase } from '@open-zentra/foundation-database';
 import {
   createDebugLogger,
   createSingletonFactory,
   Disposable,
   normalizeError,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import {
   DEFAULT_ID_MAPPING_TTL_MS,

@@ -27,7 +27,7 @@ import {
   createDebugLogger,
   getErrorMessage,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { DatabaseConfig } from '../core/config';
 import type { InsightsDatabase } from '../core/database';

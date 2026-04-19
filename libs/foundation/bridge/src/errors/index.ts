@@ -2,9 +2,9 @@
  * Error exports
  *
  * NOTE: Foundation error utilities (FoundationError, isFoundationError, hasErrorCode, etc.)
- * should be imported directly from '@open-insights-web/foundation-data-model'.
+ * should be imported directly from '@open-zentra/foundation-data-model'.
  *
- * NOTE: OpfsNotSupportedError should be imported directly from '@open-insights-web/foundation-database'
+ * NOTE: OpfsNotSupportedError should be imported directly from '@open-zentra/foundation-database'
  * since OPFS is fundamentally a database concern.
  *
  * @module errors

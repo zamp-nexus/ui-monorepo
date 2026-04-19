@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System - Test Utilities
+ * OpenZentra Design System - Test Utilities
  * @module test
  */
 

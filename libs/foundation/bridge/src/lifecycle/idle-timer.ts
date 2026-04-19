@@ -3,14 +3,14 @@
  * @module lifecycle/idle-timer
  */
 
-import type { Milliseconds } from '@open-insights-web/foundation-data-model';
-import { Timestamp } from '@open-insights-web/foundation-data-model';
+import type { Milliseconds } from '@open-zentra/foundation-data-model';
+import { Timestamp } from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   Disposable,
   SafeTimer,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 /**
  * Idle timer configuration

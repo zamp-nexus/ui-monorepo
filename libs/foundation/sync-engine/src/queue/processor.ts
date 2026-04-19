@@ -9,7 +9,7 @@ import type {
   IdMapping,
   MutationQueueEntry,
   ProcessingResult,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   isPlainObject,
   isProvisionalId,
@@ -17,8 +17,8 @@ import {
   MUTATION_TYPE,
   Timestamp,
   tryToJsonSerializable,
-} from '@open-insights-web/foundation-data-model';
-import { canProcessMutation } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import { canProcessMutation } from '@open-zentra/foundation-database';
 import {
   createDebugLogger,
   Disposable,
@@ -29,7 +29,7 @@ import {
   normalizeError,
   sleep,
   topologicalSort,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { ConflictResolver } from '../conflicts/resolver';
 import {

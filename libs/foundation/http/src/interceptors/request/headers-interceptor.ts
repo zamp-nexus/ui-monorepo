@@ -8,7 +8,7 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-import { createDebugLogger, generateId } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, generateId } from '@open-zentra/foundation-utils';
 
 import { CLIENT_HEADERS, HTTP_HEADERS } from '../../core/constants';
 import type { ClientHeadersConfig } from '../../core/types';

@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Component Guidelines
 
-This guide covers best practices for using and extending the Open Insights Design System components.
+This guide covers best practices for using and extending the Open Zentra Design System components.
 
 ## Component Architecture
 
@@ -51,7 +51,7 @@ Many of our complex components use the compound component pattern, which provide
 All components must be wrapped in a `ThemeProvider`:
 
 ```tsx
-import { defaultTheme, ThemeProvider } from '@open-insights-web/foundation-design-system';
+import { defaultTheme, ThemeProvider } from '@open-zentra/foundation-design-system';
 
 function App() {
   return (
@@ -67,7 +67,7 @@ function App() {
 Create custom themes by extending the default theme:
 
 ```tsx
-import { createTheme, defaultTheme } from '@open-insights-web/foundation-design-system';
+import { createTheme, defaultTheme } from '@open-zentra/foundation-design-system';
 
 const customTheme = createTheme({
   ...defaultTheme,
@@ -227,7 +227,7 @@ Use viewport-aware patterns:
 Wrap components that might fail:
 
 ```tsx
-import { ErrorBoundary } from '@open-insights-web/foundation-design-system';
+import { ErrorBoundary } from '@open-zentra/foundation-design-system';
 
 <ErrorBoundary fallback={<ErrorFallback />}>
   <ComponentThatMightFail />
@@ -258,9 +258,9 @@ Import components directly for optimal tree-shaking:
 
 ```tsx
 // Good - only imports Button
-import { Button } from '@open-insights-web/foundation-design-system';
+import { Button } from '@open-zentra/foundation-design-system';
 // Also good - same result
-import { Button } from '@open-insights-web/foundation-design-system/button';
+import { Button } from '@open-zentra/foundation-design-system/button';
 ```
 
 ### Lazy Loading
@@ -287,7 +287,7 @@ Components are designed for easy testing:
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { Button } from '@open-insights-web/foundation-design-system';
+import { Button } from '@open-zentra/foundation-design-system';
 
 test('button calls onClick when clicked', async () => {
   const handleClick = vi.fn();

@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System - Primitives
+ * OpenZentra Design System - Primitives
  * Low-level building blocks for components
  * @module primitives
  */

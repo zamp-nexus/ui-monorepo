@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { FOUNDATION_ERROR_CODE } from '@open-insights-web/foundation-data-model';
+import { FOUNDATION_ERROR_CODE } from '@open-zentra/foundation-data-model';
 
 import { HTTP_ERROR_CODE } from '../core/constants';
 import {

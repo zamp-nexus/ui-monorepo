@@ -16,7 +16,7 @@ import { drawerDefaultTheme } from './types';
  *
  * Title text for the drawer.
  */
-export const DrawerTitle: React.FC<DrawerTitleProps> = ({ children, className, oiid }) => {
+export const DrawerTitle: React.FC<DrawerTitleProps> = ({ children, className, ozid }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
   const { titleId } = useDrawerContext();
 
@@ -24,7 +24,7 @@ export const DrawerTitle: React.FC<DrawerTitleProps> = ({ children, className, o
     <Dialog.Title
       id={titleId}
       className={theme.title?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="title"
     >
       {children}

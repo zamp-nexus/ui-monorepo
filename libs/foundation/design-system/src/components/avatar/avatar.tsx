@@ -45,7 +45,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
   {
     component,
     className,
-    oiid,
+    ozid,
     size = 'md',
     shape = 'circle',
     status = 'none',
@@ -78,7 +78,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
     <Element
       ref={ref}
       className={theme.root({ className, size, shape, status, skeleton, hasContext })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-status={status !== 'none' ? status : undefined}
       {...rest}
     >
@@ -89,14 +89,14 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
           alt={alt || name || 'Avatar'}
           className={theme.image?.({ size, shape }) ?? ''}
           onError={handleImageError}
-          data-oiid={oiid ? `${oiid}__image` : undefined}
+          data-ozid={ozid ? `${ozid}__image` : undefined}
         />
       )}
 
       {/* Fallback (initials or custom) */}
       {showFallback && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.fallback?.({ size }) ?? ''}
           slotName="fallback"
           slot={fallback}
@@ -119,7 +119,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
       {status !== 'none' && !context && (
         <span
           className={theme.statusIndicator?.({ size, status }) ?? ''}
-          data-oiid={oiid ? `${oiid}__status` : undefined}
+          data-ozid={ozid ? `${ozid}__status` : undefined}
           aria-label={`Status: ${status}`}
         />
       )}
@@ -127,7 +127,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
       {/* Context slot (replaces status indicator position) */}
       {context && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.context?.({ size }) ?? ''}
           slotName="context"
           slot={context}

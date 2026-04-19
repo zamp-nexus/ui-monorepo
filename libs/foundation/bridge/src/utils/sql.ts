@@ -6,7 +6,7 @@
  * @module utils/sql
  */
 
-import type { SqlIdentifier, SqlTableName } from '@open-insights-web/foundation-data-model';
+import type { SqlIdentifier, SqlTableName } from '@open-zentra/foundation-data-model';
 
 import { SQL } from '../constants';
 import { SqlValidationError } from '../errors/query-errors';

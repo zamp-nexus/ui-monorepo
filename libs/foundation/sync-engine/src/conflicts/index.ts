@@ -2,7 +2,7 @@
  * Conflict resolution exports
  *
  * NOTE: ConflictStrategy, ConflictContext, ConflictResult, and MergeConfig types
- * should be imported directly from @open-insights-web/foundation-data-model
+ * should be imported directly from @open-zentra/foundation-data-model
  *
  * @module conflicts
  */

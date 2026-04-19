@@ -10,7 +10,7 @@ import {
   type JsonValue,
   type MutationQueueEntry,
   type MutationStatus,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { generateIdempotencyKey } from '../utils/hash';
 

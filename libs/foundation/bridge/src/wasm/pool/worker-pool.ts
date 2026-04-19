@@ -10,14 +10,14 @@
  * @module wasm/pool/worker-pool
  */
 
-import { WorkerId } from '@open-insights-web/foundation-data-model';
-import type { Logger } from '@open-insights-web/foundation-utils';
+import { WorkerId } from '@open-zentra/foundation-data-model';
+import type { Logger } from '@open-zentra/foundation-utils';
 import {
   createDebugLogger,
   getErrorMessage,
   normalizeError,
   withTimeout,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { WorkerInitializationError } from '../../errors/pool-errors';
 import type { ResolvedPoolConfig, WorkerInfo } from '../../types';

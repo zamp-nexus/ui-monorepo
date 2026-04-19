@@ -6,7 +6,7 @@
  * @module builders/query-builder
  */
 
-import { QueryId, Timestamp } from '@open-insights-web/foundation-data-model';
+import { QueryId, Timestamp } from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Types

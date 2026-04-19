@@ -3,14 +3,14 @@
  *
  * Helpers for building and working with TanStack Query keys.
  *
- * NOTE: For DataSource type, import directly from @open-insights-web/foundation-data-model
+ * NOTE: For DataSource type, import directly from @open-zentra/foundation-data-model
  *
  * @module utils/query-key
  */
 
 import type { QueryKey } from '@tanstack/react-query';
 
-import { DATA_SOURCE, type DataSource } from '@open-insights-web/foundation-data-model';
+import { DATA_SOURCE, type DataSource } from '@open-zentra/foundation-data-model';
 
 /**
  * Build a query key from table, entityId, and args

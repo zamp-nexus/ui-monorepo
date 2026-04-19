@@ -29,7 +29,7 @@ const IconButtonImpl = <T extends React.ElementType = 'button'>(
     component,
     className,
     children,
-    oiid,
+    ozid,
     intent = 'secondary',
     size = 'md',
     disabled,
@@ -55,7 +55,7 @@ const IconButtonImpl = <T extends React.ElementType = 'button'>(
         disabled: isDisabled,
         loading,
       })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       aria-disabled={isDisabled || undefined}
       aria-busy={loading || undefined}
       aria-label={ariaLabel}

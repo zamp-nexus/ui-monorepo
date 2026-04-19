@@ -28,7 +28,7 @@
     "",
     "<THIRD_PARTY_MODULES>",
     "",
-    "^@open-insights-web/(.*)$",
+    "^@open-zentra/(.*)$",
     "",
     "^[./]"
   ],

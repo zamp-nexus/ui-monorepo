@@ -21,12 +21,12 @@ import {
   isMutationOperation,
   OPERATIONS,
   WRITE_OPERATIONS,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createSingletonFactory,
   DisposedError,
   type IDisposable,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type {
   DecisionContext,

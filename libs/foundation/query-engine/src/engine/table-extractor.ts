@@ -18,7 +18,7 @@
  * @module engine/table-extractor
  */
 
-import { createSingletonFactory } from '@open-insights-web/foundation-utils';
+import { createSingletonFactory } from '@open-zentra/foundation-utils';
 
 import { mapFilterExpression } from '../internal/filter-recursion';
 import type { DimensionSpec } from '../types/dimension';

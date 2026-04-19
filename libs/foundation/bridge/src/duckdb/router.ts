@@ -5,9 +5,9 @@
 
 import isEqual from 'react-fast-compare';
 
-import type { Milliseconds } from '@open-insights-web/foundation-data-model';
-import { Timestamp } from '@open-insights-web/foundation-data-model';
-import type { Logger } from '@open-insights-web/foundation-utils';
+import type { Milliseconds } from '@open-zentra/foundation-data-model';
+import { Timestamp } from '@open-zentra/foundation-data-model';
+import type { Logger } from '@open-zentra/foundation-utils';
 import {
   createDebugLogger,
   createDeepEqualComparison,
@@ -15,7 +15,7 @@ import {
   getErrorMessage,
   Mutex,
   SafeTimer,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { BRIDGE_TYPE, DEFAULTS } from '../constants';
 import type { BridgeType } from '../constants';

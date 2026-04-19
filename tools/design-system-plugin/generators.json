@@ -3,7 +3,7 @@
     "component": {
       "factory": "./dist/generators/component/component",
       "schema": "./dist/generators/component/schema.json",
-      "description": "Generate a new OpenInsights design system component"
+      "description": "Generate a new OpenZentra design system component"
     }
   }
 }

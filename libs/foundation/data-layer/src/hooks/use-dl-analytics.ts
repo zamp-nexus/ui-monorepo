@@ -19,7 +19,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { DuckDBResult, DuckDBRow } from '@open-insights-web/foundation-bridge';
+import type { DuckDBResult, DuckDBRow } from '@open-zentra/foundation-bridge';
 
 import { ANALYTICS_QUERY_RETRY_MAX, QUERY_RETRY_DELAY_BASE_MS } from '../core/constants';
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';

@@ -1,6 +1,6 @@
-# @open-insights-web/foundation-auth
+# @open-zentra/foundation-auth
 
-Authentication and session management for Open Insights, centered on Ory and reusable token/session helpers for authenticated HTTP and WebSocket clients.
+Authentication and session management for Open Zentra, centered on Ory and reusable token/session helpers for authenticated HTTP and WebSocket clients.
 
 ## Features
 
@@ -13,14 +13,14 @@ Authentication and session management for Open Insights, centered on Ory and reu
 ## Installation
 
 ```bash
-npm install @open-insights-web/foundation-auth
+npm install @open-zentra/foundation-auth
 npm install @ory/client-fetch @ory/elements-react react
 ```
 
 ## Quick Start
 
 ```tsx
-import { AuthProvider } from '@open-insights-web/foundation-auth';
+import { AuthProvider } from '@open-zentra/foundation-auth';
 
 const App = () => (
   <AuthProvider
@@ -41,7 +41,7 @@ const App = () => (
 ## Typical Usage
 
 ```tsx
-import { useAuth, useAuthSession, useAuthUser } from '@open-insights-web/foundation-auth';
+import { useAuth, useAuthSession, useAuthUser } from '@open-zentra/foundation-auth';
 
 const ProfilePage = () => {
   const { isAuthenticated, logout } = useAuth();

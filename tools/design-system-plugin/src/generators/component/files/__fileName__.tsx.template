@@ -34,7 +34,7 @@ export const <%= className %> = React.forwardRef(function <%= className %><
     component,
     className,
     children,
-    oiid,
+    ozid,
 <% for (const v of variants) { %>
     <%= v.name %> = '<%= v.values[0] %>',
 <% } %>
@@ -62,7 +62,7 @@ export const <%= className %> = React.forwardRef(function <%= className %><
     <Element
       ref={ref}
       className={cn(rootClassName)}
-      data-oiid={oiid}
+      data-ozid={ozid}
       {...rest}
     >
       {children}

@@ -16,14 +16,14 @@ import { toastDefaultTheme } from './types';
 export const ToastDescription: React.FC<ToastDescriptionProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('toast', toastDefaultTheme);
 
   return (
     <p
       className={theme.description?.({ className, feedback: 'info' }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="description"
     >
       {children}

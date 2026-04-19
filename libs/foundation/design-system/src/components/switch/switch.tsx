@@ -34,7 +34,7 @@ export const Switch: SwitchComponent = React.forwardRef<HTMLButtonElement, Switc
   function Switch(
     {
       className,
-      oiid,
+      ozid,
       size = 'md',
       disabled,
       checked,
@@ -52,7 +52,7 @@ export const Switch: SwitchComponent = React.forwardRef<HTMLButtonElement, Switc
       <SwitchPrimitive.Root
         ref={ref}
         className={theme.root({ className, size, disabled, checked: !!checked })}
-        data-oiid={oiid}
+        data-ozid={ozid}
         disabled={disabled}
         checked={checked}
         defaultChecked={defaultChecked}
@@ -63,7 +63,7 @@ export const Switch: SwitchComponent = React.forwardRef<HTMLButtonElement, Switc
       >
         <SwitchPrimitive.Thumb
           className={theme.thumb?.({ size }) ?? ''}
-          data-oiid={oiid ? `${oiid}__thumb` : undefined}
+          data-ozid={ozid ? `${ozid}__thumb` : undefined}
         />
       </SwitchPrimitive.Root>
     );

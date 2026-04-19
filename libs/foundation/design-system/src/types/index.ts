@@ -1,5 +1,5 @@
 /**
- * OpenInsights Design System - Type Definitions
+ * OpenZentra Design System - Type Definitions
  * @module types
  */
 

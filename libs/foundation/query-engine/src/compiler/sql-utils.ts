@@ -2,7 +2,7 @@
  * SQL Utilities for Foundation Query Engine
  *
  * Provides SQL escaping, quoting, and formatting utilities.
- * Reuses canonical SQL helpers from @open-insights-web/foundation-bridge.
+ * Reuses canonical SQL helpers from @open-zentra/foundation-bridge.
  *
  * @module compiler/sql-utils
  */
@@ -12,7 +12,7 @@ import {
   isValidIdentifier as bridgeIsValidIdentifier,
   quoteIdentifier as bridgeQuoteIdentifier,
   validateIdentifier as bridgeValidateIdentifier,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 import type { FilterValue } from '../types/filter';
 import { parseMemberRef } from '../utils/member-ref';
@@ -41,7 +41,7 @@ export const escapeString = (value: string): string => bridgeEscapeString(value)
  * Validate that a string matches SQL identifier pattern (pattern-only).
  * Does not check reserved words or length. For full DuckDB identifier validation
  * (pattern + length + reserved words), use validateIdentifier/isValidIdentifier
- * from @open-insights-web/foundation-bridge.
+ * from @open-zentra/foundation-bridge.
  *
  * Valid identifiers start with a letter or underscore,
  * followed by letters, digits, or underscores.
@@ -62,7 +62,7 @@ export const isValidIdentifier = (name: string): boolean => {
  * Accepts any string and returns a quoted identifier string.
  *
  * For the "validate then quote" flow, use validateIdentifier + quoteIdentifier from
- * `@open-insights-web/foundation-bridge` (bridge takes validated SqlIdentifier, returns string).
+ * `@open-zentra/foundation-bridge` (bridge takes validated SqlIdentifier, returns string).
  *
  * @param identifier - Raw identifier to quote
  * @returns Double-quoted identifier safe for SQL

@@ -1,7 +1,7 @@
 /**
- * @open-insights-web/foundation-auth
+ * @open-zentra/foundation-auth
  *
- * Enterprise-grade authentication library integrating Ory with the Open Insights stack.
+ * Enterprise-grade authentication library integrating Ory with the Open Zentra stack.
  *
  * @packageDocumentation
  */

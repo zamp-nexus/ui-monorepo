@@ -5,7 +5,7 @@
 import React from 'react';
 
 import { cn } from '../../utils/cn';
-import { slotOiid } from '../../utils/oiid';
+import { slotOzid } from '../../utils/ozid';
 import {
   getSlotChildren,
   getSlotClassName,
@@ -21,23 +21,23 @@ import type { SlotComponent, SlotDefaultElement, SlotProps } from './slot';
  * Renders a slot for a design system component. Supports:
  * - React nodes as children
  * - Configuration objects with component/children/className
- * - Automatic oiid generation for testing
+ * - Automatic ozid generation for testing
  *
  * @example
  * // Simple slot with React node
- * <Slot slotName="startIcon" slot={<Icon />} baseOiid="button-1" />
+ * <Slot slotName="startIcon" slot={<Icon />} baseOzid="button-1" />
  *
  * @example
  * // Slot with configuration
  * <Slot
  *   slotName="startIcon"
  *   slot={{ component: 'span', children: <Icon />, className: 'custom' }}
- *   baseOiid="button-1"
+ *   baseOzid="button-1"
  * />
  *
  * @example
  * // Slot with default children
- * <Slot slotName="indicator" baseOiid="checkbox-1" component="span">
+ * <Slot slotName="indicator" baseOzid="checkbox-1" component="span">
  *   <CheckIcon />
  * </Slot>
  */
@@ -45,8 +45,8 @@ export const Slot = React.forwardRef(function Slot<
   T extends React.ElementType = SlotDefaultElement,
 >(
   {
-    baseOiid,
-    oiid: customOiid,
+    baseOzid,
+    ozid: customOzid,
     slotName,
     slot,
     component,
@@ -56,8 +56,8 @@ export const Slot = React.forwardRef(function Slot<
   }: SlotProps<T>,
   ref: React.ForwardedRef<Element>,
 ) {
-  // Generate oiid for the slot
-  const oiid = customOiid ?? (slotName ? slotOiid(baseOiid, slotName) : undefined);
+  // Generate ozid for the slot
+  const ozid = customOzid ?? (slotName ? slotOzid(baseOzid, slotName) : undefined);
 
   // Get children from slot prop or use provided children
   let slotChildren = children;
@@ -90,7 +90,7 @@ export const Slot = React.forwardRef(function Slot<
   }
 
   return (
-    <Element {...rest} ref={ref} className={finalClassName} data-oiid={oiid} data-slot={slotName}>
+    <Element {...rest} ref={ref} className={finalClassName} data-ozid={ozid} data-slot={slotName}>
       {slotChildren}
     </Element>
   );

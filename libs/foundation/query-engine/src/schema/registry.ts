@@ -21,12 +21,12 @@
 import type {
   MemberRef,
   SqlTableName as TableName,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   MemberRef as MemberRefUtil,
   SqlTableName as TableNameUtil,
-} from '@open-insights-web/foundation-data-model';
-import { createLogger, DisposedError, type IDisposable } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createLogger, DisposedError, type IDisposable } from '@open-zentra/foundation-utils';
 
 import type {
   DimensionDefinition,
@@ -94,7 +94,7 @@ export type MemberResolution = MeasureMemberResolution | DimensionMemberResoluti
  * Schema validation status with errors and warnings
  *
  * This is specific to schema validation in query-engine.
- * For general validation, use `ValidationResult` from `@open-insights-web/foundation-data-model`.
+ * For general validation, use `ValidationResult` from `@open-zentra/foundation-data-model`.
  *
  * Named "Status" to avoid confusion with `ValidationResult` from foundation-data-model.
  */

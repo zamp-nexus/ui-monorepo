@@ -8,8 +8,8 @@
 
 import type { Attributes } from '@opentelemetry/api';
 
-import { HTTP_METHOD, type HttpMethod } from '@open-insights-web/foundation-data-model';
-import { extractRoute } from '@open-insights-web/foundation-utils';
+import { HTTP_METHOD, type HttpMethod } from '@open-zentra/foundation-data-model';
+import { extractRoute } from '@open-zentra/foundation-utils';
 
 import type { NetworkRequest } from '../types';
 

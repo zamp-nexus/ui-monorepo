@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import type { ModalCloseProps } from './types';
@@ -17,13 +17,13 @@ import { modalDefaultTheme } from './types';
  *
  * Button that closes the modal. Can be used standalone or wrap custom content.
  */
-export const ModalClose: React.FC<ModalCloseProps> = ({ children, className, oiid, ...rest }) => {
+export const ModalClose: React.FC<ModalCloseProps> = ({ children, className, ozid, ...rest }) => {
   const theme = useTheme('modal', modalDefaultTheme);
 
   return (
     <Dialog.Close
       className={className || theme.close?.({}) || ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="close"
       aria-label="Close"
       {...rest}

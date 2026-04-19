@@ -11,12 +11,12 @@ import {
   type ConflictResult,
   type ConflictStrategy,
   type MergeConfig,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   createSingletonFactory,
   Disposable,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { IConflictResolver } from '../core/interfaces';
 import { DEFAULT_MERGE_CONFIG, strategyResolvers } from './strategies';

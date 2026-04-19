@@ -1,13 +1,13 @@
 # Data Layer Plugin
 
-Nx generator plugin for creating CRUD wrapper hooks aligned with `@open-insights-web/foundation-data-layer`.
+Nx generator plugin for creating CRUD wrapper hooks aligned with `@open-zentra/foundation-data-layer`.
 
 ## Usage
 
 ```bash
-nx g @open-insights-web/data-layer-plugin:crud product \
+nx g @open-zentra/data-layer-plugin:crud product \
   --directory=libs/products/data-layer/src \
-  --dataModel=@open-insights-web/products-data-model \
+  --dataModel=@open-zentra/products-data-model \
   --endpoint=/api/products
 ```
 

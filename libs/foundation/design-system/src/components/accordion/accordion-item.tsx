@@ -21,7 +21,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   disabled,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('accordion', accordionDefaultTheme);
   const { variant, disabled: groupDisabled } = useAccordionContext();
@@ -32,7 +32,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       value={value}
       disabled={isDisabled}
       className={theme.item?.({ className, variant, disabled: isDisabled }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="item"
     >
       {children}

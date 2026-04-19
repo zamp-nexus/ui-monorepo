@@ -5,7 +5,7 @@
 
 import type { SpanContext } from '@opentelemetry/api';
 
-import type { HttpMethod } from '@open-insights-web/foundation-data-model';
+import type { HttpMethod } from '@open-zentra/foundation-data-model';
 
 import type {
   BreadcrumbCategory,
@@ -142,7 +142,7 @@ export interface InteractionEvent {
   targetTag: string;
   targetId?: string;
   targetClasses?: string[];
-  targetOiid?: string;
+  targetOzid?: string;
   timestamp: number;
   route: string;
   metadata?: Record<string, unknown>;
@@ -154,7 +154,7 @@ export interface InteractionEvent {
 export interface RageClickEvent {
   clickCount: number;
   targetSelector: string;
-  targetOiid?: string;
+  targetOzid?: string;
   windowDuration: number;
   firstClickTime: number;
   lastClickTime: number;

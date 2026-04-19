@@ -16,13 +16,13 @@ A thin, extensible wrapper over [lucide-react](https://lucide.dev/) icons with T
 The library is already part of the monorepo. Import it in your components:
 
 ```tsx
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 ```
 
 ## Basic Usage
 
 ```tsx
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 // Simple icon
 <Icon name="home" />
@@ -202,7 +202,7 @@ You can add custom icons to the registry:
 ```tsx
 import { CustomIcon } from 'lucide-react';
 
-import { registerIcon } from '@open-insights-web/foundation-icons';
+import { registerIcon } from '@open-zentra/foundation-icons';
 
 // Register a new icon
 registerIcon({
@@ -225,7 +225,7 @@ To add more icons from lucide-react:
 ```tsx
 import { Sparkles, Zap } from 'lucide-react';
 
-import { registerIcon } from '@open-insights-web/foundation-icons';
+import { registerIcon } from '@open-zentra/foundation-icons';
 
 registerIcon({ name: 'zap', component: Zap });
 registerIcon({ name: 'sparkles', component: Sparkles });
@@ -240,7 +240,7 @@ import {
   getIcon,
   hasIcon,
   registerIcon,
-} from '@open-insights-web/foundation-icons';
+} from '@open-zentra/foundation-icons';
 
 // Check if icon exists
 if (hasIcon('home')) {

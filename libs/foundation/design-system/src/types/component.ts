@@ -1,5 +1,5 @@
 /**
- * Core component type definitions for the OpenInsights Design System
+ * Core component type definitions for the OpenZentra Design System
  * @module types/component
  */
 
@@ -16,13 +16,13 @@ type OIComponentReservedProp =
   (typeof OI_COMPONENT_RESERVED_PROP)[keyof typeof OI_COMPONENT_RESERVED_PROP];
 
 /**
- * Base props that every OpenInsights component inherits
+ * Base props that every OpenZentra component inherits
  */
 export interface OIDefaultProps {
   /** Custom className to merge with component styles */
   className?: string;
-  /** Open Insights ID - renders as data-oiid for testing/analytics */
-  oiid?: string;
+  /** Open Zentra ID - renders as data-ozid for testing/analytics */
+  ozid?: string;
 }
 
 /**
@@ -221,7 +221,7 @@ export type OIPolymorphicForwardRefComponent<
 export interface InteractionEvent {
   componentName: string;
   action: string;
-  oiid?: string;
+  ozid?: string;
   timestamp: number;
   metadata?: Record<string, unknown>;
 }
@@ -230,8 +230,8 @@ export interface InteractionEvent {
  * Component analytics configuration
  */
 export interface ComponentAnalytics {
-  onMount?: (componentName: string, oiid?: string) => void;
-  onUnmount?: (componentName: string, oiid?: string) => void;
+  onMount?: (componentName: string, ozid?: string) => void;
+  onUnmount?: (componentName: string, ozid?: string) => void;
   onInteraction?: (event: InteractionEvent) => void;
-  onError?: (error: Error, componentName: string, oiid?: string) => void;
+  onError?: (error: Error, componentName: string, ozid?: string) => void;
 }

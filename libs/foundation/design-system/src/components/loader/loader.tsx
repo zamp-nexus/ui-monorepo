@@ -54,7 +54,7 @@ export const Loader = React.forwardRef(function Loader<T extends React.ElementTy
   {
     component,
     className,
-    oiid,
+    ozid,
     size = 'md',
     variant = 'spinner',
     fullScreen,
@@ -87,7 +87,7 @@ export const Loader = React.forwardRef(function Loader<T extends React.ElementTy
     if (indicator) {
       return (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.indicator?.({ size }) ?? ''}
           slotName="indicator"
           slot={indicator}
@@ -118,7 +118,7 @@ export const Loader = React.forwardRef(function Loader<T extends React.ElementTy
     <Element
       ref={ref}
       className={theme.root({ className, size, variant, fullScreen, overlay, inline })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       role="status"
       aria-busy="true"
       aria-live="polite"
@@ -129,7 +129,7 @@ export const Loader = React.forwardRef(function Loader<T extends React.ElementTy
 
       {label && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.label?.({ size }) ?? ''}
           slotName="label"
           slot={label}

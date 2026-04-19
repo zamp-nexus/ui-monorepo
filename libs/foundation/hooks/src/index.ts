@@ -1,11 +1,11 @@
 /**
  * Foundation Hooks
  *
- * Reusable React hooks for the Open Insights Web platform.
+ * Reusable React hooks for the Open Zentra Web platform.
  * This is the canonical home for React-specific utilities,
  * keeping foundation-utils framework-agnostic.
  *
- * @module @open-insights-web/foundation-hooks
+ * @module @open-zentra/foundation-hooks
  */
 
 export { useMountedRef } from './use-mounted-ref';

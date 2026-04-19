@@ -2,7 +2,7 @@
  * TanStack Query helpers exports
  *
  * NOTE: OfflineQueryContext and OfflineMutationResult types should be imported
- * directly from @open-insights-web/foundation-data-model
+ * directly from @open-zentra/foundation-data-model
  *
  * @module tanstack
  */

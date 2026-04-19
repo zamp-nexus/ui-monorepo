@@ -1,6 +1,6 @@
 # Foundation Data Layer
 
-`@open-insights-web/foundation-data-layer` is the client runtime for transactional HTTP APIs, realtime WebSocket events, offline cache persistence, and optional DuckDB analytics.
+`@open-zentra/foundation-data-layer` is the client runtime for transactional HTTP APIs, realtime WebSocket events, offline cache persistence, and optional DuckDB analytics.
 
 ## What It Provides
 
@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-npm install @open-insights-web/foundation-data-layer @tanstack/react-query axios
+npm install @open-zentra/foundation-data-layer @tanstack/react-query axios
 ```
 
 ## Quick Start
@@ -23,13 +23,13 @@ npm install @open-insights-web/foundation-data-layer @tanstack/react-query axios
 import axios from 'axios';
 import { z } from 'zod';
 
-import { createRealtimeTicketFetcher } from '@open-insights-web/foundation-auth';
-import { DataLayerProvider } from '@open-insights-web/foundation-data-layer';
+import { createRealtimeTicketFetcher } from '@open-zentra/foundation-auth';
+import { DataLayerProvider } from '@open-zentra/foundation-data-layer';
 import {
   CONFLICT_STRATEGY,
   DATA_FRESHNESS,
   type UnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 const axiosInstance = axios.create({ baseURL: '/api' });
 

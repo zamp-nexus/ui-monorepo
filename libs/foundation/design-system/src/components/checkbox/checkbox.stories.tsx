@@ -119,7 +119,7 @@ export const WithLabel: Story = {
  * Controlled checkbox with state.
  */
 export const Controlled: Story = {
-  render: () => {
+  render: function ControlledRender() {
     const [checked, setChecked] = useState(false);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

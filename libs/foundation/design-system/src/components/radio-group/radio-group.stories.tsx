@@ -191,7 +191,7 @@ export const Horizontal: Story = {
  * Controlled radio group.
  */
 export const Controlled: Story = {
-  render: () => {
+  render: function ControlledRender() {
     const [value, setValue] = useState('option1');
 
     return (

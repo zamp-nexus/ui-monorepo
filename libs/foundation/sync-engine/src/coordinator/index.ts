@@ -19,9 +19,9 @@ import {
   type SyncEvent,
   type SyncEventListener,
   type SyncState,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import { getDatabase } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
+import { getDatabase } from '@open-zentra/foundation-database';
 import {
   AsyncDisposable,
   CompositeDisposable,
@@ -31,7 +31,7 @@ import {
   normalizeError,
   SafeDebounce,
   SafeTimer,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { ConflictResolver } from '../conflicts/resolver';
 import { createConflictResolver } from '../conflicts/resolver';

@@ -25,10 +25,10 @@ import {
   useDataLayerInternals,
   useDLAnalytics,
   useDLGet,
-} from '@open-insights-web/foundation-data-layer';
-import type { ApiQueryDescriptor } from '@open-insights-web/foundation-data-model';
-import { OPERATIONS } from '@open-insights-web/foundation-data-model';
-import { EMPTY_ARRAY, EMPTY_OBJECT, hashPayloadSync } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-layer';
+import type { ApiQueryDescriptor } from '@open-zentra/foundation-data-model';
+import { OPERATIONS } from '@open-zentra/foundation-data-model';
+import { EMPTY_ARRAY, EMPTY_OBJECT, hashPayloadSync } from '@open-zentra/foundation-utils';
 
 import { getSqlCompiler } from '../compiler/sql-compiler';
 import { getDecisionEngine } from '../engine/decision-engine';

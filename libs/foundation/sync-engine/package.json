@@ -1,5 +1,5 @@
 {
-  "name": "@open-insights-web/foundation-sync-engine",
+  "name": "@open-zentra/foundation-sync-engine",
   "version": "0.0.1",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

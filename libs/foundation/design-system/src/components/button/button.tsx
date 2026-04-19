@@ -38,7 +38,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
     component,
     className,
     children,
-    oiid,
+    ozid,
     intent = 'primary',
     size = 'md',
     disabled,
@@ -72,7 +72,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
         loading,
         fullWidth,
       })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       aria-disabled={isDisabled || undefined}
       aria-busy={loading || undefined}
       aria-label={ariaLabel}
@@ -83,7 +83,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
       {/* Loading indicator */}
       {loading && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.loadingIndicator?.({ intent, size }) ?? ''}
           slotName="loadingIndicator"
           slot={loadingIndicator}
@@ -97,7 +97,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
       {/* Start slot */}
       {start && !loading && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.start?.({ intent, size }) ?? ''}
           slotName="start"
           slot={start}
@@ -121,7 +121,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
       {/* End slot */}
       {end && !loading && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.end?.({ intent, size }) ?? ''}
           slotName="end"
           slot={end}

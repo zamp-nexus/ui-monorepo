@@ -6,7 +6,7 @@
  *
  * NOTE: NetworkStatus, NetworkStatusListener, CrossTabMessageType, CrossTabMessage,
  * CrossTabMessageHandler, SyncEvent, and SyncEventListener should be imported
- * directly from @open-insights-web/foundation-data-model
+ * directly from @open-zentra/foundation-data-model
  *
  * @module core/interfaces
  */
@@ -39,9 +39,9 @@ import type {
   SyncEventListener,
   SyncState,
   UnifiedTableConfig,
-} from '@open-insights-web/foundation-data-model';
-import type { InsightsDatabase } from '@open-insights-web/foundation-database';
-import type { IAsyncDisposable, IDisposable } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import type { InsightsDatabase } from '@open-zentra/foundation-database';
+import type { IAsyncDisposable, IDisposable } from '@open-zentra/foundation-utils';
 
 export type SyncTableConfig = UnifiedTableConfig<ApiQueryDescriptor, ApiMutationDescriptor>;
 

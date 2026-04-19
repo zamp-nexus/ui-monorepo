@@ -5,10 +5,10 @@
  * Depends on: @foundation/data-model
  *
  * NOTE: JsonSerializable and related utilities should be imported directly from
- * @open-insights-web/foundation-data-model
+ * @open-zentra/foundation-data-model
  *
  * NOTE: Generic hash functions (hashPayloadSync, hashPayloadAsync) should be
- * imported directly from @open-insights-web/foundation-utils
+ * imported directly from @open-zentra/foundation-utils
  *
  * @packageDocumentation
  */
@@ -51,7 +51,7 @@ export {
   type OpfsFileSchema,
 
   // Sync state (used by bridge, sync-engine)
-  // NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
+  // NOTE: NetworkStatus should be imported directly from @open-zentra/foundation-data-model
   isDuckDBViewsValue,
   isNetworkStatus,
   isRealtimeCursorStore,

@@ -11,15 +11,15 @@ import { QueryClientProvider, type QueryKey } from '@tanstack/react-query';
 import type {
   RealtimeDataServerMessage,
   RealtimeTopicDescriptor,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   REALTIME_CONNECTION_STATE,
   REALTIME_OWNERSHIP_STATE,
   REALTIME_SERVER_MESSAGE_TYPE,
   SYNC_EVENT_TYPE,
   type SyncEvent,
-} from '@open-insights-web/foundation-data-model';
-import { createLogger, hashPayloadSync, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createLogger, hashPayloadSync, type Logger } from '@open-zentra/foundation-utils';
 
 import {
   createContainerConfig,

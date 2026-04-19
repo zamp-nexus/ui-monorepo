@@ -11,7 +11,7 @@
  *
  * @example
  * ```tsx
- * import { HttpProvider, useHttp } from '@open-insights-web/foundation-http';
+ * import { HttpProvider, useHttp } from '@open-zentra/foundation-http';
  *
  * const App = () => (
  *   <HttpProvider config={{ baseUrl: 'https://api.example.com' }}>

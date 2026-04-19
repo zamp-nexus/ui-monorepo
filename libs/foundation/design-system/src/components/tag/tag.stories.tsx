@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Tag } from './tag';
 
@@ -191,7 +191,7 @@ export const AllSizes: Story = {
  * Interactive tags list.
  */
 export const InteractiveTags: Story = {
-  render: () => {
+  render: function InteractiveTagsRender() {
     const [tags, setTags] = useState(['React', 'TypeScript', 'Tailwind', 'Storybook']);
 
     const removeTag = (tagToRemove: string) => {

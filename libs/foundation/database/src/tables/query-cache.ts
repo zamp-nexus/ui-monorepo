@@ -8,7 +8,7 @@ import {
   type JsonValue,
   type QueryCacheStatus,
   type QueryKeyBase,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 /**
  * Query cache entry stored in Dexie

@@ -27,7 +27,7 @@ import {
   SYNC_STATE_KEY,
   toJsonSerializable,
   type ConflictResolutionType,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';

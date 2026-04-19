@@ -13,13 +13,13 @@ import { emptyStateDefaultTheme } from './types';
  *
  * Title text for the empty state
  */
-export const EmptyStateTitle: React.FC<EmptyStateTitleProps> = ({ children, className, oiid }) => {
+export const EmptyStateTitle: React.FC<EmptyStateTitleProps> = ({ children, className, ozid }) => {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);
 
   return (
     <h3
       className={theme.title?.({ className, size: 'md' }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="title"
     >
       {children}

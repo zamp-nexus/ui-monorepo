@@ -17,7 +17,7 @@ import {
   escapeString,
   validateIdentifier,
   type DuckDBResult,
-} from '@open-insights-web/foundation-bridge';
+} from '@open-zentra/foundation-bridge';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { getAnalyticsRouterOrThrow } from '../utils/analytics-runtime';

@@ -18,7 +18,7 @@ import { createTheme } from './theme-contract';
  * Dark theme implementing the ThemeContract
  */
 export const darkTheme = createTheme({
-  name: 'Open Insights Dark',
+  name: 'Open Zentra Dark',
   mode: 'dark',
 
   colors: {

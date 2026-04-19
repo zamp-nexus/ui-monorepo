@@ -62,7 +62,7 @@ const TooltipArrowSvg = (props: React.ComponentProps<'svg'>) => (
  */
 export const Tooltip: TooltipComponent = function Tooltip({
   children,
-  oiid,
+  ozid,
   content,
   shortcut,
   side = 'top',
@@ -80,7 +80,7 @@ export const Tooltip: TooltipComponent = function Tooltip({
   return (
     <TooltipPrimitive.Provider delay={delayDuration}>
       <TooltipPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-        <TooltipPrimitive.Trigger data-oiid={oiid} render={<span className="inline-flex" />}>
+        <TooltipPrimitive.Trigger data-ozid={ozid} render={<span className="inline-flex" />}>
           {children}
         </TooltipPrimitive.Trigger>
 
@@ -93,7 +93,7 @@ export const Tooltip: TooltipComponent = function Tooltip({
           >
             <TooltipPrimitive.Popup
               className={theme.root({ side, align, arrow, raw })}
-              data-oiid={oiid ? `${oiid}__popup` : undefined}
+              data-ozid={ozid ? `${ozid}__popup` : undefined}
             >
               {/* Arrow pointer (not overridable) */}
               {arrow && (
@@ -105,7 +105,7 @@ export const Tooltip: TooltipComponent = function Tooltip({
               {/* Content slot */}
               {content && (
                 <Slot
-                  baseOiid={oiid}
+                  baseOzid={ozid}
                   className={theme.content?.({ raw }) ?? ''}
                   component="div"
                   slot={content}
@@ -116,7 +116,7 @@ export const Tooltip: TooltipComponent = function Tooltip({
               {/* Shortcut slot */}
               {shortcut && (
                 <Slot
-                  baseOiid={oiid}
+                  baseOzid={ozid}
                   className={theme.shortcut?.({}) ?? ''}
                   component="div"
                   slot={shortcut}

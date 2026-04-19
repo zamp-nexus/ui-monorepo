@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import type { PopoverCloseProps } from './types';
@@ -20,7 +20,7 @@ import { popoverDefaultTheme } from './types';
 export const PopoverClose: React.FC<PopoverCloseProps> = ({
   children,
   className,
-  oiid,
+  ozid,
   ...rest
 }) => {
   const theme = useTheme('popover', popoverDefaultTheme);
@@ -28,7 +28,7 @@ export const PopoverClose: React.FC<PopoverCloseProps> = ({
   return (
     <PopoverPrimitive.Close
       className={className || theme.close?.({}) || ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="close"
       aria-label="Close"
       {...rest}

@@ -15,13 +15,13 @@ This repository demonstrates a production-ready React monorepo with:
 
 - **7 Libraries**
 
-  - `@open-insights-web/shop-feature-products` - Product listing feature (React)
-  - `@open-insights-web/shop-feature-product-detail` - Product detail feature (React)
-  - `@open-insights-web/shop-data` - Data access layer for shop features
-  - `@open-insights-web/shop-shared-ui` - Shared UI components
-  - `@open-insights-web/models` - Shared data models
-  - `@open-insights-web/api-products` - API product service library
-  - `@open-insights-web/shared-test-utils` - Shared testing utilities
+  - `@open-zentra/shop-feature-products` - Product listing feature (React)
+  - `@open-zentra/shop-feature-product-detail` - Product detail feature (React)
+  - `@open-zentra/shop-data` - Data access layer for shop features
+  - `@open-zentra/shop-shared-ui` - Shared UI components
+  - `@open-zentra/models` - Shared data models
+  - `@open-zentra/api-products` - API product service library
+  - `@open-zentra/shared-test-utils` - Shared testing utilities
 
 - **E2E Testing**
   - `shop-e2e` - Playwright tests for the shop application

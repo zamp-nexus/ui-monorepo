@@ -3,7 +3,7 @@
  * @module instrumentation/user-behavior/session-manager
  */
 
-import { generateId, hashStringSync } from '@open-insights-web/foundation-utils';
+import { generateId, hashStringSync } from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter } from '../../core/otel-provider';

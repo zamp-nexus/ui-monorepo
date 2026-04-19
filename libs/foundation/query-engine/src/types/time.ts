@@ -7,7 +7,7 @@
  * @module types/time
  */
 
-import type { MemberRef } from '@open-insights-web/foundation-data-model';
+import type { MemberRef } from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // TIME GRANULARITIES - Const object pattern

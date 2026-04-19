@@ -20,7 +20,7 @@ import {
   QueryId,
   QueryTimeoutError,
   WorkerId,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { PoolShutdownError, WorkerError } from '../../errors/pool-errors';
 import { PriorityQueue } from './priority-queue';

@@ -160,7 +160,7 @@ export const Indeterminate: Story = {
  * Animated progress.
  */
 export const Animated: Story = {
-  render: () => {
+  render: function AnimatedRender() {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {

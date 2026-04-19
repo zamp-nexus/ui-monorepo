@@ -13,7 +13,7 @@
  *   TestData,
  *   quickQuery,
  *   quickMutation,
- * } from '@open-insights-web/foundation-mocks';
+ * } from '@open-zentra/foundation-mocks';
  *
  * // Build a test query
  * const query = QueryBuilder.create()

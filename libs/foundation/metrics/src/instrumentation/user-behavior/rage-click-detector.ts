@@ -3,7 +3,7 @@
  * @module instrumentation/user-behavior/rage-click-detector
  */
 
-import { getCurrentRoute } from '@open-insights-web/foundation-utils';
+import { getCurrentRoute } from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter } from '../../core/otel-provider';
@@ -126,7 +126,7 @@ function handleClickForRageDetection(event: MouseEvent): void {
     const rageClickEvent: RageClickEvent = {
       clickCount: nearbyClicks.length,
       targetSelector: getTargetSelector(target),
-      targetOiid: target.getAttribute('data-oiid') || undefined,
+      targetOzid: target.getAttribute('data-ozid') || undefined,
       windowDuration: now - nearbyClicks[0].timestamp,
       firstClickTime: nearbyClicks[0].timestamp,
       lastClickTime: now,
@@ -163,10 +163,10 @@ function getTargetSelector(element: HTMLElement): string {
     }
   }
 
-  // data-oiid
-  const oiid = element.getAttribute('data-oiid');
-  if (oiid) {
-    parts.push(`[data-oiid="${oiid}"]`);
+  // data-ozid
+  const ozid = element.getAttribute('data-ozid');
+  if (ozid) {
+    parts.push(`[data-ozid="${ozid}"]`);
   }
 
   return parts.join('');
@@ -189,7 +189,7 @@ function recordRageClick(event: RageClickEvent): void {
       ...spanAttributes,
       'rage_click.count': event.clickCount,
       'rage_click.target': event.targetSelector,
-      'rage_click.target_oiid': event.targetOiid || 'unknown',
+      'rage_click.target_ozid': event.targetOzid || 'unknown',
       'page.route': event.route,
     });
 
@@ -213,7 +213,7 @@ function recordRageClick(event: RageClickEvent): void {
 export function reportRageClick(
   targetSelector: string,
   clickCount: number,
-  targetOiid?: string,
+  targetOzid?: string,
 ): void {
   if (!state?.config.enabled) {
     return;
@@ -223,7 +223,7 @@ export function reportRageClick(
   const event: RageClickEvent = {
     clickCount,
     targetSelector,
-    targetOiid,
+    targetOzid,
     windowDuration: 0,
     firstClickTime: now,
     lastClickTime: now,

@@ -3,7 +3,7 @@
  * @module compliance/pii-scrubber
  */
 
-import { isPlainObject } from '@open-insights-web/foundation-data-model';
+import { isPlainObject } from '@open-zentra/foundation-data-model';
 
 import type { PIIDetectionResult, PiiFieldType, PIIPattern } from '../types';
 import { PII_FIELD_TYPE } from '../types/constants';

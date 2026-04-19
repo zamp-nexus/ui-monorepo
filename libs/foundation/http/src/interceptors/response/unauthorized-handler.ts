@@ -9,7 +9,7 @@
 
 import type { AxiosInstance, AxiosResponse } from 'axios';
 
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger } from '@open-zentra/foundation-utils';
 
 import { HTTP_STATUS } from '../../core/constants';
 import type { AuthConfig } from '../../core/types';

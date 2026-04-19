@@ -11,7 +11,7 @@ import type {
   NetworkStatus,
   RealtimeCursorStore,
   SyncStateKey,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import {
   duckDBViewsValueSchema,
@@ -33,7 +33,7 @@ export interface SyncStateEntry<TValue = unknown> {
   updatedAt: number;
 }
 
-// NOTE: NetworkStatus should be imported directly from @open-insights-web/foundation-data-model
+// NOTE: NetworkStatus should be imported directly from @open-zentra/foundation-data-model
 // Do NOT re-export it here to maintain single source of truth
 
 /**

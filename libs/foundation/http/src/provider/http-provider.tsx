@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AxiosInstance } from 'axios';
 
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger } from '@open-zentra/foundation-utils';
 
 import { createConfigSignature } from '../core/config-signature';
 import type {

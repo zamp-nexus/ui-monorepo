@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-import type { QueryKeyBase } from '@open-insights-web/foundation-data-model';
+import type { QueryKeyBase } from '@open-zentra/foundation-data-model';
 import {
   CROSS_TAB_MESSAGE_TYPE,
   realtimeConnectionSnapshotSchema,
@@ -17,7 +17,7 @@ import {
   type RealtimeConnectionSnapshot,
   type RealtimeServerMessage,
   type RealtimeSubscriptionSnapshot,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   createSingletonFactory,
@@ -25,7 +25,7 @@ import {
   hashPayloadSync,
   ManagedInterval,
   SafeTimer,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import {
   DEFAULT_CHANNEL_NAME,

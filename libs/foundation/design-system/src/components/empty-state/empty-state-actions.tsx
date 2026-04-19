@@ -16,14 +16,14 @@ import { emptyStateDefaultTheme } from './types';
 export const EmptyStateActions: React.FC<EmptyStateActionsProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('emptyState', emptyStateDefaultTheme);
 
   return (
     <div
       className={theme.actions?.({ className, size: 'md' }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="actions"
     >
       {children}

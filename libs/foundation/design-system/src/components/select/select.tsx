@@ -41,7 +41,7 @@ import type { SelectProps } from './types';
  */
 function SelectRoot({
   children,
-  oiid,
+  ozid,
   size = 'md',
   disabled,
   value,
@@ -63,7 +63,7 @@ function SelectRoot({
     : undefined;
 
   return (
-    <SelectProvider value={{ size, disabled, oiid }}>
+    <SelectProvider value={{ size, disabled, ozid }}>
       <SelectPrimitive.Root
         value={value}
         defaultValue={defaultValue}

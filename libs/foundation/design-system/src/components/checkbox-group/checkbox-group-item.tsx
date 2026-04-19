@@ -27,7 +27,7 @@ export const CheckboxGroupItem: React.FC<CheckboxGroupItemProps> = ({
   disabled: itemDisabled,
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('checkboxGroup', checkboxGroupDefaultTheme);
   const {
@@ -66,7 +66,7 @@ export const CheckboxGroupItem: React.FC<CheckboxGroupItemProps> = ({
   return (
     <label
       className={theme.item?.({ className, size, disabled: isDisabled }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="item"
       data-checked={isChecked || undefined}
       data-disabled={isDisabled || undefined}
@@ -76,7 +76,7 @@ export const CheckboxGroupItem: React.FC<CheckboxGroupItemProps> = ({
         onCheckedChange={handleCheckedChange}
         disabled={isDisabled}
         size={checkboxSize}
-        oiid={oiid ? `${oiid}__checkbox` : undefined}
+        ozid={ozid ? `${ozid}__checkbox` : undefined}
       />
       {children && <span className={theme.label?.({ size }) ?? ''}>{children}</span>}
     </label>

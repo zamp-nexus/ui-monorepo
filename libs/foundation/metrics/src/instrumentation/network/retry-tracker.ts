@@ -14,7 +14,7 @@ import {
   normalizeError,
   sanitizeUrl,
   sleep,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { getSpanAttributes } from '../../core/context-manager';
 import { getMeter } from '../../core/otel-provider';

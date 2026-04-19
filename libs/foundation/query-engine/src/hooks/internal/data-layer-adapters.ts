@@ -11,7 +11,7 @@ import {
   type ApiQueryDescriptor,
   type Operation,
   type WriteOperation,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 type QueryDescriptor = ApiQueryDescriptor;
 type MutationDescriptor = ApiMutationDescriptor;

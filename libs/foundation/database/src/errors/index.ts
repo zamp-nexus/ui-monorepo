@@ -1,7 +1,7 @@
 /**
  * Error exports
  *
- * NOTE: For FoundationErrorCode, import from @open-insights-web/foundation-data-model
+ * NOTE: For FoundationErrorCode, import from @open-zentra/foundation-data-model
  *
  * @module errors
  */
@@ -33,4 +33,4 @@ export {
   isQuotaExceededError,
 } from './database-errors';
 
-// NOTE: FoundationErrorCode and hasErrorCode should be imported directly from @open-insights-web/foundation-data-model
+// NOTE: FoundationErrorCode and hasErrorCode should be imported directly from @open-zentra/foundation-data-model

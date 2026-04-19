@@ -17,7 +17,7 @@ import {
   type NetworkStatus,
   type RealtimeCursorStore,
   type SyncStateKey,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { SyncStateEntry, SyncStateOperations } from '../tables/sync-state';
 import { assertValid } from '../validation/assert-valid';

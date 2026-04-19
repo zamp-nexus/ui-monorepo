@@ -6,7 +6,7 @@
  * @module core/retry-utils
  */
 
-import { isRetriableHttpStatus } from '@open-insights-web/foundation-utils';
+import { isRetriableHttpStatus } from '@open-zentra/foundation-utils';
 
 /**
  * Check whether an HTTP status should be retried.

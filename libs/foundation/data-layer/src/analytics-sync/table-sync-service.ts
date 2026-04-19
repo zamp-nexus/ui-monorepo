@@ -14,8 +14,8 @@ import {
   type DataSourceFileInfo,
   type DataSourceResponse,
   type DataSourceTableInfo,
-} from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, type Logger } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import { createDebugLogger, type Logger } from '@open-zentra/foundation-utils';
 
 import type { DataSourceEndpointDescriptor } from '../core/types';
 import { executeQueryDescriptor } from '../core/http-descriptor';

@@ -7,7 +7,7 @@
  * @module types/result
  */
 
-import type { ExecutionId, JsonValue, QueryId } from '@open-insights-web/foundation-data-model';
+import type { ExecutionId, JsonValue, QueryId } from '@open-zentra/foundation-data-model';
 
 import type { DataSource, QueryBackend } from './query';
 

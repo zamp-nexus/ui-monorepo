@@ -4,13 +4,13 @@
  * Deletes a <%= name %> by ID.
  */
 
-import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
+import type { ApiMutationDescriptor } from '@open-zentra/foundation-data-model';
 import {
   useDLDelete,
   type MutationDescriptorArgs,
   type MutationDescriptorData,
   type UseDLDeleteOptions,
-} from '@open-insights-web/foundation-data-layer';
+} from '@open-zentra/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 type <%= className %>DeleteArgs = Readonly<Record<string, unknown>> & {

@@ -14,7 +14,7 @@ import {
   OPERATIONS,
   QueryId,
   SqlTableName as TableName,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { AGGREGATIONS, isAggregation } from './aggregation';
 import { DECISION_PATHS, isExecutionPath } from './decision';

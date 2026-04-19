@@ -16,11 +16,11 @@ import type { PopoverTriggerProps } from './types';
 export const PopoverTrigger: React.FC<PopoverTriggerProps> = ({
   children,
   className,
-  oiid,
+  ozid,
   ...rest
 }) => {
   return (
-    <PopoverPrimitive.Trigger className={className} data-oiid={oiid} data-slot="trigger" {...rest}>
+    <PopoverPrimitive.Trigger className={className} data-ozid={ozid} data-slot="trigger" {...rest}>
       {children}
     </PopoverPrimitive.Trigger>
   );

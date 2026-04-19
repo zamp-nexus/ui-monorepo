@@ -58,9 +58,9 @@ function normalizeOptions(options: CrudGeneratorSchema): NormalizedOptions {
  *
  * @example
  * ```bash
- * nx g @open-insights-web/data-layer-plugin:crud product \
+ * nx g @open-zentra/data-layer-plugin:crud product \
  *   --directory=libs/products/data-layer/src \
- *   --dataModel=@open-insights-web/products-data-model \
+ *   --dataModel=@open-zentra/products-data-model \
  *   --endpoint=/api/products \
  *   --pagination=true
  * ```

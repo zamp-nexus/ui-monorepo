@@ -18,7 +18,7 @@
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
 
-import { createDebugLogger, sleep } from '@open-insights-web/foundation-utils';
+import { createDebugLogger, sleep } from '@open-zentra/foundation-utils';
 
 import { AXIOS_ERROR_CODE } from '../../core/constants';
 import { getRequestMetadata } from '../../core/request-metadata';

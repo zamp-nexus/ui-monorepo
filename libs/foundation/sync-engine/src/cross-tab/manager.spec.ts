@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { CROSS_TAB_MESSAGE_TYPE } from '@open-insights-web/foundation-data-model';
+import { CROSS_TAB_MESSAGE_TYPE } from '@open-zentra/foundation-data-model';
 
 import { CrossTabManager } from './manager';
 

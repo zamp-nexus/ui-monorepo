@@ -9,7 +9,7 @@
  * NOTE: For retry configuration, use DEFAULT_RETRY_CONFIG from @foundation/utils
  */
 
-import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-insights-web/foundation-data-model';
+import { CONFLICT_STRATEGY, type ConflictStrategy } from '@open-zentra/foundation-data-model';
 
 // ============================================================================
 // Network Monitor Defaults
@@ -90,7 +90,7 @@ export const DEFAULT_SYNC_DEBOUNCE_DELAY_MS = 100;
 /**
  * Default BroadcastChannel name for cross-tab communication
  */
-export const DEFAULT_CHANNEL_NAME = 'open-insights-sync';
+export const DEFAULT_CHANNEL_NAME = 'open-zentra-sync';
 
 /**
  * Default interval between leader heartbeats (ms)

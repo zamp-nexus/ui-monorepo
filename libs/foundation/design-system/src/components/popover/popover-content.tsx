@@ -25,7 +25,7 @@ const ArrowSvg = (props: React.ComponentProps<'svg'>) => (
  *
  * Container for the popover content.
  */
-export const PopoverContent: React.FC<PopoverContentProps> = ({ children, className, oiid }) => {
+export const PopoverContent: React.FC<PopoverContentProps> = ({ children, className, ozid }) => {
   const theme = useTheme('popover', popoverDefaultTheme);
   const { maxWidth, arrow, side, align, sideOffset } = usePopoverContext();
 
@@ -34,7 +34,7 @@ export const PopoverContent: React.FC<PopoverContentProps> = ({ children, classN
       <PopoverPrimitive.Positioner side={side} align={align} sideOffset={sideOffset}>
         <PopoverPrimitive.Popup
           className={theme.popup?.({ className, maxWidth }) ?? className}
-          data-oiid={oiid}
+          data-ozid={ozid}
           data-slot="content"
         >
           {arrow && (

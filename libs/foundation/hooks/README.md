@@ -1,6 +1,6 @@
 # Foundation Hooks
 
-`@open-insights-web/foundation-hooks` contains reusable React hooks shared across foundation libraries and apps.
+`@open-zentra/foundation-hooks` contains reusable React hooks shared across foundation libraries and apps.
 
 ## Purpose
 
@@ -16,7 +16,7 @@ Use this package for small, framework-specific hook utilities that should not li
 ## Example
 
 ```tsx
-import { useAbortController, useStableCallback } from '@open-insights-web/foundation-hooks';
+import { useAbortController, useStableCallback } from '@open-zentra/foundation-hooks';
 
 export function SearchBox() {
   const { signal, reset } = useAbortController();

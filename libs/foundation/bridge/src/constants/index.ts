@@ -2,12 +2,12 @@
  * Constants for the bridge library
  *
  * Configuration defaults, limits, and SQL constants.
- * For error codes, use FoundationErrorCode from '@open-insights-web/foundation-data-model'.
+ * For error codes, use FoundationErrorCode from '@open-zentra/foundation-data-model'.
  *
  * @module constants
  */
 
-import { Milliseconds } from '@open-insights-web/foundation-data-model';
+import { Milliseconds } from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // Default Configuration Values
@@ -46,7 +46,7 @@ export const DEFAULTS = {
   /**
    * OPFS root directory for analytics data
    */
-  OPFS_ROOT_DIR: 'open-insights/analytics',
+  OPFS_ROOT_DIR: 'open-zentra/analytics',
 
   /**
    * Maximum SQL identifier length (DuckDB limit)

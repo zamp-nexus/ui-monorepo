@@ -14,7 +14,7 @@ import {
   type CreateMutationOptions,
   type MutationQueueEntry,
   type MutationStatus,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { createDuplicateEntryError } from '../errors/database-errors';
 import type { MutationQueueOperations } from '../tables/mutation-queue';

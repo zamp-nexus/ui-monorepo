@@ -30,7 +30,7 @@ export const Progress: ProgressComponent = React.forwardRef<HTMLDivElement, Prog
   function Progress(
     {
       className,
-      oiid,
+      ozid,
       value = 0,
       max = 100,
       intent = 'primary',
@@ -59,7 +59,7 @@ export const Progress: ProgressComponent = React.forwardRef<HTMLDivElement, Prog
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         className={theme.root({ className, intent, size, indeterminate })}
-        data-oiid={oiid}
+        data-ozid={ozid}
         {...rest}
       >
         <div
@@ -67,7 +67,7 @@ export const Progress: ProgressComponent = React.forwardRef<HTMLDivElement, Prog
           style={{
             width: indeterminate ? '50%' : `${percentage}%`,
           }}
-          data-oiid={oiid ? `${oiid}__indicator` : undefined}
+          data-ozid={ozid ? `${ozid}__indicator` : undefined}
         />
       </div>
     );

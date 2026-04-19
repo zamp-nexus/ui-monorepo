@@ -13,7 +13,7 @@ import {
 } from './mutation-helpers';
 
 // Mock the external dependencies
-vi.mock('@open-insights-web/foundation-data-model', () => ({
+vi.mock('@open-zentra/foundation-data-model', () => ({
   hashQueryKey: vi.fn((key: unknown[]) => `hash_${key.join('_')}`),
   SCHEMA_VERSION: 1,
   toJsonSerializable: vi.fn((data: unknown) => data),
@@ -32,13 +32,13 @@ vi.mock('@open-insights-web/foundation-data-model', () => ({
 }));
 
 // Mock the foundation-utils for TIME_MS
-vi.mock('@open-insights-web/foundation-utils', () => ({
+vi.mock('@open-zentra/foundation-utils', () => ({
   TIME_MS: {
     DAY: 86400000,
   },
 }));
 
-vi.mock('@open-insights-web/foundation-database', () => ({
+vi.mock('@open-zentra/foundation-database', () => ({
   createCacheEntry: vi.fn(
     (cacheKey: string, queryKey: unknown[], data: unknown, options: Record<string, unknown>) => ({
       cacheKey,

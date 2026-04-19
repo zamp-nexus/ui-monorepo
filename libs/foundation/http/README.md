@@ -1,6 +1,6 @@
 # Foundation HTTP
 
-`@open-insights-web/foundation-http` is the standardized HTTP transport layer for Open Insights Web.
+`@open-zentra/foundation-http` is the standardized HTTP transport layer for Open Zentra Web.
 It provides a typed Axios client, request/response interception, enterprise error mapping, retry logic,
 optional circuit-breaker protection, and React provider integration.
 
@@ -27,7 +27,7 @@ This is an internal workspace package and is consumed through monorepo dependenc
 ```json
 {
   "dependencies": {
-    "@open-insights-web/foundation-http": "workspace:*"
+    "@open-zentra/foundation-http": "workspace:*"
   }
 }
 ```
@@ -37,7 +37,7 @@ This is an internal workspace package and is consumed through monorepo dependenc
 ### 1. Wrap your app with `HttpProvider`
 
 ```tsx
-import { HttpProvider } from '@open-insights-web/foundation-http';
+import { HttpProvider } from '@open-zentra/foundation-http';
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (
   <HttpProvider
@@ -59,7 +59,7 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
 ### 2. Use the configured client
 
 ```tsx
-import { useHttp } from '@open-insights-web/foundation-http';
+import { useHttp } from '@open-zentra/foundation-http';
 
 export const Users = () => {
   const { axios, isInitialized } = useHttp();
@@ -77,7 +77,7 @@ export const Users = () => {
 
 Primary entrypoint:
 
-- `@open-insights-web/foundation-http`
+- `@open-zentra/foundation-http`
 
 This package intentionally does not expose a broad `./internal` mirror entry anymore.
 Use only the documented public exports from the root entrypoint.

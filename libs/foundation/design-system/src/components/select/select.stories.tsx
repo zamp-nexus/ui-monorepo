@@ -165,7 +165,7 @@ export const ManyOptions: Story = {
  * Controlled select.
  */
 export const Controlled: Story = {
-  render: () => {
+  render: function ControlledRender() {
     const [value, setValue] = useState('');
 
     return (

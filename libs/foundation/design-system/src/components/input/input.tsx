@@ -39,7 +39,7 @@ import { inputDefaultTheme } from './types';
 export const Input: InputComponent = React.forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     className,
-    oiid,
+    ozid,
     size = 'md',
     disabled,
     invalid,
@@ -66,7 +66,7 @@ export const Input: InputComponent = React.forwardRef<HTMLInputElement, InputPro
     <div className="relative w-full">
       {start && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.start?.({ size }) ?? ''}
           slotName="start"
           slot={start}
@@ -79,7 +79,7 @@ export const Input: InputComponent = React.forwardRef<HTMLInputElement, InputPro
         ref={forwardedRef}
         type={type}
         className={inputClassName}
-        data-oiid={oiid}
+        data-ozid={ozid}
         disabled={disabled}
         readOnly={readOnly}
         aria-invalid={invalid || undefined}
@@ -89,7 +89,7 @@ export const Input: InputComponent = React.forwardRef<HTMLInputElement, InputPro
 
       {end && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.end?.({ size }) ?? ''}
           slotName="end"
           slot={end}

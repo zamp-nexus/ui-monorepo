@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { useTheme } from '../../theme';
 import { useSelectContext } from './select.context';
@@ -22,18 +22,18 @@ export const SelectTrigger: SelectTriggerComponent = React.forwardRef<
   HTMLButtonElement,
   SelectTriggerProps
 >(function SelectTrigger(
-  { className, oiid: propOiid, children, placeholder, ...rest },
+  { className, ozid: propOzid, children, placeholder, ...rest },
   ref: React.ForwardedRef<HTMLButtonElement>,
 ) {
-  const { size, disabled, oiid: contextOiid } = useSelectContext();
+  const { size, disabled, ozid: contextOzid } = useSelectContext();
   const theme = useTheme('select', selectDefaultTheme);
-  const oiid = propOiid ?? (contextOiid ? `${contextOiid}__trigger` : undefined);
+  const ozid = propOzid ?? (contextOzid ? `${contextOzid}__trigger` : undefined);
 
   return (
     <SelectPrimitive.Trigger
       ref={ref}
       className={theme.trigger?.({ className, size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       disabled={disabled}
       {...rest}
     >

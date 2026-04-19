@@ -18,14 +18,14 @@ import { accordionDefaultTheme } from './types';
 export const AccordionContent: React.FC<AccordionContentProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('accordion', accordionDefaultTheme);
 
   return (
     <AccordionPrimitive.Panel
       className={theme.content?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="content"
     >
       <div className={theme.contentInner?.({}) ?? ''}>{children}</div>

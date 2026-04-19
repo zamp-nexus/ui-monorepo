@@ -4,12 +4,12 @@
  * Fetches a single <%= name %> by ID.
  */
 
-import type { ApiQueryDescriptor } from '@open-insights-web/foundation-data-model';
+import type { ApiQueryDescriptor } from '@open-zentra/foundation-data-model';
 import {
   useDLGetOne,
   type QueryDescriptorArgs,
   type UseDLGetOptions,
-} from '@open-insights-web/foundation-data-layer';
+} from '@open-zentra/foundation-data-layer';
 import type { <%= className %> } from '<%= dataModel %>';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 

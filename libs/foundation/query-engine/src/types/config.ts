@@ -6,7 +6,7 @@
  * @module types/config
  */
 
-import type { ApiQueryDescriptor, DataSourceResponse } from '@open-insights-web/foundation-data-model';
+import type { ApiQueryDescriptor, DataSourceResponse } from '@open-zentra/foundation-data-model';
 
 // =============================================================================
 // QUERY ENGINE CONFIG

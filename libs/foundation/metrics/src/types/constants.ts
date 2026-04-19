@@ -10,7 +10,7 @@
 import {
   SEVERITY_NUMBER,
   type SeverityNumberValue,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 export const ERROR_TYPE = {
   RUNTIME: 'runtime',

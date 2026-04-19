@@ -1,6 +1,6 @@
 # Foundation Mocks
 
-`@open-insights-web/foundation-mocks` provides test builders and mock utilities for foundation-layer tests.
+`@open-zentra/foundation-mocks` provides test builders and mock utilities for foundation-layer tests.
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Use this package in unit/integration tests to create consistent, typed test data
 ## Example
 
 ```ts
-import { MutationBuilder, QueryBuilder } from '@open-insights-web/foundation-mocks';
+import { MutationBuilder, QueryBuilder } from '@open-zentra/foundation-mocks';
 
 const query = QueryBuilder.create().withTable('events').withMeasure('count', 'count').build();
 const mutation = MutationBuilder.create()

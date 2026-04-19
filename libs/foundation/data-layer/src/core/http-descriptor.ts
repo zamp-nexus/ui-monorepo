@@ -3,7 +3,7 @@ import type { AxiosInstance } from 'axios';
 import type {
   ApiMutationDescriptor,
   ApiQueryDescriptor,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

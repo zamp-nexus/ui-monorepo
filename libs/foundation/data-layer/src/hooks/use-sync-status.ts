@@ -9,8 +9,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-insights-web/foundation-data-model';
-import { useCallbackRef } from '@open-insights-web/foundation-hooks';
+import { SYNC_EVENT_TYPE, type SyncEvent } from '@open-zentra/foundation-data-model';
+import { useCallbackRef } from '@open-zentra/foundation-hooks';
 
 import { useDataLayerInternals } from '../provider/data-layer-internals-context';
 import { createScopedErrorHandler } from '../utils/error-handler';

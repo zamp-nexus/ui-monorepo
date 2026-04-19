@@ -13,13 +13,13 @@ import { toastDefaultTheme } from './types';
  *
  * Container for action buttons in the toast
  */
-export const ToastActions: React.FC<ToastActionsProps> = ({ children, className, oiid }) => {
+export const ToastActions: React.FC<ToastActionsProps> = ({ children, className, ozid }) => {
   const theme = useTheme('toast', toastDefaultTheme);
 
   return (
     <div
       className={theme.actions?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="actions"
     >
       {children}

@@ -10,7 +10,7 @@ import {
   QueryCancelledError,
   QueryExecutionError,
   QueryTimeoutError,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import {
   BridgeInitializationError,
@@ -29,7 +29,7 @@ import {
 } from './pool-errors';
 import { SqlValidationError } from './query-errors';
 
-// NOTE: OpfsNotSupportedError and isOpfsNotSupportedError - import from '@open-insights-web/foundation-database'
+// NOTE: OpfsNotSupportedError and isOpfsNotSupportedError - import from '@open-zentra/foundation-database'
 
 // =============================================================================
 // Query Error Type Guards

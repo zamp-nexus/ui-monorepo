@@ -37,7 +37,7 @@ function getSizeClass(
  *
  * Container for the drawer content. Renders backdrop and sliding panel.
  */
-export const DrawerContent: React.FC<DrawerContentProps> = ({ children, className, oiid }) => {
+export const DrawerContent: React.FC<DrawerContentProps> = ({ children, className, ozid }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
   const { direction, size, titleId, descriptionId } = useDrawerContext();
 
@@ -47,11 +47,11 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ children, classNam
     <Dialog.Portal>
       <Dialog.Backdrop
         className={theme.backdrop?.({}) ?? ''}
-        data-oiid={oiid ? `${oiid}__backdrop` : undefined}
+        data-ozid={ozid ? `${ozid}__backdrop` : undefined}
       />
       <Dialog.Popup
         className={cn(theme.popup?.({ direction }) ?? '', sizeClass, className)}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-slot="content"
         data-direction={direction}
         aria-labelledby={titleId}

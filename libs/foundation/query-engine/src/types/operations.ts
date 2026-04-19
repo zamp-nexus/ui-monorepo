@@ -1,7 +1,7 @@
 /**
  * @module types/operations
  *
- * Query operation contracts are owned by `@open-insights-web/foundation-data-model`.
+ * Query operation contracts are owned by `@open-zentra/foundation-data-model`.
  * Import them directly from that package.
  */
 

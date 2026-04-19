@@ -9,8 +9,8 @@
 
 import type { QueryClient, QueryKey } from '@tanstack/react-query';
 
-import type { WithId } from '@open-insights-web/foundation-data-model';
-import { matchesEntityId } from '@open-insights-web/foundation-data-model';
+import type { WithId } from '@open-zentra/foundation-data-model';
+import { matchesEntityId } from '@open-zentra/foundation-data-model';
 
 /**
  * Optimistic context for rollback operations

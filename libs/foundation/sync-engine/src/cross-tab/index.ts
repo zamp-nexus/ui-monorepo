@@ -3,7 +3,7 @@
  * @module cross-tab
  *
  * NOTE: CrossTabMessageType, CrossTabMessage, and CrossTabMessageHandler types
- * should be imported directly from @open-insights-web/foundation-data-model
+ * should be imported directly from @open-zentra/foundation-data-model
  */
 
 export {

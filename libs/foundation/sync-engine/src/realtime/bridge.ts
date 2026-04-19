@@ -5,8 +5,8 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { QueryKeyBase } from '@open-insights-web/foundation-data-model';
-import { createDebugLogger, Disposable } from '@open-insights-web/foundation-utils';
+import type { QueryKeyBase } from '@open-zentra/foundation-data-model';
+import { createDebugLogger, Disposable } from '@open-zentra/foundation-utils';
 
 import type { ICrossTabManager } from '../core/interfaces';
 
@@ -44,7 +44,9 @@ export class RealtimeEventBridge extends Disposable {
     this.crossTabManager?.invalidateQueries([...keys]);
   }
 
-  protected onDispose(): void {}
+  protected onDispose(): void {
+    // No owned resources to release; the bridge only forwards invalidations.
+  }
 }
 
 export const createRealtimeEventBridge = (

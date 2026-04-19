@@ -16,11 +16,11 @@ import type { ModalTriggerProps } from './types';
 export const ModalTrigger: React.FC<ModalTriggerProps> = ({
   children,
   className,
-  oiid,
+  ozid,
   ...rest
 }) => {
   return (
-    <Dialog.Trigger className={className} data-oiid={oiid} data-slot="trigger" {...rest}>
+    <Dialog.Trigger className={className} data-ozid={ozid} data-slot="trigger" {...rest}>
       {children}
     </Dialog.Trigger>
   );

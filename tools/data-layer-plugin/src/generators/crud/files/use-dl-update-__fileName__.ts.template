@@ -4,13 +4,13 @@
  * Updates an existing <%= name %>.
  */
 
-import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
+import type { ApiMutationDescriptor } from '@open-zentra/foundation-data-model';
 import {
   useDLUpdate,
   type MutationDescriptorArgs,
   type MutationDescriptorData,
   type UseDLUpdateOptions,
-} from '@open-insights-web/foundation-data-layer';
+} from '@open-zentra/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 type <%= className %>UpdateArgs = Readonly<Record<string, unknown>> & {

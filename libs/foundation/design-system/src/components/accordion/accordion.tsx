@@ -32,7 +32,7 @@ import { accordionDefaultTheme } from './types';
  * </Accordion>
  */
 const AccordionRoot: AccordionComponent = ({
-  oiid,
+  ozid,
   variant = 'default',
   multiple = false,
   value,
@@ -59,7 +59,7 @@ const AccordionRoot: AccordionComponent = ({
         defaultValue={defaultValue}
         onValueChange={onValueChange}
         className={theme.root?.({ variant, disabled }) ?? ''}
-        data-oiid={oiid}
+        data-ozid={ozid}
       >
         {children}
       </AccordionPrimitive.Root>

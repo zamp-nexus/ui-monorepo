@@ -8,7 +8,7 @@
 
 import type { Session } from '@ory/client-fetch';
 
-import { ManagedInterval } from '@open-insights-web/foundation-utils';
+import { ManagedInterval } from '@open-zentra/foundation-utils';
 
 import { DEFAULT_AUTH_CONFIG, SESSION_STATE, type SessionStateType } from '../core/constants';
 import type { OryClientInstance } from '../core/ory-client';

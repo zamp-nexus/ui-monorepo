@@ -12,7 +12,7 @@ import {
   DisposedError,
   hashPayloadSync,
   type IDisposable,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { mapFilterExpression } from '../internal/filter-recursion';
 import { getAggregationSqlFunction, isDistinctAggregation } from '../types/aggregation';

@@ -10,7 +10,7 @@ import camelCase from 'lodash/camelCase';
 
 import { ThemeProvider } from '../theme';
 import type { OIComponentModifiers, OIComponentVariants } from '../types';
-import { slotOiid } from '../utils/oiid';
+import { slotOzid } from '../utils/ozid';
 import { randomString } from './random';
 import { resetTestingComponentState, setTestingComponentState } from './test-state';
 
@@ -42,22 +42,22 @@ export interface DescribeComponentOptions {
  */
 function testSupportsClassName(element: React.ReactElement) {
   it('supports className property', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const className = randomString('test-class-name');
-    const { getByTestId } = render(React.cloneElement(element, { className, oiid }));
-    expect(getByTestId(oiid)).toHaveClass(className);
+    const { getByTestId } = render(React.cloneElement(element, { className, ozid }));
+    expect(getByTestId(ozid)).toHaveClass(className);
   });
 }
 
 /**
- * Tests oiid property support
+ * Tests ozid property support
  */
-function testSupportsOiid(element: React.ReactElement) {
-  it('supports oiid property', () => {
-    const oiid = randomString();
-    const { getByTestId } = render(React.cloneElement(element, { oiid }));
-    expect(getByTestId(oiid)).toHaveAttribute('data-oiid', oiid);
-    expect(getByTestId(oiid)).toBeInTheDocument();
+function testSupportsOzid(element: React.ReactElement) {
+  it('supports ozid property', () => {
+    const ozid = randomString();
+    const { getByTestId } = render(React.cloneElement(element, { ozid }));
+    expect(getByTestId(ozid)).toHaveAttribute('data-ozid', ozid);
+    expect(getByTestId(ozid)).toBeInTheDocument();
   });
 }
 
@@ -70,10 +70,10 @@ function testSupportsForwardRef(
 ) {
   it('supports forwarding ref to root element', () => {
     const ref = React.createRef();
-    const oiid = randomString();
-    const { getByTestId } = render(React.cloneElement(element, { oiid, ref }));
+    const ozid = randomString();
+    const { getByTestId } = render(React.cloneElement(element, { ozid, ref }));
     expect(ref.current).toBeInstanceOf(rootInstanceOf);
-    expect(getByTestId(oiid)).toEqual(ref.current);
+    expect(getByTestId(ozid)).toEqual(ref.current);
   });
 }
 
@@ -85,32 +85,32 @@ function testSupportsCommonHTMLAttributes(
   { rootSupportsAriaAttributes }: Pick<DescribeComponentOptions, 'rootSupportsAriaAttributes'>,
 ) {
   it('should support passing lang attribute to root element', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const lang = 'en';
-    const { getByTestId } = render(React.cloneElement(element, { oiid, lang }));
-    expect(getByTestId(oiid)).toHaveAttribute('lang', lang);
+    const { getByTestId } = render(React.cloneElement(element, { ozid, lang }));
+    expect(getByTestId(ozid)).toHaveAttribute('lang', lang);
   });
 
   if (rootSupportsAriaAttributes) {
     it('should support passing aria attribute to root element', () => {
-      const oiid = randomString();
+      const ozid = randomString();
       const ariaAttrName = 'aria-labelledby';
       const ariaAttrValue = randomString('aria-labelledby');
       const { getByTestId } = render(
-        React.cloneElement(element, { [ariaAttrName]: ariaAttrValue, oiid }),
+        React.cloneElement(element, { [ariaAttrName]: ariaAttrValue, ozid }),
       );
-      expect(getByTestId(oiid)).toHaveAttribute(ariaAttrName, ariaAttrValue);
+      expect(getByTestId(ozid)).toHaveAttribute(ariaAttrName, ariaAttrValue);
     });
   }
 
   it('should support passing data-* attributes to root element', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const dataAttrName = randomString('data');
     const dataAttrValue = randomString();
     const { getByTestId } = render(
-      React.cloneElement(element, { [dataAttrName]: dataAttrValue, oiid }),
+      React.cloneElement(element, { [dataAttrName]: dataAttrValue, ozid }),
     );
-    expect(getByTestId(oiid)).toHaveAttribute(dataAttrName, dataAttrValue);
+    expect(getByTestId(ozid)).toHaveAttribute(dataAttrName, dataAttrValue);
   });
 }
 
@@ -119,13 +119,13 @@ function testSupportsCommonHTMLAttributes(
  */
 function testSupportsComponentProp(element: React.ReactElement) {
   it('should render the root element with provided component', () => {
-    const oiid = randomString();
-    const { getByTestId } = render(React.cloneElement(element, { component: 'i', oiid }));
-    expect(getByTestId(oiid).nodeName).toBe('I');
+    const ozid = randomString();
+    const { getByTestId } = render(React.cloneElement(element, { component: 'i', ozid }));
+    expect(getByTestId(ozid).nodeName).toBe('I');
   });
 
   it('should render the root element with provided React component', () => {
-    const oiid = randomString();
+    const ozid = randomString();
     const testContent = randomString();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const Component = React.forwardRef<HTMLDivElement, any>((props, ref) => (
@@ -134,8 +134,8 @@ function testSupportsComponentProp(element: React.ReactElement) {
       </div>
     ));
     Component.displayName = 'TestComponent';
-    const { getByTestId } = render(React.cloneElement(element, { component: Component, oiid }));
-    expect(getByTestId(oiid)).toHaveTextContent(testContent);
+    const { getByTestId } = render(React.cloneElement(element, { component: Component, ozid }));
+    expect(getByTestId(ozid)).toHaveTextContent(testContent);
   });
 }
 
@@ -164,24 +164,24 @@ export function testModifiers(
           },
         },
       };
-      const oiid = randomString(modifier);
+      const ozid = randomString(modifier);
 
       it(`should support modifier: ${modifier}=true`, () => {
         const { getByTestId, getAllByTestId } = render(
           <ThemeProvider theme={themeConfig}>
-            {React.cloneElement(element, { oiid, [modifier]: true })}
+            {React.cloneElement(element, { ozid, [modifier]: true })}
           </ThemeProvider>,
         );
         if (allowMultiple) {
           const renderedElements = getAllByTestId(
-            slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
+            slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '',
           );
           for (const renderedElement of renderedElements) {
             expect(renderedElement).toHaveClass(trueClassName);
             expect(renderedElement).not.toHaveClass(falseClassName);
           }
         } else {
-          const renderedElement = getByTestId(slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '');
+          const renderedElement = getByTestId(slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '');
           expect(renderedElement).toHaveClass(trueClassName);
           expect(renderedElement).not.toHaveClass(falseClassName);
         }
@@ -190,19 +190,19 @@ export function testModifiers(
       it(`should support modifier: ${modifier}=false`, () => {
         const { getByTestId, getAllByTestId } = render(
           <ThemeProvider theme={themeConfig}>
-            {React.cloneElement(element, { oiid, [modifier]: false })}
+            {React.cloneElement(element, { ozid, [modifier]: false })}
           </ThemeProvider>,
         );
         if (allowMultiple) {
           const renderedElements = getAllByTestId(
-            slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
+            slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '',
           );
           for (const renderedElement of renderedElements) {
             expect(renderedElement).toHaveClass(falseClassName);
             expect(renderedElement).not.toHaveClass(trueClassName);
           }
         } else {
-          const renderedElement = getByTestId(slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '');
+          const renderedElement = getByTestId(slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '');
           expect(renderedElement).toHaveClass(falseClassName);
           expect(renderedElement).not.toHaveClass(trueClassName);
         }
@@ -252,16 +252,16 @@ export function testVariants(
       };
 
       for (const value of values) {
-        const oiid = randomString(`test-variant-${variant}`);
+        const ozid = randomString(`test-variant-${variant}`);
         it(`should support value: ${value}`, () => {
           const { getByTestId, getAllByTestId } = render(
             <ThemeProvider theme={themeConfig}>
-              {React.cloneElement(element, { oiid, [variant]: value })}
+              {React.cloneElement(element, { ozid, [variant]: value })}
             </ThemeProvider>,
           );
           if (allowMultiple) {
             const renderedElements = getAllByTestId(
-              slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
+              slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '',
             );
             for (const renderedElement of renderedElements) {
               for (const otherValue of values) {
@@ -274,7 +274,7 @@ export function testVariants(
             }
           } else {
             const renderedElement = getByTestId(
-              slot === 'root' ? oiid : slotOiid(oiid, slot) ?? '',
+              slot === 'root' ? ozid : slotOzid(ozid, slot) ?? '',
             );
             for (const otherValue of values) {
               if (otherValue === value) {
@@ -291,7 +291,7 @@ export function testVariants(
 }
 
 /**
- * Main test harness for OpenInsights Design System components
+ * Main test harness for OpenZentra Design System components
  *
  * @example
  * describeComponent(
@@ -330,7 +330,7 @@ export function describeComponent(
   describe(`OI component: <${name} />`, () => {
     describe('common:', () => {
       testSupportsClassName(minimumElement);
-      testSupportsOiid(minimumElement);
+      testSupportsOzid(minimumElement);
       if (shouldSupportForwardRef) {
         testSupportsForwardRef(minimumElement, rootInstanceOf);
       }

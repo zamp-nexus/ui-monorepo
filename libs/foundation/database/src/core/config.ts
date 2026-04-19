@@ -3,8 +3,8 @@
  * @module core/config
  */
 
-import { SYNC_STATE_KEY } from '@open-insights-web/foundation-data-model';
-import { TIME_MS } from '@open-insights-web/foundation-utils';
+import { SYNC_STATE_KEY } from '@open-zentra/foundation-data-model';
+import { TIME_MS } from '@open-zentra/foundation-utils';
 
 /**
  * Database configuration options
@@ -50,7 +50,7 @@ const isDevelopment = (): boolean => {
  * Default database configuration
  */
 export const DEFAULT_DATABASE_CONFIG: DatabaseConfig = {
-  name: 'open-insights-db',
+  name: 'open-zentra-db',
   version: 1,
   debug: isDevelopment(),
   queryCacheTTL: TIME_MS.MINUTE * 5, // 5 minutes

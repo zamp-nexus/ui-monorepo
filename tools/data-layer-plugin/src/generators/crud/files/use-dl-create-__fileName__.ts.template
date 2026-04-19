@@ -4,13 +4,13 @@
  * Creates a new <%= name %>.
  */
 
-import type { ApiMutationDescriptor } from '@open-insights-web/foundation-data-model';
+import type { ApiMutationDescriptor } from '@open-zentra/foundation-data-model';
 import {
   useDLCreate,
   type MutationDescriptorArgs,
   type MutationDescriptorData,
   type UseDLCreateOptions,
-} from '@open-insights-web/foundation-data-layer';
+} from '@open-zentra/foundation-data-layer';
 import { <%= propertyName %>Keys } from './<%= fileName %>-keys';
 
 export const default<%= className %>CreateMutation: ApiMutationDescriptor = {

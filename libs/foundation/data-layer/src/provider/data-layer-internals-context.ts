@@ -17,9 +17,9 @@ import { createContext, useContext } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
-import type { DuckDBRouter } from '@open-insights-web/foundation-bridge';
-import type { DatabaseFacade, OpfsManager } from '@open-insights-web/foundation-database';
-import type { SyncCoordinator } from '@open-insights-web/foundation-sync-engine';
+import type { DuckDBRouter } from '@open-zentra/foundation-bridge';
+import type { DatabaseFacade, OpfsManager } from '@open-zentra/foundation-database';
+import type { SyncCoordinator } from '@open-zentra/foundation-sync-engine';
 
 import type { FileDownloadService } from '../analytics-sync/file-download-service';
 import type { TableSyncService } from '../analytics-sync/table-sync-service';

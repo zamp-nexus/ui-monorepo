@@ -41,17 +41,17 @@ import { radioGroupDefaultTheme } from './types';
  */
 const RadioGroupRoot: RadioGroupComponent = React.forwardRef<HTMLDivElement, RadioGroupProps>(
   function RadioGroup(
-    { className, oiid, size = 'md', disabled, value, defaultValue, onValueChange, children, name },
+    { className, ozid, size = 'md', disabled, value, defaultValue, onValueChange, children, name },
     ref: React.ForwardedRef<HTMLDivElement>,
   ) {
     const theme = useTheme('radioGroup', radioGroupDefaultTheme);
 
     return (
-      <RadioGroupProvider value={{ size, disabled, oiid }}>
+      <RadioGroupProvider value={{ size, disabled, ozid }}>
         <RadioGroupPrimitive
           ref={ref}
           className={theme.root({ className, size, disabled })}
-          data-oiid={oiid}
+          data-ozid={ozid}
           disabled={disabled}
           value={value}
           defaultValue={defaultValue}

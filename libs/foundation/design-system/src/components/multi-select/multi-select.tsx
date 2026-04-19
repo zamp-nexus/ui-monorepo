@@ -9,7 +9,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -42,7 +42,7 @@ import { multiSelectDefaultTheme } from './types';
  * />
  */
 export const MultiSelect: MultiSelectComponent = ({
-  oiid,
+  ozid,
   size = 'md',
   feedback = 'default',
   disabled,
@@ -133,18 +133,18 @@ export const MultiSelect: MultiSelectComponent = ({
             theme.root?.({ className, size, feedback, disabled, readOnly, showCounter }) ??
             className
           }
-          data-oiid={oiid}
+          data-ozid={ozid}
         >
           <PopoverPrimitive.Trigger
             className={theme.trigger?.({ size, feedback, disabled }) ?? ''}
             disabled={disabled || readOnly}
             aria-label={label}
-            data-oiid={oiid ? `${oiid}__trigger` : undefined}
+            data-ozid={ozid ? `${ozid}__trigger` : undefined}
           >
             {/* Start slot */}
             {start && (
               <Slot
-                baseOiid={oiid}
+                baseOzid={ozid}
                 slotName="start"
                 slot={start}
                 component="span"
@@ -158,7 +158,7 @@ export const MultiSelect: MultiSelectComponent = ({
                 <span className="truncate">{displayText}</span>
               ) : (
                 <Slot
-                  baseOiid={oiid}
+                  baseOzid={ozid}
                   className={theme.placeholder?.({}) ?? ''}
                   slotName="placeholder"
                   slot={placeholder}
@@ -176,7 +176,7 @@ export const MultiSelect: MultiSelectComponent = ({
 
             {/* End slot / chevron */}
             {end ? (
-              <Slot baseOiid={oiid} slotName="end" slot={end} component="span" aria-hidden="true" />
+              <Slot baseOzid={ozid} slotName="end" slot={end} component="span" aria-hidden="true" />
             ) : (
               <Icon
                 name="chevron-down"
@@ -189,7 +189,7 @@ export const MultiSelect: MultiSelectComponent = ({
             <PopoverPrimitive.Positioner sideOffset={4}>
               <PopoverPrimitive.Popup
                 className={theme.content?.({}) ?? ''}
-                data-oiid={oiid ? `${oiid}__content` : undefined}
+                data-ozid={ozid ? `${ozid}__content` : undefined}
               >
                 {/* Search */}
                 {searchable && (
@@ -201,7 +201,7 @@ export const MultiSelect: MultiSelectComponent = ({
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className={theme.searchInput?.({ size }) ?? ''}
-                      data-oiid={oiid ? `${oiid}__search` : undefined}
+                      data-ozid={ozid ? `${ozid}__search` : undefined}
                     />
                   </div>
                 )}
@@ -229,7 +229,7 @@ export const MultiSelect: MultiSelectComponent = ({
                             data-disabled={isDisabled || undefined}
                             className={theme.item?.({ size }) ?? ''}
                             onClick={() => !isDisabled && handleItemToggle(option.value)}
-                            data-oiid={oiid ? `${oiid}__item-${option.value}` : undefined}
+                            data-ozid={ozid ? `${ozid}__item-${option.value}` : undefined}
                           >
                             <span className={theme.itemIndicator?.({}) ?? ''}>
                               <Checkbox

@@ -14,10 +14,10 @@ export type SlotDefaultElement = 'div';
  * Slot's own props
  */
 export interface SlotOwnProps {
-  /** Base oiid from parent component */
-  baseOiid?: string;
-  /** Custom oiid (overrides generated oiid from baseOiid + slotName) */
-  oiid?: string;
+  /** Base ozid from parent component */
+  baseOzid?: string;
+  /** Custom ozid (overrides generated ozid from baseOzid + slotName) */
+  ozid?: string;
   /** Name of the slot (required for proper slot identification) */
   slotName?: string;
   /** Slot prop value (can be React node or config object) */

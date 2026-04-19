@@ -15,7 +15,7 @@ export const openInsightsDarkTheme: ThemeVars = create({
   base: 'dark',
 
   // Brand
-  brandTitle: 'Open Insights Design System',
+  brandTitle: 'Open Zentra Design System',
   brandUrl: '/',
   brandTarget: '_self',
 
@@ -71,7 +71,7 @@ export const openInsightsLightTheme: ThemeVars = create({
   base: 'light',
 
   // Brand
-  brandTitle: 'Open Insights Design System',
+  brandTitle: 'Open Zentra Design System',
   brandUrl: '/',
   brandTarget: '_self',
 

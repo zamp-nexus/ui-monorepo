@@ -7,7 +7,7 @@ import {
   CONFLICT_RESOLUTION_TYPE,
   SYNC_EVENT_TYPE,
   type SyncEvent,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { DataLayerInternals } from '../provider/data-layer-internals-context';
 import { DataLayerInternalsContext } from '../provider/data-layer-internals-context';

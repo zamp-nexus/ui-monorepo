@@ -9,7 +9,7 @@ import type { SelectVariants } from './types';
 interface SelectContextValue {
   size: (typeof SelectVariants.size)[number];
   disabled?: boolean;
-  oiid?: string;
+  ozid?: string;
 }
 
 const SelectContext = createContext<SelectContextValue | null>(null);

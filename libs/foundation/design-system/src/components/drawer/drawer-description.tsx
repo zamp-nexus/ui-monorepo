@@ -19,7 +19,7 @@ import { drawerDefaultTheme } from './types';
 export const DrawerDescription: React.FC<DrawerDescriptionProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('drawer', drawerDefaultTheme);
   const { descriptionId } = useDrawerContext();
@@ -28,7 +28,7 @@ export const DrawerDescription: React.FC<DrawerDescriptionProps> = ({
     <Dialog.Description
       id={descriptionId}
       className={theme.description?.({ className }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="description"
     >
       {children}

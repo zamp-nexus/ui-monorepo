@@ -5,7 +5,7 @@
  *
  * NOTE: Branded types (SqlTableName, MemberRef, QueryId, SqlIdentifier, ExecutionId)
  * are NOT re-exported here. Import them directly from:
- *   @open-insights-web/foundation-data-model
+ *   @open-zentra/foundation-data-model
  *
  * @module types
  */
@@ -203,7 +203,7 @@ export {
 // Table Types
 // =============================================================================
 
-// NOTE: For ConflictStrategy type, import directly from @open-insights-web/foundation-data-model
+// NOTE: For ConflictStrategy type, import directly from @open-zentra/foundation-data-model
 export {
   TABLE_SOURCES,
   TABLE_LOAD_STATES,

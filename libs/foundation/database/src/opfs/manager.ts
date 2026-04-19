@@ -12,7 +12,7 @@ import isEqual from 'fast-deep-equal';
 import {
   type LegacyErrorCallback,
   type OpfsFileType,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   clearDirectory,
   createDebugLogger,
@@ -27,7 +27,7 @@ import {
   listDirectoryEntries,
   normalizeError,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { InsightsDatabase } from '../core/database';
 import { getDatabase } from '../core/database';
@@ -72,7 +72,7 @@ export interface OpfsManagerConfig {
  * Default OPFS manager configuration
  */
 const DEFAULT_CONFIG: Required<Omit<OpfsManagerConfig, 'database' | 'onError'>> = {
-  rootDir: 'open-insights',
+  rootDir: 'open-zentra',
   debug: false,
 };
 

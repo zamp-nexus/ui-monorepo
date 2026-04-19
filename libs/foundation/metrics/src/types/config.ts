@@ -5,7 +5,7 @@
 
 import type { AxiosInstance } from 'axios';
 
-import type { ComplianceRegion, Environment } from '@open-insights-web/foundation-data-model';
+import type { ComplianceRegion, Environment } from '@open-zentra/foundation-data-model';
 
 import type { FoundationMetricsPlugin } from './plugin';
 

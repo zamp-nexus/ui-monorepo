@@ -24,9 +24,9 @@ interface DescribeFocusableOptions {
 
 function testFocusable(element: React.ReactElement) {
   it('is focusable', () => {
-    const oiid = randomString();
-    const { getByTestId } = render(React.cloneElement(element, { oiid }));
-    const component = getByTestId(oiid);
+    const ozid = randomString();
+    const { getByTestId } = render(React.cloneElement(element, { ozid }));
+    const component = getByTestId(ozid);
     act(() => {
       component.focus();
     });
@@ -41,9 +41,9 @@ function testFocusableWhenDisabled(
   it(
     shouldBeFocusableWhenDisabled ? 'is focusable when disabled' : 'is not focusable when disabled',
     () => {
-      const oiid = randomString();
-      const { getByTestId } = render(React.cloneElement(element, { disabled: true, oiid }));
-      const component = getByTestId(oiid);
+      const ozid = randomString();
+      const { getByTestId } = render(React.cloneElement(element, { disabled: true, ozid }));
+      const component = getByTestId(ozid);
       act(() => {
         component.focus();
       });
@@ -58,9 +58,9 @@ function testFocusableWhenDisabled(
 
 function testIsFocusableWithCustomComponent(element: React.ReactElement) {
   it('is focusable with custom component', () => {
-    const oiid = randomString();
-    const { getByTestId } = render(React.cloneElement(element, { component: 'span', oiid }));
-    const component = getByTestId(oiid);
+    const ozid = randomString();
+    const { getByTestId } = render(React.cloneElement(element, { component: 'span', ozid }));
+    const component = getByTestId(ozid);
     act(() => {
       component.focus();
     });

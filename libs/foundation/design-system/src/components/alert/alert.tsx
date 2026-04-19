@@ -4,7 +4,7 @@
  */
 import React from 'react';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -56,7 +56,7 @@ export const Alert = React.forwardRef(function Alert<T extends React.ElementType
     component,
     className,
     children,
-    oiid,
+    ozid,
     intent = 'info',
     dismissible,
     start,
@@ -82,12 +82,12 @@ export const Alert = React.forwardRef(function Alert<T extends React.ElementType
       ref={ref}
       role="alert"
       className={theme.root({ className, intent, dismissible })}
-      data-oiid={oiid}
+      data-ozid={ozid}
       {...rest}
     >
       {/* Start slot (icon) */}
       <Slot
-        baseOiid={oiid}
+        baseOzid={ozid}
         className={theme.start?.({ intent }) ?? ''}
         slotName="start"
         slot={startSlot}
@@ -102,7 +102,7 @@ export const Alert = React.forwardRef(function Alert<T extends React.ElementType
       {/* End slot (dismiss button or custom content) */}
       {(dismissible || end) && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.end?.({ intent }) ?? ''}
           slotName="end"
           slot={endSlot}

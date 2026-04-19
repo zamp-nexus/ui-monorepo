@@ -4,7 +4,7 @@ import {
   REALTIME_CONNECTION_STATE,
   REALTIME_SERVER_MESSAGE_TYPE,
   REALTIME_SUBSCRIPTION_STATE,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import { RealtimeSocketClient } from './socket-client';
 

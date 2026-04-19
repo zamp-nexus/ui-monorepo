@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { OPERATIONS } from '@open-insights-web/foundation-data-model';
+import { OPERATIONS } from '@open-zentra/foundation-data-model';
 
 import { NETWORK_STATUS_EVENT } from '../network/index';
 import { SyncEngineContainer, SyncEngineFactory } from './container';

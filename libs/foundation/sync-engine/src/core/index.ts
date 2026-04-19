@@ -3,7 +3,7 @@
  *
  * NOTE: Sync-related types (NetworkStatus, NetworkStatusListener, CrossTabMessageType,
  * CrossTabMessage, CrossTabMessageHandler, SyncEvent, SyncEventListener) should be
- * imported directly from @open-insights-web/foundation-data-model
+ * imported directly from @open-zentra/foundation-data-model
  *
  * This module exports interfaces for dependency injection patterns.
  *

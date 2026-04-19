@@ -8,7 +8,7 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-import { createDebugLogger } from '@open-insights-web/foundation-utils';
+import { createDebugLogger } from '@open-zentra/foundation-utils';
 
 import { PARAMS_ARRAY_FORMAT, type ParamsArrayFormat } from '../../core/constants';
 

@@ -1,5 +1,5 @@
 /**
- * Open Insights Design System - Token System
+ * Open Zentra Design System - Token System
  *
  * Enterprise-grade, W3C-compliant design tokens
  * Following Linear's design language

@@ -5,7 +5,7 @@
 
 import { SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
 
-import { isBrowser } from '@open-insights-web/foundation-utils';
+import { isBrowser } from '@open-zentra/foundation-utils';
 
 import type {
   ActiveSpan,
@@ -76,7 +76,7 @@ let lifecycleState: MetricsLifecycleState = 'uninitialized';
  *
  * @example
  * ```typescript
- * import { FoundationMetrics } from '@open-insights-web/foundation-metrics';
+ * import { FoundationMetrics } from '@open-zentra/foundation-metrics';
  *
  * FoundationMetrics.init({
  *   serviceName: 'my-app',
@@ -461,7 +461,7 @@ export class FoundationMetrics {
       'interaction.type': event.type,
       'interaction.target_tag': event.targetTag,
       'interaction.target_id': event.targetId || '',
-      'interaction.target_oiid': event.targetOiid || '',
+      'interaction.target_ozid': event.targetOzid || '',
     });
 
     // Add breadcrumb
@@ -469,7 +469,7 @@ export class FoundationMetrics {
       category: BREADCRUMB_CATEGORY.UI,
       message: `${event.type} on ${event.targetTag}`,
       timestamp: event.timestamp,
-      data: { targetId: event.targetId, targetOiid: event.targetOiid },
+      data: { targetId: event.targetId, targetOzid: event.targetOzid },
     });
   }
 

@@ -7,9 +7,9 @@ import {
   QueryCancelledError,
   QueryExecutionError,
   QueryId,
-} from '@open-insights-web/foundation-data-model';
-import type { Logger } from '@open-insights-web/foundation-utils';
-import { createDebugLogger, normalizeError } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-model';
+import type { Logger } from '@open-zentra/foundation-utils';
+import { createDebugLogger, normalizeError } from '@open-zentra/foundation-utils';
 
 import { BridgeInitializationError, BridgeNotInitializedError } from '../errors/bridge-errors';
 import type {

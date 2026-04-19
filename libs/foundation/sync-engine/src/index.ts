@@ -8,7 +8,7 @@
  * QueueStats, ProcessingResult, SyncState, SyncEventType, NetworkStatus, NetworkStatusListener,
  * CrossTabMessageType, CrossTabMessage, CrossTabMessageHandler, SyncEvent, SyncEventListener,
  * OfflineQueryContext, OfflineMutationResult, ConflictResolvableData) should be imported
- * directly from @open-insights-web/foundation-data-model
+ * directly from @open-zentra/foundation-data-model
  *
  * @packageDocumentation
  */

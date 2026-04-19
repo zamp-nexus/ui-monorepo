@@ -17,7 +17,7 @@ import { createTheme } from './theme-contract';
  * Light theme implementing the ThemeContract
  */
 export const lightTheme = createTheme({
-  name: 'Open Insights Light',
+  name: 'Open Zentra Light',
   mode: 'light',
 
   colors: {

@@ -52,7 +52,7 @@ import { checkboxGroupDefaultTheme } from './types';
  * </CheckboxGroup>
  */
 const CheckboxGroupRoot: CheckboxGroupComponent = ({
-  oiid,
+  ozid,
   orientation = 'vertical',
   size = 'md',
   value: controlledValue,
@@ -127,7 +127,7 @@ const CheckboxGroupRoot: CheckboxGroupComponent = ({
         role="group"
         aria-label={label}
         className={theme.root?.({ className, orientation, size, disabled }) ?? className}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-orientation={orientation}
         data-disabled={disabled || undefined}
       >

@@ -13,11 +13,11 @@ import { modalDefaultTheme } from './types';
  *
  * Scrollable container for the main modal content.
  */
-export const ModalBody: React.FC<ModalBodyProps> = ({ children, className, oiid }) => {
+export const ModalBody: React.FC<ModalBodyProps> = ({ children, className, ozid }) => {
   const theme = useTheme('modal', modalDefaultTheme);
 
   return (
-    <div className={theme.body?.({ className }) ?? className} data-oiid={oiid} data-slot="body">
+    <div className={theme.body?.({ className }) ?? className} data-ozid={ozid} data-slot="body">
       {children}
     </div>
   );

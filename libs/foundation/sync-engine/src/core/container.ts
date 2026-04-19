@@ -3,13 +3,13 @@
  * @module core/container
  */
 
-import { getDatabase } from '@open-insights-web/foundation-database';
+import { getDatabase } from '@open-zentra/foundation-database';
 import {
   CompositeDisposable,
   createDebugLogger,
   normalizeError,
   type IAsyncDisposable,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import { ConflictResolver } from '../conflicts/resolver';
 import { SyncCoordinator } from '../coordinator';

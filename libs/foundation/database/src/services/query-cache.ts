@@ -7,7 +7,7 @@
  * @module services/query-cache
  */
 
-import { QUERY_CACHE_STATUS } from '@open-insights-web/foundation-data-model';
+import { QUERY_CACHE_STATUS } from '@open-zentra/foundation-data-model';
 
 import type {
   GetCacheOptions,

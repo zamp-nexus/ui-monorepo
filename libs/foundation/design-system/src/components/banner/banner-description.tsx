@@ -17,7 +17,7 @@ import { bannerDefaultTheme } from './types';
 export const BannerDescription: React.FC<BannerDescriptionProps> = ({
   children,
   className,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('banner', bannerDefaultTheme);
   const { descriptionId, variant } = useBannerContext();
@@ -26,7 +26,7 @@ export const BannerDescription: React.FC<BannerDescriptionProps> = ({
     <p
       id={descriptionId}
       className={theme.description?.({ className, variant }) ?? className}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="description"
     >
       {children}

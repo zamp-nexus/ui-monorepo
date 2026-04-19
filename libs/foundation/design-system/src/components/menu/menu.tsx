@@ -7,7 +7,7 @@ import * as React from 'react';
 
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 
-import { Icon } from '@open-insights-web/foundation-icons';
+import { Icon } from '@open-zentra/foundation-icons';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
@@ -64,8 +64,8 @@ const MenuRoot: MenuComponent = ({
 // Menu Trigger
 // ============================================================================
 
-const MenuTrigger: React.FC<MenuTriggerProps> = ({ children, disabled, oiid }) => (
-  <MenuPrimitive.Trigger disabled={disabled} data-oiid={oiid} data-slot="trigger">
+const MenuTrigger: React.FC<MenuTriggerProps> = ({ children, disabled, ozid }) => (
+  <MenuPrimitive.Trigger disabled={disabled} data-ozid={ozid} data-slot="trigger">
     {children}
   </MenuPrimitive.Trigger>
 );
@@ -81,7 +81,7 @@ const MenuContent: React.FC<MenuContentProps> = ({
   alignOffset,
   side = 'bottom',
   align = 'start',
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('menu', menuDefaultTheme);
 
@@ -96,7 +96,7 @@ const MenuContent: React.FC<MenuContentProps> = ({
       >
         <MenuPrimitive.Popup
           className={theme.popup?.({}) ?? ''}
-          data-oiid={oiid}
+          data-ozid={ozid}
           data-slot="content"
         >
           {children}
@@ -118,7 +118,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
   closeOnSelect = true,
   start,
   end,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('menu', menuDefaultTheme);
   const { size } = useMenuContext();
@@ -129,12 +129,12 @@ const MenuItem: React.FC<MenuItemProps> = ({
       closeOnClick={closeOnSelect}
       onClick={onSelect}
       className={theme.item?.({ size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="item"
     >
       {start && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.itemStart?.({ size }) ?? ''}
           slotName="start"
           slot={start}
@@ -145,7 +145,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
       {children}
       {end && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.itemEnd?.({}) ?? ''}
           slotName="end"
           slot={end}
@@ -167,7 +167,7 @@ const MenuCheckboxItem: React.FC<MenuCheckboxItemProps> = ({
   onCheckedChange,
   disabled,
   closeOnSelect = false,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('menu', menuDefaultTheme);
   const { size } = useMenuContext();
@@ -182,7 +182,7 @@ const MenuCheckboxItem: React.FC<MenuCheckboxItemProps> = ({
       closeOnClick={closeOnSelect}
       onClick={handleClick}
       className={theme.checkboxItem?.({ size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="checkboxItem"
       data-checked={checked || undefined}
     >
@@ -213,7 +213,7 @@ const MenuRadioGroup: React.FC<MenuRadioGroupProps> = ({
   children,
   value,
   onValueChange,
-  oiid,
+  ozid,
 }) => {
   const contextValue = useMemo(() => ({ value, onValueChange }), [value, onValueChange]);
 
@@ -222,7 +222,7 @@ const MenuRadioGroup: React.FC<MenuRadioGroupProps> = ({
       <MenuPrimitive.RadioGroup
         value={value}
         onValueChange={onValueChange}
-        data-oiid={oiid}
+        data-ozid={ozid}
         data-slot="radioGroup"
       >
         {children}
@@ -241,7 +241,7 @@ const MenuRadioItem: React.FC<MenuRadioItemProps> = ({
   value,
   disabled,
   closeOnSelect = false,
-  oiid,
+  ozid,
 }) => {
   const theme = useTheme('menu', menuDefaultTheme);
   const { size } = useMenuContext();
@@ -254,7 +254,7 @@ const MenuRadioItem: React.FC<MenuRadioItemProps> = ({
       disabled={disabled}
       closeOnClick={closeOnSelect}
       className={theme.radioItem?.({ size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="radioItem"
       data-checked={isChecked || undefined}
     >
@@ -271,11 +271,11 @@ MenuRadioItem.displayName = 'Menu.RadioItem';
 // Menu Group
 // ============================================================================
 
-const MenuGroup: React.FC<MenuGroupProps> = ({ children, oiid }) => {
+const MenuGroup: React.FC<MenuGroupProps> = ({ children, ozid }) => {
   const theme = useTheme('menu', menuDefaultTheme);
 
   return (
-    <MenuPrimitive.Group className={theme.group?.({}) ?? ''} data-oiid={oiid} data-slot="group">
+    <MenuPrimitive.Group className={theme.group?.({}) ?? ''} data-ozid={ozid} data-slot="group">
       {children}
     </MenuPrimitive.Group>
   );
@@ -286,13 +286,13 @@ MenuGroup.displayName = 'Menu.Group';
 // Menu Group Label
 // ============================================================================
 
-const MenuGroupLabel: React.FC<MenuGroupLabelProps> = ({ children, oiid }) => {
+const MenuGroupLabel: React.FC<MenuGroupLabelProps> = ({ children, ozid }) => {
   const theme = useTheme('menu', menuDefaultTheme);
 
   return (
     <MenuPrimitive.GroupLabel
       className={theme.groupLabel?.({}) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="groupLabel"
     >
       {children}
@@ -305,13 +305,13 @@ MenuGroupLabel.displayName = 'Menu.GroupLabel';
 // Menu Separator
 // ============================================================================
 
-const MenuSeparator: React.FC<MenuSeparatorProps> = ({ oiid }) => {
+const MenuSeparator: React.FC<MenuSeparatorProps> = ({ ozid }) => {
   const theme = useTheme('menu', menuDefaultTheme);
 
   return (
     <MenuPrimitive.Separator
       className={theme.separator?.({}) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="separator"
     />
   );
@@ -322,7 +322,7 @@ MenuSeparator.displayName = 'Menu.Separator';
 // Menu Sub
 // ============================================================================
 
-const MenuSub: React.FC<MenuSubProps> = ({ children, open, defaultOpen, onOpenChange, oiid }) => {
+const MenuSub: React.FC<MenuSubProps> = ({ children, open, defaultOpen, onOpenChange, ozid }) => {
   return (
     <MenuPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {children}
@@ -335,7 +335,7 @@ MenuSub.displayName = 'Menu.Sub';
 // Menu Sub Trigger
 // ============================================================================
 
-const MenuSubTrigger: React.FC<MenuSubTriggerProps> = ({ children, disabled, start, oiid }) => {
+const MenuSubTrigger: React.FC<MenuSubTriggerProps> = ({ children, disabled, start, ozid }) => {
   const theme = useTheme('menu', menuDefaultTheme);
   const { size } = useMenuContext();
 
@@ -343,12 +343,12 @@ const MenuSubTrigger: React.FC<MenuSubTriggerProps> = ({ children, disabled, sta
     <MenuPrimitive.SubmenuTrigger
       disabled={disabled}
       className={theme.subTrigger?.({ size }) ?? ''}
-      data-oiid={oiid}
+      data-ozid={ozid}
       data-slot="subTrigger"
     >
       {start && (
         <Slot
-          baseOiid={oiid}
+          baseOzid={ozid}
           className={theme.itemStart?.({ size }) ?? ''}
           slotName="start"
           slot={start}
@@ -367,7 +367,7 @@ MenuSubTrigger.displayName = 'Menu.SubTrigger';
 // Menu Sub Content
 // ============================================================================
 
-const MenuSubContent: React.FC<MenuSubContentProps> = ({ children, oiid }) => {
+const MenuSubContent: React.FC<MenuSubContentProps> = ({ children, ozid }) => {
   const theme = useTheme('menu', menuDefaultTheme);
 
   return (
@@ -375,7 +375,7 @@ const MenuSubContent: React.FC<MenuSubContentProps> = ({ children, oiid }) => {
       <MenuPrimitive.Positioner sideOffset={2} className={theme.positioner?.({}) ?? ''}>
         <MenuPrimitive.Popup
           className={theme.subContent?.({}) ?? ''}
-          data-oiid={oiid}
+          data-ozid={ozid}
           data-slot="subContent"
         >
           {children}

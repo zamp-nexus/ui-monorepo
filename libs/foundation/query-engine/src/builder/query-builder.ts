@@ -6,11 +6,11 @@
  * @module builder/query-builder
  */
 
-import type { QueryId } from '@open-insights-web/foundation-data-model';
+import type { QueryId } from '@open-zentra/foundation-data-model';
 import {
   MemberRef as MemberRefUtil,
   QueryId as QueryIdUtil,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 import type { Aggregation } from '../types/aggregation';
 import { AGGREGATIONS } from '../types/aggregation';

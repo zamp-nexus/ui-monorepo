@@ -1,6 +1,6 @@
-# @open-insights-web/foundation-database
+# @open-zentra/foundation-database
 
-Offline-first persistence for Open Insights. This library provides the Dexie/IndexedDB database, typed table contracts, service-layer operations, OPFS metadata coordination, and singleton lifecycle management used by foundation consumers.
+Offline-first persistence for Open Zentra. This library provides the Dexie/IndexedDB database, typed table contracts, service-layer operations, OPFS metadata coordination, and singleton lifecycle management used by foundation consumers.
 
 ## Table of Contents
 
@@ -29,14 +29,14 @@ Use this package when you need:
 ## Installation
 
 ```bash
-npm i @open-insights-web/foundation-database @open-insights-web/foundation-data-model
+npm i @open-zentra/foundation-database @open-zentra/foundation-data-model
 ```
 
 Peer/runtime dependencies used internally:
 
 - `dexie`
 - `zod`
-- `@open-insights-web/foundation-utils`
+- `@open-zentra/foundation-utils`
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ import {
   getDatabaseFacade,
   MUTATION_STATUS,
   MUTATION_TYPE,
-} from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-database';
 
 const facade = getDatabaseFacade({ debug: true });
 
@@ -86,7 +86,7 @@ await facade.transaction(
 ### Raw database (internal foundation usage)
 
 ```ts
-import { getDatabase } from '@open-insights-web/foundation-database';
+import { getDatabase } from '@open-zentra/foundation-database';
 
 const db = getDatabase();
 const count = await db.queries.count();
@@ -103,7 +103,7 @@ const count = await db.queries.count();
 
 ### Transaction constants
 
-- Import from `@open-insights-web/foundation-data-model`:
+- Import from `@open-zentra/foundation-data-model`:
   - `DATABASE_TRANSACTION_MODE`
     - `READ`
     - `READ_WRITE`
@@ -116,7 +116,7 @@ const count = await db.queries.count();
 
 ### Shared database constants and helpers
 
-Import these directly from `@open-insights-web/foundation-data-model`:
+Import these directly from `@open-zentra/foundation-data-model`:
 
 - `QUERY_CACHE_STATUS`
 - `MUTATION_STATUS`
@@ -162,16 +162,16 @@ Import these directly from `@open-insights-web/foundation-data-model`:
 
 ### Shared contract ownership
 
-`foundation-database` consumes canonical shared contracts from `@open-insights-web/foundation-data-model` (`src/types/database.ts`) and does not proxy those symbols.
+`foundation-database` consumes canonical shared contracts from `@open-zentra/foundation-data-model` (`src/types/database.ts`) and does not proxy those symbols.
 
 ### Ownership matrix
 
 | Contract                                                  | Canonical owner         | Import from                                |
 | --------------------------------------------------------- | ----------------------- | ------------------------------------------ |
-| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
-| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
-| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
-| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `@open-insights-web/foundation-data-model` |
+| `MUTATION_STATUS`, `MUTATION_TYPE`, `OPFS_FILE_TYPE`      | `foundation-data-model` | `@open-zentra/foundation-data-model` |
+| `SYNC_STATE_KEY`                                          | `foundation-data-model` | `@open-zentra/foundation-data-model` |
+| `DATABASE_TRANSACTION_MODE`, `DATABASE_TRANSACTION_TABLE` | `foundation-data-model` | `@open-zentra/foundation-data-model` |
+| `MutationQueueEntry`, `CreateMutationOptions`             | `foundation-data-model` | `@open-zentra/foundation-data-model` |
 
 ### Singleton safety
 
@@ -201,7 +201,7 @@ These indexes are used to reduce in-memory filtering and improve scan performanc
 
 | Key                   |            Default | Meaning                                  |
 | --------------------- | -----------------: | ---------------------------------------- |
-| `name`                | `open-insights-db` | IndexedDB database name                  |
+| `name`                | `open-zentra-db` | IndexedDB database name                  |
 | `version`             |                `1` | Config version marker                    |
 | `debug`               |          env-based | Enables debug logging                    |
 | `queryCacheTTL`       |       `5 * 60_000` | Query cache TTL                          |
@@ -215,7 +215,7 @@ These indexes are used to reduce in-memory filtering and improve scan performanc
 Example:
 
 ```ts
-import { getDatabaseFacade } from '@open-insights-web/foundation-database';
+import { getDatabaseFacade } from '@open-zentra/foundation-database';
 
 const facade = getDatabaseFacade({
   debug: false,
@@ -231,7 +231,7 @@ Database errors use `FOUNDATION_ERROR_CODE.DATABASE_*` codes from `foundation-da
 Example pattern:
 
 ```ts
-import { getDatabaseFacade, isQuotaExceededError } from '@open-insights-web/foundation-database';
+import { getDatabaseFacade, isQuotaExceededError } from '@open-zentra/foundation-database';
 
 try {
   await getDatabaseFacade().queries.clear();
@@ -243,7 +243,7 @@ try {
 }
 ```
 
-For functional error flow, use the shared `Result` contract (`ok`/`error`) from `@open-insights-web/foundation-data-model`.
+For functional error flow, use the shared `Result` contract (`ok`/`error`) from `@open-zentra/foundation-data-model`.
 
 ## Performance Notes
 

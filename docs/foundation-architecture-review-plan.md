@@ -69,7 +69,7 @@
   - Templates now generate wrappers around current APIs:
     - `useDLGet`/`useDLGetList`/`useDLGetOne`
     - `useDLCreate`/`useDLUpdate`/`useDLDelete`
-  - Key factory import moved to `@open-insights-web/foundation-data-model`.
+  - Key factory import moved to `@open-zentra/foundation-data-model`.
 
 3. `foundation-icons` compile blocker in registry contract
 

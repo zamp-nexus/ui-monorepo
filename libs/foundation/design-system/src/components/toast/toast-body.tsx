@@ -13,11 +13,11 @@ import { toastDefaultTheme } from './types';
  *
  * Container for custom body content in the toast
  */
-export const ToastBody: React.FC<ToastBodyProps> = ({ children, className, oiid }) => {
+export const ToastBody: React.FC<ToastBodyProps> = ({ children, className, ozid }) => {
   const theme = useTheme('toast', toastDefaultTheme);
 
   return (
-    <div className={theme.body?.({ className }) ?? className} data-oiid={oiid} data-slot="body">
+    <div className={theme.body?.({ className }) ?? className} data-ozid={ozid} data-slot="body">
       {children}
     </div>
   );

@@ -22,7 +22,7 @@
     },
     "dataModel": {
       "type": "string",
-      "description": "Import path for data model types (e.g., '@open-insights-web/products-data-model')",
+      "description": "Import path for data model types (e.g., '@open-zentra/products-data-model')",
       "x-prompt": "What is the import path for the data model types?"
     },
     "endpoint": {

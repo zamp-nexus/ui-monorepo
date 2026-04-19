@@ -5,10 +5,10 @@
  * Hook-specific types are colocated with their hook files.
  *
  * NOTE: For utility types (WithId, WithRequiredId, ExtractId, PartialBy, OfflineMetadata, OfflineDataSource),
- * import directly from @open-insights-web/foundation-data-model.
+ * import directly from @open-zentra/foundation-data-model.
  *
  * NOTE: For type guards (hasId, hasAnyId, getEntityId, matchesEntityId),
- * import directly from @open-insights-web/foundation-data-model.
+ * import directly from @open-zentra/foundation-data-model.
  *
  * @module core/types
  */
@@ -16,7 +16,7 @@
 import type { QueryKey } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
-import { REALTIME_SERVER_MESSAGE_TYPE } from '@open-insights-web/foundation-data-model';
+import { REALTIME_SERVER_MESSAGE_TYPE } from '@open-zentra/foundation-data-model';
 import type {
   ApiMutationDescriptor,
   ApiQueryDescriptor,
@@ -32,7 +32,7 @@ import type {
   RealtimeTopicDescriptor,
   UnifiedTableConfig as SharedUnifiedTableConfig,
   SyncState,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 
 type DataLayerUnifiedTableConfig = SharedUnifiedTableConfig<
   ApiQueryDescriptor,

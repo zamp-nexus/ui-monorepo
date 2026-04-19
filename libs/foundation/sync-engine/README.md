@@ -1,6 +1,6 @@
 # Foundation Sync Engine
 
-`@open-insights-web/foundation-sync-engine` coordinates offline mutation replay, conflict resolution, cross-tab leadership, and cache invalidation for API-backed data flows.
+`@open-zentra/foundation-sync-engine` coordinates offline mutation replay, conflict resolution, cross-tab leadership, and cache invalidation for API-backed data flows.
 
 ## Responsibilities
 
@@ -17,7 +17,7 @@ import {
   DEFAULT_MERGE_CONFIG,
   SyncCoordinator,
   type IQueueManager,
-} from '@open-insights-web/foundation-sync-engine';
+} from '@open-zentra/foundation-sync-engine';
 ```
 
 ## Quick Start
@@ -26,8 +26,8 @@ import {
 import axios from 'axios';
 import { QueryClient } from '@tanstack/react-query';
 
-import { CONFLICT_STRATEGY } from '@open-insights-web/foundation-data-model';
-import { createSyncCoordinator } from '@open-insights-web/foundation-sync-engine';
+import { CONFLICT_STRATEGY } from '@open-zentra/foundation-data-model';
+import { createSyncCoordinator } from '@open-zentra/foundation-sync-engine';
 
 const coordinator = createSyncCoordinator({
   queryClient: new QueryClient(),

@@ -25,9 +25,9 @@ import {
   useDLCreate,
   useDLDelete,
   useDLUpdate,
-} from '@open-insights-web/foundation-data-layer';
-import { getEntityId as getDataModelEntityId } from '@open-insights-web/foundation-data-model';
-import { EMPTY_ARRAY } from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-data-layer';
+import { getEntityId as getDataModelEntityId } from '@open-zentra/foundation-data-model';
+import { EMPTY_ARRAY } from '@open-zentra/foundation-utils';
 
 import { getTableExtractor } from '../engine/table-extractor';
 import {

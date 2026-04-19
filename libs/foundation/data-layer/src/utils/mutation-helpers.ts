@@ -18,9 +18,9 @@ import {
   hashQueryKey,
   SCHEMA_VERSION,
   toJsonSerializable,
-} from '@open-insights-web/foundation-data-model';
-import { createCacheEntry } from '@open-insights-web/foundation-database';
-import type { DatabaseFacade } from '@open-insights-web/foundation-database';
+} from '@open-zentra/foundation-data-model';
+import { createCacheEntry } from '@open-zentra/foundation-database';
+import type { DatabaseFacade } from '@open-zentra/foundation-database';
 
 import { DEFAULT_CACHE_TTL } from '../core/constants';
 import type { DLMutationResult } from '../core/types';

@@ -18,14 +18,14 @@ import {
   MUTATION_STATUS,
   type MutationQueueEntry,
   type TableSyncMetadataEntry,
-} from '@open-insights-web/foundation-data-model';
+} from '@open-zentra/foundation-data-model';
 import {
   createDebugLogger,
   createDeepEqualComparison,
   createSingletonFactory,
   ManagedInterval,
   type Logger,
-} from '@open-insights-web/foundation-utils';
+} from '@open-zentra/foundation-utils';
 
 import type { OpfsMetadataEntry } from '../tables/opfs-metadata';
 import type { QueryCacheEntry } from '../tables/query-cache';

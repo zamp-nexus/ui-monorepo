@@ -98,6 +98,6 @@ export {
 
 // ============================================
 // NOTE: Common utilities (browser detection, URL handling, etc.)
-// should be imported directly from @open-insights-web/foundation-utils
+// should be imported directly from @open-zentra/foundation-utils
 // Re-exports have been removed to reduce bundle size and clarify dependencies.
 // ============================================
