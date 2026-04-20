@@ -8,14 +8,13 @@ import {
   createAuthScope,
   createInitializingAuthState,
   createUnauthenticatedAuthState,
-  getUserPermissions,
   normalizeProviderRole,
   type AuthNavigationIntent,
   type AuthState,
   type AuthTransportAudience,
   type AuthTransportRequest,
   type ResolvedAuthTransport,
-  type UserRole,
+  type UserPermissions,
 } from '../../kernel';
 import { AuthRuntimeProvider, type AuthRuntimeProviderProps } from '../../runtime/react';
 import {
@@ -32,7 +31,6 @@ export interface ClerkAuthAdapterOptions {
   readonly audienceTransport?: Partial<Record<AuthTransportAudience, ClerkTransportMode>>;
   readonly tokenTemplate?: string;
   readonly tokenTemplates?: Partial<Record<AuthTransportAudience, string>>;
-  readonly roleMap?: Readonly<Record<string, UserRole>>;
 }
 
 export interface ClerkAuthProviderProps
@@ -49,15 +47,12 @@ const resolveRedirect = (intent?: AuthNavigationIntent): string | undefined => i
 const asRecord = (value: unknown): Readonly<Record<string, unknown>> =>
   value && typeof value === 'object' ? { ...(value as Record<string, unknown>) } : {};
 
-const resolveRole = (
-  value: string | null | undefined,
-  roleMap: ClerkAuthAdapterOptions['roleMap'],
-): UserRole => {
-  if (value && roleMap?.[value]) {
-    return roleMap[value];
-  }
-
-  return normalizeProviderRole(value, USER_ROLES.MEMBER);
+const EMPTY_PERMISSIONS: UserPermissions = {
+  canManageUsers: false,
+  canManageTenant: false,
+  canViewAnalytics: false,
+  canExportData: false,
+  canConfigureIntegrations: false,
 };
 
 const resolveTransportMode = (
@@ -117,8 +112,7 @@ const createClerkAuthState = ({
     return createUnauthenticatedAuthState(provider);
   }
 
-  const role = resolveRole(auth.orgRole, options.roleMap);
-  const permissions = getUserPermissions(role);
+  const role = normalizeProviderRole(auth.orgRole, USER_ROLES.MEMBER);
   const claims = asRecord(auth.sessionClaims);
   const tenantId = auth.orgId ?? null;
   const primaryEmail = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? '';
@@ -139,7 +133,7 @@ const createClerkAuthState = ({
     emailVerified: user.hasVerifiedEmailAddress,
     tenantId,
     role,
-    permissions,
+    permissions: EMPTY_PERMISSIONS,
     claims,
     provider,
   };
@@ -156,7 +150,7 @@ const createClerkAuthState = ({
       slug: auth.orgSlug ?? organization?.slug ?? null,
       name: organization?.name ?? null,
       role: tenantId ? role : null,
-      permissions: tenantId ? permissions : null,
+      permissions: null,
     },
     session: {
       id: auth.sessionId,
