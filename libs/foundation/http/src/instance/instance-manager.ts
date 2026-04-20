@@ -10,7 +10,7 @@
 import type { AxiosInstance } from 'axios';
 
 import { createConfigSignature } from '../core/config-signature';
-import type { HttpClientConfig, ResolvedHttpConfig } from '../core/types';
+import type { AuthConfig, HttpClientConfig, ResolvedHttpConfig } from '../core/types';
 import { HttpConfigError, HttpNotInitializedError } from '../errors/http-errors';
 import { removeInterceptors, setupInterceptors, type InterceptorIds } from '../interceptors/setup';
 import { createConfiguredAxiosInstance } from './axios-factory';
@@ -24,7 +24,7 @@ interface ManagedInstance {
   readonly config: ResolvedHttpConfig;
   readonly signature: string;
   readonly interceptorIds: InterceptorIds;
-  readonly getAccessToken: () => Promise<string | null>;
+  readonly getAccessToken: NonNullable<AuthConfig['getAccessToken']>;
 }
 
 // =============================================================================
@@ -50,7 +50,8 @@ class HttpInstanceManager {
     config: HttpClientConfig,
     key?: string,
     options?: {
-      readonly getAccessToken?: () => Promise<string | null>;
+      readonly getAccessToken?: AuthConfig['getAccessToken'];
+      readonly authTransport?: AuthConfig['transport'];
       readonly setAsDefault?: boolean;
     },
   ): ManagedInstance {
@@ -58,6 +59,7 @@ class HttpInstanceManager {
     const signature = createConfigSignature({
       config,
       getAccessToken: options?.getAccessToken,
+      authTransport: options?.authTransport,
     });
 
     const existing = this.instances.get(instanceKey);
@@ -80,6 +82,7 @@ class HttpInstanceManager {
 
     const interceptorIds = setupInterceptors(instance, resolvedConfig, {
       getAccessToken,
+      authTransport: options?.authTransport,
       clientHeaders: config.clientHeaders,
     });
 

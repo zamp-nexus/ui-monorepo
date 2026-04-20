@@ -218,6 +218,11 @@ export class RealtimeSocketClient {
     return { ...this.cursorStore };
   }
 
+  async clearResumeState(): Promise<void> {
+    this.cursorStore = {};
+    await this.deps.syncState.setRealtimeCursors?.({});
+  }
+
   getLastMessage(): RealtimeServerMessage | null {
     return this.lastMessage;
   }

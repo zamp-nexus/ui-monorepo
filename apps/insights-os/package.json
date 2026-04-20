@@ -26,5 +26,9 @@
         ]
       }
     }
+  },
+  "dependencies": {
+    "@clerk/clerk-react": "^5.61.5",
+    "@open-zentra/foundation-auth": "^0.0.1"
   }
 }

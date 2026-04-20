@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNod
 
 import { QueryClientProvider, type QueryKey } from '@tanstack/react-query';
 
+import type { AuthScopeSnapshot } from '@open-zentra/foundation-auth';
 import type {
   RealtimeDataServerMessage,
   RealtimeTopicDescriptor,
@@ -40,6 +41,8 @@ import { DataLayerInternalsContext, type DataLayerInternals } from './data-layer
 export interface DataLayerProviderProps {
   readonly config: DataLayerConfig;
   readonly children: ReactNode;
+  readonly authScope?: AuthScopeSnapshot | null;
+  readonly clearOnAuthScopeChange?: boolean;
   readonly loadingComponent?: ReactNode;
   readonly errorComponent?: (error: Error) => ReactNode;
 }
@@ -411,6 +414,8 @@ const applyRealtimeMessage = (
 export const DataLayerProvider = ({
   config,
   children,
+  authScope,
+  clearOnAuthScopeChange = true,
   loadingComponent,
   errorComponent,
 }: DataLayerProviderProps): React.ReactElement => {
@@ -435,6 +440,7 @@ export const DataLayerProvider = ({
   const containerRef = useRef<DataLayerContainer | null>(null);
   const syncUnsubscribeRef = useRef<(() => void) | null>(null);
   const lastRealtimeErrorCodeRef = useRef<string | null>(null);
+  const authScopeKeyRef = useRef<string | null>(null);
 
   const loggerRef = useRef<Logger>(
     createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' }),
@@ -443,6 +449,8 @@ export const DataLayerProvider = ({
 
   const configRef = useRef<DataLayerConfig>(config);
   configRef.current = config;
+  const resolvedAuthScope = authScope ?? config.authScope ?? null;
+  const authScopeKey = resolvedAuthScope?.scopeKey ?? 'anonymous';
 
   const configHash = useMemo(() => {
     const hashableConfig = {
@@ -743,17 +751,65 @@ export const DataLayerProvider = ({
     });
   }, [deps, realtimeOwnership, shouldOwnSocket]);
 
+  useEffect(() => {
+    if (!deps) {
+      return;
+    }
+
+    if (!clearOnAuthScopeChange) {
+      authScopeKeyRef.current = authScopeKey;
+      return;
+    }
+
+    const previousScopeKey = authScopeKeyRef.current;
+    if (previousScopeKey === null) {
+      authScopeKeyRef.current = authScopeKey;
+      return;
+    }
+
+    if (previousScopeKey === authScopeKey) {
+      return;
+    }
+
+    authScopeKeyRef.current = authScopeKey;
+    deps.realtimeClient.disconnect();
+    setRealtimeConnection(createInitialRealtimeConnection(configRef.current));
+    setRealtimeSubscriptions({});
+    setLastRealtimeMessage(null);
+
+    void (async () => {
+      try {
+        await deps.realtimeClient.clearResumeState();
+        await deps.database.clearAll();
+        deps.queryClient.clear();
+
+        if (shouldOwnSocket) {
+          await deps.realtimeClient.connect();
+        }
+      } catch (err) {
+        const scopeError = err instanceof Error ? err : new Error(String(err));
+        loggerRef.current.error('Auth scope rotation failed:', scopeError);
+      }
+    })();
+  }, [authScopeKey, clearOnAuthScopeChange, deps, shouldOwnSocket]);
+
   const syncNow = useCallback(async () => {
     if (!deps?.syncCoordinator) return;
     await deps.syncCoordinator.sync();
   }, [deps?.syncCoordinator]);
 
   const clearCache = useCallback(async () => {
+    deps?.realtimeClient.disconnect();
+    await deps?.realtimeClient.clearResumeState();
     if (deps?.database) {
       await deps.database.clearAll();
     }
     deps?.queryClient.clear();
-  }, [deps?.database, deps?.queryClient]);
+
+    if (deps?.realtimeClient && shouldOwnSocket) {
+      await deps.realtimeClient.connect();
+    }
+  }, [deps?.database, deps?.queryClient, deps?.realtimeClient, shouldOwnSocket]);
 
   const syncState = useMemo(() => {
     if (!deps?.syncCoordinator) return null;
@@ -800,6 +856,8 @@ export const DataLayerProvider = ({
     return {
       queryClient: deps.queryClient,
       axiosInstance: deps.axiosInstance,
+      authScope: resolvedAuthScope,
+      authScopeKey,
       realtimeClient: deps.realtimeClient,
       realtimeStatus,
       realtimeConnection,
@@ -820,11 +878,13 @@ export const DataLayerProvider = ({
     };
   }, [
     deps,
+    authScopeKey,
     isOnline,
     lastRealtimeMessage,
     realtimeConnection,
     realtimeStatus,
     realtimeSubscriptions,
+    resolvedAuthScope,
   ]);
 
   const realtimeValue = useMemo(() => {

@@ -57,8 +57,9 @@ export const HttpProvider = ({
       createConfigSignature({
         config,
         authInternalsGetAccessToken: authInternals?.getAccessToken,
+        authInternalsTransport: authInternals?.transport,
       }),
-    [config, authInternals?.getAccessToken],
+    [config, authInternals?.getAccessToken, authInternals?.transport],
   );
 
   useEffect(() => {
@@ -69,9 +70,11 @@ export const HttpProvider = ({
       authInternalsRef.current?.getAccessToken ??
       resolved.auth.getAccessToken ??
       (async () => null);
+    const authTransport = authInternalsRef.current?.transport ?? resolved.auth.transport;
 
     const ids = setupInterceptors(instance, resolved, {
       getAccessToken,
+      authTransport,
       clientHeaders: currentConfig.clientHeaders,
     });
 
@@ -107,6 +110,11 @@ export const HttpProvider = ({
     [resolvedConfig],
   );
 
+  const authTransport = useMemo(
+    () => authInternalsRef.current?.transport ?? resolvedConfig?.auth.transport,
+    [resolvedConfig],
+  );
+
   const contextValue = useMemo<HttpContextValue>(
     () => ({
       axios: axiosInstance,
@@ -121,8 +129,9 @@ export const HttpProvider = ({
       axios: axiosInstance,
       config: configRef.current,
       getAccessToken,
+      authTransport,
     }),
-    [axiosInstance, getAccessToken],
+    [authTransport, axiosInstance, getAccessToken],
   );
 
   return (

@@ -1,7 +1,3 @@
-// Uncomment this line to use CSS modules
-// import styles from './app.module.scss';
-import React from 'react';
-
 import NxWelcome from './nx-welcome';
 
 export function App() {

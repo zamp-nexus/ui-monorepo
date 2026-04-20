@@ -8,6 +8,12 @@
 
 import type { AxiosInstance } from 'axios';
 
+import type {
+  AuthTransport,
+  AuthTransportAudience,
+  AuthTransportRequest,
+} from '@open-zentra/foundation-auth';
+
 /**
  * HTTP retry configuration
  *
@@ -60,8 +66,10 @@ export interface HttpCircuitBreakerConfig {
 export interface AuthConfig {
   /** Whether auth is enabled */
   readonly enabled: boolean;
+  readonly transport?: AuthTransport;
+  readonly audience?: AuthTransportAudience;
   /** Function to get the access token */
-  readonly getAccessToken?: () => Promise<string | null>;
+  readonly getAccessToken?: (request?: AuthTransportRequest) => Promise<string | null>;
   /** Callback when a 401/403 response is received */
   readonly onUnauthorized?: (statusCode: number, url?: string) => void;
   /** Token type for Authorization header (default: 'Bearer') */
@@ -141,7 +149,8 @@ export interface HttpInternals {
   /** HTTP client configuration */
   readonly config: HttpClientConfig;
   /** Get current access token */
-  readonly getAccessToken: () => Promise<string | null>;
+  readonly getAccessToken: (request?: AuthTransportRequest) => Promise<string | null>;
+  readonly authTransport?: AuthTransport;
 }
 
 /**
@@ -154,6 +163,7 @@ export interface HttpProviderProps {
   readonly children: React.ReactNode;
   /** Optional auth internals for token retrieval */
   readonly authInternals?: {
-    readonly getAccessToken: () => Promise<string | null>;
+    readonly getAccessToken?: (request?: AuthTransportRequest) => Promise<string | null>;
+    readonly transport?: AuthTransport;
   };
 }

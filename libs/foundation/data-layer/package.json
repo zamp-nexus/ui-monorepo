@@ -20,5 +20,8 @@
       "scope:core",
       "visibility:public"
     ]
+  },
+  "dependencies": {
+    "@open-zentra/foundation-auth": "^0.0.1"
   }
 }

@@ -16,6 +16,7 @@
 import type { QueryKey } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
+import type { AuthScopeSnapshot } from '@open-zentra/foundation-auth';
 import { REALTIME_SERVER_MESSAGE_TYPE } from '@open-zentra/foundation-data-model';
 import type {
   ApiMutationDescriptor,
@@ -204,6 +205,8 @@ export interface DataLayerConfig {
 
   /** Sync error callback */
   readonly onSyncError?: (error: Error, context?: string) => void;
+
+  readonly authScope?: AuthScopeSnapshot | null;
 }
 
 // =============================================================================

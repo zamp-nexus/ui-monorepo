@@ -8,7 +8,7 @@
 
 import type { AxiosInstance } from 'axios';
 
-import type { ClientHeadersConfig, ResolvedHttpConfig } from '../core/types';
+import type { AuthConfig, ClientHeadersConfig, ResolvedHttpConfig } from '../core/types';
 import { setupAuthInterceptor } from './request/auth-interceptor';
 import { setupHeadersInterceptor } from './request/headers-interceptor';
 import { setupParamsInterceptor } from './request/params-interceptor';
@@ -38,7 +38,8 @@ export interface InterceptorIds {
 }
 
 export interface SetupInterceptorsOptions {
-  readonly getAccessToken: () => Promise<string | null>;
+  readonly getAccessToken: AuthConfig['getAccessToken'];
+  readonly authTransport?: AuthConfig['transport'];
   readonly clientHeaders?: ClientHeadersConfig;
 }
 
@@ -67,8 +68,13 @@ export const setupInterceptors = (
   config: ResolvedHttpConfig,
   options: SetupInterceptorsOptions,
 ): InterceptorIds => {
-  const { getAccessToken, clientHeaders } = options;
+  const { getAccessToken, authTransport, clientHeaders } = options;
   const { auth, retry, debug } = config;
+  const resolvedAuth: AuthConfig = {
+    ...auth,
+    getAccessToken,
+    transport: authTransport ?? auth.transport,
+  };
 
   // -- Request interceptors (LIFO) -------------------------------------------
 
@@ -83,7 +89,7 @@ export const setupInterceptors = (
   });
 
   const authId = setupAuthInterceptor(instance, {
-    auth,
+    auth: resolvedAuth,
     getAccessToken,
     debug,
   });
@@ -103,7 +109,7 @@ export const setupInterceptors = (
   });
 
   const unauthorizedHandlerId = setupUnauthorizedHandlerInterceptor(instance, {
-    auth,
+    auth: resolvedAuth,
     debug,
   });
 

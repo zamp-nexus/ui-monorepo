@@ -43,29 +43,39 @@ export const createUnauthorizedHandlerInterceptor = (options: UnauthorizedHandle
   const { auth, debug } = options;
   const logger = createDebugLogger('HttpClient:UnauthorizedHandlerInterceptor', debug ?? false);
 
+  const handleUnauthorized = (statusCode: number, url?: string): void => {
+    const code = statusCode === HTTP_STATUS.FORBIDDEN ? 'forbidden' : 'unauthorized';
+
+    void auth.transport?.invalidate({
+      code,
+      statusCode,
+      url,
+    });
+    auth.onUnauthorized?.(statusCode, url);
+  };
+
   const onFulfilled = (response: AxiosResponse): AxiosResponse => {
     if (
       auth.enabled &&
-      auth.onUnauthorized &&
       (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN)
     ) {
       logger.debug('Unauthorized response detected', {
         status: response.status,
         url: response.config?.url,
       });
-      auth.onUnauthorized(response.status, response.config?.url);
+      handleUnauthorized(response.status, response.config?.url);
     }
     return response;
   };
 
   const onRejected = (error: unknown): never => {
-    if (auth.enabled && auth.onUnauthorized) {
+    if (auth.enabled) {
       if (isHttpUnauthorizedError(error)) {
         logger.debug('Unauthorized error detected');
-        auth.onUnauthorized(error.statusCode ?? 401, error.url);
+        handleUnauthorized(error.statusCode ?? 401, error.url);
       } else if (isHttpForbiddenError(error)) {
         logger.debug('Forbidden error detected');
-        auth.onUnauthorized(error.statusCode ?? 403, error.url);
+        handleUnauthorized(error.statusCode ?? 403, error.url);
       }
     }
 

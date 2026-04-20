@@ -93,12 +93,12 @@ export const createAxiosInstance = (
 export const createConfiguredAxiosInstance = (
   config: HttpClientConfig,
   options?: {
-    readonly getAccessToken?: () => Promise<string | null>;
+    readonly getAccessToken?: ResolvedHttpConfig['auth']['getAccessToken'];
   },
 ): {
   instance: AxiosInstance;
   resolvedConfig: ResolvedHttpConfig;
-  getAccessToken: () => Promise<string | null>;
+  getAccessToken: NonNullable<ResolvedHttpConfig['auth']['getAccessToken']>;
 } => {
   const { instance, resolvedConfig } = createAxiosInstance(config);
 

@@ -19,7 +19,7 @@ import type { AuthConfig } from '../../core/types';
 
 export interface AuthInterceptorOptions {
   readonly auth: AuthConfig;
-  readonly getAccessToken: () => Promise<string | null>;
+  readonly getAccessToken: AuthConfig['getAccessToken'];
   readonly debug?: boolean;
 }
 
@@ -48,7 +48,35 @@ export const createAuthInterceptor = (options: AuthInterceptorOptions) => {
     }
 
     try {
-      const token = await getAccessToken();
+      const request = {
+        audience: auth.audience ?? 'first_party_http',
+        url: config.url,
+        method: config.method,
+      };
+
+      if (auth.transport) {
+        const transport = await auth.transport.getTransport(request);
+
+        if (transport.kind === 'anonymous') {
+          logger.debug('Anonymous auth transport resolved');
+          return config;
+        }
+
+        if (transport.kind === 'cookie') {
+          config.withCredentials = transport.withCredentials ?? true;
+          logger.debug('Cookie auth transport resolved');
+          return config;
+        }
+
+        config.withCredentials = transport.withCredentials ?? config.withCredentials;
+        config.headers = config.headers ?? {};
+        config.headers[HTTP_HEADERS.AUTHORIZATION] =
+          `${transport.scheme ?? auth.tokenType ?? 'Bearer'} ${transport.token}`;
+        logger.debug('Bearer auth transport resolved');
+        return config;
+      }
+
+      const token = await getAccessToken?.(request);
 
       if (token) {
         const tokenType = auth.tokenType ?? 'Bearer';

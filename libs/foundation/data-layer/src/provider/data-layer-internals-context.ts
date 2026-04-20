@@ -17,6 +17,7 @@ import { createContext, useContext } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosInstance } from 'axios';
 
+import type { AuthScopeSnapshot } from '@open-zentra/foundation-auth';
 import type { DuckDBRouter } from '@open-zentra/foundation-bridge';
 import type { DatabaseFacade, OpfsManager } from '@open-zentra/foundation-database';
 import type { SyncCoordinator } from '@open-zentra/foundation-sync-engine';
@@ -48,6 +49,9 @@ export interface DataLayerInternals {
 
   /** Shared Axios instance */
   readonly axiosInstance: AxiosInstance;
+
+  readonly authScope: AuthScopeSnapshot | null;
+  readonly authScopeKey: string;
 
   /** Realtime socket client */
   readonly realtimeClient: RealtimeSocketClient;
