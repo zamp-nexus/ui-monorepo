@@ -52,3 +52,8 @@ storybook-static
 .nx/polygraph
 .claude/worktrees
 .claude/settings.local.json
+
+
+.skills
+AGENTS.md
+CLAUDE.md
