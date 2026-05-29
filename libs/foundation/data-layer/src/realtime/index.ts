@@ -9,3 +9,10 @@ export {
   type RealtimeSocketContextValue,
 } from './context';
 export { useRealtimeSocket, type UseRealtimeSocketResult } from './use-realtime-socket';
+export {
+  ShoulderTapClient,
+  type ShoulderTapClientConfig,
+  type ShoulderTapEnvelope,
+  type ShoulderTapEvent,
+  type ShoulderTapState,
+} from './shoulder-tap-client';
