@@ -103,7 +103,7 @@ export const EventSchema = TenantScopedSchema.extend({
   category: z.string().max(100).optional(),
 
   // Event data
-  properties: z.record(z.unknown()).default({}),
+  properties: z.record(z.string(), z.unknown()).default({}),
 
   // Context
   timestamp: z.string().datetime(),
@@ -116,7 +116,7 @@ export const EventSchema = TenantScopedSchema.extend({
 
   // Location
   geo: GeoLocationSchema.optional(),
-  ip: z.string().ip().optional(),
+  ip: z.union([z.ipv4(), z.ipv6()]).optional(),
 
   // Page context
   page: PageContextSchema.optional(),
@@ -158,5 +158,5 @@ export const EventAggregationSchema = z.object({
   count: z.number().int(),
   uniqueUsers: z.number().int(),
   uniqueSessions: z.number().int(),
-  groupBy: z.record(z.number().int()).optional(),
+  groupBy: z.record(z.string(), z.number().int()).optional(),
 });

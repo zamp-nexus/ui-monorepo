@@ -59,7 +59,6 @@ vi.mock('@opentelemetry/api', () => ({
 vi.mock('@opentelemetry/sdk-trace-web', () => ({
   WebTracerProvider: vi.fn(
     class {
-      addSpanProcessor = vi.fn();
       register = vi.fn();
       shutdown = vi.fn().mockResolvedValue(undefined);
       forceFlush = vi.fn().mockResolvedValue(undefined);
@@ -95,13 +94,7 @@ vi.mock('@opentelemetry/core', () => ({
 }));
 
 vi.mock('@opentelemetry/resources', () => ({
-  Resource: vi.fn(
-    class {
-      constructor(_attributes: unknown) {
-        // no-op constructor for tests
-      }
-    },
-  ),
+  resourceFromAttributes: vi.fn(() => ({})),
 }));
 
 vi.mock('@opentelemetry/semantic-conventions', () => ({

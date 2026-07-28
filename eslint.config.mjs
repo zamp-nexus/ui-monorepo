@@ -132,7 +132,12 @@ const FOUNDATION_DAG_CONSTRAINTS = [
   },
   {
     sourceTag: 'foundation:http',
-    onlyDependOnLibsWithTags: ['foundation:http', 'foundation:utils', 'foundation:data-model'],
+    onlyDependOnLibsWithTags: [
+      'foundation:http',
+      'foundation:auth',
+      'foundation:utils',
+      'foundation:data-model',
+    ],
   },
   // T3
   {
@@ -169,6 +174,7 @@ const FOUNDATION_DAG_CONSTRAINTS = [
       'foundation:data-model',
       'foundation:trackers',
       'foundation:hooks',
+      'foundation:auth',
     ],
   },
   {
@@ -328,7 +334,7 @@ export default [
       '@nx/enforce-module-boundaries': [
         'error',
         {
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^@open-zentra/foundation-auth$'],
           depConstraints: [
             ...LAYER_CONSTRAINTS,
             ...FOUNDATION_DAG_CONSTRAINTS,
@@ -369,7 +375,7 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: false,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^@open-zentra/foundation-auth$'],
           depConstraints: [
             ...LAYER_CONSTRAINTS,
             ...FOUNDATION_DAG_CONSTRAINTS,

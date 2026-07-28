@@ -30,13 +30,13 @@ export const UserPreferencesSchema = z.object({
       push: z.boolean().default(true),
       inApp: z.boolean().default(true),
     })
-    .default({}),
+    .prefault({}),
   dashboard: z
     .object({
       defaultView: z.string().optional(),
       favoriteReports: z.array(z.string()).default([]),
     })
-    .default({}),
+    .prefault({}),
 });
 
 /**
@@ -48,7 +48,7 @@ export const UserSchema = TenantScopedSchema.extend({
   avatarUrl: z.string().url().nullable().optional(),
   role: UserRoleSchema,
   status: UserStatusSchema,
-  preferences: UserPreferencesSchema.default({}),
+  preferences: UserPreferencesSchema.prefault({}),
   lastLoginAt: z.string().datetime().nullable().optional(),
   emailVerifiedAt: z.string().datetime().nullable().optional(),
   ...SoftDeleteSchema.shape,

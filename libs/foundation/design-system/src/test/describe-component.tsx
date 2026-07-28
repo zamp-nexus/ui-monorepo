@@ -6,7 +6,7 @@
 import React from 'react';
 
 import { render } from '@testing-library/react';
-import camelCase from 'lodash/camelCase';
+import camelCase from 'lodash-es/camelCase';
 
 import { ThemeProvider } from '../theme';
 import type { OIComponentModifiers, OIComponentVariants } from '../types';

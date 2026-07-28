@@ -75,10 +75,10 @@ export const SessionSchema = TenantScopedSchema.extend({
 
   // Location
   geo: GeoLocationSchema.optional(),
-  ip: z.string().ip().optional(),
+  ip: z.union([z.ipv4(), z.ipv6()]).optional(),
 
   // Aggregated metrics
-  metrics: SessionMetricsSchema.default({}),
+  metrics: SessionMetricsSchema.prefault({}),
 });
 
 /**

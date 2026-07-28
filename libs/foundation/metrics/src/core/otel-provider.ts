@@ -20,7 +20,7 @@ import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes, type Resource } from '@opentelemetry/resources';
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import {
@@ -221,7 +221,7 @@ export class OTelProvider {
       ...config.resourceAttributes,
     };
 
-    return new Resource(attributes);
+    return resourceFromAttributes(attributes);
   };
 
   /**
@@ -231,10 +231,6 @@ export class OTelProvider {
     config: ResolvedConfig,
     resource: Resource,
   ): WebTracerProvider => {
-    const tracerProvider = new WebTracerProvider({
-      resource,
-    });
-
     // Configure OTLP trace exporter
     const traceExporter = new OTLPTraceExporter({
       url: `${config.collectorEndpoint}/v1/traces`,
@@ -242,14 +238,16 @@ export class OTelProvider {
       timeoutMillis: config.transport.timeout,
     });
 
-    // Add batch processor for efficient trace export
-    tracerProvider.addSpanProcessor(
-      new BatchSpanProcessor(traceExporter, {
-        maxQueueSize: config.transport.maxQueueSize,
-        maxExportBatchSize: config.transport.batchSize,
-        scheduledDelayMillis: config.transport.flushInterval,
-      }),
-    );
+    const tracerProvider = new WebTracerProvider({
+      resource,
+      spanProcessors: [
+        new BatchSpanProcessor(traceExporter, {
+          maxQueueSize: config.transport.maxQueueSize,
+          maxExportBatchSize: config.transport.batchSize,
+          scheduledDelayMillis: config.transport.flushInterval,
+        }),
+      ],
+    });
 
     // Register as global tracer provider
     tracerProvider.register({
