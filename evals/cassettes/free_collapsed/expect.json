@@ -1,0 +1,19 @@
+{
+  "tier": "free",
+  "without": [
+    "anthropic",
+    "cerebras",
+    "gemini",
+    "groq",
+    "openrouter"
+  ],
+  "status": "awaiting_approval",
+  "approval_reason": "low_confidence",
+  "score": 0.5,
+  "calibration_method": "capped_independence_none",
+  "analyst_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "analyst_sample_size": 8,
+  "evaluator_sample_size": 8,
+  "note": "Recorded with nvidia as the only reachable provider, so Nemotron served both agents. A second pass by one model is not a second opinion: NONE independence caps 0.70 at 0.50 and it gates, even though both passes agreed."
+}

@@ -1,0 +1,13 @@
+{
+  "tier": "premium",
+  "without": [],
+  "status": "awaiting_approval",
+  "approval_reason": "low_confidence",
+  "score": 0.55,
+  "calibration_method": "evaluator_independent_recheck",
+  "analyst_model": "claude-sonnet-5",
+  "evaluator_model": "claude-opus-5",
+  "analyst_sample_size": 8,
+  "evaluator_sample_size": 8,
+  "note": "Sonnet checked by Opus: PARTIAL, ceiling 0.85. Neither ceiling bit, because Claude reported 0.55 unaided \u2014 the calibration_method is its own. Worth keeping precisely because nothing was capped: it proves the bounds are a ceiling on overconfidence, not a blanket discount, and that premium is no longer gated for lack of independence."
+}

@@ -1,0 +1,13 @@
+{
+  "requested_model": "sql_analyst",
+  "text": "{\"result_summary\": \"EU refund amount rose from 20.00 in June 2026 to 260.00 in July 2026, a 240.00 increase. In June, 1 of 4 orders had a refund (20.00, reason: size_issue). In July, 3 of 4 orders had refunds totalling 260.00, all citing shipping_delay as the reason (90.00, 100.00, 70.00).\", \"metrics\": [{\"metric\": \"refundAmount\", \"previous_value\": \"20.00\", \"current_value\": \"260.00\", \"unit\": \"currency\"}, {\"metric\": \"orderCount\", \"previous_value\": \"4\", \"current_value\": \"4\", \"unit\": \"orders\"}], \"sample_size\": 8, \"confidence\": 0.7}",
+  "usage": {
+    "input_tokens": 1408,
+    "output_tokens": 854,
+    "cost_usd": "0.00",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b"
+  },
+  "fallbacks": [
+    "gemini/gemini-3.6-flash: no API key configured"
+  ]
+}

@@ -132,5 +132,10 @@ class LangGraphInvestigationPipeline:
             outcome=outcome.outcome,
             converged=outcome.converged,
             contradictions=outcome.contradictions,
-            independent_recheck=outcome.independent_recheck,
+            # The evidence the application needs to bound the confidence: which
+            # models actually served, and how much data each one counted.
+            analyst_model=outcome.analyst_model,
+            evaluator_model=outcome.evaluator_model,
+            analyst_sample_size=outcome.analyst_sample_size,
+            evaluator_sample_size=outcome.evaluator_sample_size,
         )

@@ -58,8 +58,8 @@ class PipelineOutcome:
     converged: bool
     contradictions: tuple[str, ...]
     attempts: int
-    # False when fallback collapsed the Evaluator onto the Analyst's model
-    # family, which makes the recheck something less than independent.
+    # What each agent's provider actually served. The application grades the
+    # recheck's independence from these, so they must be the real model ids.
     analyst_model: str | None = None
     evaluator_model: str | None = None
     # Counted independently by each agent from its own query, so they can

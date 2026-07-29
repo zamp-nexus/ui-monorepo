@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -70,6 +72,7 @@ from zentra_application_investigation import (
 from zentra_domain_agent_execution import AgentRole, ModelPort
 
 CASSETTE_ROOT = Path(__file__).resolve().parents[2] / "evals" / "cassettes"
+EXPECT_FILE = "expect.json"
 
 OWNER_URL = os.environ.get(
     "DATABASE_OWNER_URL",
@@ -124,8 +127,14 @@ def build(
     *,
     record: str | None,
     replay: str | None,
+    without: Sequence[str] = (),
 ) -> tuple[InvestigationService, ProviderClients, AuditRepository]:
-    models = ProviderClients.from_keys(settings.provider_api_keys())
+    keys = settings.provider_api_keys()
+    for provider in without:
+        # Simulates an outage the chain must survive. `from_keys` skips falsy
+        # values, so the rung is treated exactly as an unconfigured one.
+        keys[f"{provider.upper()}_API_KEY"] = None
+    models = ProviderClients.from_keys(keys)
 
     if replay is not None:
         # Wrapped outside the router on purpose: the cassette records which
@@ -138,6 +147,8 @@ def build(
         return service, models, audit
 
     print(f"providers configured: {sorted(p.value for p in models.available)}")
+    if without:
+        print(f"deliberately withheld: {sorted(without)}")
     print(f"tier: {tier.value}")
     for role in (AgentRole.ORCHESTRATOR, AgentRole.SQL_ANALYST, AgentRole.EVALUATOR):
         chain = " -> ".join(str(c) for c in chain_for(tier, role))
@@ -193,6 +204,42 @@ def _assemble(
     return service, audit
 
 
+def observed(detail, rows, *, tier: ModelTier, without: Sequence[str]) -> dict:
+    """The facts a replay must reproduce.
+
+    Deliberately narrow: what was decided, why, and by which models. Latency,
+    cost and wording are not reproducible and are not asserted.
+    """
+    models = {row.agent_id: row.model for row in rows}
+    samples = {
+        row.agent_id: (row.output or {}).get("sample_size")
+        for row in rows
+        if row.output is not None
+    }
+    outcome = detail.outcome.model_dump() if detail.outcome is not None else {}
+    return {
+        "tier": tier.value,
+        "without": sorted(without),
+        "status": detail.status.value,
+        "approval_reason": (detail.pending_approval.reason if detail.pending_approval else None),
+        "score": outcome.get("score"),
+        "calibration_method": outcome.get("calibration_method"),
+        "analyst_model": models.get("sql_analyst_v1"),
+        "evaluator_model": models.get("evaluator_v1"),
+        "analyst_sample_size": samples.get("sql_analyst_v1"),
+        "evaluator_sample_size": samples.get("evaluator_v1"),
+    }
+
+
+def compare(expected: dict, actual: dict) -> list[str]:
+    """Which fields diverged. `note` is prose for humans and is never asserted."""
+    return [
+        f"{field}: expected {expected[field]!r}, got {actual.get(field)!r}"
+        for field in sorted(actual)
+        if field in expected and expected[field] != actual.get(field)
+    ]
+
+
 async def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -201,17 +248,39 @@ async def main() -> int:
         default="free",
         help="Defaults to free so premium spend is always deliberate.",
     )
+    parser.add_argument(
+        "--without",
+        action="append",
+        default=[],
+        metavar="PROVIDER",
+        help="Withhold a provider key to force a degraded chain. Repeatable.",
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--record", metavar="NAME", help="Save responses as a cassette.")
     group.add_argument("--replay", metavar="NAME", help="Serve a cassette. Costs $0.")
     args = parser.parse_args()
 
     settings = Settings(_env_file="apps/api/.env")
+    expected: dict = {}
+    if args.replay is not None:
+        # The cassette knows the tier and the withheld providers it was recorded
+        # under, so replaying it never needs those repeated on the command line.
+        expected = json.loads((CASSETTE_ROOT / args.replay / EXPECT_FILE).read_text())
+        args.tier = expected["tier"]
+        args.without = expected["without"]
+
     tier = ModelTier(args.tier)
     tenant_id, user_id = await seed_tenant(args.tier)
 
     database = Database(RUNTIME_URL)
-    service, models, audit = build(settings, tier, database, record=args.record, replay=args.replay)
+    service, models, audit = build(
+        settings,
+        tier,
+        database,
+        record=args.record,
+        replay=args.replay,
+        without=args.without,
+    )
     actor = AuthenticatedActor(
         user_id=user_id,
         tenant_id=tenant_id,
@@ -223,7 +292,7 @@ async def main() -> int:
     started = datetime.now(UTC)
     detail = await service.start(actor, scenario_key="eu_refund_spike")
     print(f"started  {detail.investigation_id}  status={detail.status.value}")
-    print("running the agents (this takes minutes on the free tier)...\n")
+    print("running the agents...\n")
 
     try:
         await service.execute(actor, detail.investigation_id)
@@ -253,7 +322,7 @@ async def main() -> int:
             await connection.execute(
                 text(
                     "SELECT step, agent_id, model, status, confidence, "
-                    "latency_ms, cost_usd FROM agent_executions "
+                    "latency_ms, cost_usd, output FROM agent_executions "
                     "WHERE investigation_id = :i ORDER BY step"
                 ),
                 {"i": detail.investigation_id},
@@ -271,11 +340,34 @@ async def main() -> int:
     for entry in detail.timeline:
         label = entry.model or entry.event_type
         print(f"  {entry.created_at:%H:%M:%S}  {label}  [{entry.delivery.value}]")
+        for rung in entry.fallbacks:
+            print(f"      fell through: {rung}")
+
+    actual = observed(detail, rows, tier=tier, without=args.without)
+    status = 0
+
+    if args.record is not None:
+        path = CASSETTE_ROOT / args.record / EXPECT_FILE
+        path.write_text(json.dumps(actual, indent=2) + "\n")
+        print(f"\nwrote {path}")
+        print("Review it, add a `note`, and commit it with the recording.")
+    elif args.replay is not None:
+        print("\n=== replay vs expectations ===")
+        differences = compare(expected, actual)
+        for difference in differences:
+            print(f"  MISMATCH  {difference}")
+        if differences:
+            # Loudly, and with a non-zero exit: a cassette that no longer
+            # reproduces its recorded decision is the whole alarm.
+            print(f"  {len(differences)} field(s) diverged from {args.replay}")
+            status = 1
+        else:
+            print(f"  OK  {args.replay} reproduced its recorded decision")
 
     await models.close()
     await audit.close()
     await database.close()
-    return 0
+    return status
 
 
 if __name__ == "__main__":

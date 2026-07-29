@@ -1,0 +1,13 @@
+{
+  "requested_model": "orchestrator",
+  "text": "{\"headline\": \"EU refunds surged 13-fold from \u20ac20 to \u20ac260 between June and July 2026, driven entirely by three new shipping-delay refunds replacing a single size-issue refund.\", \"summary\": \"In June 2026, the EU segment recorded one refund of \u20ac20 for a size issue across four orders; in July, three refunds totalling \u20ac260 were all coded as shipping delays across the same volume of four orders. The data confirms a complete shift in refund reason composition but does not identify the root cause \u2014 such as carrier performance problems, a policy change, or a one-off incident \u2014 and the eight-order sample is too small to judge whether the \u20ac260 level is sustainable.\", \"contradictions\": []}",
+  "usage": {
+    "input_tokens": 573,
+    "output_tokens": 409,
+    "cost_usd": "0.00",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b"
+  },
+  "fallbacks": [
+    "gemini/gemini-3.6-flash: gemini unavailable: Error code: 429 - [{'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\\nPlease retry in 52.097977447s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '52s'}]}}]"
+  ]
+}

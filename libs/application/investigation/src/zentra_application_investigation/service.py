@@ -103,6 +103,9 @@ class TimelineEntry:
     agent_id: str | None = None
     step: int | None = None
     model: str | None = None
+    # Which rungs failed before `model` answered. Replay shows the degradation
+    # instead of only the provider that happened to succeed.
+    fallbacks: tuple[str, ...] = ()
 
     @classmethod
     def from_domain_event(
@@ -121,6 +124,7 @@ class TimelineEntry:
             agent_id=event.metadata.get("agent_id"),
             step=event.metadata.get("step"),
             model=event.metadata.get("model"),
+            fallbacks=tuple(event.metadata.get("fallbacks") or ()),
         )
 
 

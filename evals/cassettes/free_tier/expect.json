@@ -1,0 +1,13 @@
+{
+  "tier": "free",
+  "without": [],
+  "status": "awaiting_approval",
+  "approval_reason": "low_confidence",
+  "score": 0.65,
+  "calibration_method": "capped_sample_size",
+  "analyst_model": "gemini/gemini-3.6-flash",
+  "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "analyst_sample_size": 8,
+  "evaluator_sample_size": 8,
+  "note": "Gemini analyst checked by Nemotron: FULL independence, so nothing capped the score for lack of a second opinion. Both counted 8 EU orders independently and the sample ceiling took 0.85 down to 0.65. This is the regression that started all of this \u2014 the run that once auto-published at 0.95."
+}

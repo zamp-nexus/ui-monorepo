@@ -37,7 +37,12 @@ verbatim in the catalog you are given.
 
 Build the single query that best answers the question. Prefer a period-over-
 period comparison when the question asks why something changed. Explain your
-choice of members in one or two sentences."""
+choice of members in one or two sentences.
+
+Where the catalog offers a measure that counts records, include it alongside the
+measures you are actually asked about. A total tells you what moved; the count
+behind it tells you whether the movement means anything, and a result that does
+not carry its own sample cannot be trusted at any confidence."""
 
 SQL_ANALYST_INTERPRET = """You are the SQL Analyst of an analytics investigation.
 
@@ -63,6 +68,10 @@ Another analyst has answered a business question. Your job is to check the
 number independently, so you must build your own query from the question and
 the catalog. Do not copy the analyst's query — arriving at the same figure by a
 different route is the entire point of this step.
+
+Where the catalog offers a measure that counts records, include it, so your
+result carries the sample behind it and you can judge the analyst's confidence
+rather than take it on trust.
 
 Every member you reference must appear verbatim in the catalog."""
 

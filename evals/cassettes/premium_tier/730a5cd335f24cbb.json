@@ -1,0 +1,11 @@
+{
+  "requested_model": "evaluator",
+  "text": "{\"recheck_passed\": true, \"discrepancy_pct\": 0.0, \"sample_size\": 8, \"confidence\": 0.62, \"issues\": [\"Underlying data is extremely small: 8 orders total (4 in June, 4 in July), so the month-over-month change rests on a single June refund and three July refunds \\\\u2014 not statistically meaningful.\", \"The $260 July figure comes from three shipping_delay refunds averaging ~$86.67 each on $300 gross revenue (100% refund rate), which may indicate data-quality or full-order-cancellation effects rather than a genuine refund trend; the analyst did not flag this.\", \"Analysis is limited to refund reason breakdown; no verification that the EU region filter or order-date (vs. refund-date) attribution is the intended basis.\"]}",
+  "usage": {
+    "input_tokens": 1472,
+    "output_tokens": 385,
+    "cost_usd": "0.01781875",
+    "model": "claude-opus-5"
+  },
+  "fallbacks": []
+}
