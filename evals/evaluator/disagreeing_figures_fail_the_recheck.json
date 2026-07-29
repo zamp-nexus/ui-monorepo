@@ -97,7 +97,8 @@
       "confidence": 0.2,
       "issues": [
         "Figures disagree."
-      ]
+      ],
+      "sample_size": 240
     }
   ],
   "expect": {

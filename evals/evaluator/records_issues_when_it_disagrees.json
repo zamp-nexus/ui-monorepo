@@ -97,7 +97,8 @@
       "confidence": 0.1,
       "issues": [
         "June figure is 20.00, analyst said 200.00."
-      ]
+      ],
+      "sample_size": 240
     }
   ],
   "expect": {

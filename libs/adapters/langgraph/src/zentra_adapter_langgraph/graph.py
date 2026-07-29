@@ -17,7 +17,6 @@ from zentra_domain_agent_execution import (
     ExecutionStatus,
     ExecutionUsage,
     OutcomeSignal,
-    model_family,
 )
 
 from .agents.evaluator import EvaluatorAgent
@@ -61,9 +60,13 @@ class PipelineOutcome:
     attempts: int
     # False when fallback collapsed the Evaluator onto the Analyst's model
     # family, which makes the recheck something less than independent.
-    independent_recheck: bool = True
     analyst_model: str | None = None
     evaluator_model: str | None = None
+    # Counted independently by each agent from its own query, so they can
+    # legitimately differ; the application takes the lower and gates on a wide
+    # divergence.
+    analyst_sample_size: int | None = None
+    evaluator_sample_size: int | None = None
 
 
 class InvestigationGraph:
@@ -266,6 +269,7 @@ class InvestigationGraph:
                 ),
                 usage=output.usage if output is not None else ExecutionUsage(),
                 evidence_refs=output.evidence_refs if output else (),
+                fallbacks=output.fallbacks if output else (),
                 errors=errors,
                 started_at=started_at,
                 completed_at=completed_at,
@@ -288,6 +292,7 @@ class InvestigationGraph:
             "outcome": output.outcome.model_dump(mode="json"),
             "evidence_refs": list(output.evidence_refs),
             "model": output.usage.model,
+            "sample_size": output.fields.get("sample_size"),
         }
 
     def _outcome(self, state: GraphState) -> PipelineOutcome:
@@ -301,12 +306,9 @@ class InvestigationGraph:
         for source in (analyst, evaluator):
             evidence.extend(source.get("evidence_refs", []))
 
-        analyst_model = analyst.get("model")
-        evaluator_model = evaluator.get("model")
-        # Compared on what actually ran, not on the routing table: the chain can
-        # fall through and land both agents on the same weights.
-        independent = model_family(analyst_model) != model_family(evaluator_model)
-
+        # Reported on what actually ran, not on the routing table: the chain can
+        # fall through and land both agents on the same weights. Grading is the
+        # application's job, since it owns the confidence bounds.
         return PipelineOutcome(
             headline=str(synthesis["fields"]["headline"]),
             summary=str(synthesis["fields"]["summary"]),
@@ -318,9 +320,10 @@ class InvestigationGraph:
             converged=converged,
             contradictions=contradictions,
             attempts=int(state.get("attempts", 0)),
-            independent_recheck=independent,
-            analyst_model=analyst_model,
-            evaluator_model=evaluator_model,
+            analyst_model=analyst.get("model"),
+            evaluator_model=evaluator.get("model"),
+            analyst_sample_size=analyst.get("sample_size"),
+            evaluator_sample_size=evaluator.get("sample_size"),
         )
 
 

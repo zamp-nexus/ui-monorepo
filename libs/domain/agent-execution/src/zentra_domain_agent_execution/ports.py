@@ -130,6 +130,22 @@ class ModelResponse(BaseModel):
 
     text: str
     usage: ExecutionUsage
+    # Rungs that failed before this one answered. Recorded even on success, so
+    # Replay shows "Cerebras 402 -> NVIDIA 404 -> served by Gemini" rather than
+    # silently showing Gemini.
+    fallbacks: tuple[str, ...] = ()
+
+
+def merged_fallbacks(*responses: ModelResponse) -> tuple[str, ...]:
+    """Every rung that failed across the calls one agent made, in order.
+
+    An agent makes several model calls, and each carries its own trail. Dropping
+    all but the last would hide exactly the outage worth seeing.
+    """
+    seen: dict[str, None] = {}
+    for response in responses:
+        seen.update(dict.fromkeys(response.fallbacks))
+    return tuple(seen)
 
 
 class ModelPort(Protocol):
@@ -175,6 +191,7 @@ class AgentExecutionRecord(BaseModel):
     usage: ExecutionUsage = ExecutionUsage()
     evidence_refs: tuple[str, ...] = ()
     errors: tuple[str, ...] = ()
+    fallbacks: tuple[str, ...] = ()
     started_at: datetime
     completed_at: datetime
 

@@ -99,6 +99,10 @@ class ModelChoice:
         return PROVIDERS[self.provider].trains_on_input
 
     def __str__(self) -> str:
+        # Several ids already carry a vendor prefix of their own
+        # (`nvidia/nemotron-...`, `openai/gpt-oss-120b`), so do not double it.
+        if "/" in self.model:
+            return f"{self.provider.value}:{self.model}"
         return f"{self.provider.value}/{self.model}"
 
 

@@ -13,6 +13,7 @@ from zentra_domain_agent_execution import (
     SemanticLayerPort,
     ToolAccess,
     ToolScope,
+    merged_fallbacks,
     validate_agent_output,
 )
 
@@ -40,7 +41,7 @@ DESCRIPTOR = AgentDescriptor(
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
     output_schema=ANALYSIS_SCHEMA,
     output_fields=frozenset(
-        {"query", "reasoning", "result_summary", "metrics", "rows"}
+        {"query", "reasoning", "result_summary", "metrics", "rows", "sample_size"}
     ),
     eval_suite_ref="evals/sql_analyst",
 )
@@ -116,6 +117,7 @@ class SqlAnalystAgent:
                     "reasoning": plan.get("reasoning", ""),
                     "result_summary": analysis["result_summary"],
                     "metrics": analysis["metrics"],
+                    "sample_size": int(analysis["sample_size"]),
                     "rows": list(result.rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
@@ -126,6 +128,7 @@ class SqlAnalystAgent:
                 # The model the provider actually served, not the role we
                 # asked for — the ledger must record what really ran.
                 usage=usage,
+                fallbacks=merged_fallbacks(plan_response, analysis_response),
             ),
         )
 

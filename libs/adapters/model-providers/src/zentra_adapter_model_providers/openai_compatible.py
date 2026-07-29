@@ -130,6 +130,12 @@ class OpenAICompatibleModelClient:
                     output_tokens=output_tokens,
                     cache_read_tokens=cache_read,
                 ),
-                model=f"{name}/{response.model}",
+                # Several ids already carry their own vendor prefix
+                # (openai/gpt-oss-120b), so do not double it up.
+                model=(
+                    response.model
+                    if "/" in response.model
+                    else f"{name}/{response.model}"
+                ),
             ),
         )

@@ -80,6 +80,10 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
             "outcome_kind": execution.outcome.kind if execution.outcome else None,
             "confidence": execution.confidence,
             "errors": list(execution.errors),
+            # Which rungs failed before this one answered. Process metadata, so
+            # it belongs in the ledger, and it is how the next provider outage
+            # gets diagnosed from Replay instead of by hand.
+            "fallbacks": list(execution.fallbacks),
         },
     )
 

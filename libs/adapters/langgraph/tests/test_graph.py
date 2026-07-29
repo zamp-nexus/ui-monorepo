@@ -119,8 +119,14 @@ class ScriptedModel:
     """Answers by declared schema, so the graph's control flow is what is
     under test rather than any particular model wording."""
 
-    def __init__(self, *, recheck_passed: bool) -> None:
+    def __init__(
+        self,
+        *,
+        recheck_passed: bool,
+        fallbacks: tuple[str, ...] = (),
+    ) -> None:
         self._recheck_passed = recheck_passed
+        self._fallbacks = fallbacks
         self.calls = 0
 
     async def complete(
@@ -142,6 +148,7 @@ class ScriptedModel:
                 cost_usd=Decimal("0.001"),
                 model=ROLE_MODELS[model],
             ),
+            fallbacks=self._fallbacks,
         )
 
     def _payload(self, schema: dict[str, Any] | None) -> dict[str, Any]:
@@ -159,12 +166,16 @@ class ScriptedModel:
                 "result_summary": "EU refunds rose from $20 to $260.",
                 "metrics": METRICS,
                 "confidence": 0.88,
+                # Underlying records, not returned rows: two monthly totals
+                # over 240 orders.
+                "sample_size": 240,
             }
         if schema == RECHECK_SCHEMA:
             return {
                 "recheck_passed": self._recheck_passed,
                 "discrepancy_pct": 0.0 if self._recheck_passed else 0.42,
                 "confidence": 0.86 if self._recheck_passed else 0.2,
+                "sample_size": 240,
                 "issues": [] if self._recheck_passed else ["Figures disagree."],
             }
         if schema == SYNTHESIS_SCHEMA:
@@ -188,8 +199,9 @@ def build_graph(
     *,
     recheck_passed: bool,
     roles: Sequence[AgentRole] = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR),
+    fallbacks: tuple[str, ...] = (),
 ) -> tuple[InvestigationGraph, RecordingRecorder, StubSemanticLayer]:
-    model = ScriptedModel(recheck_passed=recheck_passed)
+    model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
     layer = StubSemanticLayer()
     recorder = RecordingRecorder()
     clock = iter(
@@ -326,3 +338,23 @@ async def test_executions_carry_token_and_cost_attribution() -> None:
     # Evaluator deliberately runs a different model family from the analyst, so
     # the recheck cannot inherit the same blind spots.
     assert evaluator.usage.model != analyst.usage.model
+
+
+@pytest.mark.asyncio
+async def test_every_execution_record_carries_the_rungs_that_failed() -> None:
+    """Without this the ledger shows only the provider that answered, and the
+    live run's three-deep fall-through had to be reconstructed by hand."""
+    graph, recorder, _ = build_graph(
+        recheck_passed=True,
+        fallbacks=("cerebras:zai-glm-4.7: returned 402",),
+    )
+
+    await graph.run(
+        investigation_id=INVESTIGATION_ID,
+        tenant_id=TENANT_ID,
+        question=QUESTION,
+    )
+
+    assert recorder.records
+    for record in recorder.records:
+        assert record.fallbacks == ("cerebras:zai-glm-4.7: returned 402",)

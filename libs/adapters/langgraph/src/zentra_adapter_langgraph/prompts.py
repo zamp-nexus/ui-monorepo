@@ -51,7 +51,11 @@ Rules:
 - Your confidence is how well this result answers the question asked. Lower it
   when the sample is small, the movement is within noise, or the result only
   partly addresses the question. State a number you would stand behind: a 0.9
-  means you expect to be right about nine times in ten."""
+  means you expect to be right about nine times in ten.
+- sample_size is how many underlying records these figures rest on, not how many
+  rows came back. Two monthly totals covering four orders each is a sample_size
+  of eight. Read it from a count measure in the result where one is present; if
+  the result genuinely does not say, report 0 rather than guessing."""
 
 EVALUATOR_PLAN = """You are the Evaluator of an analytics investigation.
 
@@ -75,5 +79,9 @@ Rules:
   analyst's answer after your check. A failed recheck must score below 0.5.
   Report a small sample or an ambiguous result as lower confidence even when
   the arithmetic agrees.
+- sample_size is how many underlying records your own result rests on, counted
+  the same way: underlying records, not returned rows. Report 0 if the result
+  does not say. You are counting independently of the analyst, so do not copy
+  their figure.
 - List each specific disagreement or concern as an issue. An empty list means
   you found none."""

@@ -12,6 +12,7 @@ from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     ConfidenceOutcome,
     OutcomeSignal,
+    independence_of,
 )
 from zentra_domain_investigation import (
     ApprovalDecision,
@@ -25,6 +26,7 @@ from zentra_domain_investigation import (
     InvestigationStatus,
     InvestigationTransitionError,
     RejectionReason,
+    confidence_ceiling,
     directive_for_outcome,
 )
 
@@ -81,9 +83,13 @@ class PipelineResult:
     outcome: OutcomeSignal
     converged: bool
     contradictions: tuple[str, ...] = ()
-    # False when the Evaluator ended up on the same model family as the SQL
-    # Analyst, so its recheck was not genuinely independent.
-    independent_recheck: bool = True
+    # What actually served each agent, and how many underlying records each
+    # counted. The application grades independence and bounds confidence from
+    # these rather than trusting the score the models reported.
+    analyst_model: str | None = None
+    evaluator_model: str | None = None
+    analyst_sample_size: int | None = None
+    evaluator_sample_size: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -337,13 +343,14 @@ class InvestigationService:
         now = self._now()
         expected_version = investigation.version
         investigation.begin_evaluation(now)
-        outcome = _cap_when_not_independent(result, threshold)
+        outcome = _bounded_outcome(result)
         directive = (
             directive_for_outcome(outcome, confidence_threshold=threshold)
-            if result.converged
-            # A recheck that never converged is never allowed to auto-publish,
-            # however confident the final score looks. The loop is already
-            # spent by this point, so this escalates rather than retrying.
+            if result.converged and not _sample_sizes_diverge(result)
+            # A recheck that never converged, or that counted a wildly
+            # different sample from the analyst, is never allowed to
+            # auto-publish however confident the final score looks. The loop is
+            # already spent by this point, so this escalates rather than retrying.
             else EvaluationDirective.ESCALATE
         )
         approval_reason = investigation.record_evaluation(
@@ -564,21 +571,44 @@ class InvestigationService:
             raise PermissionDeniedError("This membership cannot decide Human Approvals")
 
 
-def _cap_when_not_independent(
-    result: PipelineResult,
-    threshold: float,
-) -> OutcomeSignal:
-    """Hold a shared-model-family result below the auto-publish bar.
+# A wider gap than this between two independently counted samples is not a
+# rounding difference — the agents are describing different things.
+_SAMPLE_DIVERGENCE_FACTOR = 2
 
-    The Evaluator exists to be a second opinion. When fallback lands it on the
-    Analyst's own model family it is not one, so the confidence is capped below
-    the tenant's threshold and the investigation stops at a human. Honest rather
-    than a warning label: we really are less sure.
+
+def _sample_sizes_diverge(result: PipelineResult) -> bool:
+    analyst, evaluator = result.analyst_sample_size, result.evaluator_sample_size
+    if not analyst or not evaluator:
+        return False
+    low, high = sorted((analyst, evaluator))
+    return high > low * _SAMPLE_DIVERGENCE_FACTOR
+
+
+def _bounded_outcome(result: PipelineResult) -> OutcomeSignal:
+    """Bound the reported confidence by what the evidence and the recheck support.
+
+    Two separate ceilings apply to the same number. How independent the recheck
+    actually was — a second call to one model shares its blind spots, however
+    differently it words the answer. And how many records the claim rests on —
+    four transactions cannot support near-certainty whatever a model asserts.
+
+    The model may always be less confident than these allow, never more, and the
+    calibration method records which bound actually bit so Replay shows why a
+    number was lowered rather than just showing a lower number.
     """
     outcome = result.outcome
-    if result.independent_recheck or not isinstance(outcome, ConfidenceOutcome):
+    if not isinstance(outcome, ConfidenceOutcome):
         return outcome
-    return ConfidenceOutcome(
-        score=min(outcome.score, max(0.0, threshold - 0.01)),
-        calibration_method="capped_evaluator_shared_model_family",
+
+    independence = independence_of(result.analyst_model, result.evaluator_model)
+    sample = min(
+        filter(None, (result.analyst_sample_size, result.evaluator_sample_size)),
+        default=None,
     )
+    bounds = (
+        (outcome.score, outcome.calibration_method),
+        (independence.confidence_ceiling, f"capped_independence_{independence.value}"),
+        (confidence_ceiling(sample), "capped_sample_size"),
+    )
+    score, method = min(bounds, key=lambda bound: bound[0])
+    return ConfidenceOutcome(score=score, calibration_method=method)

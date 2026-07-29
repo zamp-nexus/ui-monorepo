@@ -95,7 +95,8 @@
       "recheck_passed": true,
       "discrepancy_pct": 0.005,
       "confidence": 0.8,
-      "issues": []
+      "issues": [],
+      "sample_size": 240
     }
   ],
   "expect": {

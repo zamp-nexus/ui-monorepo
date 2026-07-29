@@ -20,6 +20,7 @@ from zentra_domain_investigation import (
 from zentra_application_investigation import (
     AuditDelivery,
     AuthenticatedActor,
+    InvestigationDetail,
     InvestigationNotFoundError,
     InvestigationService,
     PermissionDeniedError,
@@ -41,11 +42,17 @@ class Pipeline:
         *,
         score: float = 0.42,
         converged: bool = True,
-        independent: bool = True,
+        analyst_model: str = "gemini/gemini-3.6-flash",
+        evaluator_model: str = "nvidia/nemotron-3-ultra-550b-a55b",
+        analyst_sample_size: int | None = 500,
+        evaluator_sample_size: int | None = 500,
     ) -> None:
         self._score = score
         self._converged = converged
-        self._independent = independent
+        self._analyst_model = analyst_model
+        self._evaluator_model = evaluator_model
+        self._analyst_sample = analyst_sample_size
+        self._evaluator_sample = evaluator_sample_size
         self.calls: list[UUID] = []
 
     async def run(
@@ -75,7 +82,10 @@ class Pipeline:
                 calibration_method="evaluator_independent_recheck",
             ),
             converged=self._converged,
-            independent_recheck=self._independent,
+            analyst_model=self._analyst_model,
+            evaluator_model=self._evaluator_model,
+            analyst_sample_size=self._analyst_sample,
+            evaluator_sample_size=self._evaluator_sample,
         )
 
 
@@ -268,43 +278,6 @@ async def test_confident_converged_result_completes_without_a_human() -> None:
 
 
 @pytest.mark.asyncio
-async def test_shared_model_family_caps_confidence_and_forces_a_human() -> None:
-    unit_of_work = UnitOfWork()
-    # A confident result that would normally publish itself, from an Evaluator
-    # that fallback landed on the Analyst's own model.
-    application = service(
-        unit_of_work,
-        pipeline=Pipeline(score=0.95, independent=False),
-    )
-
-    await application.start(actor(), scenario_key="eu_refund_spike")
-    await application.execute(actor(), INVESTIGATION_ID)
-    detail = await application.get(actor(), INVESTIGATION_ID)
-
-    assert detail.status == "awaiting_approval"
-    assert detail.pending_approval is not None
-    assert detail.pending_approval.reason == "low_confidence"
-    assert isinstance(detail.outcome, ConfidenceOutcome)
-    assert detail.outcome.score < 0.7
-    assert detail.outcome.calibration_method == ("capped_evaluator_shared_model_family")
-
-
-@pytest.mark.asyncio
-async def test_independent_recheck_at_high_confidence_still_auto_publishes() -> None:
-    unit_of_work = UnitOfWork()
-    application = service(
-        unit_of_work,
-        pipeline=Pipeline(score=0.95, independent=True),
-    )
-
-    await application.start(actor(), scenario_key="eu_refund_spike")
-    await application.execute(actor(), INVESTIGATION_ID)
-    detail = await application.get(actor(), INVESTIGATION_ID)
-
-    assert detail.status == "completed"
-
-
-@pytest.mark.asyncio
 async def test_unconverged_recheck_gates_even_when_confidence_is_high() -> None:
     unit_of_work = UnitOfWork()
     application = service(
@@ -373,3 +346,96 @@ async def test_owner_decision_is_idempotent_and_member_cannot_decide() -> None:
 async def test_invisible_investigation_returns_not_found() -> None:
     with pytest.raises(InvestigationNotFoundError):
         await service(UnitOfWork()).get(actor(Role.VIEWER), INVESTIGATION_ID)
+
+
+async def outcome_of(pipeline: Pipeline) -> InvestigationDetail:
+    application = service(UnitOfWork(), pipeline=pipeline)
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    return await application.get(actor(), INVESTIGATION_ID)
+
+
+@pytest.mark.asyncio
+async def test_same_model_on_both_agents_gates_however_confident() -> None:
+    """What fallback actually produced live: the chain collapsed and Gemini
+    checked itself. A second pass by one model is not a second opinion."""
+    detail = await outcome_of(
+        Pipeline(
+            score=0.95,
+            analyst_model="gemini/gemini-3.6-flash",
+            evaluator_model="gemini/gemini-3.6-flash",
+        )
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "low_confidence"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.5
+    assert detail.outcome.calibration_method == "capped_independence_none"
+
+
+@pytest.mark.asyncio
+async def test_same_family_may_publish_but_never_at_near_certainty() -> None:
+    """Opus checking Sonnet is a real second opinion, so premium is not
+    blanket-gated — but they share a training philosophy, so it is bounded."""
+    detail = await outcome_of(
+        Pipeline(
+            score=0.98,
+            analyst_model="claude-sonnet-5",
+            evaluator_model="claude-opus-5",
+        )
+    )
+
+    assert detail.status == "completed"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.85
+    assert detail.outcome.calibration_method == "capped_independence_partial"
+
+
+@pytest.mark.asyncio
+async def test_small_sample_gates_however_confident_the_models_were() -> None:
+    """The live regression: Gemini reported 0.95 over eight orders and
+    auto-published, where Claude reported 0.55 on the same data and gated."""
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=8, evaluator_sample_size=8)
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "low_confidence"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.65
+    assert detail.outcome.calibration_method == "capped_sample_size"
+
+
+@pytest.mark.asyncio
+async def test_the_lower_of_two_independently_counted_samples_is_used() -> None:
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=120, evaluator_sample_size=90)
+    )
+
+    # 90 lands in the under-100 band, not 120's unbounded one.
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.85
+
+
+@pytest.mark.asyncio
+async def test_wildly_divergent_sample_counts_gate_as_a_contradiction() -> None:
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=500, evaluator_sample_size=40)
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "contradiction_unresolved"
+
+
+@pytest.mark.asyncio
+async def test_a_well_evidenced_independent_result_still_publishes() -> None:
+    """The ceilings must not simply block everything."""
+    detail = await outcome_of(Pipeline(score=0.92))
+
+    assert detail.status == "completed"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.92

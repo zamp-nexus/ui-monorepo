@@ -9,10 +9,12 @@ from .contracts import (
     AgentRole,
     ConfidenceOutcome,
     ExecutionUsage,
+    IndependenceLevel,
     OutcomeSignal,
     ToolAccess,
     ToolScope,
     ValidationOutcome,
+    independence_of,
     model_family,
     validate_agent_output,
 )
@@ -34,6 +36,7 @@ from .ports import (
     SemanticResult,
     SemanticTimeDimension,
     UnknownSemanticMemberError,
+    merged_fallbacks,
 )
 
 __all__ = [
@@ -48,9 +51,11 @@ __all__ = [
     "ConfidenceOutcome",
     "ExecutionStatus",
     "ExecutionUsage",
+    "IndependenceLevel",
     "ModelMessage",
     "ModelPort",
     "ModelResponse",
+    "merged_fallbacks",
     "OUTCOME_ADAPTER",
     "OutcomeSignal",
     "RegisteredAgent",
@@ -66,6 +71,7 @@ __all__ = [
     "ToolScope",
     "UnknownSemanticMemberError",
     "ValidationOutcome",
+    "independence_of",
     "model_family",
     "validate_agent_output",
 ]

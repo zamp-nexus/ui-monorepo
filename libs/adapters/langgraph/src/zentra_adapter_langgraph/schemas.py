@@ -73,10 +73,14 @@ QUERY_PLAN_SCHEMA = _obj(
     }
 )
 
+# sample_size is extraction, not introspection: reading how many underlying
+# records an aggregate covers is something models do reliably, unlike scoring
+# their own confidence. Code turns it into a ceiling the model cannot argue with.
 ANALYSIS_SCHEMA = _obj(
     {
         "result_summary": {"type": "string"},
         "metrics": {"type": "array", "items": METRIC_COMPARISON_SCHEMA},
+        "sample_size": {"type": "integer"},
         "confidence": {"type": "number"},
     }
 )
@@ -85,6 +89,7 @@ RECHECK_SCHEMA = _obj(
     {
         "recheck_passed": {"type": "boolean"},
         "discrepancy_pct": {"type": "number"},
+        "sample_size": {"type": "integer"},
         "confidence": {"type": "number"},
         "issues": _STRINGS,
     }

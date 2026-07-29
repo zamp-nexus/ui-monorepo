@@ -85,6 +85,35 @@ class Finding:
     evidence_refs: tuple[EvidenceReference, ...]
 
 
+# A model may be less confident than the evidence supports, never more. These
+# are sample-size bounds, not significance tests — real hypothesis testing is
+# the Statistician's job. Against the default 0.7 threshold, anything under 30
+# observations gates.
+#
+# Starting values, chosen to be defensible rather than precise; the natural home
+# for tenant configuration later.
+_SAMPLE_CEILINGS: tuple[tuple[int, float], ...] = (
+    (5, 0.50),
+    (30, 0.65),
+    (100, 0.85),
+)
+UNKNOWN_SAMPLE_CEILING = 0.50
+
+
+def confidence_ceiling(sample_size: int | None) -> float:
+    """The most confidence a result over this many observations may claim.
+
+    An unknown sample size is treated as the weakest case: a claim whose basis
+    cannot be checked does not get to publish itself.
+    """
+    if sample_size is None or sample_size < 0:
+        return UNKNOWN_SAMPLE_CEILING
+    for threshold, ceiling in _SAMPLE_CEILINGS:
+        if sample_size < threshold:
+            return ceiling
+    return 1.0
+
+
 def directive_for_outcome(
     outcome: OutcomeSignal,
     *,

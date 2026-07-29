@@ -125,7 +125,9 @@ async def test_unenumerated_status_falls_through_rather_than_escaping() -> None:
     first = WeirdStatusClient()
     second = StubClient(VALID)
 
-    response = await run({Provider.CEREBRAS: first, Provider.GROQ: second})
+    # OpenRouter, not Groq: Groq now outranks Cerebras in the chain, so it
+    # would answer before the 402 rung was ever reached.
+    response = await run({Provider.CEREBRAS: first, Provider.OPENROUTER: second})
 
     assert first.calls == 1
     assert second.calls == 1
@@ -248,3 +250,37 @@ async def test_breaker_half_opens_after_the_cooldown() -> None:
 
     assert flaky.calls == 4, "one probe is allowed through"
     assert breaker.state(Provider.GEMINI) is BreakerState.CLOSED
+
+
+@pytest.mark.asyncio
+async def test_a_successful_call_still_records_what_failed_before_it() -> None:
+    """The live Evaluator fell through three providers before Gemini answered,
+    and nothing recorded it — each rung had to be probed by hand afterwards."""
+    dead = StubClient(ProviderUnavailableError("cerebras returned 402: no credit"))
+    missing = StubClient(ProviderUnavailableError("nvidia returned 404: unknown model"))
+    served = StubClient(VALID)
+
+    response = await run(
+        {
+            Provider.CEREBRAS: dead,
+            Provider.NVIDIA: missing,
+            Provider.GEMINI: served,
+        },
+        role=AgentRole.EVALUATOR,
+    )
+
+    assert response.text == VALID
+    trail = "\n".join(response.fallbacks)
+    assert "nvidia returned 404" in trail
+    assert "cerebras returned 402" in trail
+    # Rungs skipped for want of a key are part of the story too: without them
+    # the trail cannot explain why a chain ran shorter than it looks.
+    assert "no API key configured" in trail
+    assert "gemini" not in trail
+
+
+@pytest.mark.asyncio
+async def test_a_first_rung_success_carries_an_empty_trail() -> None:
+    response = await run({Provider.GEMINI: StubClient(VALID)})
+
+    assert response.fallbacks == ()

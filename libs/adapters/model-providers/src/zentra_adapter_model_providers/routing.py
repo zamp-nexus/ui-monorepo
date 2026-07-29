@@ -33,8 +33,11 @@ _GEMINI_FLASH = _free(Provider.GEMINI, "gemini-3.6-flash")
 # per minute against Cerebras's 5.
 _NVIDIA_NEMOTRON = _free(Provider.NVIDIA, "nvidia/nemotron-3-ultra-550b-a55b")
 
-# Cerebras deprecates this on 2026-08-17. Fallback will hide its death rather
-# than surface it, so it must not be anything's only real option by then.
+# Ranks below Groq everywhere despite the higher Index score. Verified live on
+# 2026-07-29: the free tier answers 402 until a card is on file, so every call
+# to it is a guaranteed wasted round trip. Cerebras also deprecates this model
+# on 2026-08-17. Kept as a late rung so a working key still helps, but nothing
+# depends on it — fallback would hide its death rather than surface it.
 _CEREBRAS_GLM = _free(Provider.CEREBRAS, "zai-glm-4.7")
 
 _GROQ_OSS = _free(Provider.GROQ, "openai/gpt-oss-120b")
@@ -53,16 +56,16 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
         AgentRole.ORCHESTRATOR: (
             _GEMINI_FLASH,
             _NVIDIA_NEMOTRON,
-            _CEREBRAS_GLM,
             _GROQ_OSS,
+            _CEREBRAS_GLM,
             _OPENROUTER_FREE,
             _SONNET,
         ),
         AgentRole.SQL_ANALYST: (
             _GEMINI_FLASH,
             _NVIDIA_NEMOTRON,
-            _CEREBRAS_GLM,
             _GROQ_OSS,
+            _CEREBRAS_GLM,
             _OPENROUTER_FREE,
             _SONNET,
         ),
@@ -76,8 +79,8 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
         ),
     },
     ModelTier.PREMIUM: {
-        AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _CEREBRAS_GLM, _GROQ_OSS),
-        AgentRole.SQL_ANALYST: (_SONNET, _GPT, _CEREBRAS_GLM, _GROQ_OSS),
+        AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        AgentRole.SQL_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.EVALUATOR: (_OPUS, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
     },
 }

@@ -69,7 +69,8 @@
     {
       "result_summary": "No governed rows matched.",
       "metrics": [],
-      "confidence": 0.2
+      "confidence": 0.2,
+      "sample_size": 0
     }
   ],
   "expect": {
