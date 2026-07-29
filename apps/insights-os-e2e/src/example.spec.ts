@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('has title', async ({ page }) => {
+test('shows an explicit identity setup state without Clerk configuration', async ({ page }) => {
   await page.goto('/');
 
-  // Expect h1 to contain a substring.
-  expect(await page.locator('h1').innerText()).toContain('Welcome');
+  await expect(page.getByRole('heading', { name: /connect clerk/i })).toBeVisible();
+  await expect(page.getByText('VITE_CLERK_PUBLISHABLE_KEY')).toBeVisible();
 });

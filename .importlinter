@@ -1,0 +1,33 @@
+[importlinter]
+root_packages =
+    zentra_domain_agent_execution
+    zentra_adapter_postgres
+    zentra_adapter_clickhouse
+    zentra_adapter_cube
+    zentra_adapter_telemetry
+    zentra_api
+include_external_packages = True
+
+[importlinter:contract:domain-is-framework-independent]
+name = Agent execution domain is framework independent
+type = forbidden
+source_modules =
+    zentra_domain_agent_execution
+forbidden_modules =
+    alembic
+    clickhouse_connect
+    fastapi
+    httpx
+    opentelemetry
+    psycopg
+    sqlalchemy
+    uvicorn
+
+[importlinter:contract:adapters-do-not-depend-on-each-other]
+name = Adapters do not depend on sibling adapters
+type = independence
+modules =
+    zentra_adapter_postgres
+    zentra_adapter_clickhouse
+    zentra_adapter_cube
+    zentra_adapter_telemetry

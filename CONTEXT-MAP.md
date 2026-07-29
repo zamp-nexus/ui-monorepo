@@ -1,0 +1,14 @@
+# Context Map
+
+## Contexts
+
+- [ZentraOS Domain](./libs/domain/CONTEXT.md) — owns the product language shared by investigations, tenancy, semantic modeling, and trust
+- [Agent Execution](./libs/domain/agent-execution/CONTEXT.md) — owns autonomous analytical work and its typed outcomes
+
+## Relationships
+
+- **Tenancy & Identity → every context**: every tenant-owned fact resolves to one internal Tenant.
+- **Investigation → Agent Execution**: an Investigation delegates bounded work as Agent Executions.
+- **Agent Execution → Trust & Verification**: completed work supplies typed outcomes and evidence references for gating.
+- **Trust & Verification → Investigation**: Human Approvals determine whether blocked work can continue.
+- **Semantic Modeling → Investigation**: governed Semantic Metrics are the only business definitions analytical agents may query.

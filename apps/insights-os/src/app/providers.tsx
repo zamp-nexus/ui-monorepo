@@ -20,7 +20,7 @@ const AuthzBoundary = ({ children }: AppProvidersProps) => {
 
 export const AppProviders = ({ children }: AppProvidersProps) => {
   if (!clerkPublishableKey) {
-    return <>{children}</>;
+    return children;
   }
 
   return (

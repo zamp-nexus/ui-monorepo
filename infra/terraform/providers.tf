@@ -1,0 +1,3 @@
+provider "clickhouse" {}
+
+provider "neon" {}

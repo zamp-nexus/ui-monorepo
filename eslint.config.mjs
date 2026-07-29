@@ -28,6 +28,9 @@ const LAYER_CONSTRAINTS = [
       'layer:feature',
       'layer:shared',
       'layer:foundation',
+      'layer:domain',
+      'layer:application',
+      'layer:adapter',
     ],
   },
   // Backend services + gateway: depend on shared contracts and foundation only.
@@ -35,7 +38,25 @@ const LAYER_CONSTRAINTS = [
   // Cannot import product/feature (those are frontend composition layers).
   {
     sourceTag: 'layer:service',
-    onlyDependOnLibsWithTags: ['layer:shared', 'layer:foundation'],
+    onlyDependOnLibsWithTags: [
+      'layer:shared',
+      'layer:foundation',
+      'layer:domain',
+      'layer:application',
+      'layer:adapter',
+    ],
+  },
+  {
+    sourceTag: 'layer:domain',
+    onlyDependOnLibsWithTags: ['layer:domain'],
+  },
+  {
+    sourceTag: 'layer:application',
+    onlyDependOnLibsWithTags: ['layer:domain', 'layer:application'],
+  },
+  {
+    sourceTag: 'layer:adapter',
+    onlyDependOnLibsWithTags: ['layer:domain', 'layer:adapter'],
   },
   {
     sourceTag: 'layer:product',
@@ -243,6 +264,10 @@ const PLATFORM_CONSTRAINTS = [
   {
     sourceTag: 'platform:node',
     onlyDependOnLibsWithTags: ['platform:universal', 'platform:node', 'platform:any'],
+  },
+  {
+    sourceTag: 'platform:python',
+    onlyDependOnLibsWithTags: ['platform:python'],
   },
 ];
 
