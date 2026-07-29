@@ -1,0 +1,45 @@
+{
+  "name": "synthesises_a_finding_from_agreeing_agents",
+  "agent": "orchestrator",
+  "enabled_roles": [
+    "sql_analyst",
+    "evaluator"
+  ],
+  "state": {
+    "question": "Why did EU refunds increase from June to July 2026?",
+    "phase": "synthesize",
+    "analyst": {
+      "metrics": [
+        {
+          "metric": "refund_amount",
+          "previous_value": "20.00",
+          "current_value": "260.00",
+          "unit": "USD"
+        }
+      ],
+      "result_summary": "EU refunds rose from $20 to $260."
+    },
+    "evaluator": {
+      "recheck_passed": true,
+      "discrepancy_pct": 0.0,
+      "issues": []
+    }
+  },
+  "model_responses": [
+    {
+      "headline": "EU refunds rose $240 in July.",
+      "summary": "Governed EU refund amount rose from $20 to $260 while order volume held flat.",
+      "contradictions": []
+    }
+  ],
+  "expect": {
+    "outcome_kind": "validation",
+    "fields": {
+      "contradictions": []
+    },
+    "field_present": [
+      "headline",
+      "summary"
+    ]
+  }
+}

@@ -6,7 +6,14 @@ from typing import Protocol
 from uuid import uuid4
 
 from zentra_adapter_clickhouse import AuditRepository
-from zentra_adapter_cube import CubeClient, EuRefundSpikeScenario
+from zentra_adapter_cube import CubeClient, CubeSemanticLayer
+from zentra_adapter_langgraph import (
+    AnthropicModelClient,
+    EvaluatorAgent,
+    InvestigationGraph,
+    OrchestratorAgent,
+    SqlAnalystAgent,
+)
 from zentra_adapter_postgres import (
     Database,
     PostgresInvestigationUnitOfWorkFactory,
@@ -15,6 +22,11 @@ from zentra_application_investigation import InvestigationService
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
+from .pipeline import (
+    LangGraphInvestigationPipeline,
+    PostgresExecutionRecorder,
+)
+from .registry import PostgresAgentRegistry
 from .settings import Settings
 
 
@@ -27,6 +39,7 @@ class AppDependencies:
     database: Database
     audit: AuditRepository
     cube: CubeClient
+    model: AnthropicModelClient
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
@@ -43,14 +56,23 @@ class AppDependencies:
             secure=settings.clickhouse_secure,
         )
         cube = CubeClient(settings.cube_url, settings.cube_api_secret)
+        semantic_layer = CubeSemanticLayer(cube)
+        model = AnthropicModelClient.from_api_key(settings.anthropic_api_key or "")
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
+        registry = PostgresAgentRegistry(database)
+        graph = InvestigationGraph(
+            orchestrator=OrchestratorAgent(model=model, registry=registry),
+            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            recorder=PostgresExecutionRecorder(unit_of_work_factory),
+        )
         audit_delivery = AuditDeliveryCoordinator(
             unit_of_work_factory=unit_of_work_factory,
             audit=audit,
         )
         investigations = InvestigationService(
             unit_of_work_factory=unit_of_work_factory,
-            scenario=EuRefundSpikeScenario(cube),
+            pipeline=LangGraphInvestigationPipeline(graph),
             audit_writer=audit_delivery,
             audit_reader=audit_delivery,
             now=lambda: datetime.now(UTC),
@@ -60,6 +82,7 @@ class AppDependencies:
             database=database,
             audit=audit,
             cube=cube,
+            model=model,
             jwt_verifier=ClerkJwtVerifier(
                 settings.clerk_issuer,
                 settings.clerk_audience,
@@ -71,3 +94,4 @@ class AppDependencies:
     async def close(self) -> None:
         await self.database.close()
         await self.audit.close()
+        await self.model.close()

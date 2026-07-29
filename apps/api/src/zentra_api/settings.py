@@ -27,5 +27,6 @@ class Settings(BaseSettings):
     clerk_audience: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     otel_exporter_otlp_headers: str | None = None
+    anthropic_api_key: str | None = Field(default=None, repr=False)
     e2b_api_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"

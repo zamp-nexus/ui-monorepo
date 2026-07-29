@@ -1,0 +1,25 @@
+{
+  "name": "evals",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "evals",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "uv run python tools/evals/run_evals.py",
+        "cwd": "."
+      },
+      "cache": true
+    },
+    "promote": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run python tools/evals/run_evals.py --promote",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["layer:tooling", "platform:python", "scope:core"]
+}

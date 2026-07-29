@@ -8,18 +8,23 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from zentra_domain_agent_execution import (
+    AgentExecutionRecord,
+    OutcomeSignal,
+)
 from zentra_domain_investigation import (
     ApprovalDecision,
     DomainEvent,
     EvaluationDirective,
+    FailureOutcome,
     Finding,
     HumanApproval,
     HumanApprovalStatus,
     Investigation,
     InvestigationStatus,
     InvestigationTransitionError,
-    InvestigationValidation,
     RejectionReason,
+    directive_for_outcome,
 )
 
 SCENARIO_KEY = "eu_refund_spike"
@@ -68,9 +73,13 @@ class AuthenticatedActor:
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioResult:
+class PipelineResult:
+    """What the agent pipeline established for one investigation."""
+
     finding: Finding
-    validation: InvestigationValidation
+    outcome: OutcomeSignal
+    converged: bool
+    contradictions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +90,8 @@ class TimelineEntry:
     created_at: datetime
     artifact_refs: tuple[str, ...] = ()
     delivery: AuditDelivery = AuditDelivery.COMPLETE
+    agent_id: str | None = None
+    step: int | None = None
 
     @classmethod
     def from_domain_event(
@@ -96,6 +107,8 @@ class TimelineEntry:
             created_at=event.occurred_at,
             artifact_refs=tuple(ref.value for ref in event.artifact_refs),
             delivery=delivery,
+            agent_id=event.metadata.get("agent_id"),
+            step=event.metadata.get("step"),
         )
 
 
@@ -125,14 +138,20 @@ class InvestigationDetail:
     updated_at: datetime
     finished_at: datetime | None
     finding: Finding | None
-    validation: InvestigationValidation | None
+    outcome: OutcomeSignal | None
     pending_approval: PendingApproval | None
     timeline: tuple[TimelineEntry, ...]
     audit_delivery: AuditDelivery
 
 
-class GovernedScenario(Protocol):
-    async def run(self) -> ScenarioResult: ...
+class InvestigationPipeline(Protocol):
+    async def run(
+        self,
+        *,
+        investigation_id: UUID,
+        tenant_id: UUID,
+        question: str,
+    ) -> PipelineResult: ...
 
 
 class InvestigationRepository(Protocol):
@@ -168,7 +187,11 @@ class HumanApprovalRepository(Protocol):
 
 
 class AgentExecutionRepository(Protocol):
-    async def add(self, execution: object) -> None: ...
+    async def add(self, execution: AgentExecutionRecord) -> None: ...
+
+
+class TenantPolicyRepository(Protocol):
+    async def confidence_threshold(self, tenant_id: UUID) -> float: ...
 
 
 class AuditOutboxRepository(Protocol):
@@ -179,6 +202,7 @@ class InvestigationUnitOfWork(Protocol):
     investigations: InvestigationRepository
     approvals: HumanApprovalRepository
     agent_executions: AgentExecutionRepository
+    policies: TenantPolicyRepository
     outbox: AuditOutboxRepository
 
     async def commit(self) -> None: ...
@@ -211,14 +235,14 @@ class InvestigationService:
         self,
         *,
         unit_of_work_factory: InvestigationUnitOfWorkFactory,
-        scenario: GovernedScenario,
+        pipeline: InvestigationPipeline,
         audit_writer: AuditWriter,
         audit_reader: AuditReader,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
-        self._scenario = scenario
+        self._pipeline = pipeline
         self._audit_writer = audit_writer
         self._audit_reader = audit_reader
         self._now = now
@@ -230,17 +254,13 @@ class InvestigationService:
         *,
         scenario_key: str,
     ) -> InvestigationDetail:
+        """Register the investigation and return. The agents run afterwards, so
+        the caller is not held open for the length of the pipeline."""
         self._require_create_role(actor)
         if scenario_key != SCENARIO_KEY:
             raise UnsupportedScenarioError(
                 f"Unsupported investigation scenario: {scenario_key}"
             )
-        try:
-            result = await self._scenario.run()
-        except Exception as error:
-            raise ScenarioUnavailableError(
-                "The governed metric scenario is unavailable"
-            ) from error
 
         now = self._now()
         investigation = Investigation.create(
@@ -251,22 +271,6 @@ class InvestigationService:
             now=now,
         )
         investigation.start(now)
-        investigation.begin_evaluation(now)
-        approval_reason = investigation.record_evaluation(
-            directive=EvaluationDirective.REVIEW,
-            validation=result.validation,
-            finding=result.finding,
-            now=now,
-        )
-        assert approval_reason is not None
-        approval = HumanApproval(
-            approval_id=self._new_id(),
-            investigation_id=investigation.investigation_id,
-            tenant_id=actor.tenant_id,
-            reason=approval_reason,
-            status=HumanApprovalStatus.PENDING,
-            requested_at=now,
-        )
 
         async with self._unit_of_work_factory(
             actor.tenant_id,
@@ -274,7 +278,6 @@ class InvestigationService:
             actor.span_id,
         ) as unit_of_work:
             await unit_of_work.investigations.add(investigation)
-            await unit_of_work.approvals.add(approval)
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
 
@@ -285,9 +288,115 @@ class InvestigationService:
         return await self._detail(
             actor,
             investigation,
-            approval,
+            None,
             fallback_events=investigation.events,
             delivered=delivered,
+        )
+
+    async def execute(self, actor: AuthenticatedActor, investigation_id: UUID) -> None:
+        """Run the agent pipeline and apply what it established.
+
+        Individual agent executions are persisted by the pipeline as they
+        complete; this applies the terminal result to the aggregate.
+        """
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(investigation_id)
+            if investigation is None:
+                raise InvestigationNotFoundError("Investigation was not found")
+            threshold = await unit_of_work.policies.confidence_threshold(
+                actor.tenant_id
+            )
+
+        try:
+            result = await self._pipeline.run(
+                investigation_id=investigation_id,
+                tenant_id=actor.tenant_id,
+                question=investigation.question,
+            )
+        except Exception as error:
+            await self._fail(actor, investigation, error)
+            raise ScenarioUnavailableError(
+                "The investigation pipeline could not complete"
+            ) from error
+
+        now = self._now()
+        expected_version = investigation.version
+        investigation.begin_evaluation(now)
+        directive = (
+            directive_for_outcome(result.outcome, confidence_threshold=threshold)
+            if result.converged
+            # A recheck that never converged is never allowed to auto-publish,
+            # however confident the final score looks. The loop is already
+            # spent by this point, so this escalates rather than retrying.
+            else EvaluationDirective.ESCALATE
+        )
+        approval_reason = investigation.record_evaluation(
+            directive=directive,
+            outcome=result.outcome,
+            finding=result.finding,
+            now=now,
+        )
+        approval = (
+            HumanApproval(
+                approval_id=self._new_id(),
+                investigation_id=investigation.investigation_id,
+                tenant_id=actor.tenant_id,
+                reason=approval_reason,
+                status=HumanApprovalStatus.PENDING,
+                requested_at=now,
+            )
+            if approval_reason is not None
+            else None
+        )
+
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            await unit_of_work.investigations.save(
+                investigation,
+                expected_version=expected_version,
+            )
+            if approval is not None:
+                await unit_of_work.approvals.add(approval)
+            await unit_of_work.outbox.enqueue(investigation.events)
+            await unit_of_work.commit()
+
+        await self._audit_writer.flush(
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation_id,
+        )
+
+    async def _fail(
+        self,
+        actor: AuthenticatedActor,
+        investigation: Investigation,
+        error: Exception,
+    ) -> None:
+        expected_version = investigation.version
+        investigation.fail(
+            FailureOutcome(code="pipeline_failed", message=str(error)),
+            self._now(),
+        )
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            await unit_of_work.investigations.save(
+                investigation,
+                expected_version=expected_version,
+            )
+            await unit_of_work.outbox.enqueue(investigation.events)
+            await unit_of_work.commit()
+        await self._audit_writer.flush(
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation.investigation_id,
         )
 
     async def get(
@@ -426,7 +535,7 @@ class InvestigationService:
             updated_at=investigation.updated_at,
             finished_at=investigation.finished_at,
             finding=investigation.finding,
-            validation=investigation.validation,
+            outcome=investigation.outcome,
             pending_approval=pending_approval,
             timeline=merged_timeline,
             audit_delivery=delivery,

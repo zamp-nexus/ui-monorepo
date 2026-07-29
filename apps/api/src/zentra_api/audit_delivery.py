@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -112,6 +112,8 @@ class AuditDeliveryCoordinator:
                 created_at=row["created_at"],
                 artifact_refs=tuple(row.get("artifact_refs", ())),
                 delivery=AuditDelivery.COMPLETE,
+                agent_id=row.get("agent_id") or None,
+                step=row.get("step"),
             )
         for record in outbox_rows:
             if record.dispatched_at is not None:
@@ -126,6 +128,8 @@ class AuditDeliveryCoordinator:
                     created_at=record.created_at,
                     artifact_refs=tuple(payload.get("artifact_refs", ())),
                     delivery=AuditDelivery.PENDING,
+                    agent_id=(payload.get("metadata") or {}).get("agent_id"),
+                    step=(payload.get("metadata") or {}).get("step"),
                 ),
             )
         return tuple(
@@ -150,9 +154,7 @@ class AuditDeliveryCoordinator:
         while not self._stop.is_set():
             tenant_ids = set(self._active_tenants)
             with suppress(Exception):
-                tenant_ids.update(
-                    await self._unit_of_work_factory.bound_tenant_ids()
-                )
+                tenant_ids.update(await self._unit_of_work_factory.bound_tenant_ids())
             for tenant_id in tenant_ids:
                 try:
                     async with self._unit_of_work_factory(
@@ -161,9 +163,7 @@ class AuditDeliveryCoordinator:
                         SYSTEM_SPAN_ID,
                     ) as unit_of_work:
                         pending = await unit_of_work.outbox.pending()
-                    investigation_ids = {
-                        record.investigation_id for record in pending
-                    }
+                    investigation_ids = {record.investigation_id for record in pending}
                     for investigation_id in investigation_ids:
                         await self.flush(
                             tenant_id=tenant_id,
@@ -177,6 +177,8 @@ class AuditDeliveryCoordinator:
     def _entry(record: OutboxRecord) -> AuditEntry:
         payload: dict[str, Any] = record.payload
         occurred_at = datetime.fromisoformat(str(payload["occurred_at"]))
+        metadata: dict[str, Any] = payload.get("metadata", {}) or {}
+        latency_ms = int(metadata.get("latency_ms") or 0)
         return AuditEntry(
             entry_id=record.event_id,
             trace_id=UUID(str(payload["trace_id"])),
@@ -184,18 +186,26 @@ class AuditDeliveryCoordinator:
             tenant_id=record.tenant_id,
             investigation_id=record.investigation_id,
             event_type=str(payload["event_type"]),
-            started_at=occurred_at,
+            agent_id=metadata.get("agent_id"),
+            execution_id=(
+                UUID(str(metadata["execution_id"]))
+                if metadata.get("execution_id")
+                else None
+            ),
+            step=metadata.get("step"),
+            started_at=occurred_at - timedelta(milliseconds=latency_ms),
             completed_at=occurred_at,
-            latency_ms=0,
-            input_tokens=0,
-            output_tokens=0,
-            total_cost_usd=Decimal("0"),
+            latency_ms=latency_ms,
+            input_tokens=int(metadata.get("input_tokens") or 0),
+            output_tokens=int(metadata.get("output_tokens") or 0),
+            total_cost_usd=Decimal(str(metadata.get("total_cost_usd") or "0")),
             input_hash=str(payload["input_hash"]),
-            outcome_kind="validation"
-            if payload["event_type"] == "investigation.validation_completed"
-            else None,
+            outcome_kind=metadata.get("outcome_kind"),
+            confidence=metadata.get("confidence"),
+            model=metadata.get("model"),
+            errors=tuple(metadata.get("errors", ())),
             status=str(payload["status"]),
             artifact_refs=tuple(payload.get("artifact_refs", ())),
-            redacted_metadata=payload.get("metadata", {}),
+            redacted_metadata=metadata,
             created_at=occurred_at,
         )

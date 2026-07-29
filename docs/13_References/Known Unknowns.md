@@ -30,7 +30,8 @@ These gaps are not resolved by repository evidence:
 | Neon/ClickHouse connectivity | credentialed runtime checks | readiness record |
 | Langfuse Tenant trace | credentialed manual trace | readiness record |
 | Incident system/on-call process | organizational decision | incident/runbook governance |
-| Agent runtime/scheduling | implemented Phase 1+ design | domain/component/ADR |
+| Agent behaviour against a live model | credentialed eval run with functional known-answer cases | readiness record |
+| Recovery for a pipeline interrupted mid-run | implemented reaper or durable execution | workflow/ADR |
 
 The repository also contains shared foundation test debt that is separate from
 Phase 1A targeted verification. Do not convert this observation into invented

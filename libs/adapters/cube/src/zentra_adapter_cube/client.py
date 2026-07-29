@@ -23,6 +23,15 @@ class CubeClient:
         except httpx.HTTPError:
             return False
 
+    async def meta(self) -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                f"{self._base_url}/cubejs-api/v1/meta",
+                headers=self._headers(),
+            )
+        response.raise_for_status()
+        return response.json()
+
     async def load(self, query: dict[str, Any]) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(

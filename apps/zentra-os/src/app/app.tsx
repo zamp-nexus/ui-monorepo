@@ -75,12 +75,19 @@ interface Investigation {
     readonly metrics: readonly MetricComparison[];
     readonly evidence_references: readonly string[];
   } | null;
-  readonly validation: {
-    readonly kind: 'validation';
-    readonly passed: boolean;
-    readonly checks: readonly string[];
-    readonly issues: readonly string[];
-  } | null;
+  readonly outcome:
+    | {
+        readonly kind: 'validation';
+        readonly passed: boolean;
+        readonly checks: readonly string[];
+        readonly issues: readonly string[];
+      }
+    | {
+        readonly kind: 'confidence';
+        readonly score: number;
+        readonly calibration_method: string;
+      }
+    | null;
   readonly pending_approval: {
     readonly approval_id: string;
     readonly reason: string;
@@ -94,6 +101,8 @@ interface Investigation {
     readonly created_at: string;
     readonly artifact_references: readonly string[];
     readonly delivery: 'complete' | 'pending';
+    readonly agent_id: string | null;
+    readonly step: number | null;
   }[];
   readonly audit_delivery: 'complete' | 'pending';
 }
@@ -274,13 +283,13 @@ const Launcher = ({
           {scenarioQuestion}
         </motion.h1>
         <p className={styles.launchBrief}>
-          Trace an exact refund anomaly through Cube-governed metrics,
-          deterministic validation, and an explicit Human Approval gate.
+          Trace a refund anomaly through Cube-governed metrics, an independent
+          recheck, and a Human Approval gate that opens on low confidence.
         </p>
         <div className={styles.scenarioFacts} aria-label="Scenario constraints">
           <span>EU commerce</span>
           <span>June → July 2026</span>
-          <span>No model inference</span>
+          <span>Governed metrics only</span>
         </div>
         <Button
           className={styles.launchButton}
@@ -301,7 +310,7 @@ const Launcher = ({
       </div>
       <div className={styles.launchRule} aria-hidden="true">
         <span />
-        <strong>Validation, not confidence</strong>
+        <strong>Every claim rechecked before you see it</strong>
       </div>
     </section>
   );
@@ -317,6 +326,16 @@ const eventLabels: Record<string, string> = {
   'human_approval.rejected': 'Evidence rejected',
   'investigation.completed': 'Investigation completed',
   'investigation.rejected': 'Investigation rejected',
+  'investigation.retry_requested': 'Recheck disagreed, retrying',
+  'investigation.failed': 'Investigation failed',
+  'agent.execution_completed': 'Agent step completed',
+  'agent.execution_failed': 'Agent step failed',
+};
+
+const agentLabels: Record<string, string> = {
+  orchestrator: 'Orchestrator',
+  sql_analyst: 'SQL Analyst',
+  evaluator: 'Evaluator',
 };
 
 const EvidenceSpine = ({
@@ -374,7 +393,13 @@ const EvidenceSpine = ({
             >
               <span className={styles.traceNode} aria-hidden="true" />
               <div>
-                <strong>{eventLabels[entry.event_type] ?? entry.event_type}</strong>
+                <strong>
+                  {entry.agent_id
+                    ? `${agentLabels[entry.agent_id.replace(/_v\d+$/, '')] ?? entry.agent_id}${
+                        entry.step ? ` · step ${entry.step}` : ''
+                      }`
+                    : (eventLabels[entry.event_type] ?? entry.event_type)}
+                </strong>
                 <small>
                   {new Date(entry.created_at).toLocaleTimeString([], {
                     hour: '2-digit',
@@ -389,6 +414,69 @@ const EvidenceSpine = ({
           ))}
         </ol>
       </div>
+    </section>
+  );
+};
+
+const approvalHeadings: Record<string, string> = {
+  low_confidence: 'Confidence below the tenant threshold',
+  contradiction_unresolved: 'The recheck did not converge',
+  tenant_policy: 'Review required by tenant policy',
+  irreversible_action: 'Irreversible action requires approval',
+  regulatory_exposure: 'Regulated data requires approval',
+};
+
+const OutcomePanel = ({
+  investigation,
+}: {
+  readonly investigation: Investigation;
+}) => {
+  const outcome = investigation.outcome;
+  if (!outcome) return null;
+
+  if (outcome.kind === 'confidence') {
+    const percent = Math.round(outcome.score * 100);
+    return (
+      <section className={styles.validation} aria-labelledby="outcome-title">
+        <p className={styles.eyebrow}>Typed outcome · confidence</p>
+        <h3 id="outcome-title">
+          {investigation.pending_approval
+            ? (approvalHeadings[investigation.pending_approval.reason] ??
+              'Human judgment required')
+            : 'Rechecked and cleared to publish'}
+        </h3>
+        <p className={styles.confidenceScore}>
+          <strong>{percent}%</strong> confidence
+        </p>
+        <ul>
+          <li>Calibrated by: {outcome.calibration_method.replace(/_/g, ' ')}</li>
+          <li>
+            Evaluation attempts: {investigation.evaluation_attempts} of 3
+          </li>
+        </ul>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.validation} aria-labelledby="outcome-title">
+      <p className={styles.eyebrow}>Typed outcome · validation</p>
+      <h3 id="outcome-title">
+        {investigation.pending_approval
+          ? (approvalHeadings[investigation.pending_approval.reason] ??
+            'Human judgment required')
+          : 'Validation passed'}
+      </h3>
+      <ul>
+        {outcome.checks.map((check) => (
+          <li key={check}>✓ {check}</li>
+        ))}
+        {outcome.issues.map((issue) => (
+          <li className={styles.validationIssue} key={issue}>
+            ! {issue}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 };
@@ -545,8 +633,18 @@ const InvestigationWorkspace = ({
     queryFn: () =>
       requestJson<Investigation>(`/v1/investigations/${id}`, token),
     enabled: Boolean(id && token),
-    refetchInterval: (result) =>
-      result.state.data?.audit_delivery === 'pending' ? 1500 : false,
+    refetchInterval: (result) => {
+      const data = result.state.data;
+      if (!data) return false;
+      const settled =
+        data.status === 'completed' ||
+        data.status === 'rejected' ||
+        data.status === 'failed' ||
+        data.status === 'cancelled';
+      // Keep polling while the agents are still working, and afterwards until
+      // the ledger has caught up with what already happened.
+      return !settled || data.audit_delivery === 'pending' ? 1500 : false;
+    },
   });
   const decision = useMutation({
     mutationFn: ({
@@ -634,23 +732,7 @@ const InvestigationWorkspace = ({
                   <MetricField key={metric.metric} metric={metric} />
                 ))}
               </div>
-              <section
-                className={styles.validation}
-                aria-labelledby="validation-title"
-              >
-                <p className={styles.eyebrow}>Typed outcome · validation</p>
-                <h3 id="validation-title">Review required by tenant policy</h3>
-                <ul>
-                  {investigation.validation?.checks.map((check) => (
-                    <li key={check}>✓ {check}</li>
-                  ))}
-                  {investigation.validation?.issues.map((issue) => (
-                    <li className={styles.validationIssue} key={issue}>
-                      ! {issue}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <OutcomePanel investigation={investigation} />
               <footer className={styles.artifact}>
                 <span>Evidence reference</span>
                 <code>{investigation.finding.evidence_references[0]}</code>

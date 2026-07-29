@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
+from zentra_domain_agent_execution import ConfidenceOutcome, ValidationOutcome
 
 from zentra_domain_investigation import (
     ApprovalDecision,
@@ -13,10 +14,12 @@ from zentra_domain_investigation import (
     Investigation,
     InvestigationStatus,
     InvestigationTransitionError,
-    InvestigationValidation,
     MetricComparison,
     RejectionReason,
+    directive_for_outcome,
 )
+
+CONFIDENCE_THRESHOLD = 0.7
 
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -39,12 +42,16 @@ def finding() -> Finding:
     )
 
 
-def validation(*, passed: bool = False) -> InvestigationValidation:
-    return InvestigationValidation(
+def validation(*, passed: bool = False) -> ValidationOutcome:
+    return ValidationOutcome(
         passed=passed,
         checks=("governed_metrics", "minimum_sample_size"),
         issues=() if passed else ("Only four orders were observed per month.",),
     )
+
+
+def confidence(score: float) -> ConfidenceOutcome:
+    return ConfidenceOutcome(score=score, calibration_method="evaluator_recheck")
 
 
 def new_investigation() -> Investigation:
@@ -64,7 +71,7 @@ def test_canonical_investigation_requires_human_approval() -> None:
     investigation.begin_evaluation(NOW + timedelta(seconds=2))
     approval_reason = investigation.record_evaluation(
         directive=EvaluationDirective.REVIEW,
-        validation=validation(),
+        outcome=validation(),
         finding=finding(),
         now=NOW + timedelta(seconds=3),
     )
@@ -103,7 +110,7 @@ def test_human_decision_finishes_an_investigation(
     investigation.begin_evaluation(NOW)
     investigation.record_evaluation(
         directive=EvaluationDirective.REVIEW,
-        validation=validation(),
+        outcome=validation(),
         finding=finding(),
         now=NOW,
     )
@@ -138,7 +145,7 @@ def test_fourth_evaluation_is_rejected() -> None:
         investigation.begin_evaluation(NOW + timedelta(seconds=attempt))
         investigation.record_evaluation(
             directive=EvaluationDirective.RETRY,
-            validation=validation(),
+            outcome=validation(),
             finding=finding(),
             now=NOW + timedelta(seconds=attempt),
         )
@@ -148,6 +155,84 @@ def test_fourth_evaluation_is_rejected() -> None:
 
     with pytest.raises(InvestigationTransitionError, match="awaiting_approval"):
         investigation.begin_evaluation(NOW)
+
+
+@pytest.mark.parametrize(
+    ("score", "expected"),
+    [
+        (0.9, EvaluationDirective.PASS),
+        (0.7, EvaluationDirective.PASS),
+        (0.5, EvaluationDirective.REVIEW),
+    ],
+)
+def test_confidence_is_compared_against_the_tenant_threshold(
+    score: float,
+    expected: EvaluationDirective,
+) -> None:
+    directive = directive_for_outcome(
+        confidence(score),
+        confidence_threshold=CONFIDENCE_THRESHOLD,
+    )
+
+    assert directive is expected
+
+
+def test_confident_evaluation_completes_without_a_human() -> None:
+    investigation = new_investigation()
+    investigation.start(NOW)
+    investigation.begin_evaluation(NOW)
+
+    approval_reason = investigation.record_evaluation(
+        directive=directive_for_outcome(
+            confidence(0.91),
+            confidence_threshold=CONFIDENCE_THRESHOLD,
+        ),
+        outcome=confidence(0.91),
+        finding=finding(),
+        now=NOW,
+    )
+
+    assert approval_reason is None
+    assert investigation.status is InvestigationStatus.COMPLETED
+    assert investigation.completion is not None
+    assert investigation.completion.human_approved is False
+
+
+def test_low_confidence_gates_on_low_confidence_not_tenant_policy() -> None:
+    investigation = new_investigation()
+    investigation.start(NOW)
+    investigation.begin_evaluation(NOW)
+
+    approval_reason = investigation.record_evaluation(
+        directive=directive_for_outcome(
+            confidence(0.42),
+            confidence_threshold=CONFIDENCE_THRESHOLD,
+        ),
+        outcome=confidence(0.42),
+        finding=finding(),
+        now=NOW,
+    )
+
+    assert investigation.status is InvestigationStatus.AWAITING_APPROVAL
+    assert approval_reason == "low_confidence"
+
+
+def test_unconverged_retry_gates_on_contradiction_regardless_of_confidence() -> None:
+    investigation = new_investigation()
+    investigation.start(NOW)
+
+    for attempt in range(3):
+        investigation.begin_evaluation(NOW + timedelta(seconds=attempt))
+        approval_reason = investigation.record_evaluation(
+            directive=EvaluationDirective.RETRY,
+            outcome=confidence(0.95),
+            finding=finding(),
+            now=NOW + timedelta(seconds=attempt),
+        )
+
+    assert investigation.evaluation_attempts == 3
+    assert investigation.status is InvestigationStatus.AWAITING_APPROVAL
+    assert approval_reason == "contradiction_unresolved"
 
 
 def test_evidence_references_must_be_artifacts() -> None:

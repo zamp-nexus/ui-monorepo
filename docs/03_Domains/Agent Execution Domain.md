@@ -36,8 +36,14 @@ gate; neither is an Agent.
 
 ## Current boundary
 
-The contracts exist, but the Agent registry is empty and no Agent implementation
-or Agent Execution participates in Phase 1A.
+Three of the fourteen roles are implemented — Orchestrator, SQL Analyst, and
+Evaluator — and participate in every Investigation. Each is a registry row that
+the Orchestrator resolves at investigation start; a role with no enabled,
+eval-passing Agent causes the Investigation to refuse rather than proceed.
+
+The Semantic Layer Port is the only capability in the tree that reaches data.
+No raw-SQL port exists for an Agent to be granted, which is what makes the SQL
+Analyst's inability to see raw tables structural rather than instructed.
 
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).

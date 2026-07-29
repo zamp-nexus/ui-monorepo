@@ -62,15 +62,14 @@ const investigation = {
       'artifact://semantic/eu-refund-spike/2026-06_2026-07',
     ],
   },
-  validation: {
-    kind: 'validation',
-    passed: false,
-    checks: ['Governed totals match.'],
-    issues: ['Only four governed orders are present in each month.'],
+  outcome: {
+    kind: 'confidence',
+    score: 0.42,
+    calibration_method: 'evaluator_independent_recheck',
   },
   pending_approval: {
     approval_id: '40000000-0000-0000-0000-000000000004',
-    reason: 'tenant_policy',
+    reason: 'low_confidence',
     requested_at: '2026-07-29T00:00:00Z',
     can_decide: true,
   },
@@ -82,14 +81,28 @@ const investigation = {
       created_at: '2026-07-29T00:00:00Z',
       artifact_references: [],
       delivery: 'complete',
+      agent_id: null,
+      step: null,
+    },
+    {
+      entry_id: '50000000-0000-0000-0000-000000000007',
+      event_type: 'agent.execution_completed',
+      status: 'running',
+      created_at: '2026-07-29T00:00:01Z',
+      artifact_references: ['artifact://execution/60000000-0000-0000-0000-000000000006'],
+      delivery: 'complete',
+      agent_id: 'sql_analyst_v1',
+      step: 2,
     },
     {
       entry_id: '50000000-0000-0000-0000-000000000006',
       event_type: 'human_approval.requested',
       status: 'awaiting_approval',
-      created_at: '2026-07-29T00:00:01Z',
+      created_at: '2026-07-29T00:00:02Z',
       artifact_references: [],
       delivery: 'complete',
+      agent_id: null,
+      step: null,
     },
   ],
   audit_delivery: 'complete',
@@ -219,7 +232,15 @@ describe('App', () => {
     ).toBeTruthy();
     expect(screen.getByText('Question registered')).toBeTruthy();
     expect(screen.getByRole('button', { name: /approve finding/i })).toBeTruthy();
-    expect(screen.queryByText(/confidence/i)).toBeNull();
+    // The agent that produced each step is named on the timeline.
+    expect(screen.getByText('SQL Analyst · step 2')).toBeTruthy();
+    // A score below the tenant threshold gates on low confidence, not policy.
+    expect(screen.getByText('42%')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: /confidence below the tenant threshold/i,
+      }),
+    ).toBeTruthy();
   });
 
   it('renders read-only approval state for a viewer', async () => {

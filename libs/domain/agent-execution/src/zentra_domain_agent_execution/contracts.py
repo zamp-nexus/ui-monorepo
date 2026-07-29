@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal, Protocol
 from uuid import UUID
@@ -71,12 +72,33 @@ class AgentInput(BaseModel):
     state: dict[str, JsonValue]
 
 
+class ExecutionUsage(BaseModel):
+    """What one unit of agent work consumed. Feeds tracing, the audit ledger,
+    and cost governance from a single measurement (§3.10)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cost_usd: Decimal = Field(default=Decimal("0"), ge=0)
+    model: str | None = None
+
+    def __add__(self, other: ExecutionUsage) -> ExecutionUsage:
+        return ExecutionUsage(
+            input_tokens=self.input_tokens + other.input_tokens,
+            output_tokens=self.output_tokens + other.output_tokens,
+            cost_usd=self.cost_usd + other.cost_usd,
+            model=self.model or other.model,
+        )
+
+
 class AgentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     fields: dict[str, JsonValue]
     evidence_refs: tuple[str, ...] = ()
     outcome: OutcomeSignal
+    usage: ExecutionUsage = ExecutionUsage()
 
     @field_validator("evidence_refs")
     @classmethod

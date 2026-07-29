@@ -19,8 +19,7 @@ requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
     "httpx>=0.28,<1",
-    "zentra-application-investigation",
-    "zentra-domain-investigation",
+    "zentra-domain-agent-execution",
 ]
 
 
@@ -61,5 +60,4 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.uv.sources]
-zentra-application-investigation = { workspace = true }
-zentra-domain-investigation = { workspace = true }
+zentra-domain-agent-execution = { workspace = true }

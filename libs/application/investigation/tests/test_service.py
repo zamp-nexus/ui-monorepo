@@ -6,13 +6,13 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
+from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
     EvidenceReference,
     Finding,
     HumanApproval,
     Investigation,
-    InvestigationValidation,
     MetricComparison,
     RejectionReason,
 )
@@ -23,8 +23,8 @@ from zentra_application_investigation import (
     InvestigationNotFoundError,
     InvestigationService,
     PermissionDeniedError,
+    PipelineResult,
     Role,
-    ScenarioResult,
     UnsupportedScenarioError,
 )
 
@@ -35,9 +35,21 @@ APPROVAL_ID = UUID("54000000-0000-0000-0000-000000000004")
 NOW = datetime(2026, 7, 29, 9, 0, tzinfo=UTC)
 
 
-class Scenario:
-    async def run(self) -> ScenarioResult:
-        return ScenarioResult(
+class Pipeline:
+    def __init__(self, *, score: float = 0.42, converged: bool = True) -> None:
+        self._score = score
+        self._converged = converged
+        self.calls: list[UUID] = []
+
+    async def run(
+        self,
+        *,
+        investigation_id: UUID,
+        tenant_id: UUID,
+        question: str,
+    ) -> PipelineResult:
+        self.calls.append(investigation_id)
+        return PipelineResult(
             finding=Finding(
                 headline="EU refund rate increased from 25% to 75%",
                 summary="Shipping-delay refunds account for the July increase.",
@@ -50,11 +62,11 @@ class Scenario:
                     EvidenceReference("artifact://seed/eu-refund-spike/2026-06-07"),
                 ),
             ),
-            validation=InvestigationValidation(
-                passed=False,
-                checks=("governed_metrics", "minimum_sample_size"),
-                issues=("Only four orders were observed per month.",),
+            outcome=ConfidenceOutcome(
+                score=self._score,
+                calibration_method="evaluator_independent_recheck",
             ),
+            converged=self._converged,
         )
 
 
@@ -115,10 +127,19 @@ class Outbox:
 
 
 class AgentExecutions:
+    def __init__(self) -> None:
+        self.rows: list[object] = []
+
     async def add(self, execution: object) -> None:
-        raise AssertionError(
-            "The deterministic scenario must not create Agent Executions"
-        )
+        self.rows.append(execution)
+
+
+class Policies:
+    def __init__(self, threshold: float = 0.7) -> None:
+        self.threshold = threshold
+
+    async def confidence_threshold(self, tenant_id: UUID) -> float:
+        return self.threshold
 
 
 class UnitOfWork:
@@ -126,6 +147,7 @@ class UnitOfWork:
         self.investigations = Investigations()
         self.approvals = Approvals()
         self.agent_executions = AgentExecutions()
+        self.policies = Policies()
         self.outbox = Outbox()
         self.commits = 0
 
@@ -167,11 +189,15 @@ def actor(role: Role = Role.OWNER) -> AuthenticatedActor:
     )
 
 
-def service(unit_of_work: UnitOfWork) -> InvestigationService:
+def service(
+    unit_of_work: UnitOfWork,
+    *,
+    pipeline: Pipeline | None = None,
+) -> InvestigationService:
     ids = iter((INVESTIGATION_ID, APPROVAL_ID))
     return InvestigationService(
         unit_of_work_factory=UnitOfWorkFactory(unit_of_work),
-        scenario=Scenario(),
+        pipeline=pipeline or Pipeline(),
         audit_writer=Audit(),
         audit_reader=Audit(),
         now=lambda: NOW,
@@ -180,7 +206,7 @@ def service(unit_of_work: UnitOfWork) -> InvestigationService:
 
 
 @pytest.mark.asyncio
-async def test_member_starts_seed_scenario_without_an_agent_execution() -> None:
+async def test_start_returns_running_before_the_agents_have_run() -> None:
     unit_of_work = UnitOfWork()
 
     detail = await service(unit_of_work).start(
@@ -188,15 +214,61 @@ async def test_member_starts_seed_scenario_without_an_agent_execution() -> None:
         scenario_key="eu_refund_spike",
     )
 
-    assert detail.status == "awaiting_approval"
-    assert detail.validation is not None
-    assert detail.validation.passed is False
-    assert detail.pending_approval is not None
+    assert detail.status == "running"
+    assert detail.outcome is None
+    assert detail.pending_approval is None
     assert detail.audit_delivery is AuditDelivery.COMPLETE
     assert unit_of_work.commits == 1
-    assert [event.event_type for event in unit_of_work.outbox.events][-1] == (
-        "human_approval.requested"
+    assert [event.event_type for event in unit_of_work.outbox.events] == [
+        "investigation.created",
+        "investigation.started",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_gates_on_a_human_rather_than_publishing() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.42))
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "low_confidence"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.42
+
+
+@pytest.mark.asyncio
+async def test_confident_converged_result_completes_without_a_human() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.91))
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "completed"
+    assert detail.pending_approval is None
+
+
+@pytest.mark.asyncio
+async def test_unconverged_recheck_gates_even_when_confidence_is_high() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(score=0.95, converged=False),
     )
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "contradiction_unresolved"
 
 
 @pytest.mark.asyncio
@@ -214,7 +286,9 @@ async def test_viewer_cannot_start_and_unsupported_scenarios_are_rejected() -> N
 async def test_owner_decision_is_idempotent_and_member_cannot_decide() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work)
-    started = await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    started = await application.get(actor(), INVESTIGATION_ID)
     assert started.pending_approval is not None
 
     with pytest.raises(PermissionDeniedError):
