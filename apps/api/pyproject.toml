@@ -28,6 +28,8 @@ zentra-adapter-cube = { workspace = true }
 zentra-adapter-postgres = { workspace = true }
 zentra-adapter-telemetry = { workspace = true }
 zentra-domain-agent-execution = { workspace = true }
+zentra-application-investigation = { workspace = true }
+zentra-domain-investigation = { workspace = true }
 
 [project]
 name = "zentra-api"
@@ -45,7 +47,9 @@ dependencies = [
  "zentra-adapter-cube",
  "zentra-adapter-postgres",
  "zentra-adapter-telemetry",
+ "zentra-application-investigation",
  "zentra-domain-agent-execution",
+ "zentra-domain-investigation",
 ]
 
 [build-system]

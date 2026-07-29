@@ -13,5 +13,6 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "human_approvals",
         "semantic_metrics",
         "agent_registry",
+        "audit_outbox",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"

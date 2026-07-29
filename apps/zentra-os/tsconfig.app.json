@@ -35,6 +35,9 @@
   "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
   "references": [
     {
+      "path": "../../libs/foundation/design-system/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/foundation/authz/tsconfig.lib.json"
     },
     {

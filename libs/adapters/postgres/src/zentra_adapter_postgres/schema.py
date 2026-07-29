@@ -152,8 +152,11 @@ investigations = Table(
         nullable=False,
     ),
     Column("question", Text, nullable=False),
-    Column("status", String(32), nullable=False, server_default="in_progress"),
+    Column("status", String(32), nullable=False, server_default="pending"),
     Column("state", JSON, nullable=False, server_default=text("'{}'::jsonb")),
+    Column("scenario_key", String(64)),
+    Column("version", Integer, nullable=False, server_default="1"),
+    Column("evaluation_attempts", Integer, nullable=False, server_default="0"),
     Column("cost_so_far_usd", Numeric(12, 4), nullable=False, server_default="0"),
     Column(
         "created_at",
@@ -161,12 +164,24 @@ investigations = Table(
         nullable=False,
         server_default=text("now()"),
     ),
-    Column("resolved_at", TIMESTAMP(timezone=True)),
+    Column(
+        "updated_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column("finished_at", TIMESTAMP(timezone=True)),
     CheckConstraint(
-        "status IN ('in_progress', 'pending_review', 'resolved', 'cost_limited')",
+        "status IN ('pending', 'running', 'evaluating', 'awaiting_approval', "
+        "'completed', 'rejected', 'failed', 'cancelled')",
         name="ck_investigations_status",
     ),
     CheckConstraint("cost_so_far_usd >= 0", name="ck_investigations_cost"),
+    CheckConstraint("version >= 1", name="ck_investigations_version"),
+    CheckConstraint(
+        "evaluation_attempts >= 0 AND evaluation_attempts <= 3",
+        name="ck_investigations_evaluation_attempts",
+    ),
 )
 Index(
     "ix_investigations_tenant_created",
@@ -273,6 +288,7 @@ human_approvals = Table(
     ),
     Column("decided_at", TIMESTAMP(timezone=True)),
     Column("decided_by", UUID(as_uuid=True), ForeignKey("users.user_id")),
+    Column("decision_reason", String(32)),
     CheckConstraint(
         "reason IN ('low_confidence', 'irreversible_action', "
         "'contradiction_unresolved', 'regulatory_exposure', 'tenant_policy')",
@@ -282,11 +298,59 @@ human_approvals = Table(
         "status IN ('pending', 'granted', 'rejected', 'timed_out')",
         name="ck_human_approvals_status",
     ),
+    CheckConstraint(
+        "decision_reason IS NULL OR decision_reason IN "
+        "('insufficient_evidence', 'incorrect_interpretation', "
+        "'policy_mismatch', 'needs_more_analysis')",
+        name="ck_human_approvals_decision_reason",
+    ),
 )
 Index(
     "ix_human_approvals_tenant_status",
     human_approvals.c.tenant_id,
     human_approvals.c.status,
+)
+Index(
+    "uq_human_approvals_one_pending",
+    human_approvals.c.tenant_id,
+    human_approvals.c.investigation_id,
+    unique=True,
+    postgresql_where=human_approvals.c.status == "pending",
+)
+
+audit_outbox = Table(
+    "audit_outbox",
+    metadata,
+    Column("event_id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "investigation_id",
+        UUID(as_uuid=True),
+        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("payload", JSON, nullable=False),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column("dispatched_at", TIMESTAMP(timezone=True)),
+    Column("attempts", Integer, nullable=False, server_default="0"),
+    Column("last_error_code", String(64)),
+    CheckConstraint("attempts >= 0", name="ck_audit_outbox_attempts"),
+)
+Index(
+    "ix_audit_outbox_tenant_pending",
+    audit_outbox.c.tenant_id,
+    audit_outbox.c.dispatched_at,
+    audit_outbox.c.created_at,
 )
 
 semantic_metrics = Table(

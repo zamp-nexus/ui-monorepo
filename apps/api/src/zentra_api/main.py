@@ -25,7 +25,11 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.settings = resolved_settings
         app.state.dependencies = resolved_dependencies
+        if hasattr(resolved_dependencies, "audit_delivery"):
+            resolved_dependencies.audit_delivery.start()
         yield
+        if hasattr(resolved_dependencies, "audit_delivery"):
+            await resolved_dependencies.audit_delivery.stop()
         if dependencies is None:
             await resolved_dependencies.close()
 
@@ -38,7 +42,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=[resolved_settings.frontend_origin],
         allow_credentials=True,
-        allow_methods=["GET"],
+        allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type", "Traceparent", "Tracestate"],
     )
     api.include_router(router)

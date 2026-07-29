@@ -13,7 +13,7 @@ import {
   isReactNode,
   isSlotConfig,
 } from '../../utils/slot-helpers';
-import type { SlotComponent, SlotDefaultElement, SlotProps } from './slot';
+import type { SlotComponent, SlotDefaultElement, SlotProps } from './types';
 
 /**
  * Slot component

@@ -234,7 +234,11 @@ class AuditRepository:
                 },
             )
         )
-        return [
+        rows = [
             dict(zip(result.column_names, row, strict=True))
             for row in result.result_rows
         ]
+        deduplicated: dict[UUID, dict[str, Any]] = {}
+        for row in rows:
+            deduplicated.setdefault(UUID(str(row["entry_id"])), row)
+        return list(deduplicated.values())

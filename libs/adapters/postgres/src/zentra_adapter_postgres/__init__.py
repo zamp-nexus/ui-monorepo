@@ -6,12 +6,22 @@ from .identity import (
     IdentityNotBoundError,
     resolve_identity_context,
 )
+from .investigation import (
+    ConcurrentInvestigationUpdateError,
+    OutboxRecord,
+    PostgresInvestigationUnitOfWork,
+    PostgresInvestigationUnitOfWorkFactory,
+)
 from .schema import metadata
 
 __all__ = [
     "Database",
     "IdentityContext",
     "IdentityNotBoundError",
+    "ConcurrentInvestigationUpdateError",
+    "OutboxRecord",
+    "PostgresInvestigationUnitOfWork",
+    "PostgresInvestigationUnitOfWorkFactory",
     "metadata",
     "resolve_identity_context",
 ]

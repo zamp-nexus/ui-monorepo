@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Icon } from './icon';
 import { clearRegistry, registerIcon } from './registry/registry';
+import type { IconName } from './registry/registry';
 
 // Helper to safely query container (container is HTMLElement with querySelector in jsdom)
 const queryContainer = (container: RenderResult['container'], selector: string) => {
@@ -133,7 +134,7 @@ describe('Icon', () => {
   });
 
   it('should render fallback placeholder for unregistered icon', () => {
-    const { container } = render(<Icon name="non-existent" />);
+    const { container } = render(<Icon name={'non-existent' as IconName} />);
     // When icon is not found, component renders a fallback placeholder
     const wrapper = queryContainer(container, 'i');
     expect(wrapper).toBeTruthy();

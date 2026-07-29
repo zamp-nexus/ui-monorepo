@@ -179,7 +179,9 @@ const ClerkAuthBridge = ({
   const organizationState = useOrganization();
   const optionsRef = useRef(options);
 
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const snapshot = useMemo(
     () =>

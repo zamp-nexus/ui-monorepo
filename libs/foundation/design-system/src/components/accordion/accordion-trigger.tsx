@@ -44,7 +44,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
           component="span"
           aria-hidden="true"
         >
-          <Icon name="chevron-down" size="sm" />
+          <Icon name="chevron_down" size="sm" />
         </Slot>
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>

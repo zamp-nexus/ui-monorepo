@@ -21,6 +21,13 @@
       "visibility:public"
     ],
     "targets": {
+      "typecheck": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "tsc --build libs/foundation/design-system/tsconfig.lib.json",
+          "cwd": "."
+        }
+      },
       "storybook": {
         "syncGenerators": [
           "@juristr/nx-tailwind-sync:source-directives"

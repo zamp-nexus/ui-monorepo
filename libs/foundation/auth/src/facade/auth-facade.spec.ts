@@ -205,7 +205,7 @@ describe('AuthFacade', () => {
       const identity = createIdentity({
         traits: {},
         verifiable_addresses: [
-          { id: 'a1', value: '+1234567890', verified: true, via: 'phone', status: 'completed' },
+          { id: 'a1', value: '+1234567890', verified: true, via: 'sms', status: 'completed' },
           {
             id: 'a2',
             value: 'email@example.com',
@@ -445,9 +445,9 @@ describe('AuthFacade', () => {
     it('should convert Date objects to ISO strings', () => {
       const now = new Date('2025-01-15T12:00:00Z');
       const identity = createIdentity({
-        state_changed_at: now as unknown as string,
-        created_at: now as unknown as string,
-        updated_at: now as unknown as string,
+        state_changed_at: now,
+        created_at: now,
+        updated_at: now,
       });
       const user = facade.mapIdentityToUser(identity);
 

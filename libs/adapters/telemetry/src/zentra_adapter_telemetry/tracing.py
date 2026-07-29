@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI
 from opentelemetry import trace
@@ -21,6 +21,13 @@ class TelemetrySettings:
 
 def correlate_tenant(tenant_id: UUID) -> None:
     trace.get_current_span().set_attribute("zentra.tenant_id", str(tenant_id))
+
+
+def current_trace_ids() -> tuple[UUID, UUID]:
+    context = trace.get_current_span().get_span_context()
+    trace_id = UUID(int=context.trace_id) if context.trace_id else uuid4()
+    span_id = UUID(int=context.span_id) if context.span_id else uuid4()
+    return trace_id, span_id
 
 
 def configure_telemetry(app: FastAPI, settings: TelemetrySettings) -> None:

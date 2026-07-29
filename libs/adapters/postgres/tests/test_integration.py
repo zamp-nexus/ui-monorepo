@@ -102,7 +102,7 @@ async def seed(owner_url: str) -> None:
                 investigation_id=INVESTIGATION_ID,
                 tenant_id=TENANT_A,
                 question="Integration fixture",
-                status="in_progress",
+                status="running",
             )
             .on_conflict_do_nothing()
         )

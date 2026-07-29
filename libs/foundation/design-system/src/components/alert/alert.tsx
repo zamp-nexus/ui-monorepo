@@ -21,9 +21,9 @@ const DefaultDismissIcon = () => <Icon name="x" size="sm" />;
  */
 const DefaultAlertIcons = {
   info: () => <Icon name="info" size="base" />,
-  success: () => <Icon name="check-circle" size="base" />,
-  warning: () => <Icon name="alert-triangle" size="base" />,
-  error: () => <Icon name="x-circle" size="base" />,
+  success: () => <Icon name="check_circle" size="base" />,
+  warning: () => <Icon name="alert_triangle" size="base" />,
+  error: () => <Icon name="x_circle" size="base" />,
 };
 
 /**

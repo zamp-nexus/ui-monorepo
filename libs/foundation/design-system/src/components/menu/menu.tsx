@@ -357,7 +357,7 @@ const MenuSubTrigger: React.FC<MenuSubTriggerProps> = ({ children, disabled, sta
         />
       )}
       {children}
-      <Icon name="chevron-right" className={theme.subTriggerIcon?.({ size }) ?? ''} />
+      <Icon name="chevron_right" className={theme.subTriggerIcon?.({ size }) ?? ''} />
     </MenuPrimitive.SubmenuTrigger>
   );
 };

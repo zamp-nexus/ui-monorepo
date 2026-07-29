@@ -8,7 +8,9 @@ dependencies = [
   "zentra-adapter-postgres",
   "zentra-adapter-telemetry",
   "zentra-api",
-  "zentra-domain-agent-execution"
+  "zentra-application-investigation",
+  "zentra-domain-agent-execution",
+  "zentra-domain-investigation"
 ]
 
 [tool.uv.workspace]
@@ -18,7 +20,9 @@ members = [
   "libs/adapters/cube",
   "libs/adapters/postgres",
   "libs/adapters/telemetry",
-  "libs/domain/agent-execution"
+  "libs/application/investigation",
+  "libs/domain/agent-execution",
+  "libs/domain/investigation"
 ]
 
 [tool.uv.sources.zentra-adapter-clickhouse]
@@ -36,19 +40,14 @@ workspace = true
 [tool.uv.sources.zentra-api]
 workspace = true
 
+[tool.uv.sources.zentra-application-investigation]
+workspace = true
+
 [tool.uv.sources.zentra-domain-agent-execution]
 workspace = true
 
-[dependency-groups]
-dev = [
-  "autopep8>=2.3.1",
-  "import-linter>=2.9,<3",
-  "pytest-asyncio>=1.2,<2",
-  "ruff>=0.8.2",
-  "pytest>=8.3.4",
-  "pytest-sugar>=1.0.0",
-  "pytest-cov>=6.0.0",
-]
+[tool.uv.sources.zentra-domain-investigation]
+workspace = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -59,8 +58,20 @@ exclude = [ ".ruff_cache", ".svn", ".tox", ".venv", "dist" ]
 line-length = 100
 indent-width = 4
 
-[tool.ruff.lint]
-select = [ "E", "F", "UP", "B", "SIM", "I" ]
-ignore = [ ]
-fixable = [ "ALL" ]
-unfixable = [ ]
+  [tool.ruff.lint]
+  select = [ "E", "F", "UP", "B", "SIM", "I" ]
+  ignore = [ ]
+  fixable = [ "ALL" ]
+  unfixable = [ ]
+
+[dependency-groups]
+dev = [
+  "autopep8>=2.3.1",
+  "import-linter>=2.9,<3",
+  "pytest-asyncio>=1.2,<2",
+  "ruff>=0.8.2",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1"
+]

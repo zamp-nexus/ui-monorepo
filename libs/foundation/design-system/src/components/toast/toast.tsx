@@ -20,9 +20,9 @@ import { toastDefaultTheme } from './types';
  */
 const FeedbackIcons = {
   info: () => <Icon name="info" />,
-  success: () => <Icon name="check-circle" />,
-  warning: () => <Icon name="alert-triangle" />,
-  error: () => <Icon name="alert-circle" />,
+  success: () => <Icon name="check_circle" />,
+  warning: () => <Icon name="alert_triangle" />,
+  error: () => <Icon name="alert_circle" />,
 };
 
 /**

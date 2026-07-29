@@ -179,7 +179,7 @@ export const MultiSelect: MultiSelectComponent = ({
               <Slot baseOzid={ozid} slotName="end" slot={end} component="span" aria-hidden="true" />
             ) : (
               <Icon
-                name="chevron-down"
+                name="chevron_down"
                 className={cn(theme.icon?.({}) ?? '', open && 'rotate-180')}
               />
             )}

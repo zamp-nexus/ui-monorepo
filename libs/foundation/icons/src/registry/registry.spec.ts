@@ -2,6 +2,7 @@ import { Home, Search, User } from 'lucide-react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clearRegistry, getAllIconNames, getIcon, hasIcon, registerIcon } from './registry';
+import type { IconName } from './registry';
 
 describe('Icon Registry', () => {
   beforeEach(() => {
@@ -40,7 +41,7 @@ describe('Icon Registry', () => {
     });
 
     it('should return undefined for unregistered icon', () => {
-      const icon = getIcon('non-existent');
+      const icon = getIcon('non-existent' as IconName);
       expect(icon).toBeUndefined();
     });
   });
@@ -52,7 +53,7 @@ describe('Icon Registry', () => {
     });
 
     it('should return false for unregistered icon', () => {
-      expect(hasIcon('non-existent')).toBe(false);
+      expect(hasIcon('non-existent' as IconName)).toBe(false);
     });
   });
 

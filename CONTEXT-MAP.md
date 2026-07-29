@@ -3,6 +3,7 @@
 ## Contexts
 
 - [ZentraOS Domain](./libs/domain/CONTEXT.md) — owns the product language shared by investigations, tenancy, semantic modeling, and trust
+- [Investigation](./libs/domain/investigation/CONTEXT.md) — owns the lifecycle of a traceable attempt to answer one governed business question
 - [Agent Execution](./libs/domain/agent-execution/CONTEXT.md) — owns autonomous analytical work and its typed outcomes
 
 ## Relationships

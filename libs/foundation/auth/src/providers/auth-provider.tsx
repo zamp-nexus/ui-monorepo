@@ -72,10 +72,12 @@ export const AuthProvider = ({
   const onAuthStateChangeRef = useRef(onAuthStateChange);
   const authStateRef = useRef<AuthState>(authState);
 
-  // Keep refs up to date
-  configRef.current = config;
-  onAuthStateChangeRef.current = onAuthStateChange;
-  authStateRef.current = authState;
+  // Keep callback inputs current without mutating refs during render.
+  useEffect(() => {
+    configRef.current = config;
+    onAuthStateChangeRef.current = onAuthStateChange;
+    authStateRef.current = authState;
+  }, [authState, config, onAuthStateChange]);
 
   // ==========================================================================
   // Session State Handler (stable ref pattern to avoid dependency loop)

@@ -1,6 +1,8 @@
 [importlinter]
 root_packages =
     zentra_domain_agent_execution
+    zentra_domain_investigation
+    zentra_application_investigation
     zentra_adapter_postgres
     zentra_adapter_clickhouse
     zentra_adapter_cube
@@ -13,6 +15,22 @@ name = Agent execution domain is framework independent
 type = forbidden
 source_modules =
     zentra_domain_agent_execution
+    zentra_domain_investigation
+forbidden_modules =
+    alembic
+    clickhouse_connect
+    fastapi
+    httpx
+    opentelemetry
+    psycopg
+    sqlalchemy
+    uvicorn
+
+[importlinter:contract:application-is-framework-independent]
+name = Investigation application is framework independent
+type = forbidden
+source_modules =
+    zentra_application_investigation
 forbidden_modules =
     alembic
     clickhouse_connect

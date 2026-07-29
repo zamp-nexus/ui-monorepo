@@ -22,6 +22,8 @@ dependencies = [
     "greenlet>=3.2,<4",
     "psycopg[binary,pool]>=3.2,<4",
     "sqlalchemy>=2.0,<3",
+    "zentra-application-investigation",
+    "zentra-domain-investigation",
 ]
 
 
@@ -60,3 +62,7 @@ ignore = []
 
 fixable = ["ALL"]
 unfixable = []
+
+[tool.uv.sources]
+zentra-application-investigation = { workspace = true }
+zentra-domain-investigation = { workspace = true }

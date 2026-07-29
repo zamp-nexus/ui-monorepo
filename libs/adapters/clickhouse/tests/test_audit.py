@@ -37,9 +37,14 @@ def test_requires_artifact_scheme() -> None:
 
 @pytest.mark.asyncio
 async def test_repository_query_always_scopes_tenant_and_investigation() -> None:
+    entry_id = uuid4()
+
     class Result:
-        column_names = ["event_type"]
-        result_rows = [("Phase0SmokeTrace",)]
+        column_names = ["entry_id", "event_type"]
+        result_rows = [
+            (entry_id, "Phase0SmokeTrace"),
+            (entry_id, "Phase0SmokeTrace"),
+        ]
 
     class Client:
         query_text = ""
@@ -66,4 +71,4 @@ async def test_repository_query_always_scopes_tenant_and_investigation() -> None
         "tenant_id": str(tenant_id),
         "investigation_id": str(investigation_id),
     }
-    assert rows == [{"event_type": "Phase0SmokeTrace"}]
+    assert rows == [{"entry_id": entry_id, "event_type": "Phase0SmokeTrace"}]

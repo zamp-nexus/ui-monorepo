@@ -1,11 +1,14 @@
 # ZentraOS
 
 ZentraOS is a trust-first analytics system: investigations are tenant-isolated,
-agent outputs carry typed outcome evidence, low-confidence work stops at a human
-gate, and the process can be replayed without retaining raw customer data.
+results carry typed outcome evidence, governed work can stop at a human gate,
+and the process can be replayed without retaining raw customer data.
 
-Phase 0 contains the foundation only. The agent registry is empty and no agent
-implementation is included.
+Phase 1A adds the first deterministic investigation trust loop for the governed
+`eu_refund_spike` scenario. It queries Cube, validates the result, pauses for
+owner or admin approval, persists state in Postgres, and delivers an append-only
+timeline to ClickHouse. The agent registry remains empty and no model-backed
+agent, LangGraph workflow, or fabricated confidence score is included.
 
 ## Prerequisites
 
@@ -40,11 +43,21 @@ Copy the frontend and API `.env.example` files into untracked `.env` files and
 provide Clerk, Langfuse OTLP, and E2B credentials when exercising those
 integrations.
 
+The authenticated Phase 1A API exposes:
+
+- `POST /v1/investigations`
+- `GET /v1/investigations/{investigation_id}`
+- `POST /v1/investigations/{investigation_id}/approvals/{approval_id}/decision`
+
+Only `{"scenario_key":"eu_refund_spike"}` is accepted. The canonical question
+and governed result are determined by the server.
+
 ## Verification
 
 ```bash
 uv run python tools/architecture/verify_known_bad_boundary.py
 npm exec -- nx run-many -t lint test build typecheck
+npm exec -- nx e2e zentra-os-e2e
 ```
 
 Managed Neon and ClickHouse Cloud resources live under `infra/terraform`.

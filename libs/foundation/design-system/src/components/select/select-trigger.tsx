@@ -39,7 +39,7 @@ export const SelectTrigger: SelectTriggerComponent = React.forwardRef<
     >
       <SelectPrimitive.Value placeholder={placeholder}>{children}</SelectPrimitive.Value>
       <SelectPrimitive.Icon>
-        <Icon name="chevron-down" size="sm" className="opacity-50" />
+        <Icon name="chevron_down" size="sm" className="opacity-50" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );

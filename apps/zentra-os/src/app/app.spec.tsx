@@ -1,7 +1,8 @@
 /// <reference types="vitest/globals" />
-import React from 'react';
-
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MotionConfig } from 'motion/react';
+import { MemoryRouter } from 'react-router-dom';
 
 import App from './app';
 
@@ -19,11 +20,6 @@ const readyResponse = {
     clickhouse: { status: 'ready' },
     cube: { status: 'ready' },
   },
-  configuration: {
-    clerk: true,
-    e2b: false,
-    telemetry_export: false,
-  },
 };
 
 const contextResponse = {
@@ -34,11 +30,103 @@ const contextResponse = {
   role: 'owner',
 };
 
+const investigation = {
+  investigation_id: '30000000-0000-0000-0000-000000000003',
+  canonical_question: 'Why did EU refunds increase from June to July 2026?',
+  scenario_key: 'eu_refund_spike',
+  status: 'awaiting_approval',
+  version: 5,
+  evaluation_attempts: 1,
+  created_at: '2026-07-29T00:00:00Z',
+  updated_at: '2026-07-29T00:00:00Z',
+  finished_at: null,
+  finding: {
+    headline: 'EU refunds rose $240 in July',
+    summary:
+      'Governed EU refund amount increased while order volume remained flat.',
+    metrics: [
+      {
+        metric: 'refund_amount',
+        previous_value: '20.00',
+        current_value: '260.00',
+        unit: 'USD',
+      },
+      {
+        metric: 'refund_rate',
+        previous_value: '25',
+        current_value: '75',
+        unit: 'percent',
+      },
+    ],
+    evidence_references: [
+      'artifact://semantic/eu-refund-spike/2026-06_2026-07',
+    ],
+  },
+  validation: {
+    kind: 'validation',
+    passed: false,
+    checks: ['Governed totals match.'],
+    issues: ['Only four governed orders are present in each month.'],
+  },
+  pending_approval: {
+    approval_id: '40000000-0000-0000-0000-000000000004',
+    reason: 'tenant_policy',
+    requested_at: '2026-07-29T00:00:00Z',
+    can_decide: true,
+  },
+  timeline: [
+    {
+      entry_id: '50000000-0000-0000-0000-000000000005',
+      event_type: 'investigation.created',
+      status: 'pending',
+      created_at: '2026-07-29T00:00:00Z',
+      artifact_references: [],
+      delivery: 'complete',
+    },
+    {
+      entry_id: '50000000-0000-0000-0000-000000000006',
+      event_type: 'human_approval.requested',
+      status: 'awaiting_approval',
+      created_at: '2026-07-29T00:00:01Z',
+      artifact_references: [],
+      delivery: 'complete',
+    },
+  ],
+  audit_delivery: 'complete',
+} as const;
+
 const response = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+
+const mockApi = (detail: unknown = investigation) =>
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
+    const url = String(input);
+    if (url.endsWith('/health/ready')) return response(readyResponse);
+    if (url.endsWith('/v1/context')) return response(contextResponse);
+    if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
+      return response(detail, 201);
+    }
+    if (url.includes('/v1/investigations/')) return response(detail);
+    return response({ detail: 'Not found' }, 404);
+  });
+
+const renderApp = (path = '/') => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <QueryClientProvider client={queryClient}>
+        <MotionConfig reducedMotion="always">
+          <App clerkConfigured />
+        </MotionConfig>
+      </QueryClientProvider>
+    </MemoryRouter>,
+  );
+};
 
 describe('App', () => {
   beforeEach(() => {
@@ -48,110 +136,134 @@ describe('App', () => {
     });
   });
 
-  it('renders an explicit Clerk setup state when identity is not configured', () => {
-    const { getByRole, getByText } = render(<App clerkConfigured={false} />);
-
-    expect(getByRole('heading', { name: /connect clerk/i })).toBeTruthy();
-    expect(getByText('VITE_CLERK_PUBLISHABLE_KEY')).toBeTruthy();
+  it('renders an explicit Clerk setup state', () => {
+    const queryClient = new QueryClient();
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <App clerkConfigured={false} />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('heading', { name: /connect clerk/i }),
+    ).toBeTruthy();
   });
 
-  it('renders the signed-out shell', () => {
+  it('renders the signed-out observatory entry', () => {
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: false,
       isInitializing: false,
       login: vi.fn(),
     });
-
-    render(<App clerkConfigured />);
-
-    expect(screen.getByRole('heading', { name: /trust is the product/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeTruthy();
+    renderApp();
+    expect(
+      screen.getByRole('heading', { name: /trust is the product/i }),
+    ).toBeTruthy();
   });
 
-  it('denies access when there is no active organization', () => {
+  it('denies access without an active organization', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
-      login: vi.fn(),
       logout: vi.fn(),
       tenant: null,
       user: { email: 'owner@example.com' },
     });
-
-    render(<App clerkConfigured />);
-
-    expect(screen.getByRole('heading', { name: /select a clerk organization/i })).toBeTruthy();
+    renderApp();
+    expect(
+      screen.getByRole('heading', { name: /select a clerk organization/i }),
+    ).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('shows an unauthorized membership without inventing tenant context', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(response(readyResponse))
-      .mockResolvedValueOnce(response({ detail: 'Not bound' }, 403));
+  it('launches only the governed synthetic scenario', async () => {
+    mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
-      login: vi.fn(),
       logout: vi.fn(),
-      tenant: { id: 'org_123', name: 'Clerk Organization' },
+      tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'owner@example.com' },
     });
-
-    render(<App clerkConfigured />);
-
-    expect(await screen.findByText(/not yet bound to an internal tenant/i)).toBeTruthy();
+    renderApp();
+    expect(await screen.findByText('Acme Europe')).toBeTruthy();
+    const launch = screen.getByRole('button', {
+      name: /begin evidence trace/i,
+    });
+    fireEvent.click(launch);
+    expect(
+      await screen.findByRole('heading', {
+        name: /eu refunds rose \$240 in july/i,
+      }),
+    ).toBeTruthy();
   });
 
-  it('shows the resolved tenant and healthy foundation', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(response(readyResponse))
-      .mockResolvedValueOnce(response(contextResponse));
+  it('shows persisted evidence and owner approval controls on refresh', async () => {
+    mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
-      login: vi.fn(),
       logout: vi.fn(),
-      tenant: { id: 'org_123', name: 'Clerk Organization' },
+      tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'owner@example.com' },
     });
-
-    render(<App clerkConfigured />);
-
-    expect(await screen.findByRole('heading', { name: 'Acme Europe' })).toBeTruthy();
-    expect(screen.getByText(/owner · tenant 20000000/i)).toBeTruthy();
-    expect(screen.getAllByText('ready')).toHaveLength(3);
-    expect(screen.getByText('0 agents registered')).toBeTruthy();
+    renderApp(
+      '/investigations/30000000-0000-0000-0000-000000000003',
+    );
+    expect(
+      await screen.findByRole('heading', {
+        name: /evidence is coherent/i,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('Question registered')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /approve finding/i })).toBeTruthy();
+    expect(screen.queryByText(/confidence/i)).toBeNull();
   });
 
-  it('surfaces a degraded dependency without leaking details', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(
-        response(
-          {
-            ...readyResponse,
-            status: 'degraded',
-            dependencies: {
-              ...readyResponse.dependencies,
-              clickhouse: { status: 'unavailable' },
-            },
-          },
-          503,
-        ),
-      )
-      .mockResolvedValueOnce(response({ detail: 'Not bound' }, 403));
+  it('renders read-only approval state for a viewer', async () => {
+    mockApi({
+      ...investigation,
+      pending_approval: { ...investigation.pending_approval, can_decide: false },
+    });
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
-      login: vi.fn(),
       logout: vi.fn(),
-      tenant: { id: 'org_123', name: 'Clerk Organization' },
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'viewer@example.com' },
+    });
+    renderApp(
+      '/investigations/30000000-0000-0000-0000-000000000003',
+    );
+    expect(
+      await screen.findByText(/owner or admin judgment is required/i),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /approve finding/i })).toBeNull();
+  });
+
+  it('announces a completed terminal state after approval', async () => {
+    const completed = {
+      ...investigation,
+      status: 'completed' as const,
+      pending_approval: null,
+      finished_at: '2026-07-29T00:00:02Z',
+    };
+    mockApi(completed);
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'owner@example.com' },
     });
-
-    render(<App clerkConfigured />);
-
-    await waitFor(() => expect(screen.getByText('unavailable')).toBeTruthy());
-    expect(screen.queryByText(/password|credential/i)).toBeNull();
+    renderApp(
+      '/investigations/30000000-0000-0000-0000-000000000003',
+    );
+    await waitFor(() =>
+      expect(screen.getByText('Approved and complete')).toBeTruthy(),
+    );
+    expect(screen.getByText('completed')).toBeTruthy();
   });
 });

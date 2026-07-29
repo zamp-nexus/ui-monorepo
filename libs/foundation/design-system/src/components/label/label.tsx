@@ -15,7 +15,7 @@ import { labelDefaultTheme } from './types';
 /**
  * Default tooltip icon
  */
-const DefaultTooltipIcon = () => <Icon name="help-circle" size="xs" />;
+const DefaultTooltipIcon = () => <Icon name="help_circle" size="xs" />;
 
 /**
  * Label component
