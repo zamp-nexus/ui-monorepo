@@ -58,8 +58,8 @@ const SetupRequired = () => (
       <p className={styles.eyebrow}>Identity setup required</p>
       <h1>Connect Clerk to enter the workspace.</h1>
       <p>
-        Add <code>VITE_CLERK_PUBLISHABLE_KEY</code> to the frontend environment. No
-        development tenant is silently assumed.
+        Add <code>VITE_CLERK_PUBLISHABLE_KEY</code> to the frontend environment. No development
+        tenant is silently assumed.
       </p>
     </section>
   </main>
@@ -75,8 +75,8 @@ const SignedOut = ({ login }: { readonly login: () => Promise<void> }) => (
       <p className={styles.eyebrow}>A verifiable analytics department</p>
       <h1>Trust is the product.</h1>
       <p>
-        ZentraOS makes every analytical claim traceable, replayable, and subject to
-        a real confidence gate.
+        ZentraOS makes every analytical claim traceable, replayable, and subject to a real
+        confidence gate.
       </p>
       <button className={styles.primaryAction} type="button" onClick={() => void login()}>
         Sign in to your workspace
@@ -111,36 +111,39 @@ const AuthenticatedWorkspace = () => {
   const [connection, setConnection] = useState<ConnectionState>({ kind: 'checking' });
   const [identity, setIdentity] = useState<IdentityContext | null>(null);
 
-  const refresh = useCallback(async (showChecking = true) => {
-    if (showChecking) {
-      setConnection({ kind: 'checking' });
-    }
-    try {
-      const readinessResponse = await fetch(`${apiUrl}/health/ready`);
-      const readiness = (await readinessResponse.json()) as ReadinessResponse;
-      setConnection({
-        kind: readinessResponse.ok ? 'ready' : 'degraded',
-        readiness,
-      });
-
-      const token = await getAccessToken({ audience: 'first_party_http' });
-      if (token) {
-        const contextResponse = await fetch(`${apiUrl}/v1/context`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (contextResponse.ok) {
-          setIdentity((await contextResponse.json()) as IdentityContext);
-        } else {
-          setIdentity(null);
-        }
+  const refresh = useCallback(
+    async (showChecking = true) => {
+      if (showChecking) {
+        setConnection({ kind: 'checking' });
       }
-    } catch (error) {
-      setConnection({
-        kind: 'unreachable',
-        message: error instanceof Error ? error.message : 'The API could not be reached.',
-      });
-    }
-  }, [getAccessToken]);
+      try {
+        const readinessResponse = await fetch(`${apiUrl}/health/ready`);
+        const readiness = (await readinessResponse.json()) as ReadinessResponse;
+        setConnection({
+          kind: readinessResponse.ok ? 'ready' : 'degraded',
+          readiness,
+        });
+
+        const token = await getAccessToken({ audience: 'first_party_http' });
+        if (token) {
+          const contextResponse = await fetch(`${apiUrl}/v1/context`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (contextResponse.ok) {
+            setIdentity((await contextResponse.json()) as IdentityContext);
+          } else {
+            setIdentity(null);
+          }
+        }
+      } catch (error) {
+        setConnection({
+          kind: 'unreachable',
+          message: error instanceof Error ? error.message : 'The API could not be reached.',
+        });
+      }
+    },
+    [getAccessToken],
+  );
 
   useEffect(() => {
     if (!tenant?.id) {

@@ -29,7 +29,7 @@ npm exec -- nx serve api
 In another terminal:
 
 ```bash
-npm exec -- nx serve insights-os
+npm exec -- nx serve zentra-os
 ```
 
 The frontend runs at `http://localhost:4200`, the API at

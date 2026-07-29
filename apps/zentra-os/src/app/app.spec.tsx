@@ -81,9 +81,7 @@ describe('App', () => {
 
     render(<App clerkConfigured />);
 
-    expect(
-      screen.getByRole('heading', { name: /select a clerk organization/i }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /select a clerk organization/i })).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -102,9 +100,7 @@ describe('App', () => {
 
     render(<App clerkConfigured />);
 
-    expect(
-      await screen.findByText(/not yet bound to an internal tenant/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/not yet bound to an internal tenant/i)).toBeTruthy();
   });
 
   it('shows the resolved tenant and healthy foundation', async () => {

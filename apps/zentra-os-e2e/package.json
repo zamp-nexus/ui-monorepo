@@ -1,5 +1,5 @@
 {
-  "name": "insights-os-e2e",
+  "name": "zentra-os-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
@@ -9,7 +9,8 @@
       "scope:core"
     ],
     "implicitDependencies": [
-      "insights-os"
-    ]
+      "zentra-os"
+    ],
+    "name": "zentra-os-e2e"
   }
 }

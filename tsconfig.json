@@ -31,10 +31,10 @@
       "path": "./libs/foundation/mocks"
     },
     {
-      "path": "./apps/insights-os-e2e"
+      "path": "./apps/zentra-os-e2e"
     },
     {
-      "path": "./apps/insights-os"
+      "path": "./apps/zentra-os"
     },
     {
       "path": "./tools/design-system-plugin"

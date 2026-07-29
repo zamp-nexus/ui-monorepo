@@ -19,7 +19,7 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 ├── CONTEXT-MAP.md
 ├── docs/adr/                          ← system-wide decisions
 ├── apps/
-│   └── insights-os/
+│   └── zentra-os/
 │       ├── CONTEXT.md
 │       └── docs/adr/                  ← app-specific decisions
 ├── libs/
