@@ -22,6 +22,7 @@ repo_path: docker-compose.yml
 - [[Test Strategy]]
 - [[Infrastructure Topology]]
 - [[Managed Service Readiness]]
+- [[Model Provider Sub-Processors]]
 
 Recovery procedures live in [[Runbooks MOC]].
 

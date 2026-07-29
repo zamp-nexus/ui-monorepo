@@ -1,6 +1,6 @@
 """ZentraOS Cube semantic-layer adapter"""
 
 from .client import CubeClient
-from .scenario import EuRefundSpikeScenario
+from .semantic import CubeSemanticLayer
 
-__all__ = ["CubeClient", "EuRefundSpikeScenario"]
+__all__ = ["CubeClient", "CubeSemanticLayer"]

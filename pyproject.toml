@@ -5,6 +5,8 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
   "zentra-adapter-clickhouse",
   "zentra-adapter-cube",
+  "zentra-adapter-langgraph",
+  "zentra-adapter-model-providers",
   "zentra-adapter-postgres",
   "zentra-adapter-telemetry",
   "zentra-api",
@@ -18,6 +20,8 @@ members = [
   "apps/api",
   "libs/adapters/clickhouse",
   "libs/adapters/cube",
+  "libs/adapters/langgraph",
+  "libs/adapters/model-providers",
   "libs/adapters/postgres",
   "libs/adapters/telemetry",
   "libs/application/investigation",
@@ -29,6 +33,12 @@ members = [
 workspace = true
 
 [tool.uv.sources.zentra-adapter-cube]
+workspace = true
+
+[tool.uv.sources.zentra-adapter-langgraph]
+workspace = true
+
+[tool.uv.sources.zentra-adapter-model-providers]
 workspace = true
 
 [tool.uv.sources.zentra-adapter-postgres]

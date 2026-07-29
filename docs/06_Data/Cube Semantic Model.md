@@ -17,7 +17,7 @@ repo_path: infra/cube/model/cubes/Commerce.js
 code_refs:
   - infra/cube/model/cubes/Commerce.js
   - infra/cube/tests/eu-refund-spike.json
-  - libs/adapters/cube/src/zentra_adapter_cube/scenario.py
+  - libs/adapters/cube/src/zentra_adapter_cube/semantic.py
 ---
 
 # Cube Semantic Model

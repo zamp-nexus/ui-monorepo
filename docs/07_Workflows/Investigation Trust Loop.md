@@ -30,20 +30,27 @@ question.
 ## Sequence
 
 1. Resolve verified internal actor and Tenant.
-2. Query Cube for June/July EU metrics and July refund reasons.
-3. Reject dependency mismatch without creating a misleading Investigation.
-4. Create `pending`, transition to `running`, then `evaluating`.
-5. Record deterministic validation and Finding with `artifact://` evidence.
-6. Transition to `awaiting_approval` because tenant policy rejects autonomous
-   completion for four orders per month.
-7. Persist Investigation, pending approval, and audit events atomically.
-8. Attempt ClickHouse delivery after commit; expose pending delivery safely.
-9. Owner/admin approves to `completed` or rejects with structured reason to
-   `rejected`.
-10. Persist and deliver terminal audit events; exact decision replay is
-    idempotent.
+2. Create `pending`, transition to `running`, and return. The request is not
+   held open for the length of the pipeline.
+3. The Orchestrator resolves the enabled Agents from the registry and refuses
+   if a required role is absent.
+4. The SQL Analyst builds one governed query, executes it, and reports the
+   movement with a self-reported confidence.
+5. The Evaluator builds its own query from the question alone, executes it
+   independently, and compares. Its confidence is capped at the Analyst's.
+6. A failed recheck returns to step 4 with the disagreement attached. The loop
+   exits hard at three attempts whatever the score.
+7. The Orchestrator synthesises a Finding and names any contradiction.
+8. Each Agent Execution is persisted and enqueued to the audit outbox as it
+   completes, so an interrupted Investigation is replayable up to that point.
+9. Transition to `evaluating`, then either `completed` when the confidence
+   clears the Tenant threshold and the recheck converged, or
+   `awaiting_approval` with `low_confidence` or `contradiction_unresolved`.
+10. Owner/admin approves to `completed` or rejects with structured reason to
+    `rejected`. Exact decision replay is idempotent.
 
-No step is represented as an Agent Execution. No synthetic delay, confidence,
-prompt, or hidden reasoning is introduced.
+Result rows never enter the audit ledger or travel between Agents. They live in
+`agent_executions.output` and are reachable only through the `artifact://`
+pointer the ledger carries.
 
 Parent: [[Workflows MOC]]

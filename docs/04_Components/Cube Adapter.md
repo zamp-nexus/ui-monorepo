@@ -17,21 +17,21 @@ related: ["[[Components MOC]]", "[[Cube Semantic Model]]", "[[Semantic Modeling]
 repo_path: libs/adapters/cube
 code_refs:
   - libs/adapters/cube/src/zentra_adapter_cube/client.py
-  - libs/adapters/cube/src/zentra_adapter_cube/scenario.py
+  - libs/adapters/cube/src/zentra_adapter_cube/semantic.py
 ---
 
 # Cube Adapter
 
-The Cube client loads governed semantic queries and exposes readiness. The
-`EuRefundSpikeScenario` implements the application scenario port with two
-queries: monthly EU order/refund measures and July refund-reason breakdown.
+The Cube client loads governed semantic queries and exposes readiness.
+`CubeSemanticLayer` implements the Semantic Layer Port: it derives the governed
+catalog from Cube's own metadata, and refuses any query referencing a member
+that catalog does not define — before the query reaches Cube.
 
-The scenario rejects results that do not match the deterministic seed. A
-successful result returns structured metric comparisons, checks/issues, and an
-`artifact://` evidence reference—never raw Cube rows.
+That refusal is the mechanism behind ADR-003. An Agent asking for something
+ungoverned gets an error, not a plausible number from somewhere else.
 
-Only this explicit scenario exists. There is no general-purpose SQL, dataset, or
-natural-language query endpoint.
+There is no general-purpose SQL, dataset, or natural-language query endpoint,
+and no port anywhere in the tree that reaches a raw table.
 
 Data detail: [[Cube Semantic Model]].
 

@@ -8,12 +8,12 @@ from zentra_application_investigation import (
     AuditDelivery,
     InvestigationDetail,
 )
+from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
     EvidenceReference,
     Finding,
     InvestigationStatus,
-    InvestigationValidation,
     MetricComparison,
 )
 
@@ -203,15 +203,12 @@ def investigation_detail() -> InvestigationDetail:
         finding=Finding(
             headline="EU refunds rose $240 in July",
             summary="Governed evidence requires review.",
-            metrics=(
-                MetricComparison("refund_amount", "20.00", "260.00", "USD"),
-            ),
+            metrics=(MetricComparison("refund_amount", "20.00", "260.00", "USD"),),
             evidence_refs=(EvidenceReference("artifact://semantic/eu-refunds"),),
         ),
-        validation=InvestigationValidation(
-            passed=False,
-            checks=("Governed totals match.",),
-            issues=("The sample contains four orders per month.",),
+        outcome=ConfidenceOutcome(
+            score=0.42,
+            calibration_method="evaluator_independent_recheck",
         ),
         pending_approval=None,
         timeline=(),
@@ -240,7 +237,7 @@ class InvestigationServiceStub:
         return self.detail
 
 
-def test_investigation_create_returns_typed_validation(monkeypatch) -> None:
+def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
@@ -261,8 +258,11 @@ def test_investigation_create_returns_typed_validation(monkeypatch) -> None:
 
     assert response.status_code == 201
     assert response.json()["status"] == "awaiting_approval"
-    assert response.json()["validation"]["kind"] == "validation"
-    assert "confidence" not in response.text
+    assert response.json()["outcome"] == {
+        "kind": "confidence",
+        "score": 0.42,
+        "calibration_method": "evaluator_independent_recheck",
+    }
 
 
 def test_approval_request_validates_reason_before_service(monkeypatch) -> None:

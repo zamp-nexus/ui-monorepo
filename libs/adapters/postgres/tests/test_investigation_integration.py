@@ -11,15 +11,15 @@ from zentra_application_investigation import (
     AuthenticatedActor,
     InvestigationNotFoundError,
     InvestigationService,
+    PipelineResult,
     Role,
-    ScenarioResult,
 )
+from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
     EvidenceReference,
     Finding,
     InvestigationStatus,
-    InvestigationValidation,
     MetricComparison,
 )
 
@@ -45,9 +45,9 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-class Scenario:
-    async def run(self) -> ScenarioResult:
-        return ScenarioResult(
+class Pipeline:
+    async def run(self, **kwargs: object) -> PipelineResult:
+        return PipelineResult(
             finding=Finding(
                 headline="EU refunds rose $240 in July",
                 summary="Governed evidence requires Human Approval.",
@@ -61,11 +61,11 @@ class Scenario:
                 ),
                 evidence_refs=(EvidenceReference("artifact://integration/eu"),),
             ),
-            validation=InvestigationValidation(
-                passed=False,
-                checks=("Governed totals match.",),
-                issues=("Only four orders are present in each month.",),
+            outcome=ConfidenceOutcome(
+                score=0.42,
+                calibration_method="evaluator_independent_recheck",
             ),
+            converged=True,
         )
 
 
@@ -111,7 +111,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
     database = Database(RUNTIME_URL)
     service = InvestigationService(
         unit_of_work_factory=PostgresInvestigationUnitOfWorkFactory(database),
-        scenario=Scenario(),
+        pipeline=Pipeline(),
         audit_writer=PendingAudit(),
         audit_reader=PendingAudit(),
         now=lambda: datetime.now(UTC),
@@ -126,10 +126,16 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
     )
 
     started = await service.start(actor, scenario_key="eu_refund_spike")
+    assert started.status is InvestigationStatus.RUNNING
+    # An undeliverable ledger is surfaced, never silently treated as written.
+    assert started.audit_delivery.value == "pending"
+
+    await service.execute(actor, started.investigation_id)
+    started = await service.get(actor, started.investigation_id)
 
     assert started.status is InvestigationStatus.AWAITING_APPROVAL
-    assert started.audit_delivery.value == "pending"
     assert started.pending_approval is not None
+    assert started.pending_approval.reason == "low_confidence"
 
     runtime = create_async_engine(RUNTIME_URL)
     async with runtime.begin() as connection:
@@ -141,6 +147,8 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
             select(func.count()).select_from(agent_executions)
         )
     assert outbox_count == 5
+    # This pipeline stub reports a result without running agents, so no
+    # execution rows are written. The graph writes one per step.
     assert agent_execution_count == 0
 
     completed = await service.decide(

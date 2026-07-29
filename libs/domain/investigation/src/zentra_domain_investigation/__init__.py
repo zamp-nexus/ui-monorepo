@@ -14,9 +14,9 @@ from .model import (
     Investigation,
     InvestigationStatus,
     InvestigationTransitionError,
-    InvestigationValidation,
     MetricComparison,
     RejectionReason,
+    directive_for_outcome,
 )
 
 __all__ = [
@@ -33,7 +33,7 @@ __all__ = [
     "Investigation",
     "InvestigationStatus",
     "InvestigationTransitionError",
-    "InvestigationValidation",
     "MetricComparison",
     "RejectionReason",
+    "directive_for_outcome",
 ]

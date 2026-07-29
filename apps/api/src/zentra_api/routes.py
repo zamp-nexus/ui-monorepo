@@ -1,21 +1,32 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from zentra_application_investigation import (
+    AuthenticatedActor,
     ConflictError,
     InvestigationDetail,
     InvestigationNotFoundError,
+    InvestigationService,
     PermissionDeniedError,
     ScenarioUnavailableError,
     UnsupportedScenarioError,
 )
+from zentra_domain_agent_execution import ConfidenceOutcome, ValidationOutcome
 from zentra_domain_investigation import ApprovalDecision, RejectionReason
 
 from .request_context import RequestContext, authenticated_context
@@ -90,10 +101,24 @@ class FindingResponse(BaseModel):
 class ValidationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    kind: str = "validation"
+    kind: Literal["validation"] = "validation"
     passed: bool
     checks: list[str]
     issues: list[str]
+
+
+class ConfidenceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["confidence"] = "confidence"
+    score: float
+    calibration_method: str
+
+
+OutcomeResponse = Annotated[
+    ConfidenceResponse | ValidationResponse,
+    Field(discriminator="kind"),
+]
 
 
 class ApprovalResponse(BaseModel):
@@ -114,6 +139,9 @@ class TimelineResponse(BaseModel):
     created_at: datetime
     artifact_references: list[str]
     delivery: str
+    agent_id: str | None = None
+    step: int | None = None
+    model: str | None = None
 
 
 class InvestigationDetailResponse(BaseModel):
@@ -129,7 +157,7 @@ class InvestigationDetailResponse(BaseModel):
     updated_at: datetime
     finished_at: datetime | None
     finding: FindingResponse | None
-    validation: ValidationResponse | None
+    outcome: OutcomeResponse | None
     pending_approval: ApprovalResponse | None
     timeline: list[TimelineResponse]
     audit_delivery: str
@@ -154,12 +182,17 @@ class InvestigationDetailResponse(BaseModel):
                     reference.value for reference in detail.finding.evidence_refs
                 ],
             )
-        validation = None
-        if detail.validation is not None:
-            validation = ValidationResponse(
-                passed=detail.validation.passed,
-                checks=list(detail.validation.checks),
-                issues=list(detail.validation.issues),
+        outcome: OutcomeResponse | None = None
+        if isinstance(detail.outcome, ConfidenceOutcome):
+            outcome = ConfidenceResponse(
+                score=detail.outcome.score,
+                calibration_method=detail.outcome.calibration_method,
+            )
+        elif isinstance(detail.outcome, ValidationOutcome):
+            outcome = ValidationResponse(
+                passed=detail.outcome.passed,
+                checks=list(detail.outcome.checks),
+                issues=list(detail.outcome.issues),
             )
         approval = None
         if detail.pending_approval is not None:
@@ -180,7 +213,7 @@ class InvestigationDetailResponse(BaseModel):
             updated_at=detail.updated_at,
             finished_at=detail.finished_at,
             finding=finding,
-            validation=validation,
+            outcome=outcome,
             pending_approval=approval,
             timeline=[
                 TimelineResponse(
@@ -190,6 +223,9 @@ class InvestigationDetailResponse(BaseModel):
                     created_at=entry.created_at,
                     artifact_references=list(entry.artifact_refs),
                     delivery=entry.delivery.value,
+                    agent_id=entry.agent_id,
+                    step=entry.step,
+                    model=entry.model,
                 )
                 for entry in detail.timeline
             ],
@@ -257,10 +293,12 @@ async def context(
 async def create_investigation(
     body: InvestigationCreateRequest,
     request: Request,
+    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> InvestigationDetailResponse:
+    investigations = request.app.state.dependencies.investigations
     try:
-        detail = await request.app.state.dependencies.investigations.start(
+        detail = await investigations.start(
             resolved.actor,
             scenario_key=body.scenario_key,
         )
@@ -270,7 +308,27 @@ async def create_investigation(
         raise HTTPException(status_code=403, detail=str(error)) from error
     except ScenarioUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+
+    # The agents run after the response is sent; the client polls GET for the
+    # timeline as each step lands.
+    background.add_task(
+        _run_pipeline,
+        investigations,
+        resolved.actor,
+        detail.investigation_id,
+    )
     return InvestigationDetailResponse.from_detail(detail)
+
+
+async def _run_pipeline(
+    investigations: InvestigationService,
+    actor: AuthenticatedActor,
+    investigation_id: UUID,
+) -> None:
+    with suppress(Exception):
+        # Failures are already recorded against the Investigation itself, so a
+        # background crash must not take the worker down with it.
+        await investigations.execute(actor, investigation_id)
 
 
 @router.get(

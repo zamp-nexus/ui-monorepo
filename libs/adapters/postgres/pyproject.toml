@@ -23,6 +23,7 @@ dependencies = [
     "psycopg[binary,pool]>=3.2,<4",
     "sqlalchemy>=2.0,<3",
     "zentra-application-investigation",
+    "zentra-domain-agent-execution",
     "zentra-domain-investigation",
 ]
 
@@ -64,5 +65,6 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.uv.sources]
+zentra-domain-agent-execution = { workspace = true }
 zentra-application-investigation = { workspace = true }
 zentra-domain-investigation = { workspace = true }

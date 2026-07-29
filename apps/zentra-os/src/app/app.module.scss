@@ -594,6 +594,28 @@
   background: #b8ff65;
 }
 
+.stepModel {
+  display: block;
+  color: #7f8a7f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.confidenceScore {
+  margin: 0 0 16px;
+  color: #d9dcd6;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+
+  strong {
+    color: #e4b866;
+    font-size: 30px;
+    font-weight: 550;
+    letter-spacing: -0.02em;
+  }
+}
+
 .validation {
   margin-top: 48px;
   padding: 25px 0;

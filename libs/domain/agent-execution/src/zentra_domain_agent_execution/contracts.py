@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal, Protocol
 from uuid import UUID
@@ -71,12 +72,33 @@ class AgentInput(BaseModel):
     state: dict[str, JsonValue]
 
 
+class ExecutionUsage(BaseModel):
+    """What one unit of agent work consumed. Feeds tracing, the audit ledger,
+    and cost governance from a single measurement (§3.10)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cost_usd: Decimal = Field(default=Decimal("0"), ge=0)
+    model: str | None = None
+
+    def __add__(self, other: ExecutionUsage) -> ExecutionUsage:
+        return ExecutionUsage(
+            input_tokens=self.input_tokens + other.input_tokens,
+            output_tokens=self.output_tokens + other.output_tokens,
+            cost_usd=self.cost_usd + other.cost_usd,
+            model=self.model or other.model,
+        )
+
+
 class AgentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     fields: dict[str, JsonValue]
     evidence_refs: tuple[str, ...] = ()
     outcome: OutcomeSignal
+    usage: ExecutionUsage = ExecutionUsage()
 
     @field_validator("evidence_refs")
     @classmethod
@@ -105,6 +127,37 @@ class AgentPort(Protocol):
     def descriptor(self) -> AgentDescriptor: ...
 
     def invoke(self, agent_input: AgentInput) -> Awaitable[AgentOutput]: ...
+
+
+# Matched as substrings, not prefixes: vendors bury the family mid-identifier
+# (`zai-glm-4.7`, `openai/gpt-oss-120b`).
+_FAMILY_MARKERS: tuple[tuple[str, str], ...] = (
+    ("gpt-oss", "gpt-oss"),
+    ("claude", "claude"),
+    ("gemini", "gemini"),
+    ("nemotron", "nemotron"),
+    ("glm", "glm"),
+    ("gpt-5", "gpt-5"),
+    ("kimi", "kimi"),
+    ("qwen", "qwen"),
+    ("llama", "llama"),
+)
+
+
+def model_family(model: str | None) -> str | None:
+    """Reduce a model id to the family whose blind spots it shares.
+
+    Two agents on the same family do not give independent answers, however
+    different their prompts. Used to detect when fallback has collapsed the
+    Evaluator onto the Analyst's model.
+    """
+    if not model:
+        return None
+    name = model.rsplit("/", maxsplit=1)[-1].lower()
+    for marker, family in _FAMILY_MARKERS:
+        if marker in name:
+            return family
+    return name
 
 
 def validate_agent_output(port: AgentPort, output: AgentOutput) -> AgentOutput:

@@ -6,6 +6,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
+from zentra_domain_agent_execution import ConfidenceOutcome, OutcomeSignal
+
 
 class InvestigationStatus(StrEnum):
     PENDING = "pending"
@@ -22,6 +24,9 @@ class EvaluationDirective(StrEnum):
     PASS = "pass"
     REVIEW = "review"
     RETRY = "retry"
+    # The evaluation loop ran out of attempts without converging. Distinct from
+    # RETRY, which asks for another attempt: this one can only escalate.
+    ESCALATE = "escalate"
 
 
 class ApprovalReason(StrEnum):
@@ -80,11 +85,20 @@ class Finding:
     evidence_refs: tuple[EvidenceReference, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class InvestigationValidation:
-    passed: bool
-    checks: tuple[str, ...] = ()
-    issues: tuple[str, ...] = ()
+def directive_for_outcome(
+    outcome: OutcomeSignal,
+    *,
+    confidence_threshold: float,
+) -> EvaluationDirective:
+    """Decide whether an evaluated outcome may complete without a human.
+
+    Retry is not decided here; only the Evaluator knows a recheck disagreed.
+    """
+    if isinstance(outcome, ConfidenceOutcome):
+        passed = outcome.score >= confidence_threshold
+    else:
+        passed = outcome.passed
+    return EvaluationDirective.PASS if passed else EvaluationDirective.REVIEW
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +183,7 @@ class Investigation:
     updated_at: datetime
     finished_at: datetime | None = None
     finding: Finding | None = None
-    validation: InvestigationValidation | None = None
+    outcome: OutcomeSignal | None = None
     completion: CompletionOutcome | None = None
     failure: FailureOutcome | None = None
     events: list[DomainEvent] = field(default_factory=list)
@@ -218,7 +232,7 @@ class Investigation:
         self,
         *,
         directive: EvaluationDirective,
-        validation: InvestigationValidation,
+        outcome: OutcomeSignal,
         finding: Finding,
         now: datetime,
     ) -> ApprovalReason | None:
@@ -229,7 +243,7 @@ class Investigation:
             )
 
         self.evaluation_attempts += 1
-        self.validation = validation
+        self.outcome = outcome
         self.finding = finding
         self.updated_at = now
         self.version += 1
@@ -240,7 +254,10 @@ class Investigation:
             metadata={
                 "attempt": self.evaluation_attempts,
                 "directive": directive.value,
-                "passed": validation.passed,
+                "outcome_kind": outcome.kind,
+                "confidence": outcome.score
+                if isinstance(outcome, ConfidenceOutcome)
+                else None,
             },
         )
 
@@ -257,11 +274,7 @@ class Investigation:
             )
             return None
 
-        reason = (
-            ApprovalReason.CONTRADICTION_UNRESOLVED
-            if directive is EvaluationDirective.RETRY
-            else ApprovalReason.TENANT_POLICY
-        )
+        reason = self._approval_reason(directive, outcome)
         self._transition(
             expected={InvestigationStatus.EVALUATING},
             target=InvestigationStatus.AWAITING_APPROVAL,
@@ -358,6 +371,20 @@ class Investigation:
             now=now,
             finished=True,
         )
+
+    @staticmethod
+    def _approval_reason(
+        directive: EvaluationDirective,
+        outcome: OutcomeSignal,
+    ) -> ApprovalReason:
+        if directive in {
+            EvaluationDirective.RETRY,
+            EvaluationDirective.ESCALATE,
+        }:
+            return ApprovalReason.CONTRADICTION_UNRESOLVED
+        if isinstance(outcome, ConfidenceOutcome):
+            return ApprovalReason.LOW_CONFIDENCE
+        return ApprovalReason.TENANT_POLICY
 
     def _require_status(self, expected: set[InvestigationStatus]) -> None:
         if self.status not in expected:

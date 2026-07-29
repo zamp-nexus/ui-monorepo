@@ -3,11 +3,14 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 FORBIDDEN_ROOTS = {
     "alembic",
+    "anthropic",
     "clickhouse_connect",
     "fastapi",
+    "langchain_core",
+    "langgraph",
+    "openai",
     "httpx",
     "opentelemetry",
     "psycopg",
@@ -27,13 +30,21 @@ def forbidden_imports(path: Path) -> set[str]:
     return found & FORBIDDEN_ROOTS
 
 
+FIXTURES = {
+    "libs/domain/agent-execution/tests/architecture_fixture/invalid_domain.py": {"fastapi"},
+    "libs/domain/agent-execution/tests/architecture_fixture/invalid_agent_domain.py": {
+        "anthropic",
+        "langgraph",
+    "openai",
+    },
+}
+
+
 if __name__ == "__main__":
-    fixture = Path(
-        "libs/domain/agent-execution/tests/architecture_fixture/invalid_domain.py"
-    )
-    violations = forbidden_imports(fixture)
-    if violations != {"fastapi"}:
-        raise SystemExit(
-            f"Boundary fixture did not produce the expected violation: {violations}"
-        )
-    print("Known-bad boundary fixture correctly rejected: fastapi")
+    for path, expected in FIXTURES.items():
+        violations = forbidden_imports(Path(path))
+        if violations != expected:
+            raise SystemExit(
+                f"{path} did not produce the expected violation: {violations} (expected {expected})"
+            )
+        print(f"Known-bad boundary fixture correctly rejected: {sorted(expected)}")

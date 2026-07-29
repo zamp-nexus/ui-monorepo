@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_application_investigation import InvestigationUnitOfWork
+from zentra_domain_agent_execution import OUTCOME_ADAPTER, AgentExecutionRecord
 from zentra_domain_investigation import (
     ApprovalReason,
     CompletionOutcome,
@@ -23,7 +24,6 @@ from zentra_domain_investigation import (
     HumanApprovalStatus,
     Investigation,
     InvestigationStatus,
-    InvestigationValidation,
     MetricComparison,
     RejectionReason,
 )
@@ -35,6 +35,7 @@ from .schema import (
     human_approvals,
     investigations,
     tenant_identity_bindings,
+    tenants,
 )
 
 
@@ -83,18 +84,10 @@ def _finding_from_json(value: dict[str, Any] | None) -> Finding | None:
 
 
 def _state_to_json(investigation: Investigation) -> dict[str, Any]:
-    validation = investigation.validation
+    outcome = investigation.outcome
     return {
         "finding": _finding_to_json(investigation.finding),
-        "validation": (
-            {
-                "passed": validation.passed,
-                "checks": list(validation.checks),
-                "issues": list(validation.issues),
-            }
-            if validation
-            else None
-        ),
+        "outcome": outcome.model_dump(mode="json") if outcome else None,
         "completion": (
             {"human_approved": investigation.completion.human_approved}
             if investigation.completion
@@ -114,16 +107,8 @@ def _state_to_json(investigation: Investigation) -> dict[str, Any]:
 def _investigation_from_row(row: Any) -> Investigation:
     state = row.state or {}
     finding = _finding_from_json(state.get("finding"))
-    validation_value = state.get("validation")
-    validation = (
-        InvestigationValidation(
-            passed=validation_value["passed"],
-            checks=tuple(validation_value.get("checks", ())),
-            issues=tuple(validation_value.get("issues", ())),
-        )
-        if validation_value
-        else None
-    )
+    outcome_value = state.get("outcome")
+    outcome = OUTCOME_ADAPTER.validate_python(outcome_value) if outcome_value else None
     completion_value = state.get("completion")
     completion = (
         CompletionOutcome(
@@ -154,7 +139,7 @@ def _investigation_from_row(row: Any) -> Investigation:
         updated_at=row.updated_at,
         finished_at=row.finished_at,
         finding=finding,
-        validation=validation,
+        outcome=outcome,
         completion=completion,
         failure=failure,
         events=[],
@@ -411,16 +396,67 @@ class PostgresAuditOutboxRepository:
 
 
 class PostgresAgentExecutionRepository:
+    """Holds the full agent output, including result rows.
+
+    This is the tenant-scoped, RLS-protected store an `artifact://execution/{id}`
+    pointer resolves to. Raw values live here and never in the audit ledger.
+    """
+
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
 
-    async def add(self, execution: object) -> None:
-        if not isinstance(execution, dict):
-            raise TypeError("Agent Execution persistence requires a mapping")
-        values = dict(execution)
-        if "cost_usd" in values:
-            values["cost_usd"] = Decimal(str(values["cost_usd"]))
-        await self._connection.execute(insert(agent_executions).values(**values))
+    async def add(self, execution: AgentExecutionRecord) -> None:
+        outcome = execution.outcome
+        await self._connection.execute(
+            insert(agent_executions).values(
+                execution_id=execution.execution_id,
+                investigation_id=execution.investigation_id,
+                tenant_id=execution.tenant_id,
+                agent_id=execution.agent_id,
+                step=execution.step,
+                input=execution.input,
+                output=execution.output,
+                outcome_kind=outcome.kind if outcome else None,
+                confidence=(
+                    Decimal(str(execution.confidence))
+                    if execution.confidence is not None
+                    else None
+                ),
+                outcome=outcome.model_dump(mode="json") if outcome else None,
+                status=execution.status.value,
+                latency_ms=execution.latency_ms,
+                cost_usd=Decimal(str(execution.usage.cost_usd)),
+                model=execution.usage.model,
+                started_at=execution.started_at,
+                completed_at=execution.completed_at,
+            )
+        )
+
+
+class PostgresTenantPolicyRepository:
+    def __init__(self, connection: AsyncConnection) -> None:
+        self._connection = connection
+
+    async def confidence_threshold(self, tenant_id: UUID) -> float:
+        value = (
+            await self._connection.execute(
+                select(tenants.c.confidence_threshold).where(
+                    tenants.c.tenant_id == tenant_id
+                )
+            )
+        ).scalar_one()
+        return float(value)
+
+    async def model_tier(self, tenant_id: UUID) -> str:
+        return str(
+            (
+                await self._connection.execute(
+                    select(tenants.c.model_tier).where(
+                        tenants.c.tenant_id == tenant_id
+                    )
+                )
+            ).scalar_one()
+        )
 
 
 class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
@@ -434,6 +470,7 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
         self.investigations = PostgresInvestigationRepository(connection)
         self.approvals = PostgresHumanApprovalRepository(connection)
         self.agent_executions = PostgresAgentExecutionRepository(connection)
+        self.policies = PostgresTenantPolicyRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection,
             trace_id=trace_id,

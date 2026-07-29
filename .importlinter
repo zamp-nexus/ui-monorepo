@@ -6,6 +6,8 @@ root_packages =
     zentra_adapter_postgres
     zentra_adapter_clickhouse
     zentra_adapter_cube
+    zentra_adapter_langgraph
+    zentra_adapter_model_providers
     zentra_adapter_telemetry
     zentra_api
 include_external_packages = True
@@ -18,9 +20,13 @@ source_modules =
     zentra_domain_investigation
 forbidden_modules =
     alembic
+    anthropic
     clickhouse_connect
     fastapi
     httpx
+    langchain_core
+    langgraph
+    openai
     opentelemetry
     psycopg
     sqlalchemy
@@ -33,9 +39,13 @@ source_modules =
     zentra_application_investigation
 forbidden_modules =
     alembic
+    anthropic
     clickhouse_connect
     fastapi
     httpx
+    langchain_core
+    langgraph
+    openai
     opentelemetry
     psycopg
     sqlalchemy
@@ -48,4 +58,6 @@ modules =
     zentra_adapter_postgres
     zentra_adapter_clickhouse
     zentra_adapter_cube
+    zentra_adapter_langgraph
+    zentra_adapter_model_providers
     zentra_adapter_telemetry
