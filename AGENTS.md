@@ -64,6 +64,16 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Multi-context layout: root `CONTEXT-MAP.md` points to per-area `CONTEXT.md` files under `apps/*` and `libs/*`. See `docs/agents/domain.md`.
+
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
