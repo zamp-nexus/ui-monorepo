@@ -9,6 +9,7 @@ class Provider(StrEnum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     GEMINI = "gemini"
+    NVIDIA = "nvidia"
     GROQ = "groq"
     CEREBRAS = "cerebras"
     OPENROUTER = "openrouter"
@@ -56,12 +57,22 @@ PROVIDERS: dict[Provider, ProviderConfig] = {
         base_url="https://api.cerebras.ai/v1",
         trains_on_input=False,
     ),
-    # Gemini and OpenRouter train on free-tier traffic. They are reachable only
-    # from the free chain; ROUTING asserts they never appear in a premium one.
+    # Gemini, NVIDIA, and OpenRouter train on free-tier traffic. They are
+    # reachable only from the free chain; ROUTING asserts at import that none
+    # appears in a premium one.
     Provider.GEMINI: ProviderConfig(
         provider=Provider.GEMINI,
         env_key="GEMINI_API_KEY",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        trains_on_input=True,
+    ),
+    Provider.NVIDIA: ProviderConfig(
+        provider=Provider.NVIDIA,
+        env_key="NVIDIA_API_KEY",
+        base_url="https://integrate.api.nvidia.com/v1",
+        # NVIDIA records inputs and outputs on free endpoints to train their
+        # models, and warns against sending personal data. Only self-hosted NIM
+        # avoids that, which is infrastructure we do not run.
         trains_on_input=True,
     ),
     Provider.OPENROUTER: ProviderConfig(
@@ -112,7 +123,8 @@ _PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     "zai-glm-4.7": _ZERO,
     "openai/gpt-oss-120b": _ZERO,
     "openai/gpt-oss-20b": _ZERO,
-    "gemini-3-flash": _ZERO,
+    "gemini-3.6-flash": _ZERO,
+    "nvidia/nemotron-3-ultra": _ZERO,
     "openrouter/free": _ZERO,
 }
 

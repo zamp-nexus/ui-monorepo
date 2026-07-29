@@ -40,6 +40,17 @@ Model order within each chain follows the Artificial Analysis Intelligence
 Index, not vendor-reported benchmarks, which disagreed with independent
 evaluation by wide margins.
 
+Because the Index moves, the table is expected to be revisited rather than
+treated as settled. It already has been once: the first free chains shipped with
+`gemini-3-flash` (38) and led the Evaluator with a model Cerebras had scheduled
+for deprecation. They now lead with `gemini-3.6-flash` (50) and carry Nemotron 3
+Ultra (38) as the second rung.
+
+A provider whose strict-schema support is unverified is never placed first in a
+chain, because a retry-and-fall-through would then sit on the critical path of
+every investigation. Nemotron is there today; a live call proving strict
+`json_schema` promotes it.
+
 ## The Evaluator's independence is checked at runtime
 
 The free chains start the SQL Analyst and the Evaluator on different vendors and

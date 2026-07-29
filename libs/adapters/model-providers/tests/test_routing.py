@@ -30,6 +30,16 @@ def test_free_evaluator_starts_on_a_different_family_from_the_analyst() -> None:
     assert analyst.provider is not evaluator.provider
 
 
+def test_no_free_chain_leads_with_an_unverified_schema_provider() -> None:
+    """Nemotron's strict json_schema support is unverified against the live
+    endpoint, so it must sit behind a rung with confirmed support rather than
+    put a retry-and-fall-through on every investigation's critical path."""
+    for role, chain in ROUTING[ModelTier.FREE].items():
+        assert chain[0].provider is not Provider.NVIDIA, (
+            f"{role.value} leads with an unverified provider"
+        )
+
+
 def test_premium_evaluator_starts_on_a_stronger_model_than_the_analyst() -> None:
     analyst = ROUTING[ModelTier.PREMIUM][AgentRole.SQL_ANALYST][0]
     evaluator = ROUTING[ModelTier.PREMIUM][AgentRole.EVALUATOR][0]
@@ -71,7 +81,9 @@ def test_free_tier_models_record_genuinely_zero_cost() -> None:
         ("claude-sonnet-5", "claude"),
         ("groq/openai/gpt-oss-120b", "gpt-oss"),
         ("cerebras/zai-glm-4.7", "glm"),
-        ("gemini/gemini-3-flash", "gemini"),
+        ("gemini/gemini-3.6-flash", "gemini"),
+        ("nvidia/nemotron-3-ultra", "nemotron"),
+        ("nvidia/nemotron-3-ultra-550b-a55b:free", "nemotron"),
         ("gpt-5.5", "gpt-5"),
         (None, None),
     ],

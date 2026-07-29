@@ -45,11 +45,17 @@ traffic they receive.**
 
 | Provider | Role | Data handling |
 | --- | --- | --- |
-| Cerebras | Evaluator primary, Analyst second | Does not retain inputs or outputs |
+| **Gemini** | **Analyst and Orchestrator primary** | **Free-tier content is used to improve Google's products** |
+| **NVIDIA** | **Evaluator second; Analyst second** | **Inputs and outputs on free endpoints are recorded and used to train NVIDIA's models. NVIDIA warns against sending personal data. Only self-hosted NIM avoids this.** |
+| Cerebras | Evaluator primary | Does not retain inputs or outputs |
 | Groq | Later rung | Contractually barred from training |
-| **Gemini** | **Analyst primary** | **Free-tier content is used to improve Google's products** |
 | **OpenRouter** | Later rung | **Free model access is exchanged for traffic becoming training signal** |
 | Anthropic | Final backstop | No training on API data |
+
+⚠️ **Cerebras deprecates `zai-glm-4.7` on 2026-08-17.** It is currently the
+Evaluator's primary rung. Fallback will absorb its removal silently rather than
+raise, so this needs a replacement chosen before that date — either GLM-5.2 on a
+paid provider, or whatever Cerebras ships next.
 
 ## What this requires
 

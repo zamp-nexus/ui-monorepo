@@ -135,6 +135,7 @@ _FAMILY_MARKERS: tuple[tuple[str, str], ...] = (
     ("gpt-oss", "gpt-oss"),
     ("claude", "claude"),
     ("gemini", "gemini"),
+    ("nemotron", "nemotron"),
     ("glm", "glm"),
     ("gpt-5", "gpt-5"),
     ("kimi", "kimi"),
