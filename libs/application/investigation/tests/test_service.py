@@ -36,9 +36,16 @@ NOW = datetime(2026, 7, 29, 9, 0, tzinfo=UTC)
 
 
 class Pipeline:
-    def __init__(self, *, score: float = 0.42, converged: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        score: float = 0.42,
+        converged: bool = True,
+        independent: bool = True,
+    ) -> None:
         self._score = score
         self._converged = converged
+        self._independent = independent
         self.calls: list[UUID] = []
 
     async def run(
@@ -47,6 +54,7 @@ class Pipeline:
         investigation_id: UUID,
         tenant_id: UUID,
         question: str,
+        model_tier: str = "free",
     ) -> PipelineResult:
         self.calls.append(investigation_id)
         return PipelineResult(
@@ -67,6 +75,7 @@ class Pipeline:
                 calibration_method="evaluator_independent_recheck",
             ),
             converged=self._converged,
+            independent_recheck=self._independent,
         )
 
 
@@ -135,11 +144,15 @@ class AgentExecutions:
 
 
 class Policies:
-    def __init__(self, threshold: float = 0.7) -> None:
+    def __init__(self, threshold: float = 0.7, tier: str = "free") -> None:
         self.threshold = threshold
+        self.tier = tier
 
     async def confidence_threshold(self, tenant_id: UUID) -> float:
         return self.threshold
+
+    async def model_tier(self, tenant_id: UUID) -> str:
+        return self.tier
 
 
 class UnitOfWork:
@@ -252,6 +265,43 @@ async def test_confident_converged_result_completes_without_a_human() -> None:
 
     assert detail.status == "completed"
     assert detail.pending_approval is None
+
+
+@pytest.mark.asyncio
+async def test_shared_model_family_caps_confidence_and_forces_a_human() -> None:
+    unit_of_work = UnitOfWork()
+    # A confident result that would normally publish itself, from an Evaluator
+    # that fallback landed on the Analyst's own model.
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(score=0.95, independent=False),
+    )
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+    assert detail.pending_approval.reason == "low_confidence"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score < 0.7
+    assert detail.outcome.calibration_method == ("capped_evaluator_shared_model_family")
+
+
+@pytest.mark.asyncio
+async def test_independent_recheck_at_high_confidence_still_auto_publishes() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(score=0.95, independent=True),
+    )
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "completed"
 
 
 @pytest.mark.asyncio

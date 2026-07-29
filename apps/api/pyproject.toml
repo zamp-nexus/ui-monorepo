@@ -25,6 +25,8 @@ indent-width = 4
 [tool.uv.sources]
 zentra-adapter-clickhouse = { workspace = true }
 zentra-adapter-cube = { workspace = true }
+zentra-adapter-langgraph = { workspace = true }
+zentra-adapter-model-providers = { workspace = true }
 zentra-adapter-postgres = { workspace = true }
 zentra-adapter-telemetry = { workspace = true }
 zentra-domain-agent-execution = { workspace = true }
@@ -45,6 +47,8 @@ dependencies = [
  "uvicorn[standard]>=0.37,<1",
  "zentra-adapter-clickhouse",
  "zentra-adapter-cube",
+ "zentra-adapter-langgraph",
+ "zentra-adapter-model-providers",
  "zentra-adapter-postgres",
  "zentra-adapter-telemetry",
  "zentra-application-investigation",

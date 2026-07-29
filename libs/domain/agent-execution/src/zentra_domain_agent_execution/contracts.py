@@ -129,6 +129,36 @@ class AgentPort(Protocol):
     def invoke(self, agent_input: AgentInput) -> Awaitable[AgentOutput]: ...
 
 
+# Matched as substrings, not prefixes: vendors bury the family mid-identifier
+# (`zai-glm-4.7`, `openai/gpt-oss-120b`).
+_FAMILY_MARKERS: tuple[tuple[str, str], ...] = (
+    ("gpt-oss", "gpt-oss"),
+    ("claude", "claude"),
+    ("gemini", "gemini"),
+    ("glm", "glm"),
+    ("gpt-5", "gpt-5"),
+    ("kimi", "kimi"),
+    ("qwen", "qwen"),
+    ("llama", "llama"),
+)
+
+
+def model_family(model: str | None) -> str | None:
+    """Reduce a model id to the family whose blind spots it shares.
+
+    Two agents on the same family do not give independent answers, however
+    different their prompts. Used to detect when fallback has collapsed the
+    Evaluator onto the Analyst's model.
+    """
+    if not model:
+        return None
+    name = model.rsplit("/", maxsplit=1)[-1].lower()
+    for marker, family in _FAMILY_MARKERS:
+        if marker in name:
+            return family
+    return name
+
+
 def validate_agent_output(port: AgentPort, output: AgentOutput) -> AgentOutput:
     undeclared = output.fields.keys() - port.descriptor.output_fields
     if undeclared:

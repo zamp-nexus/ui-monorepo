@@ -106,6 +106,15 @@ class StubRegistry:
         )
 
 
+# What the router resolves each role to, mirrored here so the graph tests keep
+# asserting on real model identities rather than on role keys.
+ROLE_MODELS = {
+    "orchestrator": "gemini/gemini-3-flash",
+    "sql_analyst": "cerebras/zai-glm-4.7",
+    "evaluator": "groq/openai/gpt-oss-120b",
+}
+
+
 class ScriptedModel:
     """Answers by declared schema, so the graph's control flow is what is
     under test rather than any particular model wording."""
@@ -131,7 +140,7 @@ class ScriptedModel:
                 input_tokens=100,
                 output_tokens=20,
                 cost_usd=Decimal("0.001"),
-                model=model,
+                model=ROLE_MODELS[model],
             ),
         )
 
@@ -312,7 +321,8 @@ async def test_executions_carry_token_and_cost_attribution() -> None:
     assert analyst.usage.input_tokens == 200
     assert analyst.usage.output_tokens == 40
     assert analyst.usage.cost_usd > 0
-    assert analyst.usage.model == "claude-sonnet-5"
+    assert analyst.usage.model == "cerebras/zai-glm-4.7"
     evaluator = next(r for r in recorder.records if r.role is AgentRole.EVALUATOR)
-    # Evaluator deliberately runs a different model from the analyst.
+    # Evaluator deliberately runs a different model family from the analyst, so
+    # the recheck cannot inherit the same blind spots.
     assert evaluator.usage.model != analyst.usage.model

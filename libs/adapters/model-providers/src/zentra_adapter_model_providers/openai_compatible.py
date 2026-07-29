@@ -1,0 +1,124 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import openai
+from openai import AsyncOpenAI
+from pydantic.types import JsonValue
+from zentra_domain_agent_execution import (
+    ExecutionUsage,
+    ModelMessage,
+    ModelResponse,
+)
+
+from .errors import (
+    ProviderAuthError,
+    ProviderTruncatedError,
+    ProviderUnavailableError,
+)
+from .providers import Provider, ProviderConfig, token_cost_usd
+
+SCHEMA_NAME = "agent_output"
+
+
+class OpenAICompatibleModelClient:
+    """One ModelPort for Groq, Cerebras, OpenAI, Gemini, and OpenRouter.
+
+    All five expose the OpenAI wire format, so they differ only by base URL and
+    key. Structured output goes through `response_format` with `strict: true`,
+    which every one of them supports for the models in the routing table.
+    """
+
+    def __init__(self, *, config: ProviderConfig, client: AsyncOpenAI) -> None:
+        self._config = config
+        self._client = client
+
+    @classmethod
+    def from_api_key(
+        cls,
+        config: ProviderConfig,
+        api_key: str,
+    ) -> OpenAICompatibleModelClient:
+        return cls(
+            config=config,
+            client=AsyncOpenAI(api_key=api_key, base_url=config.base_url),
+        )
+
+    @property
+    def provider(self) -> Provider:
+        return self._config.provider
+
+    async def close(self) -> None:
+        await self._client.close()
+
+    async def complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        response_schema: dict[str, JsonValue] | None = None,
+    ) -> ModelResponse:
+        name = self._config.provider.value
+        request: dict[str, object] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": [
+                {"role": "system", "content": system},
+                *(message.model_dump() for message in messages),
+            ],
+        }
+        if response_schema is not None:
+            request["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": SCHEMA_NAME,
+                    "schema": response_schema,
+                    "strict": True,
+                },
+            }
+
+        try:
+            response = await self._client.chat.completions.create(**request)  # type: ignore[arg-type]
+        except (openai.AuthenticationError, openai.PermissionDeniedError) as e:
+            raise ProviderAuthError(f"{name} rejected credentials: {e}") from e
+        except (
+            openai.RateLimitError,
+            openai.InternalServerError,
+            openai.APITimeoutError,
+            openai.APIConnectionError,
+        ) as e:
+            raise ProviderUnavailableError(f"{name} unavailable: {e}") from e
+        except openai.BadRequestError as e:
+            # A provider that advertises strict schema but rejects ours is a
+            # capability gap, not a bug in the request — try the next rung.
+            raise ProviderUnavailableError(f"{name} rejected the request: {e}") from e
+
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            raise ProviderTruncatedError(
+                f"{name}/{model} hit the {max_tokens} token ceiling"
+            )
+
+        usage = response.usage
+        input_tokens = usage.prompt_tokens if usage else 0
+        output_tokens = usage.completion_tokens if usage else 0
+        cache_read = 0
+        if usage is not None and usage.prompt_tokens_details is not None:
+            cache_read = usage.prompt_tokens_details.cached_tokens or 0
+
+        return ModelResponse(
+            text=choice.message.content or "",
+            usage=ExecutionUsage(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost_usd=token_cost_usd(
+                    model,
+                    input_tokens=max(0, input_tokens - cache_read),
+                    output_tokens=output_tokens,
+                    cache_read_tokens=cache_read,
+                ),
+                model=f"{name}/{response.model}",
+            ),
+        )

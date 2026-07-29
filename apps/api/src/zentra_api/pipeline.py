@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from uuid import UUID
 
 from zentra_adapter_langgraph import InvestigationGraph
+from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_application_investigation import PipelineResult
 from zentra_domain_agent_execution import AgentExecutionRecord, ExecutionStatus
@@ -83,10 +85,14 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
 
 
 class LangGraphInvestigationPipeline:
-    """Adapts the agent graph's outcome to what the application expects."""
+    """Adapts the agent graph's outcome to what the application expects.
 
-    def __init__(self, graph: InvestigationGraph) -> None:
-        self._graph = graph
+    Holds one compiled graph per tier — two at most — so the tenant's tier
+    never has to travel through `ModelPort.complete()`.
+    """
+
+    def __init__(self, graphs: Mapping[ModelTier, InvestigationGraph]) -> None:
+        self._graphs = dict(graphs)
 
     async def run(
         self,
@@ -94,8 +100,10 @@ class LangGraphInvestigationPipeline:
         investigation_id: UUID,
         tenant_id: UUID,
         question: str,
+        model_tier: str = ModelTier.FREE.value,
     ) -> PipelineResult:
-        outcome = await self._graph.run(
+        graph = self._graphs[ModelTier(model_tier)]
+        outcome = await graph.run(
             investigation_id=investigation_id,
             tenant_id=tenant_id,
             question=question,
@@ -120,4 +128,5 @@ class LangGraphInvestigationPipeline:
             outcome=outcome.outcome,
             converged=outcome.converged,
             contradictions=outcome.contradictions,
+            independent_recheck=outcome.independent_recheck,
         )

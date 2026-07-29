@@ -10,6 +10,7 @@ FORBIDDEN_ROOTS = {
     "fastapi",
     "langchain_core",
     "langgraph",
+    "openai",
     "httpx",
     "opentelemetry",
     "psycopg",
@@ -34,6 +35,7 @@ FIXTURES = {
     "libs/domain/agent-execution/tests/architecture_fixture/invalid_agent_domain.py": {
         "anthropic",
         "langgraph",
+    "openai",
     },
 }
 

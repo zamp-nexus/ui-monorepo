@@ -32,6 +32,7 @@ tenants = Table(
     ),
     Column("name", Text, nullable=False),
     Column("data_residency_zone", Text, nullable=False, server_default="us-east"),
+    Column("model_tier", String(16), nullable=False, server_default="free"),
     Column(
         "confidence_threshold", Numeric(4, 3), nullable=False, server_default="0.700"
     ),
@@ -47,6 +48,10 @@ tenants = Table(
         name="ck_tenants_confidence_threshold",
     ),
     CheckConstraint("cost_ceiling_usd >= 0", name="ck_tenants_cost_ceiling"),
+    CheckConstraint(
+        "model_tier IN ('free', 'premium')",
+        name="ck_tenants_model_tier",
+    ),
 )
 
 users = Table(

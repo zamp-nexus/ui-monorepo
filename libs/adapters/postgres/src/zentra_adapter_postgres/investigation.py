@@ -447,6 +447,17 @@ class PostgresTenantPolicyRepository:
         ).scalar_one()
         return float(value)
 
+    async def model_tier(self, tenant_id: UUID) -> str:
+        return str(
+            (
+                await self._connection.execute(
+                    select(tenants.c.model_tier).where(
+                        tenants.c.tenant_id == tenant_id
+                    )
+                )
+            ).scalar_one()
+        )
+
 
 class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
     def __init__(

@@ -6,6 +6,7 @@ dependencies = [
   "zentra-adapter-clickhouse",
   "zentra-adapter-cube",
   "zentra-adapter-langgraph",
+  "zentra-adapter-model-providers",
   "zentra-adapter-postgres",
   "zentra-adapter-telemetry",
   "zentra-api",
@@ -20,6 +21,7 @@ members = [
   "libs/adapters/clickhouse",
   "libs/adapters/cube",
   "libs/adapters/langgraph",
+  "libs/adapters/model-providers",
   "libs/adapters/postgres",
   "libs/adapters/telemetry",
   "libs/application/investigation",
@@ -34,6 +36,9 @@ workspace = true
 workspace = true
 
 [tool.uv.sources.zentra-adapter-langgraph]
+workspace = true
+
+[tool.uv.sources.zentra-adapter-model-providers]
 workspace = true
 
 [tool.uv.sources.zentra-adapter-postgres]

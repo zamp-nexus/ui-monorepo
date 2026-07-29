@@ -141,6 +141,7 @@ class TimelineResponse(BaseModel):
     delivery: str
     agent_id: str | None = None
     step: int | None = None
+    model: str | None = None
 
 
 class InvestigationDetailResponse(BaseModel):
@@ -224,6 +225,7 @@ class InvestigationDetailResponse(BaseModel):
                     delivery=entry.delivery.value,
                     agent_id=entry.agent_id,
                     step=entry.step,
+                    model=entry.model,
                 )
                 for entry in detail.timeline
             ],

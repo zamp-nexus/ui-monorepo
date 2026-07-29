@@ -172,9 +172,5 @@ class OrchestratorAgent:
 
 
 def _usage(usage: ExecutionUsage) -> ExecutionUsage:
-    return ExecutionUsage(
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        cost_usd=usage.cost_usd,
-        model=ORCHESTRATOR_MODEL,
-    )
+    """Pass through untouched: the provider reported which model served this."""
+    return usage

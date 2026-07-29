@@ -12,14 +12,15 @@ addopts = """
 """
 
 [project]
-name = "zentra-adapter-langgraph"
+name = "zentra-adapter-model-providers"
 version = "1.0.0"
-description = "ZentraOS LangGraph agent adapter"
+description = "ZentraOS model provider adapter"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
-    "langgraph>=1.2,<2",
-    "langgraph-checkpoint-postgres>=3,<4",
+    "anthropic>=0.120,<1",
+    "openai>=2,<3",
+    "jsonschema>=4.23,<5",
     "zentra-domain-agent-execution",
 ]
 

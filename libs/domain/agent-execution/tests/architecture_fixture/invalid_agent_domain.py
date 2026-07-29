@@ -5,7 +5,9 @@ ever reaches domain code, this is what CI must catch.
 """
 
 import anthropic
+import openai
 from langgraph.graph import StateGraph
 
 client = anthropic.Anthropic()
+routed = openai.OpenAI()
 graph = StateGraph(dict)

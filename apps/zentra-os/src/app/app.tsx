@@ -103,6 +103,7 @@ interface Investigation {
     readonly delivery: 'complete' | 'pending';
     readonly agent_id: string | null;
     readonly step: number | null;
+    readonly model: string | null;
   }[];
   readonly audit_delivery: 'complete' | 'pending';
 }
@@ -400,6 +401,9 @@ const EvidenceSpine = ({
                       }`
                     : (eventLabels[entry.event_type] ?? entry.event_type)}
                 </strong>
+                {entry.model ? (
+                  <small className={styles.stepModel}>{entry.model}</small>
+                ) : null}
                 <small>
                   {new Date(entry.created_at).toLocaleTimeString([], {
                     hour: '2-digit',
@@ -453,6 +457,14 @@ const OutcomePanel = ({
           <li>
             Evaluation attempts: {investigation.evaluation_attempts} of 3
           </li>
+          {outcome.calibration_method ===
+          'capped_evaluator_shared_model_family' ? (
+            <li className={styles.validationIssue}>
+              ! The recheck ran on the same model family as the analysis, so it
+              was not independent. Confidence is capped and this cannot publish
+              without you.
+            </li>
+          ) : null}
         </ul>
       </section>
     );

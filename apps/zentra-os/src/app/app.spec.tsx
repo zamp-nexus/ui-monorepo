@@ -83,6 +83,7 @@ const investigation = {
       delivery: 'complete',
       agent_id: null,
       step: null,
+      model: null,
     },
     {
       entry_id: '50000000-0000-0000-0000-000000000007',
@@ -93,6 +94,7 @@ const investigation = {
       delivery: 'complete',
       agent_id: 'sql_analyst_v1',
       step: 2,
+      model: 'cerebras/zai-glm-4.7',
     },
     {
       entry_id: '50000000-0000-0000-0000-000000000006',
@@ -103,6 +105,7 @@ const investigation = {
       delivery: 'complete',
       agent_id: null,
       step: null,
+      model: null,
     },
   ],
   audit_delivery: 'complete',
@@ -234,6 +237,8 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /approve finding/i })).toBeTruthy();
     // The agent that produced each step is named on the timeline.
     expect(screen.getByText('SQL Analyst · step 2')).toBeTruthy();
+    // The provider and model that actually served the step are named.
+    expect(screen.getByText('cerebras/zai-glm-4.7')).toBeTruthy();
     // A score below the tenant threshold gates on low confidence, not policy.
     expect(screen.getByText('42%')).toBeTruthy();
     expect(

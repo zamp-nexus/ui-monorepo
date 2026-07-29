@@ -7,7 +7,14 @@ and the process can be replayed without retaining raw customer data.
 Phase 1 runs the governed `eu_refund_spike` question through three agents: an
 Orchestrator that resolves the enabled roles from the registry and synthesises
 the Finding, a SQL Analyst that queries Cube, and an Evaluator that re-derives
-the number independently on a different model. The Evaluator-Optimizer loop
+the number independently on a different model.
+
+Which model serves each agent is a per-tenant routing decision. Free tenants run
+on free inference — Gemini, Cerebras, Groq, OpenRouter — falling through on rate
+limits, outages, and schema violations, with Anthropic as the final backstop.
+Premium tenants run Anthropic-first and never reach a provider that trains on
+inference data; see
+[Model Provider Sub-Processors](docs/08_Operations/Model%20Provider%20Sub-Processors.md). The Evaluator-Optimizer loop
 exits hard at three attempts. A confidence below the Tenant threshold, or a
 recheck that never converged, opens a Human Approval gate that blocks
 completion. Every agent step is persisted with token, cost, and model
@@ -45,7 +52,14 @@ The frontend runs at `http://localhost:4200`, the API at
 
 Copy the frontend and API `.env.example` files into untracked `.env` files and
 provide Clerk, Langfuse OTLP, and E2B credentials when exercising those
-integrations. `ANTHROPIC_API_KEY` is required for the agents to run.
+integrations. `ANTHROPIC_API_KEY` is required for the agents to run; every other
+provider key is optional, and a provider without one is skipped in the chain.
+
+A tenant defaults to the free tier. Put one on Anthropic-first routing with:
+
+```sql
+UPDATE tenants SET model_tier = 'premium' WHERE tenant_id = '...';
+```
 
 Agents are registered disabled. Promote them once their eval suites pass:
 

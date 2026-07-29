@@ -8,11 +8,16 @@ from uuid import uuid4
 from zentra_adapter_clickhouse import AuditRepository
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
-    AnthropicModelClient,
     EvaluatorAgent,
     InvestigationGraph,
     OrchestratorAgent,
     SqlAnalystAgent,
+)
+from zentra_adapter_model_providers import (
+    ModelTier,
+    ProviderCircuitBreaker,
+    ProviderClients,
+    RoutedModelClient,
 )
 from zentra_adapter_postgres import (
     Database,
@@ -39,7 +44,7 @@ class AppDependencies:
     database: Database
     audit: AuditRepository
     cube: CubeClient
-    model: AnthropicModelClient
+    models: ProviderClients
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
@@ -57,22 +62,36 @@ class AppDependencies:
         )
         cube = CubeClient(settings.cube_url, settings.cube_api_secret)
         semantic_layer = CubeSemanticLayer(cube)
-        model = AnthropicModelClient.from_api_key(settings.anthropic_api_key or "")
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
-        graph = InvestigationGraph(
-            orchestrator=OrchestratorAgent(model=model, registry=registry),
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
-            recorder=PostgresExecutionRecorder(unit_of_work_factory),
-        )
+        recorder = PostgresExecutionRecorder(unit_of_work_factory)
+
+        # A provider with no key is simply absent from the chain, so the whole
+        # system still runs on ANTHROPIC_API_KEY alone.
+        models = ProviderClients.from_keys(settings.provider_api_keys())
+        # Shared across tiers: the limits being tripped belong to our API keys,
+        # not to any one tenant.
+        breaker = ProviderCircuitBreaker()
+
+        graphs = {
+            tier: _build_graph(
+                tier=tier,
+                models=models,
+                breaker=breaker,
+                registry=registry,
+                semantic_layer=semantic_layer,
+                recorder=recorder,
+            )
+            for tier in ModelTier
+        }
+
         audit_delivery = AuditDeliveryCoordinator(
             unit_of_work_factory=unit_of_work_factory,
             audit=audit,
         )
         investigations = InvestigationService(
             unit_of_work_factory=unit_of_work_factory,
-            pipeline=LangGraphInvestigationPipeline(graph),
+            pipeline=LangGraphInvestigationPipeline(graphs),
             audit_writer=audit_delivery,
             audit_reader=audit_delivery,
             now=lambda: datetime.now(UTC),
@@ -82,7 +101,7 @@ class AppDependencies:
             database=database,
             audit=audit,
             cube=cube,
-            model=model,
+            models=models,
             jwt_verifier=ClerkJwtVerifier(
                 settings.clerk_issuer,
                 settings.clerk_audience,
@@ -94,4 +113,31 @@ class AppDependencies:
     async def close(self) -> None:
         await self.database.close()
         await self.audit.close()
-        await self.model.close()
+        await self.models.close()
+
+
+def _build_graph(
+    *,
+    tier: ModelTier,
+    models: ProviderClients,
+    breaker: ProviderCircuitBreaker,
+    registry: PostgresAgentRegistry,
+    semantic_layer: CubeSemanticLayer,
+    recorder: PostgresExecutionRecorder,
+) -> InvestigationGraph:
+    """One compiled graph per tier.
+
+    The agents are identical; only the routed client behind them differs, which
+    is what keeps the tenant's tier out of `ModelPort.complete()`.
+    """
+    model = RoutedModelClient(
+        tier=tier,
+        clients=models.as_dict(),
+        breaker=breaker,
+    )
+    return InvestigationGraph(
+        orchestrator=OrchestratorAgent(model=model, registry=registry),
+        sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+        evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+        recorder=recorder,
+    )

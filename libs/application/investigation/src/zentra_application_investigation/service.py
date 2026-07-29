@@ -10,6 +10,7 @@ from uuid import UUID
 
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
+    ConfidenceOutcome,
     OutcomeSignal,
 )
 from zentra_domain_investigation import (
@@ -80,6 +81,9 @@ class PipelineResult:
     outcome: OutcomeSignal
     converged: bool
     contradictions: tuple[str, ...] = ()
+    # False when the Evaluator ended up on the same model family as the SQL
+    # Analyst, so its recheck was not genuinely independent.
+    independent_recheck: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +96,7 @@ class TimelineEntry:
     delivery: AuditDelivery = AuditDelivery.COMPLETE
     agent_id: str | None = None
     step: int | None = None
+    model: str | None = None
 
     @classmethod
     def from_domain_event(
@@ -109,6 +114,7 @@ class TimelineEntry:
             delivery=delivery,
             agent_id=event.metadata.get("agent_id"),
             step=event.metadata.get("step"),
+            model=event.metadata.get("model"),
         )
 
 
@@ -151,6 +157,7 @@ class InvestigationPipeline(Protocol):
         investigation_id: UUID,
         tenant_id: UUID,
         question: str,
+        model_tier: str,
     ) -> PipelineResult: ...
 
 
@@ -192,6 +199,8 @@ class AgentExecutionRepository(Protocol):
 
 class TenantPolicyRepository(Protocol):
     async def confidence_threshold(self, tenant_id: UUID) -> float: ...
+
+    async def model_tier(self, tenant_id: UUID) -> str: ...
 
 
 class AuditOutboxRepository(Protocol):
@@ -310,12 +319,14 @@ class InvestigationService:
             threshold = await unit_of_work.policies.confidence_threshold(
                 actor.tenant_id
             )
+            model_tier = await unit_of_work.policies.model_tier(actor.tenant_id)
 
         try:
             result = await self._pipeline.run(
                 investigation_id=investigation_id,
                 tenant_id=actor.tenant_id,
                 question=investigation.question,
+                model_tier=model_tier,
             )
         except Exception as error:
             await self._fail(actor, investigation, error)
@@ -326,8 +337,9 @@ class InvestigationService:
         now = self._now()
         expected_version = investigation.version
         investigation.begin_evaluation(now)
+        outcome = _cap_when_not_independent(result, threshold)
         directive = (
-            directive_for_outcome(result.outcome, confidence_threshold=threshold)
+            directive_for_outcome(outcome, confidence_threshold=threshold)
             if result.converged
             # A recheck that never converged is never allowed to auto-publish,
             # however confident the final score looks. The loop is already
@@ -336,7 +348,7 @@ class InvestigationService:
         )
         approval_reason = investigation.record_evaluation(
             directive=directive,
-            outcome=result.outcome,
+            outcome=outcome,
             finding=result.finding,
             now=now,
         )
@@ -550,3 +562,23 @@ class InvestigationService:
     def _require_decision_role(actor: AuthenticatedActor) -> None:
         if actor.role not in {Role.OWNER, Role.ADMIN}:
             raise PermissionDeniedError("This membership cannot decide Human Approvals")
+
+
+def _cap_when_not_independent(
+    result: PipelineResult,
+    threshold: float,
+) -> OutcomeSignal:
+    """Hold a shared-model-family result below the auto-publish bar.
+
+    The Evaluator exists to be a second opinion. When fallback lands it on the
+    Analyst's own model family it is not one, so the confidence is capped below
+    the tenant's threshold and the investigation stops at a human. Honest rather
+    than a warning label: we really are less sure.
+    """
+    outcome = result.outcome
+    if result.independent_recheck or not isinstance(outcome, ConfidenceOutcome):
+        return outcome
+    return ConfidenceOutcome(
+        score=min(outcome.score, max(0.0, threshold - 0.01)),
+        calibration_method="capped_evaluator_shared_model_family",
+    )

@@ -36,12 +36,16 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Agent Executions persisted per step with token, cost, and model attribution,
   and delivered to the audit ledger as metadata and `artifact://` pointers.
 - Deterministic agent eval suites gating `agent_registry.eval_status`.
+- Tiered model provider routing with per-role fallback chains, a per-provider
+  circuit breaker, client-side schema validation, and a runtime check that caps
+  confidence when the Evaluator lands on the Analyst's model family.
 - OpenTelemetry trace correlation and configurable OTLP export.
 - Local Docker environment and managed Neon/ClickHouse Terraform definitions.
 
 ## Configured but not operationally signed off
 
-Clerk, Neon, ClickHouse Cloud, Langfuse, Anthropic, and E2B require externally
+Clerk, Neon, ClickHouse Cloud, Langfuse, E2B, and every model provider
+(Anthropic, OpenAI, Gemini, Groq, Cerebras, OpenRouter) require externally
 supplied credentials. E2B remains configuration validation only. No agent has
 been exercised against a live model in this repository.
 

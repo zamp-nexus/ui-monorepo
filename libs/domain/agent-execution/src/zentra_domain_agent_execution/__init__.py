@@ -13,6 +13,7 @@ from .contracts import (
     ToolAccess,
     ToolScope,
     ValidationOutcome,
+    model_family,
     validate_agent_output,
 )
 from .ports import (
@@ -65,5 +66,6 @@ __all__ = [
     "ToolScope",
     "UnknownSemanticMemberError",
     "ValidationOutcome",
+    "model_family",
     "validate_agent_output",
 ]

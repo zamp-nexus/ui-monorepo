@@ -17,6 +17,7 @@ from zentra_domain_agent_execution import (
     ExecutionStatus,
     ExecutionUsage,
     OutcomeSignal,
+    model_family,
 )
 
 from .agents.evaluator import EvaluatorAgent
@@ -58,6 +59,11 @@ class PipelineOutcome:
     converged: bool
     contradictions: tuple[str, ...]
     attempts: int
+    # False when fallback collapsed the Evaluator onto the Analyst's model
+    # family, which makes the recheck something less than independent.
+    independent_recheck: bool = True
+    analyst_model: str | None = None
+    evaluator_model: str | None = None
 
 
 class InvestigationGraph:
@@ -281,6 +287,7 @@ class InvestigationGraph:
             "discrepancy_pct": output.fields.get("discrepancy_pct"),
             "outcome": output.outcome.model_dump(mode="json"),
             "evidence_refs": list(output.evidence_refs),
+            "model": output.usage.model,
         }
 
     def _outcome(self, state: GraphState) -> PipelineOutcome:
@@ -294,6 +301,12 @@ class InvestigationGraph:
         for source in (analyst, evaluator):
             evidence.extend(source.get("evidence_refs", []))
 
+        analyst_model = analyst.get("model")
+        evaluator_model = evaluator.get("model")
+        # Compared on what actually ran, not on the routing table: the chain can
+        # fall through and land both agents on the same weights.
+        independent = model_family(analyst_model) != model_family(evaluator_model)
+
         return PipelineOutcome(
             headline=str(synthesis["fields"]["headline"]),
             summary=str(synthesis["fields"]["summary"]),
@@ -305,6 +318,9 @@ class InvestigationGraph:
             converged=converged,
             contradictions=contradictions,
             attempts=int(state.get("attempts", 0)),
+            independent_recheck=independent,
+            analyst_model=analyst_model,
+            evaluator_model=evaluator_model,
         )
 
 

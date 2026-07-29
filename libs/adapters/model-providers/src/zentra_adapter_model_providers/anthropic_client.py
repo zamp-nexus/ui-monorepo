@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import anthropic
 from anthropic import AsyncAnthropic
 from pydantic.types import JsonValue
 from zentra_domain_agent_execution import (
@@ -10,7 +11,12 @@ from zentra_domain_agent_execution import (
     ModelResponse,
 )
 
-from .constants import token_cost_usd
+from .errors import (
+    ProviderAuthError,
+    ProviderTruncatedError,
+    ProviderUnavailableError,
+)
+from .providers import token_cost_usd
 
 
 class AnthropicModelClient:
@@ -18,7 +24,8 @@ class AnthropicModelClient:
 
     System prompts are sent as a cacheable block: they are stable across every
     investigation, so the governed catalog and role instructions are written
-    once and read at ~0.1x on every subsequent agent call.
+    once and read at ~0.1x on every subsequent agent call. No other provider in
+    the chain offers an equivalent, which is why this client is separate.
     """
 
     def __init__(self, client: AsyncAnthropic) -> None:
@@ -57,7 +64,22 @@ class AnthropicModelClient:
                 "format": {"type": "json_schema", "schema": response_schema}
             }
 
-        response = await self._client.messages.create(**request)  # type: ignore[arg-type]
+        try:
+            response = await self._client.messages.create(**request)  # type: ignore[arg-type]
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
+            raise ProviderAuthError(f"anthropic rejected credentials: {e}") from e
+        except (
+            anthropic.RateLimitError,
+            anthropic.InternalServerError,
+            anthropic.APITimeoutError,
+            anthropic.APIConnectionError,
+        ) as e:
+            raise ProviderUnavailableError(f"anthropic unavailable: {e}") from e
+
+        if response.stop_reason == "max_tokens":
+            raise ProviderTruncatedError(
+                f"anthropic/{model} hit the {max_tokens} token ceiling"
+            )
 
         text = next(
             (block.text for block in response.content if block.type == "text"),

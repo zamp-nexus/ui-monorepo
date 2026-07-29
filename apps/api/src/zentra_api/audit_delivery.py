@@ -114,6 +114,7 @@ class AuditDeliveryCoordinator:
                 delivery=AuditDelivery.COMPLETE,
                 agent_id=row.get("agent_id") or None,
                 step=row.get("step"),
+                model=row.get("model") or None,
             )
         for record in outbox_rows:
             if record.dispatched_at is not None:
@@ -130,6 +131,7 @@ class AuditDeliveryCoordinator:
                     delivery=AuditDelivery.PENDING,
                     agent_id=(payload.get("metadata") or {}).get("agent_id"),
                     step=(payload.get("metadata") or {}).get("step"),
+                    model=(payload.get("metadata") or {}).get("model"),
                 ),
             )
         return tuple(

@@ -8,7 +8,6 @@ from zentra_domain_agent_execution import (
     AgentOutput,
     AgentRole,
     ConfidenceOutcome,
-    ExecutionUsage,
     ModelMessage,
     ModelPort,
     SemanticLayerPort,
@@ -138,12 +137,9 @@ class EvaluatorAgent:
                     score=score,
                     calibration_method="evaluator_independent_recheck",
                 ),
-                usage=ExecutionUsage(
-                    input_tokens=usage.input_tokens,
-                    output_tokens=usage.output_tokens,
-                    cost_usd=usage.cost_usd,
-                    model=EVALUATOR_MODEL,
-                ),
+                # The model the provider actually served, not the role we
+                # asked for — the ledger must record what really ran.
+                usage=usage,
             ),
         )
 
