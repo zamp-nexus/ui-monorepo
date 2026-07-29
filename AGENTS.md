@@ -74,6 +74,12 @@ Issues and specs live as markdown files under `.scratch/`. See `docs/agents/issu
 
 Multi-context layout: root `CONTEXT-MAP.md` points to per-area `CONTEXT.md` files under `apps/*` and `libs/*`. See `docs/agents/domain.md`.
 
+### Engineering knowledge vault
+
+`docs/` is the Obsidian vault root. Start at `docs/00_Index/ZentraOS Knowledge Base.md`.
+When architecture, behavior, API, schema, operations, or ownership changes, update the
+canonical vault note in the same change and run `npm exec -- nx run docs:check`.
+
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

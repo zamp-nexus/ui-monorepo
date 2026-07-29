@@ -1,0 +1,37 @@
+---
+id: moc-decisions
+title: Decisions MOC
+type: moc
+status: active
+owner: unassigned
+source: repository
+created: 2026-07-29
+updated: 2026-07-29
+reviewed: 2026-07-29
+confidence: verified
+priority: high
+tags: [adr, decisions, index]
+related: ["[[ZentraOS Knowledge Base]]", "[[Hexagonal Modular Monolith]]"]
+repo_path: docs/adr
+---
+
+# Decisions
+
+Canonical ADRs remain in `docs/adr/`:
+
+- [[adr/0001-hexagonal-modular-monolith]]
+- [[adr/0002-split-transactional-and-audit-storage]]
+- [[adr/0003-provider-neutral-multi-tenant-identity]]
+- [[adr/0004-four-membership-roles]]
+- [[adr/0005-agents-and-execution-participants]]
+- [[adr/0006-metadata-only-audit-ledger]]
+- [[adr/0007-transactional-audit-outbox]]
+
+## Governance
+
+An accepted ADR is immutable except for metadata or status corrections. A new
+decision supersedes an old one and both notes link to each other. Create an ADR
+only for a hard-to-reverse choice with real alternatives and meaningful future
+surprise.
+
+Parent: [[ZentraOS Knowledge Base]]

@@ -63,3 +63,13 @@ npm exec -- nx e2e zentra-os-e2e
 Managed Neon and ClickHouse Cloud resources live under `infra/terraform`.
 Terraform applies are explicit operator actions; provider tokens, state, plans,
 and generated connection credentials must remain outside the repository.
+
+## Engineering knowledge
+
+Open [`docs/`](docs/README.md) as the plugin-independent Obsidian vault and
+start at the [ZentraOS Knowledge Base](docs/00_Index/ZentraOS%20Knowledge%20Base.md).
+Validate its metadata, links, and source references with:
+
+```bash
+npm exec -- nx run docs:check
+```
