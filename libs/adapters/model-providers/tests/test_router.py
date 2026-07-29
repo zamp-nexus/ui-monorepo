@@ -112,6 +112,27 @@ async def test_bad_credentials_raise_instead_of_spending_elsewhere() -> None:
 
 
 @pytest.mark.asyncio
+async def test_unenumerated_status_falls_through_rather_than_escaping() -> None:
+    """A 402 from a free tier out of credit killed a whole live run: the status
+    was not in the mapped set, so it escaped the chain walker entirely. Any
+    provider answer that is not an auth failure must fall through."""
+
+    class WeirdStatusClient(StubClient):
+        async def complete(self, **kwargs: Any) -> ModelResponse:
+            self.calls += 1
+            raise ProviderUnavailableError("cerebras returned 402: payment required")
+
+    first = WeirdStatusClient()
+    second = StubClient(VALID)
+
+    response = await run({Provider.CEREBRAS: first, Provider.GROQ: second})
+
+    assert first.calls == 1
+    assert second.calls == 1
+    assert response.text == VALID
+
+
+@pytest.mark.asyncio
 async def test_truncated_response_falls_through() -> None:
     first = StubClient(ProviderTruncatedError("hit the ceiling"))
     second = StubClient(VALID)

@@ -124,7 +124,7 @@ _PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     "openai/gpt-oss-120b": _ZERO,
     "openai/gpt-oss-20b": _ZERO,
     "gemini-3.6-flash": _ZERO,
-    "nvidia/nemotron-3-ultra": _ZERO,
+    "nvidia/nemotron-3-ultra-550b-a55b": _ZERO,
     "openrouter/free": _ZERO,
 }
 

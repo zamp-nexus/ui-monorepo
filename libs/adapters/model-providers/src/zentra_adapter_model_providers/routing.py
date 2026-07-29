@@ -26,13 +26,12 @@ def _paid(provider: Provider, model: str) -> ModelChoice:
 # roughly a third of the blended price.
 _GEMINI_FLASH = _free(Provider.GEMINI, "gemini-3.6-flash")
 
-# NVIDIA fine-tuned this for tool calling and structured output, but documents
-# JSON *mode* rather than schema-constrained decoding, and strict json_schema is
-# unverified against the live endpoint. It therefore sits behind a rung with
-# confirmed strict support rather than leading a chain — the router's validation
-# and fall-through absorb the misses either way. Promote it to Evaluator primary
-# once a live call proves strict schema holds.
-_NVIDIA_NEMOTRON = _free(Provider.NVIDIA, "nvidia/nemotron-3-ultra")
+# Verified 2026-07-29 against the live NIM endpoint: it honours strict
+# json_schema with our real QUERY_PLAN_SCHEMA, despite NVIDIA documenting only
+# JSON mode. It therefore leads the Evaluator chain — highest free Index after
+# Gemini, a different model family from the Analyst's primary, and 40 requests
+# per minute against Cerebras's 5.
+_NVIDIA_NEMOTRON = _free(Provider.NVIDIA, "nvidia/nemotron-3-ultra-550b-a55b")
 
 # Cerebras deprecates this on 2026-08-17. Fallback will hide its death rather
 # than surface it, so it must not be anything's only real option by then.
@@ -68,9 +67,9 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
             _SONNET,
         ),
         AgentRole.EVALUATOR: (
-            _CEREBRAS_GLM,
             _NVIDIA_NEMOTRON,
             _GROQ_OSS,
+            _CEREBRAS_GLM,
             _GEMINI_FLASH,
             _OPENROUTER_FREE,
             _OPUS,

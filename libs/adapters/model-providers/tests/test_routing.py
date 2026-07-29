@@ -30,13 +30,14 @@ def test_free_evaluator_starts_on_a_different_family_from_the_analyst() -> None:
     assert analyst.provider is not evaluator.provider
 
 
-def test_no_free_chain_leads_with_an_unverified_schema_provider() -> None:
-    """Nemotron's strict json_schema support is unverified against the live
-    endpoint, so it must sit behind a rung with confirmed support rather than
-    put a retry-and-fall-through on every investigation's critical path."""
+def test_every_free_chain_leads_with_a_schema_verified_provider() -> None:
+    """A chain may only lead with a provider whose strict json_schema support
+    has been confirmed against its live endpoint. Leading with an unverified one
+    puts a retry-and-fall-through on every investigation's critical path."""
+    verified = {Provider.GEMINI, Provider.NVIDIA, Provider.GROQ, Provider.ANTHROPIC}
     for role, chain in ROUTING[ModelTier.FREE].items():
-        assert chain[0].provider is not Provider.NVIDIA, (
-            f"{role.value} leads with an unverified provider"
+        assert chain[0].provider in verified, (
+            f"{role.value} leads with a provider of unconfirmed schema support"
         )
 
 

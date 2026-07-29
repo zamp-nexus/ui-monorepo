@@ -94,6 +94,17 @@ class OpenAICompatibleModelClient:
             # A provider that advertises strict schema but rejects ours is a
             # capability gap, not a bug in the request — try the next rung.
             raise ProviderUnavailableError(f"{name} rejected the request: {e}") from e
+        except openai.APIStatusError as e:
+            # Everything else the provider can answer with. A free tier out of
+            # credit returns 402, and other statuses (404, 409, 413, 422) are
+            # equally provider-specific. None of them mean the next rung cannot
+            # serve, and letting an unenumerated status escape would defeat the
+            # whole chain — so the default is to fall through, not to propagate.
+            raise ProviderUnavailableError(
+                f"{name} returned {e.status_code}: {e}"
+            ) from e
+        except openai.APIError as e:
+            raise ProviderUnavailableError(f"{name} failed: {e}") from e
 
         choice = response.choices[0]
         if choice.finish_reason == "length":
