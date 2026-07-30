@@ -94,7 +94,9 @@ class MetricComparisonResponse(BaseModel):
 
     metric: str
     previous_value: str
+    previous_label: str | None = None
     current_value: str
+    current_label: str | None = None
     unit: str
 
 
@@ -182,7 +184,9 @@ class InvestigationDetailResponse(BaseModel):
                     MetricComparisonResponse(
                         metric=metric.metric,
                         previous_value=metric.previous_value,
+                        previous_label=metric.previous_label,
                         current_value=metric.current_value,
+                        current_label=metric.current_label,
                         unit=metric.unit,
                     )
                     for metric in detail.finding.metrics

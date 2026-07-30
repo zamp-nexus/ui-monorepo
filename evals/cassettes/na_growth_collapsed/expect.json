@@ -10,12 +10,12 @@
     "openrouter"
   ],
   "status": "awaiting_approval",
-  "approval_reason": "low_confidence",
+  "approval_reason": "contradiction_unresolved",
   "score": 0.5,
   "calibration_method": "capped_independence_none",
   "analyst_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "analyst_sample_size": 300,
-  "evaluator_sample_size": 300,
-  "note": "The independence ceiling binding, against live output. Nemotron analyses the 300-order scenario at 0.95 and Nemotron checks it \u2014 both counting 300, so the sample ceiling is 1.00 and cannot be what caps this. NONE takes 0.95 to 0.50 and it gates. Compare na_growth_premium, identical data, where two models from one lab reach PARTIAL and publish at 0.85. The whole difference is who did the checking."
+  "evaluator_sample_size": 112,
+  "note": "Two gates firing at once, on live output. Nemotron analyses the 300-order scenario and Nemotron checks it, so independence is NONE and the ceiling takes 0.95 to 0.50 — compare na_growth_premium, identical data, where two models from one lab reach PARTIAL and publish at 0.85. On top of that the two passes disagree about how much data they read, 300 against 112, so the approval reason is contradiction_unresolved rather than low_confidence: the system will not auto-publish on a disagreement about the evidence itself, even when the score alone would already have gated it."
 }

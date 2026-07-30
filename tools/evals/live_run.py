@@ -324,9 +324,14 @@ async def main() -> int:
         print(f"\nheadline: {detail.finding.headline}")
         print(f"summary:  {detail.finding.summary}")
         for metric in detail.finding.metrics:
+            # The labels are printed because a recording is eyeballed here
+            # before it is trusted, and a wrong period is exactly what reading
+            # the numbers alone will not catch.
+            previous = f"{metric.previous_label} " if metric.previous_label else ""
+            current = f"{metric.current_label} " if metric.current_label else ""
             print(
-                f"  {metric.metric}: {metric.previous_value} -> "
-                f"{metric.current_value} {metric.unit}"
+                f"  {metric.metric}: {previous}{metric.previous_value} -> "
+                f"{current}{metric.current_value} {metric.unit}"
             )
 
     print("\n=== which model served each step ===")

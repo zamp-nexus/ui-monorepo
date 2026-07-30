@@ -52,6 +52,13 @@ Rules:
 - Report only figures present in the rows. Never estimate or extrapolate.
 - Each metric compares a previous value to a current value. Copy the values
   exactly as they appear, and give the unit.
+- Label each side with the period it covers. The granularity was your choice, so
+  nothing downstream can recover it, and a human reads these labels: name the
+  bucket the way it would be said aloud — "June 2026" for a month bucket of
+  2026-06-01, "Q3 2026", "2026" — rather than copying a raw timestamp. Name only
+  a period the result actually contains; never widen, narrow, or shift one. Where
+  the two values are not two periods, use null for both labels, because a reader
+  told nothing is better served than a reader told a guess.
 - The summary is one or two sentences describing the movement, not its cause.
 - Your confidence is how well this result answers the question asked. Lower it
   when the sample is small, the movement is within noise, or the result only

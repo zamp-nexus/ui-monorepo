@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import Field
+from typing import Any, get_args
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +38,35 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = Field(default=None, repr=False)
     e2b_api_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _blank_is_unset(cls, values: Any) -> Any:
+        """`CLERK_AUDIENCE=` in a .env file parses as "", and "" is not None.
+
+        That switched audience verification on and made PyJWT reject every token
+        for missing a claim Clerk was never asked to mint. The bug is not
+        specific to that key — every optional setting here can be written blank
+        in an env file, and each consumer would have to remember `or None`
+        independently. Normalising once, where the value enters, is what makes
+        the class of bug unrepeatable rather than the one instance of it fixed.
+
+        Only fields that already accept None are touched: blanking a required
+        field is a configuration error and should still fail loudly.
+        """
+        if not isinstance(values, dict):
+            return values
+        nullable = {
+            name
+            for name, field in cls.model_fields.items()
+            if type(None) in get_args(field.annotation)
+        }
+        return {
+            key: None
+            if key in nullable and isinstance(value, str) and not value.strip()
+            else value
+            for key, value in values.items()
+        }
 
     def provider_api_keys(self) -> dict[str, str | None]:
         """Keyed by the env var each provider config names."""

@@ -75,6 +75,12 @@ class MetricComparison:
     previous_value: str
     current_value: str
     unit: str
+    # What the two values are periods of. Only the agent that chose the
+    # granularity can say, so only it fills these in. Optional because an older
+    # recording predates them, and because not every comparison is over time —
+    # absent means the reader is told nothing rather than told a guess.
+    previous_label: str | None = None
+    current_label: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

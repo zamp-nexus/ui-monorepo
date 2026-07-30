@@ -1,9 +1,9 @@
 {
   "requested_model": "orchestrator",
-  "text": "{\"tasks\": [{\"role\": \"sql_analyst\", \"objective\": \"Query EU refund data for June and July 2026 to quantify the increase and identify contributing factors such as order volume, return rates, product categories, or policy changes.\"}, {\"role\": \"evaluator\", \"objective\": \"Analyze the SQL findings to determine the primary driver(s) of the EU refund increase and assess the statistical significance of each factor.\"}]}",
+  "text": "{\"tasks\": [{\"role\": \"sql_analyst\", \"objective\": \"Retrieve EU refund counts and amounts for June and July 2026, broken down by refund reason, product category, and customer segment.\"}, {\"role\": \"evaluator\", \"objective\": \"Analyze the refund breakdown to identify the primary drivers of the month-over-month increase and assess statistical significance of key factors.\"}]}",
   "usage": {
     "input_tokens": 134,
-    "output_tokens": 316,
+    "output_tokens": 584,
     "cost_usd": "0.00",
     "model": "nvidia/nemotron-3-ultra-550b-a55b"
   },

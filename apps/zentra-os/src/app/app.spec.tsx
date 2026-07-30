@@ -48,13 +48,17 @@ const investigation = {
       {
         metric: 'refund_amount',
         previous_value: '20.00',
+        previous_label: 'June 2026',
         current_value: '260.00',
+        current_label: 'July 2026',
         unit: 'USD',
       },
       {
         metric: 'refund_rate',
         previous_value: '25',
+        previous_label: null,
         current_value: '75',
+        current_label: null,
         unit: 'percent',
       },
     ],
@@ -395,10 +399,48 @@ describe('App', () => {
     expect(new Set(sent).size).toBeGreaterThan(1);
   });
 
-  it('never captions a metric with a month the scenario did not run in', async () => {
-    // These read "June X -> July Y", hardcoded from the only scenario that
-    // existed. The first live run of the second scenario captioned an
-    // October-to-November finding as June to July.
+  it('captions a metric with the periods the metric itself reports', async () => {
+    // Captions once read "June X -> July Y", hardcoded from the only scenario
+    // that existed, and the first live run of the second scenario captioned an
+    // October-to-November finding as June to July. So the labels here are
+    // deliberately months this fixture's question does not mention: a caption
+    // that still says June or July is reading something other than the data.
+    mockApi({
+      ...investigation,
+      finding: {
+        ...investigation.finding,
+        metrics: [
+          {
+            metric: 'refund_amount',
+            previous_value: '20.00',
+            previous_label: 'October 2026',
+            current_value: '260.00',
+            current_label: 'November 2026',
+            unit: 'USD',
+          },
+        ],
+      },
+    });
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    const caption = screen.getByText(/20\.00 → November 2026 260\.00 USD/);
+    expect(caption.textContent).toContain('October 2026');
+    expect(caption.textContent).not.toMatch(/june|july/i);
+  });
+
+  it('captions no period when the metric names none', async () => {
+    // A model may have no period to report, and the comparison may not be over
+    // time at all. Showing nothing is correct; borrowing months from elsewhere
+    // on the page is the original bug.
     mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -411,9 +453,8 @@ describe('App', () => {
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', { name: /evidence is coherent/i });
 
-    // The question itself may name months — this scenario's does. The caption
-    // must not, because it does not know which scenario it belongs to.
-    const caption = screen.getByText(/20\.00 → 260\.00 USD/);
-    expect(caption.textContent).not.toMatch(/june|july/i);
+    // refund_rate carries null labels in the fixture.
+    const caption = screen.getByText(/25 → 75 percent/);
+    expect(caption.textContent).not.toMatch(/june|july|2026/i);
   });
 });
