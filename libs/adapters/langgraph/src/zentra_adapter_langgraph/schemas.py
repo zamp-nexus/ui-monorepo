@@ -123,6 +123,41 @@ SYNTHESIS_SCHEMA = _obj(
     }
 )
 
+# The Insight Agent's structured output.
+#
+# `kind` is required on every claim rather than inferred, because the
+# observed/interpretation split is the one thing a reader cannot re-derive from
+# prose. `metric` and `value` exist so a claim can be checked against the
+# validated aggregate it says it rests on — a claim naming no governed metric,
+# or naming a value the aggregate does not carry, is refused rather than shown.
+#
+# `root_cause_resolved` is asked for precisely so it can be refused: ADR 0011
+# admits no Root Cause Claim until a causal-evidence standard is accepted, so a
+# model asserting one has overclaimed and the whole draft fails closed.
+DRAFT_FINDING_SCHEMA = _obj(
+    {
+        "headline": {"type": "string"},
+        "summary": {"type": "string"},
+        "claims": {
+            "type": "array",
+            "items": _obj(
+                {
+                    "kind": {
+                        "type": "string",
+                        "enum": ["observed", "interpretation"],
+                    },
+                    "text": {"type": "string"},
+                    "metric": _nullable({"type": "string"}),
+                    "value": _nullable({"type": "string"}),
+                }
+            ),
+        },
+        "contradictions": _STRINGS,
+        "root_cause_resolved": {"type": "boolean"},
+        "confidence": {"type": "number"},
+    }
+)
+
 
 def parse_json_object(text: str) -> dict[str, Any]:
     try:

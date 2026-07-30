@@ -47,7 +47,7 @@ unresolved” when the available evidence cannot establish causality.
 | Human Reviewer | Current | Owner/admin User decides at a Human Approval gate |
 | Replay chronology | Current | Tenant-filtered ClickHouse timeline with pending-outbox merge |
 | Finding narrative | Partial | Orchestrator currently synthesizes the Finding |
-| Insight Agent | Missing | Role exists in contracts but has no registered implementation or eval suite |
+| Insight Agent | Partial | Registered, evaluation-gated, and implemented behind a 12-case suite; does not yet run in the pipeline |
 | Evidence Citation | Partial | `artifact://execution/...` pointers exist but are not a resolvable claim-level contract |
 | Split-authority Replay | Partial | Process timeline exists; evidence resolution and explicit missing states do not |
 | Tombstone deletion | Missing | No content-erasure and citation-resolution workflow exists |

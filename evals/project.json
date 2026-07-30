@@ -35,6 +35,15 @@
         "command": "uv run python tools/evals/run_evals.py --promote",
         "cwd": "."
       }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "uv run pytest tools/evals/test_gate.py -q -o addopts=--cov=tools/evals",
+        "cwd": "."
+      },
+      "cache": true
     }
   },
   "tags": [

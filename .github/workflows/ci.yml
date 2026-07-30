@@ -50,6 +50,10 @@ jobs:
           DATABASE_OWNER_URL: postgresql+psycopg://zentra_owner:zentra_owner@localhost:5432/zentra_control
       - run: uv run python tools/architecture/verify_known_bad_boundary.py
       - run: npm exec -- nx run docs:check
+      # The Agent registration gate. It decides which Agents may reach a
+      # Tenant, and until now nothing in CI ran it — a suite could be deleted,
+      # or an Agent added without one, and the build stayed green.
+      - run: npm exec -- nx run evals:check
       - run: terraform -chdir=infra/terraform fmt -check -recursive
       - run: terraform -chdir=infra/terraform init -backend=false -input=false
       - run: terraform -chdir=infra/terraform validate

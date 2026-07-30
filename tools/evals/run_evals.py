@@ -31,6 +31,7 @@ from uuid import UUID
 
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
+    InsightAgent,
     OrchestratorAgent,
     SqlAnalystAgent,
 )
@@ -52,18 +53,69 @@ EVALS_ROOT = Path(__file__).resolve().parents[2] / "evals"
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 
+# Every agent here is required: the run only succeeds when all of them have a
+# suite and every case in it passes. Adding a key is what makes an agent
+# ungatable by omission.
 AGENT_IDS = {
     "orchestrator": "orchestrator_v1",
     "sql_analyst": "sql_analyst_v1",
     "evaluator": "evaluator_v1",
+    "insight": "insight_v1",
+}
+
+# The coverage a suite must actually contain before its agent may be promoted.
+# "All its cases passed" is not the same claim as "it was tested for the things
+# that matter" — a suite stays green while someone deletes the case that hurts.
+#
+# Only Insight declares this. The Phase 1 agents predate the requirement, and
+# retrofitting them is a separate decision rather than a side effect of this one.
+REQUIRED_CASES: dict[str, frozenset[str]] = {
+    "insight": frozenset(
+        {
+            "reports_an_observed_change_against_the_validated_aggregate",
+            "accepts_a_claim_stating_the_earlier_side_of_the_comparison",
+            "labels_an_association_as_interpretation_not_proof",
+            "states_root_cause_unresolved_even_when_the_recheck_agreed",
+            "refuses_a_resolved_root_cause",
+            "refuses_a_driver_absent_from_the_validated_aggregate",
+            "refuses_a_figure_the_aggregate_does_not_carry",
+            "preserves_an_evaluator_contradiction_the_model_dropped",
+            "refuses_an_observed_claim_that_cites_no_governed_metric",
+            "confidence_never_exceeds_the_evaluators_bound",
+            "rejects_malformed_model_output",
+            "refuses_to_draft_from_absent_evidence",
+            "attributes_the_rungs_that_failed_before_one_answered",
+        }
+    ),
 }
 
 
-class ReplayModel:
-    """Returns the case's pinned responses in call order."""
+def incomplete_suites(by_agent: dict[str, list[CaseResult]]) -> dict[str, set[str]]:
+    """Which required cases each suite is missing."""
+    gaps: dict[str, set[str]] = {}
+    for agent, required in REQUIRED_CASES.items():
+        present = {case.name for case in by_agent.get(agent, [])}
+        missing = required - present
+        if missing:
+            gaps[agent] = missing
+    return gaps
 
-    def __init__(self, responses: Sequence[dict[str, Any]]) -> None:
+
+class ReplayModel:
+    """Returns the case's pinned responses in call order.
+
+    `fallbacks` stands in for the rungs a real routed chain burned through
+    before one answered, so a case can assert that an agent attributes them
+    rather than reporting a clean run.
+    """
+
+    def __init__(
+        self,
+        responses: Sequence[dict[str, Any]],
+        fallbacks: Sequence[str] = (),
+    ) -> None:
         self._responses = list(responses)
+        self._fallbacks = tuple(fallbacks)
         self._index = 0
 
     async def complete(self, **kwargs: Any) -> ModelResponse:
@@ -72,13 +124,14 @@ class ReplayModel:
         payload = self._responses[self._index]
         self._index += 1
         return ModelResponse(
-            text=json.dumps(payload),
+            text=json.dumps(payload) if isinstance(payload, dict) else str(payload),
             usage=ExecutionUsage(
                 input_tokens=100,
                 output_tokens=20,
                 cost_usd=Decimal("0.001"),
                 model=str(kwargs["model"]),
             ),
+            fallbacks=self._fallbacks,
         )
 
 
@@ -125,12 +178,19 @@ class CaseResult:
 
 def _build_agent(case: dict[str, Any]) -> Any:
     agent = case["agent"]
-    model = ReplayModel(case.get("model_responses", []))
+    model = ReplayModel(
+        case.get("model_responses", []),
+        case.get("model_fallbacks", []),
+    )
     if agent == "orchestrator":
         return OrchestratorAgent(
             model=model,
             registry=ReplayRegistry(case.get("enabled_roles", [])),
         )
+    if agent == "insight":
+        # No semantic layer: Insight reaches nothing, and handing it one would
+        # make the case weaker than the agent.
+        return InsightAgent(model=model)
     layer = ReplaySemanticLayer(case["catalog"], case.get("rows", []))
     if agent == "sql_analyst":
         return SqlAnalystAgent(model=model, semantic_layer=layer)
@@ -185,10 +245,18 @@ async def _run_case(path: Path) -> CaseResult:
         problems.append(f"{len(output.evidence_refs)} evidence refs")
     for key, value in expect.get("fields", {}).items():
         if output.fields.get(key) != value:
-            problems.append(f"{key}={output.fields.get(key)!r}")
+            # Names the field, never its content. Insight's fields carry
+            # customer-derived narrative and figures, and this line reaches
+            # CI logs.
+            problems.append(f"field {key} does not match the expected value")
     for key in expect.get("field_present", []):
         if key not in output.fields:
             problems.append(f"missing field {key}")
+    if "fallbacks" in expect and list(output.fallbacks) != expect["fallbacks"]:
+        problems.append(
+            f"{len(output.fallbacks)} fallback rungs attributed, "
+            f"expected {len(expect['fallbacks'])}"
+        )
 
     return CaseResult(agent_name, case["name"], not problems, "; ".join(problems))
 
@@ -243,6 +311,17 @@ async def main() -> int:
     missing = set(AGENT_IDS) - set(by_agent)
     if missing:
         print(f"No cases for: {', '.join(sorted(missing))}", file=sys.stderr)
+
+    # A suite that passes but does not cover what it must is not a suite that
+    # earned a promotion, so an incomplete one is demoted alongside a failing
+    # one rather than quietly enabling the agent.
+    for agent, gaps in sorted(incomplete_suites(by_agent).items()):
+        print(
+            f"Suite for {agent} is missing required cases: "
+            f"{', '.join(sorted(gaps))}",
+            file=sys.stderr,
+        )
+        passing.discard(agent)
 
     if args.promote:
         await _promote(passing)
