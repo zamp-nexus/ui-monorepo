@@ -84,6 +84,11 @@ export const useBackgroundFileSync = (
 
   const isConfigured = datasourceEndpoint !== null;
 
+  // React Compiler cannot see through async deferral. Every ref read and every
+  // setState below sits after an await inside an async callback that is only
+  // ever invoked from an effect (line ~242) or by a consumer — never during
+  // render. The rules are right in general; they cannot model this shape.
+  /* eslint-disable react-hooks/refs -- async callback, never called in render */
   const triggerSync = useCallback(async (): Promise<void> => {
     if (!enabled || normalizedTables.length === 0 || !datasourceEndpoint) {
       logger.debug('Sync skipped: not configured or disabled');
@@ -237,8 +242,13 @@ export const useBackgroundFileSync = (
     logger,
   ]);
 
+  /* eslint-enable react-hooks/refs */
+
   useEffect(() => {
     if (enabled && datasourceEndpoint && normalizedTables.length > 0) {
+      // Fire-and-forget: triggerSync is async, so its setStates land in later
+      // ticks, not synchronously inside this effect.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void triggerSync();
     }
   }, [enabled, datasourceEndpoint, normalizedTables, triggerSync]);

@@ -10,17 +10,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AxiosInstance } from 'axios';
 
 import { createDebugLogger } from '@open-zentra/foundation-utils';
 
 import { createConfigSignature } from '../core/config-signature';
 import type {
-  HttpClientConfig,
   HttpContextValue,
   HttpInternals,
   HttpProviderProps,
-  ResolvedHttpConfig,
 } from '../core/types';
 import { createAxiosInstance } from '../instance/axios-factory';
 import { removeInterceptors, setupInterceptors, type InterceptorIds } from '../interceptors/setup';
@@ -36,17 +33,12 @@ export const HttpProvider = ({
   children,
   authInternals,
 }: HttpProviderProps): React.ReactElement => {
+  // Interceptors are a side effect on the instance, so they stay in an effect —
+  // and until they are attached, requests would miss auth. That is what this
+  // flag is for, and setting it after the work is done is the point of it.
   const [isInitialized, setIsInitialized] = useState(false);
-  const [axiosInstance, setAxiosInstance] = useState<AxiosInstance | null>(null);
-  const [resolvedConfig, setResolvedConfig] = useState<ResolvedHttpConfig | null>(null);
 
   const interceptorIdsRef = useRef<InterceptorIds | null>(null);
-  const configRef = useRef<HttpClientConfig>(config);
-  configRef.current = config;
-
-  const authInternalsRef = useRef(authInternals);
-  authInternalsRef.current = authInternals;
-
   const logger = useMemo(
     () => createDebugLogger('HttpProvider', config.debug ?? false),
     [config.debug],
@@ -62,26 +54,43 @@ export const HttpProvider = ({
     [config, authInternals?.getAccessToken, authInternals?.transport],
   );
 
+  // Derived, not stored. Building the client in an effect and pushing it into
+  // state cost a render where consumers saw `axios: null` for no reason, and
+  // three synchronous setStates in one effect is the cascading-render pattern
+  // React Compiler flags. The client depends only on the config, so a memo says
+  // that directly.
+  const { instance: axiosInstance, resolvedConfig } = useMemo(
+    () => createAxiosInstance(config),
+    // configSignature hashes the config's contents, so this rebuilds when the
+    // config meaningfully changes rather than on every new object identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configSignature],
+  );
+
+
   useEffect(() => {
-    const currentConfig = configRef.current;
-    const { instance, resolvedConfig: resolved } = createAxiosInstance(currentConfig);
+    const instance = axiosInstance;
+    const resolved = resolvedConfig;
 
     const getAccessToken =
-      authInternalsRef.current?.getAccessToken ??
+      authInternals?.getAccessToken ??
       resolved.auth.getAccessToken ??
       (async () => null);
-    const authTransport = authInternalsRef.current?.transport ?? resolved.auth.transport;
+    const authTransport = authInternals?.transport ?? resolved.auth.transport;
 
     const ids = setupInterceptors(instance, resolved, {
       getAccessToken,
       authTransport,
-      clientHeaders: currentConfig.clientHeaders,
+      clientHeaders: config.clientHeaders,
     });
 
     interceptorIdsRef.current = ids;
-
-    setAxiosInstance(instance);
-    setResolvedConfig(resolved);
+    // The rule is right in general and wrong here. Child effects run before
+    // parent effects, so a consumer can fire a request before these
+    // interceptors exist — which is the entire reason this flag is published.
+    // Signalling that an effect has completed is what a state flag is for, and
+    // every alternative changes the provider's public contract.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsInitialized(true);
 
     logger.debug('Initialized with config:', {
@@ -100,38 +109,40 @@ export const HttpProvider = ({
 
       logger.debug('Disposed');
     };
-  }, [configSignature, logger]); // Re-initialize when config values/functions change
+    // Re-wires when the config values or functions change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configSignature, logger, axiosInstance, resolvedConfig]);
 
   const getAccessToken = useMemo(
     () =>
-      authInternalsRef.current?.getAccessToken ??
-      resolvedConfig?.auth.getAccessToken ??
+      authInternals?.getAccessToken ??
+      resolvedConfig.auth.getAccessToken ??
       (async () => null),
-    [resolvedConfig],
+    [authInternals?.getAccessToken, resolvedConfig],
   );
 
   const authTransport = useMemo(
-    () => authInternalsRef.current?.transport ?? resolvedConfig?.auth.transport,
-    [resolvedConfig],
+    () => authInternals?.transport ?? resolvedConfig.auth.transport,
+    [authInternals?.transport, resolvedConfig],
   );
 
   const contextValue = useMemo<HttpContextValue>(
     () => ({
       axios: axiosInstance,
       isInitialized,
-      baseUrl: resolvedConfig?.baseUrl ?? config.baseUrl,
+      baseUrl: resolvedConfig.baseUrl,
     }),
-    [axiosInstance, resolvedConfig, isInitialized, config.baseUrl],
+    [axiosInstance, resolvedConfig, isInitialized],
   );
 
   const internalsValue = useMemo<HttpInternals>(
     () => ({
       axios: axiosInstance,
-      config: configRef.current,
+      config,
       getAccessToken,
       authTransport,
     }),
-    [authTransport, axiosInstance, getAccessToken],
+    [authTransport, axiosInstance, config, getAccessToken],
   );
 
   return (
