@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -54,7 +55,7 @@ interface MetricComparison {
 interface Investigation {
   readonly investigation_id: string;
   readonly canonical_question: string;
-  readonly scenario_key: 'eu_refund_spike';
+  readonly scenario_key: string;
   readonly status:
     | 'pending'
     | 'running'
@@ -118,14 +119,25 @@ const apiUrl =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ??
   'http://localhost:8000';
 
-const scenarioQuestion =
-  'Why did EU refunds increase from June to July 2026?';
+interface Scenario {
+  readonly key: string;
+  readonly question: string;
+  readonly facts: readonly string[];
+}
+
+// A Clerk session token lives 60 seconds. Holding one in component state and
+// reusing it means the first click on a page left open sends a dead token — the
+// API answers "Invalid bearer token" and it reads like a configuration fault.
+// Minting per request costs nothing: Clerk caches internally and refreshes near
+// expiry, so this is a memory read almost every time.
+type TokenSource = () => Promise<string | null>;
 
 const requestJson = async <T,>(
   url: string,
-  token: string | null,
+  getToken: TokenSource,
   options?: RequestInit,
 ): Promise<T> => {
+  const token = await getToken();
   const response = await fetch(`${apiUrl}${url}`, {
     ...options,
     headers: {
@@ -254,18 +266,26 @@ const ObservatoryShell = ({
 };
 
 const Launcher = ({
-  token,
+  getToken,
   identity,
 }: {
-  readonly token: string | null;
+  readonly getToken: TokenSource;
   readonly identity: IdentityContext;
 }) => {
   const navigate = useNavigate();
+  // The catalogue comes from the API rather than living here. The question text
+  // used to be written out in this file and again in the service; a second
+  // scenario would have made that three copies to keep in step.
+  const scenarios = useQuery({
+    queryKey: ['scenarios'],
+    queryFn: () => requestJson<Scenario[]>('/v1/scenarios', getToken),
+    enabled: true,
+  });
   const mutation = useMutation({
-    mutationFn: () =>
-      requestJson<Investigation>('/v1/investigations', token, {
+    mutationFn: (scenarioKey: string) =>
+      requestJson<Investigation>('/v1/investigations', getToken, {
         method: 'POST',
-        body: JSON.stringify({ scenario_key: 'eu_refund_spike' }),
+        body: JSON.stringify({ scenario_key: scenarioKey }),
       }),
     onSuccess: (investigation) =>
       navigate(`/investigations/${investigation.investigation_id}`, {
@@ -273,36 +293,60 @@ const Launcher = ({
       }),
   });
 
+  const isViewer = identity.role === 'viewer';
+
   return (
     <section className={styles.launcher}>
       <div className={styles.launchIndex} aria-hidden="true">
-        01 / Evidence inquiry
+        Evidence inquiries
       </div>
       <div className={styles.launchContent}>
-        <p className={styles.eyebrow}>Governed synthetic scenario</p>
-        <motion.h1 layoutId="investigation-question">
-          {scenarioQuestion}
-        </motion.h1>
-        <p className={styles.launchBrief}>
-          Trace a refund anomaly through Cube-governed metrics, an independent
-          recheck, and a Human Approval gate that opens on low confidence.
-        </p>
-        <div className={styles.scenarioFacts} aria-label="Scenario constraints">
-          <span>EU commerce</span>
-          <span>June → July 2026</span>
-          <span>Governed metrics only</span>
-        </div>
-        <Button
-          className={styles.launchButton}
-          size="lg"
-          loading={mutation.isPending}
-          disabled={identity.role === 'viewer'}
-          onClick={() => mutation.mutate()}
-        >
-          {identity.role === 'viewer'
-            ? 'Viewer access · read only'
-            : 'Begin evidence trace'}
-        </Button>
+        <p className={styles.eyebrow}>Governed synthetic scenarios</p>
+        <ul className={styles.scenarioList}>
+          {(scenarios.data ?? []).map((scenario, index) => (
+            <li className={styles.scenarioCard} key={scenario.key}>
+              <span className={styles.launchIndex} aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <motion.h1
+                // Only the card being launched carries the shared-element id:
+                // two elements with one layoutId at the same time cannot animate.
+                layoutId={
+                  mutation.variables === scenario.key
+                    ? 'investigation-question'
+                    : undefined
+                }
+              >
+                {scenario.question}
+              </motion.h1>
+              <div
+                className={styles.scenarioFacts}
+                aria-label="Scenario constraints"
+              >
+                {scenario.facts.map((fact) => (
+                  <span key={fact}>{fact}</span>
+                ))}
+                <span>Governed metrics only</span>
+              </div>
+              <Button
+                className={styles.launchButton}
+                size="lg"
+                loading={
+                  mutation.isPending && mutation.variables === scenario.key
+                }
+                disabled={isViewer || mutation.isPending}
+                onClick={() => mutation.mutate(scenario.key)}
+              >
+                {isViewer ? 'Viewer access · read only' : 'Begin evidence trace'}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        {scenarios.error ? (
+          <p className={styles.error} role="alert">
+            {scenarios.error.message}
+          </p>
+        ) : null}
         {mutation.error ? (
           <p className={styles.error} role="alert">
             {mutation.error.message}
@@ -521,9 +565,13 @@ const MetricField = ({ metric }: { readonly metric: MetricComparison }) => {
           transition={{ duration: 0.32, delay: 0.08 }}
         />
       </div>
+      {/* No month names. These were hardcoded to June and July from the one
+          scenario that existed, and captioned an October-to-November finding
+          with the wrong months the first time a second scenario ran. The
+          period is already stated in the question above; a metric knows only
+          its own before and after. */}
       <small>
-        June {metric.previous_value} → July {metric.current_value}{' '}
-        {metric.unit}
+        {metric.previous_value} → {metric.current_value} {metric.unit}
       </small>
     </div>
   );
@@ -634,17 +682,17 @@ const ApprovalInspector = ({
 };
 
 const InvestigationWorkspace = ({
-  token,
+  getToken,
 }: {
-  readonly token: string | null;
+  readonly getToken: TokenSource;
 }) => {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['investigation', id],
     queryFn: () =>
-      requestJson<Investigation>(`/v1/investigations/${id}`, token),
-    enabled: Boolean(id && token),
+      requestJson<Investigation>(`/v1/investigations/${id}`, getToken),
+    enabled: Boolean(id),
     refetchInterval: (result) => {
       const data = result.state.data;
       if (!data) return false;
@@ -672,7 +720,7 @@ const InvestigationWorkspace = ({
       }
       return requestJson<Investigation>(
         `/v1/investigations/${id}/approvals/${approval.approval_id}/decision`,
-        token,
+        getToken,
         {
           method: 'POST',
           body: JSON.stringify({ decision: choice, reason }),
@@ -778,13 +826,10 @@ const InvestigationWorkspace = ({
 const AuthenticatedWorkspace = () => {
   const { logout, tenant } = useAuth();
   const { getAccessToken } = useAuthSession();
-  const tokenQuery = useQuery({
-    queryKey: ['access-token', tenant?.id],
-    queryFn: () => getAccessToken({ audience: 'first_party_http' }),
-    enabled: Boolean(tenant?.id),
-    staleTime: 30_000,
-  });
-  const token = tokenQuery.data ?? null;
+  const getToken = useCallback<TokenSource>(
+    () => getAccessToken({ audience: 'first_party_http' }),
+    [getAccessToken],
+  );
   const readiness = useQuery({
     queryKey: ['readiness'],
     queryFn: requestReadiness,
@@ -793,8 +838,8 @@ const AuthenticatedWorkspace = () => {
   });
   const identity = useQuery({
     queryKey: ['identity-context', tenant?.id],
-    queryFn: () => requestJson<IdentityContext>('/v1/context', token),
-    enabled: Boolean(token),
+    queryFn: () => requestJson<IdentityContext>('/v1/context', getToken),
+    enabled: Boolean(tenant?.id),
     retry: false,
   });
 
@@ -814,7 +859,7 @@ const AuthenticatedWorkspace = () => {
     );
   }
 
-  if (tokenQuery.isPending || identity.isPending) {
+  if (identity.isPending) {
     return (
       <main className={styles.centered} aria-live="polite">
         <ProductMark />
@@ -845,11 +890,11 @@ const AuthenticatedWorkspace = () => {
       <Routes>
         <Route
           path="/"
-          element={<Launcher token={token} identity={identity.data} />}
+          element={<Launcher getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/investigations/:id"
-          element={<InvestigationWorkspace token={token} />}
+          element={<InvestigationWorkspace getToken={getToken} />}
         />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>

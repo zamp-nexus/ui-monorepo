@@ -80,6 +80,10 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
             "outcome_kind": execution.outcome.kind if execution.outcome else None,
             "confidence": execution.confidence,
             "errors": list(execution.errors),
+            # Which rungs failed before this one answered. Process metadata, so
+            # it belongs in the ledger, and it is how the next provider outage
+            # gets diagnosed from Replay instead of by hand.
+            "fallbacks": list(execution.fallbacks),
         },
     )
 
@@ -128,5 +132,10 @@ class LangGraphInvestigationPipeline:
             outcome=outcome.outcome,
             converged=outcome.converged,
             contradictions=outcome.contradictions,
-            independent_recheck=outcome.independent_recheck,
+            # The evidence the application needs to bound the confidence: which
+            # models actually served, and how much data each one counted.
+            analyst_model=outcome.analyst_model,
+            evaluator_model=outcome.evaluator_model,
+            analyst_sample_size=outcome.analyst_sample_size,
+            evaluator_sample_size=outcome.evaluator_sample_size,
         )

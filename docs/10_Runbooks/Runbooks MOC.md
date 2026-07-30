@@ -18,6 +18,8 @@ repo_path: docs/10_Runbooks
 # Runbooks
 
 - [[Recover Local Foundation]]
+- [[Record and Replay Agent Runs]]
+- [[Set Up Clerk for Local Development]]
 - [[Diagnose Degraded Readiness]]
 - [[Recover Audit Delivery Backlog]]
 - [[Recover Failed Postgres Migration]]

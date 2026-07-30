@@ -4,6 +4,11 @@ from zentra_domain_agent_execution import model_family
 
 from .anthropic_client import AnthropicModelClient
 from .breaker import BreakerState, ProviderCircuitBreaker
+from .cassette import (
+    RecordingModelClient,
+    ReplayModelClient,
+    UnrecordedRequestError,
+)
 from .errors import (
     ChainExhaustedError,
     ProviderAuthError,
@@ -42,9 +47,12 @@ __all__ = [
     "ProviderError",
     "ProviderTruncatedError",
     "ProviderUnavailableError",
+    "RecordingModelClient",
+    "ReplayModelClient",
     "RoutedModelClient",
     "SchemaViolationError",
     "TrainingProviderInPaidChainError",
+    "UnrecordedRequestError",
     "UnknownModelError",
     "chain_for",
     "model_family",

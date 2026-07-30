@@ -41,6 +41,20 @@ Evaluator — and participate in every Investigation. Each is a registry row tha
 the Orchestrator resolves at investigation start; a role with no enabled,
 eval-passing Agent causes the Investigation to refuse rather than proceed.
 
+Both the SQL Analyst and the Evaluator report `sample_size` alongside their
+confidence — how many underlying records the figures rest on, read from a count
+measure in their own result. Reading a count is extraction; scoring one's own
+confidence is not, which is why the application bounds the latter by the former.
+
+`IndependenceLevel` grades a recheck by what actually served each agent, not by
+the routing table: `NONE` when one model served both, `PARTIAL` within a model
+family, `FULL` across families. Fallback can collapse a chain onto one provider,
+so the grade is taken from `usage.model` on what executed.
+
+The governed catalog carries the permitted **values** of low-cardinality string
+dimensions, not only member names. Without them an agent filtering
+`North America` against data storing `NA` receives zero rows and no error.
+
 The Semantic Layer Port is the only capability in the tree that reaches data.
 No raw-SQL port exists for an Agent to be granted, which is what makes the SQL
 Analyst's inability to see raw tables structural rather than instructed.

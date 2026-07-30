@@ -13,6 +13,7 @@ from zentra_domain_agent_execution import (
     SemanticLayerPort,
     ToolAccess,
     ToolScope,
+    merged_fallbacks,
     validate_agent_output,
 )
 
@@ -40,7 +41,7 @@ DESCRIPTOR = AgentDescriptor(
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
     output_schema=ANALYSIS_SCHEMA,
     output_fields=frozenset(
-        {"query", "reasoning", "result_summary", "metrics", "rows"}
+        {"query", "reasoning", "result_summary", "metrics", "rows", "sample_size"}
     ),
     eval_suite_ref="evals/sql_analyst",
 )
@@ -106,7 +107,11 @@ class SqlAnalystAgent:
             response_schema=ANALYSIS_SCHEMA,
         )
         analysis = parse_json_object(analysis_response.text)
-        usage = plan_response.usage + analysis_response.usage
+        # The interpretation call is the one that produced the number and
+        # the confidence, so its model is what independence is graded on.
+        usage = (plan_response.usage + analysis_response.usage).model_copy(
+            update={"model": analysis_response.usage.model}
+        )
 
         return validate_agent_output(
             self,
@@ -116,6 +121,7 @@ class SqlAnalystAgent:
                     "reasoning": plan.get("reasoning", ""),
                     "result_summary": analysis["result_summary"],
                     "metrics": analysis["metrics"],
+                    "sample_size": int(analysis["sample_size"]),
                     "rows": list(result.rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
@@ -126,6 +132,7 @@ class SqlAnalystAgent:
                 # The model the provider actually served, not the role we
                 # asked for — the ledger must record what really ran.
                 usage=usage,
+                fallbacks=merged_fallbacks(plan_response, analysis_response),
             ),
         )
 

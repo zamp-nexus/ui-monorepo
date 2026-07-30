@@ -33,6 +33,12 @@ class SemanticDimension(BaseModel):
 
     name: str = Field(min_length=1)
     type: str = Field(min_length=1)
+    # The values this dimension actually holds, where there are few enough to
+    # list. A member name alone tells an agent that `Commerce.region` exists
+    # but not that it is spelled "NA" — and a filter on a value that does not
+    # exist returns zero rows rather than an error. Empty means unconstrained,
+    # not empty.
+    values: tuple[str, ...] = ()
 
 
 class SemanticCatalog(BaseModel):
@@ -130,6 +136,22 @@ class ModelResponse(BaseModel):
 
     text: str
     usage: ExecutionUsage
+    # Rungs that failed before this one answered. Recorded even on success, so
+    # Replay shows "Cerebras 402 -> NVIDIA 404 -> served by Gemini" rather than
+    # silently showing Gemini.
+    fallbacks: tuple[str, ...] = ()
+
+
+def merged_fallbacks(*responses: ModelResponse) -> tuple[str, ...]:
+    """Every rung that failed across the calls one agent made, in order.
+
+    An agent makes several model calls, and each carries its own trail. Dropping
+    all but the last would hide exactly the outage worth seeing.
+    """
+    seen: dict[str, None] = {}
+    for response in responses:
+        seen.update(dict.fromkeys(response.fallbacks))
+    return tuple(seen)
 
 
 class ModelPort(Protocol):
@@ -175,6 +197,7 @@ class AgentExecutionRecord(BaseModel):
     usage: ExecutionUsage = ExecutionUsage()
     evidence_refs: tuple[str, ...] = ()
     errors: tuple[str, ...] = ()
+    fallbacks: tuple[str, ...] = ()
     started_at: datetime
     completed_at: datetime
 

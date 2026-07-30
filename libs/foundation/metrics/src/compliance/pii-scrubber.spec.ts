@@ -74,7 +74,12 @@ describe('PII Scrubber', () => {
         data: 'Some data',
       };
 
-      const result = scrubber.scrubObject(input);
+      // scrubObject preserves shape but is typed Record<string, unknown>,
+      // because it accepts anything. The caller knows what it passed in.
+      const result = scrubber.scrubObject(input) as {
+        user: Record<string, string>;
+        data: string;
+      };
 
       expect(result.user.email).toBe('[EMAIL_REDACTED]');
       expect(result.user.phone).toContain('[PHONE_REDACTED]');

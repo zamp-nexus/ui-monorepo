@@ -75,6 +75,15 @@ class AnthropicModelClient:
             anthropic.APIConnectionError,
         ) as e:
             raise ProviderUnavailableError(f"anthropic unavailable: {e}") from e
+        except anthropic.APIStatusError as e:
+            # Any other status the API can answer with. Falling through is the
+            # default: letting an unenumerated status escape would bypass the
+            # chain entirely rather than trying the next rung.
+            raise ProviderUnavailableError(
+                f"anthropic returned {e.status_code}: {e}"
+            ) from e
+        except anthropic.APIError as e:
+            raise ProviderUnavailableError(f"anthropic failed: {e}") from e
 
         if response.stop_reason == "max_tokens":
             raise ProviderTruncatedError(

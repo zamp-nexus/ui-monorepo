@@ -1,0 +1,13 @@
+{
+  "requested_model": "orchestrator",
+  "text": "{\"tasks\": [{\"role\": \"sql_analyst\", \"objective\": \"Query EU refund data for June and July 2026 to quantify the increase and identify contributing factors such as order volume, return rates, product categories, or policy changes.\"}, {\"role\": \"evaluator\", \"objective\": \"Analyze the SQL findings to determine the primary driver(s) of the EU refund increase and assess the statistical significance of each factor.\"}]}",
+  "usage": {
+    "input_tokens": 134,
+    "output_tokens": 316,
+    "cost_usd": "0.00",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b"
+  },
+  "fallbacks": [
+    "gemini/gemini-3.6-flash: no API key configured"
+  ]
+}

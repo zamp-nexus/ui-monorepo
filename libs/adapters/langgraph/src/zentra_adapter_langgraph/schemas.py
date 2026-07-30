@@ -5,6 +5,7 @@ from typing import Any
 
 from zentra_domain_agent_execution import (
     SemanticCatalog,
+    SemanticDimension,
     SemanticFilter,
     SemanticQuery,
     SemanticTimeDimension,
@@ -73,10 +74,14 @@ QUERY_PLAN_SCHEMA = _obj(
     }
 )
 
+# sample_size is extraction, not introspection: reading how many underlying
+# records an aggregate covers is something models do reliably, unlike scoring
+# their own confidence. Code turns it into a ceiling the model cannot argue with.
 ANALYSIS_SCHEMA = _obj(
     {
         "result_summary": {"type": "string"},
         "metrics": {"type": "array", "items": METRIC_COMPARISON_SCHEMA},
+        "sample_size": {"type": "integer"},
         "confidence": {"type": "number"},
     }
 )
@@ -85,6 +90,7 @@ RECHECK_SCHEMA = _obj(
     {
         "recheck_passed": {"type": "boolean"},
         "discrepancy_pct": {"type": "number"},
+        "sample_size": {"type": "integer"},
         "confidence": {"type": "number"},
         "issues": _STRINGS,
     }
@@ -157,11 +163,24 @@ def semantic_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
         ) from error
 
 
+def _render_dimension(dimension: SemanticDimension) -> str:
+    """Name, type, and the values it holds where they are few enough to list.
+
+    Without the values an agent can only guess how they are spelled — a filter
+    on "North America" against data storing "NA" returns zero rows rather than
+    an error, and the agent correctly reports that it found nothing.
+    """
+    line = f"- {dimension.name} ({dimension.type})"
+    if dimension.values:
+        return f"{line} — one of: {', '.join(dimension.values)}"
+    return line
+
+
 def render_catalog(catalog: SemanticCatalog) -> str:
     measures = "\n".join(
         f"- {measure.name} ({measure.type})" for measure in catalog.measures
     )
     dimensions = "\n".join(
-        f"- {dimension.name} ({dimension.type})" for dimension in catalog.dimensions
+        _render_dimension(dimension) for dimension in catalog.dimensions
     )
     return f"Measures:\n{measures}\n\nDimensions:\n{dimensions}"

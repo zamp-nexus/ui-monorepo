@@ -1,6 +1,7 @@
 """Investigation application services and ports."""
 
 from .service import (
+    SCENARIOS,
     AgentExecutionRepository,
     AuditDelivery,
     AuditReader,
@@ -19,6 +20,7 @@ from .service import (
     PermissionDeniedError,
     PipelineResult,
     Role,
+    Scenario,
     ScenarioUnavailableError,
     TenantPolicyRepository,
     TimelineEntry,
@@ -44,6 +46,8 @@ __all__ = [
     "PermissionDeniedError",
     "PipelineResult",
     "Role",
+    "SCENARIOS",
+    "Scenario",
     "ScenarioUnavailableError",
     "TenantPolicyRepository",
     "TimelineEntry",

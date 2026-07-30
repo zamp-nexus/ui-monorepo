@@ -15,6 +15,11 @@ export default defineConfig(() => ({
     globals: true,
     environment: 'jsdom',
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Vitest exits non-zero on an empty run, so a library with no specs yet
+    // fails CI for having nothing to say. That is noise, not a signal: it
+    // reports the same red as a genuine failure and trains people to skim past
+    // both.
+    passWithNoTests: true,
     reporters: ['default'],
     coverage: {
       reportsDirectory: './test-output/vitest/coverage',

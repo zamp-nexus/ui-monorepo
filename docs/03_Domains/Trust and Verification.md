@@ -25,10 +25,17 @@ code_refs:
 Trust is expressed through typed validation, Evidence References, explicit
 Human Approval, immutable Audit Entries, and Investigation Replay.
 
-A Human Approval blocks work that cannot proceed autonomously. In Phase 1A,
-tenant policy requires review because each month contains only four governed
-orders. Owner/admin Users decide; approval completes the Finding and rejection
-records one structured reason.
+A Human Approval blocks work that cannot proceed autonomously. Whether it opens
+is decided by evidence, not by dataset size or a blanket policy: a model's
+confidence is capped by how many underlying records it read and by how
+independent the recheck actually was, and the investigation gates when the
+result falls below the tenant threshold. See
+[[adr/0010-confidence-bounded-by-evidence]].
+
+Both outcomes are reachable. The eight-order refund scenario gates; the
+three-hundred-order channel scenario publishes without review when the two
+agents agree and the recheck is independent. Owner/admin Users decide; approval
+completes the Finding and rejection records one structured reason.
 
 An Audit Entry is a tenant-scoped fact about process, not a log line or reasoning
 dump. Replay is the ordered record connecting question, evidence, validation,

@@ -17,6 +17,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from zentra_application_investigation import (
+    SCENARIOS,
     AuthenticatedActor,
     ConflictError,
     InvestigationDetail,
@@ -57,6 +58,14 @@ class ContextResponse(BaseModel):
     email: str
     tenant_name: str
     role: str
+
+
+class ScenarioResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    question: str
+    facts: list[str]
 
 
 class InvestigationCreateRequest(BaseModel):
@@ -283,6 +292,28 @@ async def context(
         tenant_name=identity.tenant_name,
         role=identity.role,
     )
+
+
+@router.get("/v1/scenarios", response_model=list[ScenarioResponse])
+async def scenarios(
+    # Unused, but the dependency is the point: the catalogue of questions is
+    # behind authentication like everything else.
+    _: AuthenticatedRequest,
+) -> list[ScenarioResponse]:
+    """The governed questions this deployment will answer.
+
+    Served rather than hardcoded in the client so the question text has one
+    home: the launcher renders whatever the API supports, and adding a scenario
+    is a server change alone.
+    """
+    return [
+        ScenarioResponse(
+            key=scenario.key,
+            question=scenario.question,
+            facts=list(scenario.facts),
+        )
+        for scenario in SCENARIOS.values()
+    ]
 
 
 @router.post(

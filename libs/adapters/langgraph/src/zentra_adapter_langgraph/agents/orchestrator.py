@@ -106,6 +106,7 @@ class OrchestratorAgent:
                     else ("The plan delegated to no registered role.",),
                 ),
                 usage=_usage(response.usage),
+                fallbacks=response.fallbacks,
             ),
         )
 
@@ -156,6 +157,7 @@ class OrchestratorAgent:
                     issues=tuple(contradictions),
                 ),
                 usage=_usage(response.usage),
+                fallbacks=response.fallbacks,
             ),
         )
 

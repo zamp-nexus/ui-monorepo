@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -9,6 +10,7 @@ from zentra_domain_agent_execution import (
     AgentOutput,
     AgentRole,
     ConfidenceOutcome,
+    ExecutionUsage,
     ToolAccess,
     ToolScope,
     ValidationOutcome,
@@ -111,3 +113,19 @@ async def test_agent_port_shape_is_usable() -> None:
     )
 
     assert validate_agent_output(agent, output) == output
+
+
+def test_adding_usage_drops_the_model_rather_than_guessing() -> None:
+    """A live free-tier run planned on Nemotron and rechecked on Opus. Keeping
+    the first call's model recorded a free provider as the checker, under-graded
+    the independence, and hid the Anthropic spend."""
+    plan = ExecutionUsage(input_tokens=10, cost_usd=Decimal("0"), model="nemotron")
+    recheck = ExecutionUsage(
+        input_tokens=5, cost_usd=Decimal("0.08"), model="claude-opus-5"
+    )
+
+    total = plan + recheck
+
+    assert total.input_tokens == 15
+    assert total.cost_usd == Decimal("0.08")
+    assert total.model is None

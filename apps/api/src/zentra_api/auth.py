@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 import jwt
 from jwt import PyJWKClient
+
+logger = logging.getLogger(__name__)
 
 
 class AuthenticationError(ValueError):
@@ -21,7 +24,11 @@ class ClerkPrincipal:
 class ClerkJwtVerifier:
     def __init__(self, issuer: str | None, audience: str | None) -> None:
         self._issuer = issuer.rstrip("/") if issuer else None
-        self._audience = audience
+        # `or None` matters: CLERK_AUDIENCE= in a .env file parses as "", and an
+        # empty string is not None, so audience verification would switch on and
+        # reject every token for missing a claim it was never meant to carry.
+        # Configured-but-blank means unconfigured.
+        self._audience = audience or None
         self._jwks = (
             PyJWKClient(f"{self._issuer}/.well-known/jwks.json")
             if self._issuer
@@ -43,6 +50,15 @@ class ClerkJwtVerifier:
                 options=options,
             )
         except jwt.PyJWTError as error:
+            # The client is told nothing beyond "invalid" — a verifier that
+            # explains why is a verifier that helps forge. The operator gets the
+            # reason, because "Invalid bearer token" alone cannot distinguish a
+            # wrong issuer from an expired token from a key rotation.
+            logger.warning(
+                "Rejected bearer token: %s: %s",
+                type(error).__name__,
+                error,
+            )
             raise AuthenticationError("Invalid bearer token") from error
 
         subject_id = claims.get("sub")

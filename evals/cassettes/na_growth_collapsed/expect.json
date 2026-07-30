@@ -1,0 +1,21 @@
+{
+  "scenario": "na_channel_growth",
+  "tier": "free",
+  "without": [
+    "anthropic",
+    "cerebras",
+    "gemini",
+    "groq",
+    "openai",
+    "openrouter"
+  ],
+  "status": "awaiting_approval",
+  "approval_reason": "low_confidence",
+  "score": 0.5,
+  "calibration_method": "capped_independence_none",
+  "analyst_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "analyst_sample_size": 300,
+  "evaluator_sample_size": 300,
+  "note": "The independence ceiling binding, against live output. Nemotron analyses the 300-order scenario at 0.95 and Nemotron checks it \u2014 both counting 300, so the sample ceiling is 1.00 and cannot be what caps this. NONE takes 0.95 to 0.50 and it gates. Compare na_growth_premium, identical data, where two models from one lab reach PARTIAL and publish at 0.85. The whole difference is who did the checking."
+}

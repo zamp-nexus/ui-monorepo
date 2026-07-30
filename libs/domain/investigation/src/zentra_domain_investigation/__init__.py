@@ -16,6 +16,7 @@ from .model import (
     InvestigationTransitionError,
     MetricComparison,
     RejectionReason,
+    confidence_ceiling,
     directive_for_outcome,
 )
 
@@ -35,5 +36,6 @@ __all__ = [
     "InvestigationTransitionError",
     "MetricComparison",
     "RejectionReason",
+    "confidence_ceiling",
     "directive_for_outcome",
 ]

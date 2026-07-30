@@ -36,9 +36,9 @@ export function useStableCallback<T extends (...args: never[]) => unknown>(
   });
 
   const stableCallback = useCallback(
-    ((...args: Parameters<T>) => callbackRef.current?.(...args)) as T,
+    (...args: Parameters<T>) => callbackRef.current?.(...args),
     [],
-  );
+  ) as T;
 
   // Return undefined if callback is undefined to preserve the same semantics
   return callback === undefined ? undefined : stableCallback;

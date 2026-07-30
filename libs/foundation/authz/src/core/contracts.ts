@@ -14,7 +14,7 @@ export type AuthzAction = string & {};
 export type AuthzResource = string & {};
 export type AuthzDecisionSource = 'clerk' | 'static' | 'service' | 'runtime' | (string & {});
 
-export interface AuthzScope extends AuthScopeSnapshot {}
+export type AuthzScope = AuthScopeSnapshot;
 
 export interface AuthzCheck {
   readonly action: AuthzAction;

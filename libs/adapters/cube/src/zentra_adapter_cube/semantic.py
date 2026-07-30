@@ -80,6 +80,11 @@ def _to_cube_query(request: SemanticQuery) -> dict[str, Any]:
     return query
 
 
+# Above this a dimension is an identifier, not a vocabulary, and listing it
+# would bloat every prompt without helping an agent choose.
+MAX_LISTED_VALUES = 25
+
+
 class CubeSemanticLayer:
     """Reads governed metrics through Cube. Raw tables are unreachable here."""
 
@@ -89,8 +94,41 @@ class CubeSemanticLayer:
 
     async def catalog(self) -> SemanticCatalog:
         if self._catalog is None:
-            self._catalog = _catalog_from_meta(await self._client.meta())
+            catalog = _catalog_from_meta(await self._client.meta())
+            self._catalog = catalog.model_copy(
+                update={
+                    "dimensions": tuple(
+                        [
+                            await self._with_values(dimension)
+                            for dimension in catalog.dimensions
+                        ]
+                    )
+                }
+            )
         return self._catalog
+
+    async def _with_values(self, dimension: SemanticDimension) -> SemanticDimension:
+        """Read what a string dimension actually contains.
+
+        Discovered rather than declared: a hand-written list drifts from the
+        warehouse, and a permitted value that is not in the data is worse than
+        no list at all. Cached with the catalog, so this costs one query per
+        string dimension per process.
+        """
+        if dimension.type != "string":
+            return dimension
+        payload = await self._client.load(
+            {"dimensions": [dimension.name], "limit": MAX_LISTED_VALUES + 1}
+        )
+        rows = payload.get("data", [])
+        if len(rows) > MAX_LISTED_VALUES:
+            return dimension
+        values = sorted(
+            str(row[dimension.name])
+            for row in rows
+            if row.get(dimension.name) is not None
+        )
+        return dimension.model_copy(update={"values": tuple(values)})
 
     async def query(self, request: SemanticQuery) -> SemanticResult:
         catalog = await self.catalog()

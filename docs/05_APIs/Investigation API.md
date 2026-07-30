@@ -24,14 +24,23 @@ code_refs:
 
 | Method | Path | Purpose | Authorization |
 | --- | --- | --- | --- |
-| POST | `/v1/investigations` | Start `eu_refund_spike` | owner/admin/member |
+| GET | `/v1/scenarios` | List the governed questions this deployment answers | all Membership roles |
+| POST | `/v1/investigations` | Start one of the listed scenarios | owner/admin/member |
 | GET | `/v1/investigations/{investigation_id}` | Read current detail/replay | all Membership roles |
 | POST | `/v1/investigations/{investigation_id}/approvals/{approval_id}/decision` | Approve or reject | owner/admin |
 
+## Scenarios
+
+Returns each scenario's key, canonical question, and neutral descriptive facts.
+Served rather than compiled into the client so the question text has one home;
+the launcher renders whatever this returns. The facts describe the data — region,
+window, scale — and never a predicted outcome.
+
 ## Create
 
-Request is exactly `{"scenario_key":"eu_refund_spike"}`; extra fields and any
-other scenario are rejected. The response is `201` with canonical question,
+Request is exactly `{"scenario_key":"<key>"}` for a key the scenarios endpoint
+lists — `eu_refund_spike` or `na_channel_growth`. Extra fields and any
+unregistered scenario are rejected. The response is `201` with canonical question,
 state, Finding, validation, pending approval, safe timeline, and delivery state.
 
 ## Read

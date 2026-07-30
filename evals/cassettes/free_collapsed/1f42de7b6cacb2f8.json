@@ -1,0 +1,13 @@
+{
+  "requested_model": "sql_analyst",
+  "text": "{\"result_summary\": \"EU refund amount rose from 20.00 in June 2026 to 260.00 in July 2026 (currency units not specified). Refunded orders increased from 1 to 3 out of 4 orders each month. The refund reason shifted from a single \\\"size_issue\\\" in June to three \\\"shipping_delay\\\" refunds in July. Total order count remained flat at 4 per month. Sample size is 8 orders. The data shows what changed in the refund reason mix but does not explain the underlying cause of the shipping delays. Confidence: 0.65. Sample size: 8.\", \"metrics\": [{\"metric\": \"refundAmount\", \"previous_value\": \"20.00\", \"current_value\": \"260.00\", \"unit\": \"currency\"}, {\"metric\": \"refunded_order_count\", \"previous_value\": \"1\", \"current_value\": \"3\", \"unit\": \"orders\"}, {\"metric\": \"total_order_count\", \"previous_value\": \"4\", \"current_value\": \"4\", \"unit\": \"orders\"}, {\"metric\": \"refund_reason_june\", \"previous_value\": \"size_issue (1 order)\", \"current_value\": \"shipping_delay (3 orders)\", \"unit\": \"orders\"}], \"sample_size\": 8, \"confidence\": 0.65}",
+  "usage": {
+    "input_tokens": 1340,
+    "output_tokens": 1155,
+    "cost_usd": "0.00",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b"
+  },
+  "fallbacks": [
+    "gemini/gemini-3.6-flash: no API key configured"
+  ]
+}

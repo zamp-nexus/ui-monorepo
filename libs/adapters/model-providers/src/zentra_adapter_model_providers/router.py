@@ -91,7 +91,9 @@ class RoutedModelClient:
                 continue
 
             self._breaker.record_success(choice.provider)
-            return response
+            # Carried even though this call succeeded: a chain that quietly
+            # degrades is a chain nobody notices is degrading.
+            return response.model_copy(update={"fallbacks": tuple(attempts)})
 
         raise ChainExhaustedError(role.value, attempts)
 

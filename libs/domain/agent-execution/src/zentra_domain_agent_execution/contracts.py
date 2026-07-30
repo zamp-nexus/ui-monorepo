@@ -84,11 +84,19 @@ class ExecutionUsage(BaseModel):
     model: str | None = None
 
     def __add__(self, other: ExecutionUsage) -> ExecutionUsage:
+        """Tokens and cost add up. The model does not.
+
+        Deliberately drops it rather than picking one. An agent makes several
+        calls and the chain can serve them from different providers — a live
+        free-tier run had the Evaluator plan on Nemotron and recheck on Opus.
+        Keeping the first silently recorded Nemotron as the checker, which
+        under-graded the independence and hid $0.08 of Anthropic spend behind a
+        free model's name. Which call decided is the agent's to say.
+        """
         return ExecutionUsage(
             input_tokens=self.input_tokens + other.input_tokens,
             output_tokens=self.output_tokens + other.output_tokens,
             cost_usd=self.cost_usd + other.cost_usd,
-            model=self.model or other.model,
         )
 
 
@@ -99,6 +107,7 @@ class AgentOutput(BaseModel):
     evidence_refs: tuple[str, ...] = ()
     outcome: OutcomeSignal
     usage: ExecutionUsage = ExecutionUsage()
+    fallbacks: tuple[str, ...] = ()
 
     @field_validator("evidence_refs")
     @classmethod
@@ -158,6 +167,55 @@ def model_family(model: str | None) -> str | None:
         if marker in name:
             return family
     return name
+
+
+class IndependenceLevel(StrEnum):
+    """How much a recheck is actually worth.
+
+    A second call to the same model varies by sampling — different wording, a
+    different path, sometimes a different answer — but shares the weights, the
+    training and the alignment, so it shares the systematic blind spots. It is a
+    second pass by one expert, not a second expert.
+
+    Two models from one lab are genuinely different reasoners that still share a
+    training philosophy. Two labs are the real thing.
+    """
+
+    NONE = "none"
+    PARTIAL = "partial"
+    FULL = "full"
+
+    @property
+    def confidence_ceiling(self) -> float:
+        return _INDEPENDENCE_CEILINGS[self]
+
+
+# A recheck is worth what its independence is worth, and the confidence should
+# say so rather than a footnote saying so. Against the default 0.7 threshold:
+# NONE gates, PARTIAL may publish but never at near-certainty, FULL stands.
+_INDEPENDENCE_CEILINGS: dict[IndependenceLevel, float] = {
+    IndependenceLevel.NONE: 0.50,
+    IndependenceLevel.PARTIAL: 0.85,
+    IndependenceLevel.FULL: 1.00,
+}
+
+
+def independence_of(
+    analyst_model: str | None,
+    evaluator_model: str | None,
+) -> IndependenceLevel:
+    """Grade the recheck by what actually served each agent.
+
+    Unknown on either side is treated as NONE: an unverifiable claim about
+    independence is not a claim.
+    """
+    if not analyst_model or not evaluator_model:
+        return IndependenceLevel.NONE
+    if analyst_model == evaluator_model:
+        return IndependenceLevel.NONE
+    if model_family(analyst_model) == model_family(evaluator_model):
+        return IndependenceLevel.PARTIAL
+    return IndependenceLevel.FULL
 
 
 def validate_agent_output(port: AgentPort, output: AgentOutput) -> AgentOutput:

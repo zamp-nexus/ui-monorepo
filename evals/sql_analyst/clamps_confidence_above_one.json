@@ -85,7 +85,8 @@
           "unit": "USD"
         }
       ],
-      "confidence": 1.7
+      "confidence": 1.7,
+      "sample_size": 240
     }
   ],
   "expect": {

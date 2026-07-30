@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 
@@ -183,7 +190,13 @@ const ClerkAuthzBridge = ({
   const auth = useClerkAuth();
   const optionsRef = useRef(options);
 
-  optionsRef.current = options;
+  // Synced in a layout effect rather than during render: a ref written
+  // mid-render is unsound under concurrent rendering. Nothing here reads
+  // it during render, so the effect is equivalent.
+  useLayoutEffect(() => {
+    optionsRef.current = options;
+  });
+
 
   const provider = options.provider ?? CLERK_AUTHZ_PROVIDER;
 

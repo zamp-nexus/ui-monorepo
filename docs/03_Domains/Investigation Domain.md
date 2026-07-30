@@ -38,6 +38,18 @@ Evaluation increments a bounded attempt counter. A retry after the third attempt
 opens `contradiction_unresolved` approval; no fourth evaluation is allowed.
 Terminal states cannot transition.
 
+A confidence outcome is bounded before it is compared to the tenant threshold:
+`confidence_ceiling()` caps it by how many underlying records the agents read,
+and an independence ceiling caps it by how different the two models were. The
+recorded score is the lowest of the three, and `calibration_method` names which
+bound applied. Agents that disagree about the sample size by more than 2x open
+`contradiction_unresolved` rather than averaging. See
+[[adr/0010-confidence-bounded-by-evidence]].
+
+`EvaluationDirective` decides what a finished evaluation does: publish, retry, or
+`ESCALATE` to a human. A non-converged run escalates rather than returning to
+`running`, so no investigation can settle in a non-terminal state.
+
 Validation is deterministic checks and issues, not a confidence score. Evidence
 must use `artifact://`. Approval replay is idempotent only when the decision and
 structured reason match.

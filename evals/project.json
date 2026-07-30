@@ -13,6 +13,22 @@
       },
       "cache": true
     },
+    "replay": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "uv run python tools/evals/live_run.py --replay free_tier",
+          "uv run python tools/evals/live_run.py --replay free_collapsed",
+          "uv run python tools/evals/live_run.py --replay premium_tier",
+          "uv run python tools/evals/live_run.py --replay na_growth_free",
+          "uv run python tools/evals/live_run.py --replay na_growth_premium",
+          "uv run python tools/evals/live_run.py --replay na_growth_collapsed"
+        ],
+        "parallel": false,
+        "cwd": "."
+      },
+      "cache": false
+    },
     "promote": {
       "executor": "nx:run-commands",
       "options": {
@@ -21,5 +37,9 @@
       }
     }
   },
-  "tags": ["layer:tooling", "platform:python", "scope:core"]
+  "tags": [
+    "layer:tooling",
+    "platform:python",
+    "scope:core"
+  ]
 }

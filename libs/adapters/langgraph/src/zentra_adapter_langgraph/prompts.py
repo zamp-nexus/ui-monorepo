@@ -37,7 +37,12 @@ verbatim in the catalog you are given.
 
 Build the single query that best answers the question. Prefer a period-over-
 period comparison when the question asks why something changed. Explain your
-choice of members in one or two sentences."""
+choice of members in one or two sentences.
+
+Where the catalog offers a measure that counts records, include it alongside the
+measures you are actually asked about. A total tells you what moved; the count
+behind it tells you whether the movement means anything, and a result that does
+not carry its own sample cannot be trusted at any confidence."""
 
 SQL_ANALYST_INTERPRET = """You are the SQL Analyst of an analytics investigation.
 
@@ -51,7 +56,11 @@ Rules:
 - Your confidence is how well this result answers the question asked. Lower it
   when the sample is small, the movement is within noise, or the result only
   partly addresses the question. State a number you would stand behind: a 0.9
-  means you expect to be right about nine times in ten."""
+  means you expect to be right about nine times in ten.
+- sample_size is how many underlying records these figures rest on, not how many
+  rows came back. Two monthly totals covering four orders each is a sample_size
+  of eight. Read it from a count measure in the result where one is present; if
+  the result genuinely does not say, report 0 rather than guessing."""
 
 EVALUATOR_PLAN = """You are the Evaluator of an analytics investigation.
 
@@ -59,6 +68,10 @@ Another analyst has answered a business question. Your job is to check the
 number independently, so you must build your own query from the question and
 the catalog. Do not copy the analyst's query — arriving at the same figure by a
 different route is the entire point of this step.
+
+Where the catalog offers a measure that counts records, include it, so your
+result carries the sample behind it and you can judge the analyst's confidence
+rather than take it on trust.
 
 Every member you reference must appear verbatim in the catalog."""
 
@@ -75,5 +88,9 @@ Rules:
   analyst's answer after your check. A failed recheck must score below 0.5.
   Report a small sample or an ambiguous result as lower confidence even when
   the arithmetic agrees.
+- sample_size is how many underlying records your own result rests on, counted
+  the same way: underlying records, not returned rows. Report 0 if the result
+  does not say. You are counting independently of the analyst, so do not copy
+  their figure.
 - List each specific disagreement or concern as an issue. An empty list means
   you found none."""

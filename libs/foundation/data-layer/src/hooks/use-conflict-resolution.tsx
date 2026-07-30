@@ -13,6 +13,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -176,7 +177,13 @@ export const useConflictResolution = (): {
 
   // Use refs for values needed in callbacks to avoid unstable dependencies
   const conflictsRef = useRef<ConflictInfo[]>(conflicts);
-  conflictsRef.current = conflicts;
+
+  // Synced in a layout effect rather than during render: a ref written
+  // mid-render is unsound under concurrent rendering. Nothing here reads
+  // it during render, so the effect is equivalent.
+  useLayoutEffect(() => {
+    conflictsRef.current = conflicts;
+  });
 
   // Track initialization state
   const initializedRef = useRef(false);

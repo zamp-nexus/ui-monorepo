@@ -26,34 +26,44 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Postgres RLS, migrations, Investigation persistence, Human Approval locking,
   and transactional audit outbox.
 - ClickHouse metadata-only audit ledger and replay deduplication.
-- Eight Cube-governed commerce metrics and deterministic EU refund-spike seed.
+- Eight Cube-governed commerce metrics and two deterministic seeds: the
+  eight-order EU refund spike and the three-hundred-order NA channel growth.
 - Phase 1A Investigation lifecycle, API, and Forensic Observatory.
 - Phase 1 agent trust loop: Orchestrator, SQL Analyst, and Evaluator as
   `AgentPort` implementations over a LangGraph graph, with the
   Evaluator-Optimizer loop exiting hard at three attempts.
-- Calibrated confidence gating against the Tenant threshold, opening a
-  `low_confidence` Human Approval when the score falls short.
+- Confidence bounded by evidence before it meets the Tenant threshold — a
+  sample-size ceiling and a three-level independence ceiling, with
+  `calibration_method` naming whichever bound applied
+  ([[adr/0010-confidence-bounded-by-evidence]]). Both outcomes are reachable:
+  the EU scenario gates, the NA scenario publishes without review.
 - Agent Executions persisted per step with token, cost, and model attribution,
   and delivered to the audit ledger as metadata and `artifact://` pointers.
 - Deterministic agent eval suites gating `agent_registry.eval_status`.
 - Tiered model provider routing with per-role fallback chains, a per-provider
-  circuit breaker, client-side schema validation, and a runtime check that caps
-  confidence when the Evaluator lands on the Analyst's model family.
+  circuit breaker, client-side schema validation, and an independence grade taken
+  from what actually served each agent rather than from the routing table.
+- Recorded cassettes of live runs under `evals/cassettes/`, replayed by
+  `nx run evals:replay` to re-verify calibration offline at no cost.
 - OpenTelemetry trace correlation and configurable OTLP export.
 - Local Docker environment and managed Neon/ClickHouse Terraform definitions.
 
 ## Configured but not operationally signed off
 
 Clerk, Neon, ClickHouse Cloud, Langfuse, E2B, and every model provider
-(Anthropic, OpenAI, Gemini, Groq, Cerebras, OpenRouter) require externally
-supplied credentials. E2B remains configuration validation only. No agent has
-been exercised against a live model in this repository.
+(Anthropic, OpenAI, Gemini, NVIDIA, Groq, Cerebras, OpenRouter) require
+externally supplied credentials. E2B remains configuration validation only.
+
+The agents **have** been exercised against live models on both tiers, and the
+recordings are committed. Gemini's free API tier caps at 20 requests per day —
+about three investigations — after which the free chain collapses onto one
+provider and its independence grade drops to `NONE`.
 
 ## Not implemented
 
 Insight/Root-Cause and the remaining Growth-stage Agents, deletion tombstones,
-the cost-ceiling circuit breaker, functional known-answer eval cases against a
-live model, recovery for a pipeline interrupted mid-run, generalized
+the cost-ceiling circuit breaker, a cross-vendor Evaluator for the premium tier,
+recovery for a pipeline interrupted mid-run, generalized
 scheduling, arbitrary datasets/questions, production application deployment,
 and a release process.
 

@@ -117,11 +117,26 @@ const response = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+const scenariosResponse = [
+  {
+    key: 'eu_refund_spike',
+    question: 'Why did EU refunds increase from June to July 2026?',
+    facts: ['EU commerce', 'June \u2192 July 2026', '8 orders'],
+  },
+  {
+    key: 'na_channel_growth',
+    question:
+      'Which sales channel accounted for the increase in North America revenue from October to November 2026?',
+    facts: ['NA commerce', 'October \u2192 November 2026', '300 orders'],
+  },
+];
+
 const mockApi = (detail: unknown = investigation) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
     const url = String(input);
     if (url.endsWith('/health/ready')) return response(readyResponse);
     if (url.endsWith('/v1/context')) return response(contextResponse);
+    if (url.endsWith('/v1/scenarios')) return response(scenariosResponse);
     if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
       return response(detail, 201);
     }
@@ -194,8 +209,8 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('launches only the governed synthetic scenario', async () => {
-    mockApi();
+  it('launches only the governed synthetic scenarios the API offers', async () => {
+    const fetchMock = mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
@@ -205,15 +220,58 @@ describe('App', () => {
     });
     renderApp();
     expect(await screen.findByText('Acme Europe')).toBeTruthy();
-    const launch = screen.getByRole('button', {
+
+    // Rendered from the API, not from a question hardcoded in this bundle.
+    expect(
+      await screen.findByRole('heading', { name: /eu refunds increase/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /which sales channel/i }),
+    ).toBeTruthy();
+
+    const launches = screen.getAllByRole('button', {
       name: /begin evidence trace/i,
     });
-    fireEvent.click(launch);
+    expect(launches).toHaveLength(2);
+    fireEvent.click(launches[0]);
     expect(
       await screen.findByRole('heading', {
         name: /eu refunds rose \$240 in july/i,
       }),
     ).toBeTruthy();
+
+    const posted = fetchMock.mock.calls.find(
+      ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+    );
+    expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
+      scenario_key: 'eu_refund_spike',
+    });
+  });
+
+  it('launches the second scenario with its own key', async () => {
+    const fetchMock = mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+    renderApp();
+    await screen.findByRole('heading', { name: /which sales channel/i });
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
+    );
+
+    await waitFor(() => {
+      const posted = fetchMock.mock.calls.find(
+        ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+      );
+      expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
+        scenario_key: 'na_channel_growth',
+      });
+    });
   });
 
   it('shows persisted evidence and owner approval controls on refresh', async () => {
@@ -291,5 +349,71 @@ describe('App', () => {
       expect(screen.getByText('Approved and complete')).toBeTruthy(),
     );
     expect(screen.getByText('completed')).toBeTruthy();
+  });
+
+  it('mints a fresh token for every request rather than reusing one', async () => {
+    // Clerk session tokens expire after 60 seconds. Caching one in component
+    // state meant a page left open sent a dead token on the next click, and the
+    // API's "Invalid bearer token" read like a configuration fault.
+    const getAccessToken = vi
+      .fn()
+      .mockResolvedValueOnce('token-1')
+      .mockResolvedValueOnce('token-2')
+      .mockResolvedValue('token-3');
+    authMocks.useAuthSession.mockReturnValue({ getAccessToken });
+    const fetchMock = mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+
+    renderApp();
+    await screen.findByRole('heading', { name: /which sales channel/i });
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+        ),
+      ).toBe(true),
+    );
+
+    // One call per authenticated request, not one for the whole session.
+    expect(getAccessToken.mock.calls.length).toBeGreaterThan(1);
+    const sent = fetchMock.mock.calls
+      .map(([, options]) =>
+        new Headers((options as RequestInit | undefined)?.headers).get(
+          'Authorization',
+        ),
+      )
+      .filter(Boolean);
+    expect(new Set(sent).size).toBeGreaterThan(1);
+  });
+
+  it('never captions a metric with a month the scenario did not run in', async () => {
+    // These read "June X -> July Y", hardcoded from the only scenario that
+    // existed. The first live run of the second scenario captioned an
+    // October-to-November finding as June to July.
+    mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    // The question itself may name months — this scenario's does. The caption
+    // must not, because it does not know which scenario it belongs to.
+    const caption = screen.getByText(/20\.00 → 260\.00 USD/);
+    expect(caption.textContent).not.toMatch(/june|july/i);
   });
 });

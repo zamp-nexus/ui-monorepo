@@ -33,5 +33,8 @@ export function useCallbackRef<T extends (...args: never[]) => unknown>(callback
   });
 
   // Return stable callback that calls the ref
-  return useCallback(((...args: Parameters<T>) => callbackRef.current(...args)) as T, []);
+  return useCallback(
+    (...args: Parameters<T>) => callbackRef.current(...args),
+    [],
+  ) as T;
 }

@@ -17,6 +17,7 @@ repo_path: infra/cube/model/cubes/Commerce.js
 code_refs:
   - infra/cube/model/cubes/Commerce.js
   - infra/cube/tests/eu-refund-spike.json
+  - infra/cube/tests/na-channel-growth.json
   - libs/adapters/cube/src/zentra_adapter_cube/semantic.py
 ---
 
@@ -34,11 +35,19 @@ surface. It exposes:
 - active customers;
 - repeat-purchase rate.
 
-Dimensions include time, region, and refund reason needed by the deterministic
-scenario. The model, not the Investigation, owns metric definitions and grain.
+Dimensions include time, region, channel, category, country, and refund reason.
+The model, not the Investigation, owns metric definitions and grain.
 
-The scenario queries June–July 2026 EU monthly measures and July refund reasons,
-then checks exact seed values. Raw Cube rows are not persisted to Postgres,
+The catalog an agent receives carries the **values** each low-cardinality string
+dimension holds, not only its name. They are discovered from the warehouse on
+first load and cached, rather than declared, because a hand-written list drifts
+from the data and a permitted value that is not there is worse than no list. A
+member name alone told an agent that `Commerce.region` exists but not that it is
+spelled `NA`, and a filter on a value that does not exist returns zero rows
+rather than an error.
+
+The scenarios query June–July 2026 EU monthly measures with July refund reasons,
+and October–November 2026 NA revenue by channel, then check exact seed values. Raw Cube rows are not persisted to Postgres,
 ClickHouse, or the browser response.
 
 Parent: [[Data MOC]]

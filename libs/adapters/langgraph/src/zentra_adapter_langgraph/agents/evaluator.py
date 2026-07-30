@@ -13,6 +13,7 @@ from zentra_domain_agent_execution import (
     SemanticLayerPort,
     ToolAccess,
     ToolScope,
+    merged_fallbacks,
     validate_agent_output,
 )
 
@@ -38,7 +39,7 @@ DESCRIPTOR = AgentDescriptor(
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
     output_schema=RECHECK_SCHEMA,
     output_fields=frozenset(
-        {"query", "recheck_passed", "discrepancy_pct", "issues", "rows"}
+        {"query", "recheck_passed", "discrepancy_pct", "issues", "rows", "sample_size"}
     ),
     eval_suite_ref="evals/evaluator",
 )
@@ -109,7 +110,12 @@ class EvaluatorAgent:
             response_schema=RECHECK_SCHEMA,
         )
         recheck = parse_json_object(recheck_response.text)
-        usage = plan_response.usage + recheck_response.usage
+        # The recheck is the judgement. If the chain served it from a
+        # different provider than the planning call, that provider is the
+        # one that actually checked the analyst.
+        usage = (plan_response.usage + recheck_response.usage).model_copy(
+            update={"model": recheck_response.usage.model}
+        )
 
         discrepancy = abs(float(recheck["discrepancy_pct"]))
         passed = (
@@ -130,6 +136,7 @@ class EvaluatorAgent:
                     "recheck_passed": passed,
                     "discrepancy_pct": discrepancy,
                     "issues": recheck.get("issues", []),
+                    "sample_size": int(recheck["sample_size"]),
                     "rows": list(result.rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
@@ -140,6 +147,7 @@ class EvaluatorAgent:
                 # The model the provider actually served, not the role we
                 # asked for — the ledger must record what really ran.
                 usage=usage,
+                fallbacks=merged_fallbacks(plan_response, recheck_response),
             ),
         )
 
