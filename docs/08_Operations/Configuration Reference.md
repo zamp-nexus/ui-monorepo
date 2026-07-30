@@ -51,6 +51,13 @@ carries no such claim, and a blank value is treated as unconfigured — an empty
 string is not an absent one, and conflating them rejected every valid token
 until it was fixed. See [[Set Up Clerk for Local Development]].
 
+That rule is no longer specific to one key. `Settings` normalises a blank value
+to `None` for **every** optional variable above, so writing `CUBE_API_SECRET=`
+or `GEMINI_API_KEY=` in a `.env` file means unconfigured rather than configured
+as empty, and no consumer has to remember to check. Required variables are
+deliberately left alone: a blank `DATABASE_URL` is a misconfiguration and still
+fails loudly rather than being silently rewritten.
+
 ## Frontend
 
 `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL` are build/runtime browser
