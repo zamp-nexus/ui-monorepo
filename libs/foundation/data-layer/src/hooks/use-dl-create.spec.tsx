@@ -76,20 +76,26 @@ describe('useDLCreate', () => {
     const { result } = renderHook(
       () =>
         useDLCreate({
+          // Default type parameters: ApiMutationDescriptor is contravariant in
+          // TArgs, so a narrowed descriptor does not satisfy the hook's
+          // `TMutation extends ApiMutationDescriptor` constraint.
           mutation: {
             method: 'POST',
             path: '/events',
-          } as ApiMutationDescriptor<{ name: string }, { id: string; name: string }>,
+          } as ApiMutationDescriptor,
           table: 'events',
           listQueryKey: ['events'],
-          onOptimistic: (variables: { name: string }) => ({ name: variables.name }),
+          onOptimistic: (variables) => ({ name: (variables as { name: string }).name }),
         }),
       { wrapper: createWrapper(internals) },
     );
 
-    let response: { id: string; name: string } | undefined;
+    let response: { id?: string; name?: string } | undefined;
     await act(async () => {
-      response = await result.current.mutateAsync({ name: 'offline-event' });
+      response = (await result.current.mutateAsync({ name: 'offline-event' })) as {
+        id?: string;
+        name?: string;
+      };
     });
 
     await waitFor(() => expect(queueManager.enqueue).toHaveBeenCalledTimes(1));

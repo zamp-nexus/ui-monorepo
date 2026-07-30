@@ -11,11 +11,11 @@
   ],
   "status": "awaiting_approval",
   "approval_reason": "low_confidence",
-  "score": 0.2,
-  "calibration_method": "evaluator_independent_recheck",
+  "score": 0.5,
+  "calibration_method": "capped_independence_none",
   "analyst_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "analyst_sample_size": 8,
   "evaluator_sample_size": 8,
-  "note": "Nvidia deliberately the only reachable provider, so one model checks its own work regardless of anyone's daily quota. The recheck disagreed once and the loop retried, settling at 0.20 on the second attempt \u2014 the evaluator-optimizer loop converging on real output. It does not reach the hard exit at three attempts; nothing recorded here does."
+  "note": "Nvidia deliberately the only reachable provider, so one model checks its own work regardless of anyone's daily quota. Re-recorded for #5, and it now demonstrates a different bound than it used to: the previous recording settled at 0.20 through a recheck retry, where this one has Nemotron confident and the NONE independence ceiling doing the work — 0.50 is the ceiling, not the model's opinion. Same gate, arrived at honestly. Both sides count eight orders, so the sample ceiling is not what binds here."
 }

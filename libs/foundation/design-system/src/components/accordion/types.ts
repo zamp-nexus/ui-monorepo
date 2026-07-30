@@ -55,7 +55,9 @@ export interface AccordionOwnProps
 /**
  * Accordion component props
  */
-export type AccordionProps = OIDefaultProps & AccordionOwnProps;
+export type AccordionProps = OIDefaultProps &
+  AccordionOwnProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, keyof AccordionOwnProps | 'className'>;
 
 // Sub-component props
 export interface AccordionItemProps extends OIDefaultProps {
@@ -88,9 +90,10 @@ export interface AccordionContextValue {
 /**
  * Accordion component type with sub-components
  */
-export interface AccordionComponent {
-  (props: AccordionProps): React.ReactNode;
-  displayName?: string;
+export interface AccordionComponent
+  extends React.ForwardRefExoticComponent<
+    AccordionProps & React.RefAttributes<HTMLDivElement>
+  > {
   Item: React.FC<AccordionItemProps>;
   Trigger: React.FC<AccordionTriggerProps>;
   Content: React.FC<AccordionContentProps>;

@@ -43,6 +43,29 @@ privacy, approval conflict/replay, safe failures, and traces. Vitest covers
 frontend identity, role, approval, terminal, error, deep-link, and reduced-motion
 states. Playwright provides browser and automated accessibility smoke coverage.
 
+## The design system contract
+
+`describeComponent` in `libs/foundation/design-system/src/test` asserts one
+contract against every component: it accepts `className` and `ozid`, forwards a
+ref to its root element, passes `lang`, `aria-*` and `data-*` through to that
+root, and resolves its declared variants and modifiers from the theme. A
+component declares what it supports; the harness generates the tests. That is
+most of the suite's 510 assertions, and it is why adding a component costs
+almost no test-writing.
+
+Two escape hatches exist, and both narrow *where* the contract applies rather
+than whether it does. `renderRoot` is for a compound component whose outer root
+is a context provider rendering no DOM node — Modal, Drawer, Popover, Select and
+Menu are all Base UI roots of this shape — so the component nominates the
+element that does reach the document, usually its `Content` slot, and the
+contract is asserted there. `rootSlot` names the theme slot that element is
+styled from when it is not `root`. Neither removes an obligation: the component
+still has to accept every one of those props somewhere.
+
+The convention the harness depends on is that the plain `ozid` identifies the
+element `theme.root` styles, and sub-slots take suffixed ids (`ozid__trigger`).
+A component that inverts this will fail the contract, correctly.
+
 ## Recorded live runs
 
 `nx run evals:replay` serves committed recordings of real model output through

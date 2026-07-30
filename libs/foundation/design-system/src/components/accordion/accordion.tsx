@@ -2,7 +2,7 @@
  * Accordion component
  * @module components/accordion
  */
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 
@@ -11,7 +11,7 @@ import { AccordionContent } from './accordion-content';
 import { AccordionItem } from './accordion-item';
 import { AccordionTrigger } from './accordion-trigger';
 import { AccordionContext } from './accordion.context';
-import type { AccordionComponent, AccordionContextValue } from './types';
+import type { AccordionComponent, AccordionContextValue, AccordionProps } from './types';
 import { accordionDefaultTheme } from './types';
 
 /**
@@ -31,16 +31,21 @@ import { accordionDefaultTheme } from './types';
  *   </Accordion.Item>
  * </Accordion>
  */
-const AccordionRoot: AccordionComponent = ({
-  ozid,
-  variant = 'default',
-  multiple = false,
-  value,
-  defaultValue,
-  onValueChange,
-  disabled,
-  children,
-}) => {
+const AccordionRoot = React.forwardRef<HTMLDivElement, AccordionProps>(function Accordion(
+  {
+    ozid,
+    variant = 'default',
+    multiple = false,
+    value,
+    defaultValue,
+    onValueChange,
+    disabled,
+    children,
+    className,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme('accordion', accordionDefaultTheme);
 
   // Context value for sub-components
@@ -54,18 +59,22 @@ const AccordionRoot: AccordionComponent = ({
 
   return (
     <AccordionContext.Provider value={contextValue}>
+      {/* rest first: caller-supplied lang, aria and data attributes reach the
+          root, but never at the cost of the props managed here. */}
       <AccordionPrimitive.Root
+        {...rest}
+        ref={ref}
         value={value}
         defaultValue={defaultValue}
         onValueChange={onValueChange}
-        className={theme.root?.({ variant, disabled }) ?? ''}
+        className={theme.root?.({ className, variant, disabled }) ?? className}
         data-ozid={ozid}
       >
         {children}
       </AccordionPrimitive.Root>
     </AccordionContext.Provider>
   );
-};
+}) as AccordionComponent;
 
 // Attach sub-components
 AccordionRoot.displayName = 'Accordion';

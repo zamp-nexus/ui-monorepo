@@ -189,6 +189,10 @@ export const useDLCreate = <
     ],
   );
 
+  // The factory stores the ref object and reads `.current` inside the callback
+  // it returns, which React Query invokes after the mutation settles. Nothing
+  // is read during render, so the value cannot be stale in the rendered output.
+  // eslint-disable-next-line react-hooks/refs -- ref object passed, never read during render
   const handleSuccess = createOnSuccessCallback({
     internals,
     invalidateKeys,
@@ -201,6 +205,7 @@ export const useDLCreate = <
     optimisticContextRef.current = null;
   }, []);
 
+  // eslint-disable-next-line react-hooks/refs -- clearRefs writes the ref when React Query settles, not during render
   const handleSettled = createOnSettledCallback({
     clearRefs,
     onSettled,
@@ -216,6 +221,7 @@ export const useDLCreate = <
     }
   };
 
+  // eslint-disable-next-line react-hooks/refs -- ref objects passed, read only inside the error callback
   const handleError = createOnErrorCallback<TData, TVariables, WithId, null>({
     internals,
     listContextRef: optimisticContextRef,

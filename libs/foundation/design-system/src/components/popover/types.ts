@@ -66,7 +66,11 @@ export interface PopoverTriggerProps extends OIDefaultProps {
   className?: string;
 }
 
-export interface PopoverContentProps extends OIDefaultProps {
+// Popover's own root renders no DOM node, so Content is the component's real
+// root element and carries the root-element contract.
+export interface PopoverContentProps
+  extends OIDefaultProps,
+    Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> {
   children?: React.ReactNode;
   className?: string;
 }
@@ -94,7 +98,9 @@ export interface PopoverComponent {
   (props: PopoverProps): React.ReactNode;
   displayName?: string;
   Trigger: React.FC<PopoverTriggerProps>;
-  Content: React.FC<PopoverContentProps>;
+  Content: React.ForwardRefExoticComponent<
+    PopoverContentProps & React.RefAttributes<HTMLDivElement>
+  >;
   Close: React.FC<PopoverCloseProps>;
 }
 

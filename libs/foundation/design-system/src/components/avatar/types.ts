@@ -51,6 +51,14 @@ export interface AvatarOwnProps
   skeleton?: boolean;
   /** Context icon/element slot (appears in corner) */
   context?: OIComponentSlotProps;
+  /**
+   * Whether the avatar is styled as having a context slot.
+   *
+   * Derived from `context` when not given. It is settable because it is a
+   * declared modifier, and a declared modifier a caller cannot set is one the
+   * theme can style but nobody can trigger.
+   */
+  hasContext?: boolean;
   /** Fallback content when image fails or no src provided */
   fallback?: OIComponentSlotProps;
   /** Callback when image fails to load */

@@ -75,15 +75,21 @@ MenuTrigger.displayName = 'Menu.Trigger';
 // Menu Content
 // ============================================================================
 
-const MenuContent: React.FC<MenuContentProps> = ({
-  children,
-  sideOffset = 4,
-  alignOffset,
-  side = 'bottom',
-  align = 'start',
-  ozid,
-}) => {
+const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(function MenuContent(
+  {
+    children,
+    sideOffset = 4,
+    alignOffset,
+    side = 'bottom',
+    align = 'start',
+    ozid,
+    className,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme('menu', menuDefaultTheme);
+  const { size } = useMenuContext();
 
   return (
     <MenuPrimitive.Portal>
@@ -94,8 +100,15 @@ const MenuContent: React.FC<MenuContentProps> = ({
         align={align}
         className={theme.positioner?.({}) ?? ''}
       >
+        {/* rest first: caller-supplied lang, aria and data attributes reach the
+            root, but never at the cost of the props managed here. */}
         <MenuPrimitive.Popup
-          className={theme.popup?.({}) ?? ''}
+          {...rest}
+          ref={ref}
+          // size is a declared Menu variant, so the popup has to offer the
+          // theme a chance to style it even though the built-in classes for it
+          // live on the item slot.
+          className={theme.popup?.({ className, size }) ?? className}
           data-ozid={ozid}
           data-slot="content"
         >
@@ -104,7 +117,7 @@ const MenuContent: React.FC<MenuContentProps> = ({
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   );
-};
+});
 MenuContent.displayName = 'Menu.Content';
 
 // ============================================================================

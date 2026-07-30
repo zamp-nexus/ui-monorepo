@@ -39,11 +39,14 @@ comparisons, typed validation, audit-delivery state, and Human Approval
 inspector. The timeline names the model that served each step and the rungs that
 failed before it, so a degraded provider chain is visible rather than implied.
 
-Metric rows show a before and an after with no period, because a
-`MetricComparison` does not carry one. They previously read "June X → July Y",
-hardcoded from the only scenario that existed, and captioned an
-October–November finding with the wrong months. The period is stated in the
-question above the metrics until the evidence model carries it (#5).
+Metric rows caption their before and after with the periods the metric itself
+reports. `MetricComparison` carries `previous_label` and `current_label`, filled
+by the agent that chose the granularity, because nothing downstream can recover
+it. They once read "June X → July Y", hardcoded from the only scenario that
+existed, and captioned an October–November finding with the wrong months. Both
+labels are optional: where the agent named no period — an older recording, or a
+comparison that is not over time — the row shows values alone rather than a
+guess.
 
 Motion reveals already-persisted causality. Reduced-motion preferences disable
 transform/layout motion while keeping content present in the accessibility tree.

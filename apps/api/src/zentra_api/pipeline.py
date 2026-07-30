@@ -20,6 +20,15 @@ SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
 
 
+def _optional_str(value: object) -> str | None:
+    """A blank label is no label. A model that emits "" has said nothing, and
+    stringifying it would caption a metric with an empty period."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 class PostgresExecutionRecorder:
     """Commits each agent execution as it finishes.
 
@@ -122,6 +131,8 @@ class LangGraphInvestigationPipeline:
                         previous_value=str(metric["previous_value"]),
                         current_value=str(metric["current_value"]),
                         unit=str(metric["unit"]),
+                        previous_label=_optional_str(metric.get("previous_label")),
+                        current_label=_optional_str(metric.get("current_label")),
                     )
                     for metric in outcome.metrics
                 ),

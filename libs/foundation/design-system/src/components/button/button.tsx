@@ -56,7 +56,10 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
   const Element = component ?? 'button';
 
   // Effective disabled state includes loading
-  const isDisabled = disabled || loading;
+  // Boolean(), not `||`: with disabled={false} and loading unset this yields
+  // undefined, and the theme resolver only applies a modifier for an actual
+  // boolean — so the modifier's `false` class would silently never apply.
+  const isDisabled = Boolean(disabled || loading);
 
   // Map size to spinner size
   const spinnerSize = size === 'lg' ? 'md' : size === 'md' ? 'sm' : 'xs';

@@ -53,7 +53,9 @@ def _finding_to_json(finding: Finding | None) -> dict[str, Any] | None:
             {
                 "metric": metric.metric,
                 "previous_value": metric.previous_value,
+                "previous_label": metric.previous_label,
                 "current_value": metric.current_value,
+                "current_label": metric.current_label,
                 "unit": metric.unit,
             }
             for metric in finding.metrics
@@ -74,6 +76,9 @@ def _finding_from_json(value: dict[str, Any] | None) -> Finding | None:
                 previous_value=metric["previous_value"],
                 current_value=metric["current_value"],
                 unit=metric["unit"],
+                # .get, not [], so rows written before labels existed still load.
+                previous_label=metric.get("previous_label"),
+                current_label=metric.get("current_label"),
             )
             for metric in value["metrics"]
         ),

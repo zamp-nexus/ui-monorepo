@@ -67,15 +67,15 @@ export interface TooltipOwnProps extends OIDefaultProps {
 /**
  * Tooltip component props
  */
-export type TooltipProps = TooltipOwnProps;
+export type TooltipProps = TooltipOwnProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, keyof TooltipOwnProps | 'className'>;
 
 /**
  * Tooltip component type
  */
-export interface TooltipComponent {
-  (props: TooltipProps): React.ReactNode;
-  displayName?: string;
-}
+export type TooltipComponent = React.ForwardRefExoticComponent<
+  TooltipProps & React.RefAttributes<HTMLDivElement>
+>;
 
 /**
  * Default theme configuration for Tooltip

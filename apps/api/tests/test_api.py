@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import get_args
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -203,7 +204,17 @@ def investigation_detail() -> InvestigationDetail:
         finding=Finding(
             headline="EU refunds rose $240 in July",
             summary="Governed evidence requires review.",
-            metrics=(MetricComparison("refund_amount", "20.00", "260.00", "USD"),),
+            metrics=(
+                MetricComparison(
+                    "refund_amount",
+                    "20.00",
+                    "260.00",
+                    "USD",
+                    previous_label="June 2026",
+                    current_label="July 2026",
+                ),
+                MetricComparison("refund_rate", "25", "75", "percent"),
+            ),
             evidence_refs=(EvidenceReference("artifact://semantic/eu-refunds"),),
         ),
         outcome=ConfidenceOutcome(
@@ -263,6 +274,35 @@ def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
         "score": 0.42,
         "calibration_method": "evaluator_independent_recheck",
     }
+
+
+def test_a_metric_carries_the_periods_it_compares(monkeypatch) -> None:
+    """The client cannot derive them and must never guess them, so the response
+    is the only place they can come from."""
+
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="owner@example.com",
+            tenant_name="Acme Europe",
+            role="owner",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+    with client(investigations=InvestigationServiceStub()) as test_client:
+        response = test_client.post(
+            "/v1/investigations",
+            headers={"Authorization": "Bearer valid"},
+            json={"scenario_key": "eu_refund_spike"},
+        )
+
+    dated, undated = response.json()["finding"]["metrics"]
+    assert dated["previous_label"] == "June 2026"
+    assert dated["current_label"] == "July 2026"
+    # A metric with no period to name says so, rather than borrowing one.
+    assert undated["previous_label"] is None
+    assert undated["current_label"] is None
 
 
 def test_approval_request_validates_reason_before_service(monkeypatch) -> None:
@@ -331,6 +371,36 @@ def test_scenarios_are_served_so_the_client_never_hardcodes_a_question(
         "October → November 2026",
         "300 orders",
     ]
+
+
+def test_every_blank_setting_means_unconfigured_not_configured_as_empty() -> None:
+    """`CLERK_AUDIENCE=` was the key that bit, but nothing made it special: a
+    .env file can leave any of these blank, and each consumer would otherwise
+    have to remember `or None` on its own. Asserted over every nullable field so
+    a new setting cannot quietly reintroduce the bug."""
+    from zentra_api.auth import ClerkJwtVerifier
+
+    nullable = [
+        name
+        for name, field in Settings.model_fields.items()
+        if type(None) in get_args(field.annotation)
+    ]
+    assert "clerk_audience" in nullable
+
+    settings = Settings(**{name: "" for name in nullable})
+
+    assert [name for name in nullable if getattr(settings, name) is not None] == []
+    # The derived objects, not just the fields: this is what actually broke.
+    verifier = ClerkJwtVerifier(settings.clerk_issuer, settings.clerk_audience)
+    assert verifier._audience is None
+    assert all(value is None for value in settings.provider_api_keys().values())
+
+
+def test_a_blank_required_setting_is_left_alone() -> None:
+    """Normalising blanks must not reach fields that have no None to fall back
+    to. A blank DATABASE_URL is a misconfiguration, and silently rewriting it
+    would hide that."""
+    assert Settings(database_url="").database_url == ""
 
 
 def test_a_blank_audience_means_unconfigured_not_configured_as_empty() -> None:

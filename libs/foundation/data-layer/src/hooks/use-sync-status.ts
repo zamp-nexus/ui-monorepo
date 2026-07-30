@@ -170,8 +170,18 @@ export const useSyncStatus = (): SyncStatus => {
     };
   }, [syncCoordinator, handleSyncEvent]);
 
-  // Keep isOnline in sync with context
+  // Keep isOnline in sync with context.
+  //
+  // This mirrors context into state, which the rule rightly flags: it costs a
+  // second render whenever connectivity changes. The alternative is to drop the
+  // local copy and read isOnline straight from context, since the provider
+  // already tracks it from these very same coordinator events. That is a better
+  // shape, but it narrows this hook's contract — it would stop responding to
+  // ONLINE/OFFLINE on its own and require whoever supplies the internals to
+  // track connectivity, which anything constructing the context by hand does
+  // not do. Left as-is deliberately; see #4.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors context into state; see above
     setStatus((prev) => ({ ...prev, isOnline }));
   }, [isOnline]);
 

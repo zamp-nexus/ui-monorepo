@@ -60,7 +60,9 @@ export interface CheckboxGroupOwnProps
 /**
  * CheckboxGroup component props
  */
-export type CheckboxGroupProps = OIDefaultProps & CheckboxGroupOwnProps;
+export type CheckboxGroupProps = OIDefaultProps &
+  CheckboxGroupOwnProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, keyof CheckboxGroupOwnProps | 'className'>;
 
 /**
  * CheckboxGroup.Item props
@@ -115,9 +117,10 @@ export interface CheckboxGroupContextValue {
 /**
  * CheckboxGroup component type with sub-components
  */
-export interface CheckboxGroupComponent {
-  (props: CheckboxGroupProps): React.ReactNode;
-  displayName?: string;
+export interface CheckboxGroupComponent
+  extends React.ForwardRefExoticComponent<
+    CheckboxGroupProps & React.RefAttributes<HTMLDivElement>
+  > {
   Item: React.FC<CheckboxGroupItemProps>;
   Label: React.FC<CheckboxGroupLabelProps>;
 }

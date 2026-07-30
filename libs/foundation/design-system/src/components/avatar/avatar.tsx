@@ -54,6 +54,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
     name,
     skeleton,
     context,
+    hasContext: hasContextProp,
     fallback,
     onError,
     ...rest
@@ -72,7 +73,7 @@ export const Avatar = React.forwardRef(function Avatar<T extends React.ElementTy
   const showImage = src && !imageError && !skeleton;
   const showFallback = !showImage && !skeleton;
   const initials = name ? getInitials(name) : '';
-  const hasContext = Boolean(context);
+  const hasContext = hasContextProp ?? Boolean(context);
 
   return (
     <Element

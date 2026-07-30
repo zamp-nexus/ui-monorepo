@@ -13,6 +13,7 @@ import type { ThemeContract } from '../tokens/themes/theme-contract';
 import type { HSLColor } from '../tokens/types';
 import {
   createColorToken,
+  DEFAULT_COLOR_STEPS,
   generateColorScale,
   hexToHsl,
   hslToHex,
@@ -49,9 +50,11 @@ describe('Color Utilities', () => {
     it('generates a color scale with correct steps', () => {
       const scale = generateColorScale('test', 228, 6);
 
-      expect(Object.keys(scale)).toContain('test-80');
-      expect(Object.keys(scale)).toContain('test-500');
-      expect(Object.keys(scale)).toContain('test-1000');
+      // The ramp is deliberately non-uniform — denser at the ends, sparser
+      // through the middle (…480, 560, 620…) — so there is no 500, which is
+      // what this assertion used to look for. Comparing against the exported
+      // step list is both stronger and immune to that mistake recurring.
+      expect(Object.keys(scale)).toEqual(DEFAULT_COLOR_STEPS.map((step) => `test-${step}`));
     });
 
     it('generates colors with correct HSL values', () => {

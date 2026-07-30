@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { MemberRef } from '@open-zentra/foundation-data-model';
+
 import type { Query } from '../types/query';
 import type { SchemaDefinition } from '../types/schema-definition';
 import { createSchemaRegistry } from './registry';
@@ -48,7 +50,7 @@ const VALID_SCHEMA: SchemaDefinition = {
           table: 'orders',
           sql: '"users"."id" = "orders"."user_id"',
           type: 'inner',
-          cardinality: 'one_to_many',
+          relationship: 'one-to-many',
         },
       },
     },
@@ -101,7 +103,7 @@ describe('validateSchema', () => {
               table: 'nonexistent',
               sql: '"users"."id" = "nonexistent"."user_id"',
               type: 'inner',
-              cardinality: 'one_to_many',
+              relationship: 'one-to-many',
             },
           },
         },
@@ -241,7 +243,9 @@ describe('validateQuery', () => {
 
   it('validates time dimension against schema', () => {
     const query: Query = {
-      timeDimensions: [{ dimension: 'orders.created_at', granularity: 'day' }],
+      timeDimensions: [
+        { dimension: MemberRef.create('orders', 'created_at'), granularity: 'day' },
+      ],
     };
     const result = validateQuery(query, registry);
     expect(result.valid).toBe(true);
@@ -249,7 +253,9 @@ describe('validateQuery', () => {
 
   it('fails when time dimension not in schema', () => {
     const query: Query = {
-      timeDimensions: [{ dimension: 'orders.nonexistent', granularity: 'day' }],
+      timeDimensions: [
+        { dimension: MemberRef.create('orders', 'nonexistent'), granularity: 'day' },
+      ],
     };
     const result = validateQuery(query, registry);
     expect(result.valid).toBe(false);

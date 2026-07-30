@@ -48,7 +48,9 @@ interface IdentityContext {
 interface MetricComparison {
   readonly metric: string;
   readonly previous_value: string;
+  readonly previous_label: string | null;
   readonly current_value: string;
+  readonly current_label: string | null;
   readonly unit: string;
 }
 
@@ -565,13 +567,23 @@ const MetricField = ({ metric }: { readonly metric: MetricComparison }) => {
           transition={{ duration: 0.32, delay: 0.08 }}
         />
       </div>
-      {/* No month names. These were hardcoded to June and July from the one
-          scenario that existed, and captioned an October-to-November finding
-          with the wrong months the first time a second scenario ran. The
-          period is already stated in the question above; a metric knows only
-          its own before and after. */}
+      {/* The periods come from the agent that chose the granularity. They were
+          once hardcoded to June and July from the one scenario that existed,
+          and captioned an October-to-November finding with the wrong months the
+          first time a second scenario ran. Where the agent named no period we
+          render none: a metric that cannot say what it compares says nothing
+          about it. */}
       <small>
-        {metric.previous_value} → {metric.current_value} {metric.unit}
+        {metric.previous_label && metric.current_label ? (
+          <>
+            {metric.previous_label} {metric.previous_value} → {metric.current_label}{' '}
+            {metric.current_value} {metric.unit}
+          </>
+        ) : (
+          <>
+            {metric.previous_value} → {metric.current_value} {metric.unit}
+          </>
+        )}
       </small>
     </div>
   );

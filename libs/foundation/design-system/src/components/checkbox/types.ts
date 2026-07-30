@@ -6,7 +6,6 @@
 import type {
   ComponentThemeConfigStructure,
   OIComponentOwnProps,
-  OIComponentRef,
   OIDefaultProps,
 } from '../../types';
 
@@ -59,13 +58,15 @@ export interface CheckboxOwnProps
  */
 export type CheckboxProps = OIDefaultProps &
   CheckboxOwnProps &
-  Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof CheckboxOwnProps | 'className'>;
+  // Base UI's Checkbox.Root renders a span carrying role="checkbox", not a
+  // button, so the element type here follows what actually reaches the DOM.
+  Omit<React.HTMLAttributes<HTMLSpanElement>, keyof CheckboxOwnProps | 'className'>;
 
 /**
  * Checkbox component type
  */
 export type CheckboxComponent = React.ForwardRefExoticComponent<
-  CheckboxProps & { ref?: OIComponentRef<'button'> }
+  CheckboxProps & { ref?: React.Ref<HTMLSpanElement> }
 >;
 
 /**

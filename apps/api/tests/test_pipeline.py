@@ -87,6 +87,60 @@ async def test_the_finding_and_the_convergence_signal_survive_it_too() -> None:
 
 
 @pytest.mark.asyncio
+async def test_the_periods_a_metric_covers_survive_the_adapter() -> None:
+    """Without these the UI has no period to render, and the one it invented
+    captioned an October-November finding as June-July."""
+    result = await run(
+        metrics=[
+            {
+                "metric": "refund_amount",
+                "previous_value": "20.00",
+                "previous_label": "June 2026",
+                "current_value": "260.00",
+                "current_label": "July 2026",
+                "unit": "USD",
+            }
+        ]
+    )
+
+    assert result.finding.metrics[0].previous_label == "June 2026"
+    assert result.finding.metrics[0].current_label == "July 2026"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("said_nothing", [None, "", "   "])
+async def test_a_metric_that_names_no_period_reports_none(
+    said_nothing: str | None,
+) -> None:
+    """A model may legitimately have no period to name. Stringifying its silence
+    would caption the metric with an empty one, which is the bug again."""
+    result = await run(
+        metrics=[
+            {
+                "metric": "refund_rate",
+                "previous_value": "25",
+                "previous_label": said_nothing,
+                "current_value": "75",
+                "current_label": said_nothing,
+                "unit": "percent",
+            }
+        ]
+    )
+
+    assert result.finding.metrics[0].previous_label is None
+    assert result.finding.metrics[0].current_label is None
+
+
+@pytest.mark.asyncio
+async def test_a_recording_made_before_labels_existed_still_runs() -> None:
+    """Cassettes predate the field. Requiring it would turn every old recording
+    into a crash."""
+    result = await run()
+
+    assert result.finding.metrics[0].previous_label is None
+
+
+@pytest.mark.asyncio
 async def test_unknown_models_pass_through_as_unknown() -> None:
     """The application treats None as no claim of independence, so the adapter
     must not invent a value here."""

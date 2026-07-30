@@ -64,7 +64,11 @@ export interface MenuTriggerProps extends OIDefaultProps {
 /**
  * Menu Content props
  */
-export interface MenuContentProps extends OIDefaultProps {
+// Menu's own root renders no DOM node, so Content is the component's real root
+// element and carries the root-element contract.
+export interface MenuContentProps
+  extends OIDefaultProps,
+    Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> {
   /** Side offset */
   sideOffset?: number;
   /** Align offset */
@@ -199,7 +203,9 @@ export interface MenuComponent {
   (props: MenuProps): React.ReactNode;
   displayName?: string;
   Trigger: React.FC<MenuTriggerProps>;
-  Content: React.FC<MenuContentProps>;
+  Content: React.ForwardRefExoticComponent<
+    MenuContentProps & React.RefAttributes<HTMLDivElement>
+  >;
   Item: React.FC<MenuItemProps>;
   CheckboxItem: React.FC<MenuCheckboxItemProps>;
   RadioGroup: React.FC<MenuRadioGroupProps>;

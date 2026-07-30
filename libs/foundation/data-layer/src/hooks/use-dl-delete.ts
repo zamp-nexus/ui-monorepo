@@ -151,6 +151,10 @@ export const useDLDelete = <
     ],
   );
 
+  // The factory stores the ref object and reads `.current` inside the callback
+  // it returns, which React Query invokes after the mutation settles. Nothing
+  // is read during render, so the value cannot be stale in the rendered output.
+  // eslint-disable-next-line react-hooks/refs -- ref object passed, never read during render
   const handleSuccess = createOnSuccessCallback({
     internals,
     invalidateKeys,
@@ -183,6 +187,7 @@ export const useDLDelete = <
     }
   };
 
+  // eslint-disable-next-line react-hooks/refs -- ref objects passed, read only inside the error callback
   const handleError = createOnErrorCallback<TData, TVariables, WithId, TData>({
     internals,
     listContextRef,

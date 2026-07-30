@@ -13,5 +13,5 @@
   "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "analyst_sample_size": 8,
   "evaluator_sample_size": 8,
-  "note": "Gemini analysing, Nemotron checking \u2014 different labs, so FULL independence and no ceiling applies. Recorded after both planning prompts began asking for a count measure, and the effect is the point: Gemini sees eight orders in its own result and reports 0.50 unaided. The run that started all of this reported 0.95 on this data and auto-published. The ceiling is still there; it no longer has to catch this one."
+  "note": "Gemini analysing, Nemotron checking — different labs, so FULL independence and no ceiling applies. Both planning prompts ask for a count measure, and the effect is the point: Gemini sees eight orders in its own result and reports 0.50 unaided. The run that started all of this reported 0.95 on this data and auto-published. The ceiling is still there; it no longer has to catch this one. Re-recorded for #5, and the metric now names its own periods — \"June 2026 20.00 → July 2026 260.00 EUR\" — rather than leaving the UI to guess them."
 }

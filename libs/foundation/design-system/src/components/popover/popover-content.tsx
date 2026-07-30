@@ -25,28 +25,35 @@ const ArrowSvg = (props: React.ComponentProps<'svg'>) => (
  *
  * Container for the popover content.
  */
-export const PopoverContent: React.FC<PopoverContentProps> = ({ children, className, ozid }) => {
-  const theme = useTheme('popover', popoverDefaultTheme);
-  const { maxWidth, arrow, side, align, sideOffset } = usePopoverContext();
+export const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
+  function PopoverContent({ children, className, ozid, ...rest }, ref) {
+    const theme = useTheme('popover', popoverDefaultTheme);
+    const { maxWidth, arrow, side, align, sideOffset } = usePopoverContext();
 
-  return (
-    <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Positioner side={side} align={align} sideOffset={sideOffset}>
-        <PopoverPrimitive.Popup
-          className={theme.popup?.({ className, maxWidth }) ?? className}
-          data-ozid={ozid}
-          data-slot="content"
-        >
-          {arrow && (
-            <PopoverPrimitive.Arrow className={theme.arrow?.({}) ?? ''}>
-              <ArrowSvg />
-            </PopoverPrimitive.Arrow>
-          )}
-          {children}
-        </PopoverPrimitive.Popup>
-      </PopoverPrimitive.Positioner>
-    </PopoverPrimitive.Portal>
-  );
-};
+    return (
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner side={side} align={align} sideOffset={sideOffset}>
+          {/* rest first: caller-supplied lang, aria and data attributes reach
+              the root, but never at the cost of props managed here. */}
+          <PopoverPrimitive.Popup
+            {...rest}
+            ref={ref}
+            // arrow is a declared modifier, so the theme has to see it.
+            className={theme.popup?.({ className, maxWidth, arrow }) ?? className}
+            data-ozid={ozid}
+            data-slot="content"
+          >
+            {arrow && (
+              <PopoverPrimitive.Arrow className={theme.arrow?.({}) ?? ''}>
+                <ArrowSvg />
+              </PopoverPrimitive.Arrow>
+            )}
+            {children}
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    );
+  },
+);
 
 PopoverContent.displayName = 'Popover.Content';

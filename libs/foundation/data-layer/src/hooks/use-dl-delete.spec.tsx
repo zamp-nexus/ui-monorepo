@@ -75,14 +75,17 @@ describe('useDLDelete', () => {
     const { result } = renderHook(
       () =>
         useDLDelete({
+          // Default type parameters: ApiMutationDescriptor is contravariant in
+          // TArgs, so a narrowed descriptor does not satisfy the hook's
+          // `TMutation extends ApiMutationDescriptor` constraint.
           mutation: {
             method: 'DELETE',
-            path: ({ id }: { id: string }) => `/events/${id}`,
-          } as ApiMutationDescriptor<{ id: string }>,
+            path: (args) => `/events/${(args as { id: string }).id}`,
+          } as ApiMutationDescriptor,
           table: 'events',
           listQueryKey: ['events'],
           itemQueryKey: (id) => ['events', id],
-          getEntityId: (variables: { id: string }) => variables.id,
+          getEntityId: (variables) => (variables as { id: string }).id,
         }),
       { wrapper: createWrapper(internals) },
     );

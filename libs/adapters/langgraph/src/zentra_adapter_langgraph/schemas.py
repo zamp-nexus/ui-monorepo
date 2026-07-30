@@ -58,11 +58,16 @@ SEMANTIC_QUERY_SCHEMA = _obj(
     }
 )
 
+# The labels are nullable rather than absent: _obj requires every property, which
+# strict structured output demands, so nullability is how the schema says "you
+# must answer, and 'this is not a period comparison' is an answer".
 METRIC_COMPARISON_SCHEMA = _obj(
     {
         "metric": {"type": "string"},
         "previous_value": {"type": "string"},
+        "previous_label": _nullable({"type": "string"}),
         "current_value": {"type": "string"},
+        "current_label": _nullable({"type": "string"}),
         "unit": {"type": "string"},
     }
 )
