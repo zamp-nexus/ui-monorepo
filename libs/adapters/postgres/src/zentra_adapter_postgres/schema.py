@@ -18,8 +18,19 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
+from zentra_domain_agent_execution import CANONICAL_ROLES
 
 metadata = MetaData()
+
+
+def _role_check() -> str:
+    """The canonical write vocabulary, as a CHECK body.
+
+    Sorted so the emitted DDL is stable — an unordered frozenset would make
+    every schema diff look like a change.
+    """
+    values = ", ".join(f"'{role.value}'" for role in sorted(CANONICAL_ROLES))
+    return f"role IN ({values})"
 
 tenants = Table(
     "tenants",
@@ -395,13 +406,12 @@ agent_registry = Table(
     Column("enabled", Boolean, nullable=False, server_default=text("false")),
     Column("eval_status", String(16), nullable=False, server_default="pending"),
     Column("eval_suite_ref", Text, nullable=False),
-    CheckConstraint(
-        "role IN ('orchestrator', 'data_intake', 'data_quality', 'data_preparation', "
-        "'semantic_modeling', 'sql_analyst', 'evaluator', 'statistician', "
-        "'insight_root_cause', 'demand_planner', 'forecaster', 'visualization', "
-        "'executive_report_writer', 'knowledge')",
-        name="ck_agent_registry_role",
-    ),
+    # Derived from the enum rather than restated, because a hand-kept copy of
+    # this list is exactly the kind of drift nothing would catch. Legacy roles
+    # are excluded: this is the canonical *write* vocabulary, and `0005`
+    # re-adds the constraint NOT VALID so a database already holding a legacy
+    # row keeps it readable while refusing to accept another one.
+    CheckConstraint(_role_check(), name="ck_agent_registry_role"),
     CheckConstraint(
         "eval_status IN ('pending', 'passing', 'failing')",
         name="ck_agent_registry_eval_status",

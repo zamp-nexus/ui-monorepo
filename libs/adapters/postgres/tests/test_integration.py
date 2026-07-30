@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import os
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -13,6 +15,7 @@ from zentra_adapter_postgres import resolve_identity_context
 from zentra_adapter_postgres.database import set_tenant_context
 from zentra_adapter_postgres.schema import (
     agent_executions,
+    agent_registry,
     identity_subjects,
     investigations,
     tenant_identity_bindings,
@@ -171,3 +174,123 @@ async def test_rls_identity_and_constraints() -> None:
                 )
             )
     await owner.dispose()
+
+
+LEGACY_AGENT_ID = "insight_legacy_fixture"
+CANONICAL_AGENT_ID = "insight_canonical_fixture"
+
+
+def _load_migration_0005():
+    """Loaded by path rather than imported: revision filenames start with a
+    digit, so they are not importable module names. Reusing the migration's own
+    role list is the point — a test that restated it would keep passing after
+    the migration and `schema.py` had drifted apart.
+    """
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "migrations"
+        / "versions"
+        / "0005_canonical_insight_role.py"
+    )
+    spec = importlib.util.spec_from_file_location("migration_0005", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.asyncio
+async def test_a_legacy_role_row_survives_the_rename_but_cannot_be_written() -> None:
+    """ADR 0011's expand step, proved against the database rather than the
+    enum. A Phase 1 row must stay readable — Replay renders it — while the same
+    value must be unwritable from here on. `NOT VALID` is the only thing that
+    gives both, so the migration is re-applied over a seeded legacy row rather
+    than merely asserted against an empty table.
+    """
+    assert OWNER_URL is not None
+    migration = _load_migration_0005()
+    role_check = migration._role_check(migration.CANONICAL_ROLES)
+    owner = create_async_engine(OWNER_URL)
+
+    # Reconstruct a database that predates the rename, and seed the row a
+    # Phase 1 deployment would be holding.
+    async with owner.begin() as connection:
+        await connection.exec_driver_sql(
+            "ALTER TABLE agent_registry "
+            "DROP CONSTRAINT IF EXISTS ck_agent_registry_role"
+        )
+        await connection.execute(
+            postgres_insert(agent_registry)
+            .values(
+                agent_id=LEGACY_AGENT_ID,
+                role="insight_root_cause",
+                version="1",
+                eval_suite_ref="evals/insight",
+            )
+            .on_conflict_do_nothing()
+        )
+
+    # Re-apply the tightening exactly as 0005 does.
+    async with owner.begin() as connection:
+        await connection.exec_driver_sql(
+            "ALTER TABLE agent_registry ADD CONSTRAINT ck_agent_registry_role "
+            f"CHECK ({role_check}) NOT VALID"
+        )
+
+    try:
+        async with owner.begin() as connection:
+            survived = await connection.scalar(
+                select(agent_registry.c.role).where(
+                    agent_registry.c.agent_id == LEGACY_AGENT_ID
+                )
+            )
+        assert survived == "insight_root_cause"
+
+        with pytest.raises(IntegrityError, match="ck_agent_registry_role"):
+            async with owner.begin() as connection:
+                await connection.execute(
+                    insert(agent_registry).values(
+                        agent_id="insight_legacy_probe",
+                        role="insight_root_cause",
+                        version="1",
+                        eval_suite_ref="evals/insight",
+                    )
+                )
+
+        async with owner.begin() as connection:
+            await connection.execute(
+                insert(agent_registry).values(
+                    agent_id=CANONICAL_AGENT_ID,
+                    role="insight",
+                    version="1",
+                    eval_suite_ref="evals/insight",
+                )
+            )
+        async with owner.begin() as connection:
+            canonical = await connection.scalar(
+                select(agent_registry.c.role).where(
+                    agent_registry.c.agent_id == CANONICAL_AGENT_ID
+                )
+            )
+        assert canonical == "insight"
+    finally:
+        # Restore the constraint as well as the rows. This test drops a real
+        # constraint on a shared database; leaving it dropped after a failure
+        # would silently unguard every test that runs afterwards.
+        async with owner.begin() as connection:
+            await connection.execute(
+                agent_registry.delete().where(
+                    agent_registry.c.agent_id.in_(
+                        (LEGACY_AGENT_ID, CANONICAL_AGENT_ID)
+                    )
+                )
+            )
+            await connection.exec_driver_sql(
+                "ALTER TABLE agent_registry "
+                "DROP CONSTRAINT IF EXISTS ck_agent_registry_role"
+            )
+            await connection.exec_driver_sql(
+                "ALTER TABLE agent_registry ADD CONSTRAINT ck_agent_registry_role "
+                f"CHECK ({role_check}) NOT VALID"
+            )
+        await owner.dispose()

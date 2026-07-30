@@ -7,14 +7,24 @@ live run found it. These tests cost nothing and close that gap.
 
 from __future__ import annotations
 
-from uuid import UUID
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 import pytest
 from zentra_adapter_langgraph import PipelineOutcome
 from zentra_adapter_model_providers import ModelTier
-from zentra_domain_agent_execution import ConfidenceOutcome
+from zentra_domain_agent_execution import (
+    AgentExecutionRecord,
+    AgentRole,
+    ConfidenceOutcome,
+    ExecutionStatus,
+    LegacyRoleWriteError,
+)
 
-from zentra_api.pipeline import LangGraphInvestigationPipeline
+from zentra_api.pipeline import (
+    LangGraphInvestigationPipeline,
+    PostgresExecutionRecorder,
+)
 
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -148,3 +158,46 @@ async def test_unknown_models_pass_through_as_unknown() -> None:
 
     assert result.analyst_model is None
     assert result.evaluator_model is None
+
+
+def execution(role: AgentRole) -> AgentExecutionRecord:
+    moment = datetime(2026, 7, 30, 9, 0, tzinfo=UTC)
+    return AgentExecutionRecord(
+        execution_id=uuid4(),
+        investigation_id=INVESTIGATION_ID,
+        tenant_id=TENANT_ID,
+        agent_id="insight_v1",
+        role=role,
+        step=3,
+        input={"question": "Why did EU refunds increase?"},
+        status=ExecutionStatus.SUCCESS,
+        latency_ms=1200,
+        started_at=moment,
+        completed_at=moment,
+    )
+
+
+class ExplodingUnitOfWorkFactory:
+    """Any use at all is a failure: the guard must refuse before the
+    transaction opens, not after a partial write."""
+
+    def __call__(self, *_: object) -> object:
+        raise AssertionError("A legacy role reached the transaction")
+
+
+@pytest.mark.asyncio
+async def test_the_recorder_refuses_to_write_the_legacy_insight_role() -> None:
+    """The role travels into the audit ledger's metadata, and Audit Entries are
+    immutable — a legacy value written there could never be corrected."""
+    recorder = PostgresExecutionRecorder(ExplodingUnitOfWorkFactory())  # type: ignore[arg-type]
+
+    with pytest.raises(LegacyRoleWriteError, match="insight_root_cause"):
+        await recorder.record(execution(AgentRole.INSIGHT_ROOT_CAUSE))
+
+
+def test_the_audit_event_carries_the_canonical_role() -> None:
+    from zentra_api.pipeline import _audit_event
+
+    event = _audit_event(execution(AgentRole.INSIGHT))
+
+    assert event.metadata["role"] == "insight"

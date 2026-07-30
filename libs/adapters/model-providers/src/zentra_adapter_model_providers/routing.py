@@ -95,11 +95,25 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
             _OPENROUTER_FREE,
             _OPUS,
         ),
+        # Insight writes prose over aggregates the Analyst and Evaluator have
+        # already validated, so it carries the same workload shape the
+        # Orchestrator's synthesis did and inherits its chain. It is not an
+        # independence check, so it is under no obligation to lead on a
+        # different family from either upstream Agent.
+        AgentRole.INSIGHT: (
+            _GEMINI_FLASH,
+            _NVIDIA_NEMOTRON,
+            _GROQ_OSS,
+            _CEREBRAS_GLM,
+            _OPENROUTER_FREE,
+            _SONNET,
+        ),
     },
     ModelTier.PREMIUM: {
         AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.SQL_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.EVALUATOR: (_OPUS, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        AgentRole.INSIGHT: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
     },
 }
 

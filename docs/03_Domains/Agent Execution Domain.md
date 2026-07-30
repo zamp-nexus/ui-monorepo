@@ -18,6 +18,7 @@ repo_path: libs/domain/agent-execution
 code_refs:
   - libs/domain/agent-execution/CONTEXT.md
   - libs/domain/agent-execution/src/zentra_domain_agent_execution/contracts.py
+  - libs/adapters/postgres/migrations/versions/0005_canonical_insight_role.py
 ---
 
 # Agent Execution Domain
@@ -67,6 +68,30 @@ upstream evidence, and never guarantees a Root Cause Claim. The Orchestrator
 continues to delegate and arbitrate but stops synthesizing Findings. The
 Statistician remains deferred. See
 [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
+
+### Write vocabulary and read compatibility
+
+The canonical role value is `insight`. Phase 1 shipped `insight_root_cause`
+before any implementation existed, and the name promised causality the evidence
+cannot establish, so the two now sit on opposite sides of a read/write split:
+
+- **Written** — three seams refuse the legacy value outright.
+  `ck_agent_registry_role` rejects it on insert into `agent_registry`;
+  `reject_legacy_role` rejects it in `PostgresExecutionRecorder.record`, before
+  the transaction opens, because the role reaches the immutable Audit Entry
+  from there; and `chain_for` has no provider chain under it, so nothing can be
+  routed to run as it.
+- **Not advertised** — `PostgresAgentRegistry.enabled_agents` filters legacy
+  rows out. A surviving row is readable but must never be planned against: the
+  Orchestrator persists the roles it is offered into the task ledger, which is
+  a write the recorder's guard never sees.
+- **Read** — `insight_root_cause` stays a deserializable `AgentRole`, so
+  Investigations that recorded it remain readable and displayable in Replay.
+  Migration `0005_canonical_insight_role` re-adds the constraint `NOT VALID`
+  precisely so an existing legacy row survives the tightening.
+
+This is the expand step. Removing the legacy read path is a separate decision
+and is not part of Phase 2 completion.
 
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).

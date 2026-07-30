@@ -19,12 +19,41 @@ class AgentRole(StrEnum):
     SQL_ANALYST = "sql_analyst"
     EVALUATOR = "evaluator"
     STATISTICIAN = "statistician"
+    INSIGHT = "insight"
     INSIGHT_ROOT_CAUSE = "insight_root_cause"
     DEMAND_PLANNER = "demand_planner"
     FORECASTER = "forecaster"
     VISUALIZATION = "visualization"
     EXECUTIVE_REPORT_WRITER = "executive_report_writer"
     KNOWLEDGE = "knowledge"
+
+
+# Read-compatibility only. Phase 1 wrote `insight_root_cause` before any Insight
+# implementation existed, and ADR 0011 forbids naming the Agent for a causal
+# promise its evidence cannot keep. Dropping the value would make those
+# investigations unreadable rather than merely mislabelled, so it stays
+# deserialisable and is refused at the write seams instead.
+LEGACY_ROLES: frozenset[AgentRole] = frozenset({AgentRole.INSIGHT_ROOT_CAUSE})
+
+
+CANONICAL_ROLES: frozenset[AgentRole] = frozenset(AgentRole) - LEGACY_ROLES
+
+
+class LegacyRoleWriteError(ValueError):
+    """A legacy compatibility role reached a write path."""
+
+
+def reject_legacy_role(role: AgentRole) -> None:
+    """Refuses a role that may only ever be read.
+
+    This is the expand step of an expand-contract migration: the accepted write
+    vocabulary narrows now, the legacy read path is removed separately.
+    """
+    if role in LEGACY_ROLES:
+        raise LegacyRoleWriteError(
+            f"{role.value!r} is a read-compatibility role and cannot be "
+            f"written. Use {AgentRole.INSIGHT.value!r}."
+        )
 
 
 class ToolAccess(StrEnum):

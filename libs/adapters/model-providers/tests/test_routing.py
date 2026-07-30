@@ -11,6 +11,7 @@ from zentra_adapter_model_providers import (
     ModelTier,
     Provider,
     UnknownModelError,
+    chain_for,
     model_family,
     token_cost_usd,
 )
@@ -50,6 +51,20 @@ def test_premium_evaluator_starts_on_a_stronger_model_than_the_analyst() -> None
 
     assert analyst.model == "claude-sonnet-5"
     assert evaluator.model == "claude-opus-5"
+
+
+def test_the_canonical_insight_role_routes_on_both_tiers() -> None:
+    """A role the registry can hold but the router cannot resolve is a
+    KeyError waiting for the first investigation that reaches it."""
+    for tier in ModelTier:
+        assert chain_for(tier, AgentRole.INSIGHT)
+
+
+def test_the_legacy_insight_role_has_no_chain() -> None:
+    """Routing is a write path. Nothing new may run under the legacy value."""
+    for tier in ModelTier:
+        with pytest.raises(KeyError):
+            chain_for(tier, AgentRole.INSIGHT_ROOT_CAUSE)
 
 
 def test_every_chain_ends_on_anthropic() -> None:

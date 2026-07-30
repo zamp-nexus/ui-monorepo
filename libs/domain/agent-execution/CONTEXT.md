@@ -13,7 +13,7 @@ One bounded invocation of an Agent for one Investigation and Tenant.
 _Avoid_: Agent run, task process
 
 **Insight Agent**:
-A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish.
+A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish. Its canonical role value is `insight`; `insight_root_cause` is a read-only compatibility value that Phase 1 wrote and nothing writes again.
 _Avoid_: Root-Cause Agent, Finding writer, synthesis step
 
 **Outcome Signal**:
