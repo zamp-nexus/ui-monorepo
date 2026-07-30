@@ -204,7 +204,14 @@ def _assemble(
     return service, audit
 
 
-def observed(detail, rows, *, tier: ModelTier, without: Sequence[str]) -> dict:
+def observed(
+    detail,
+    rows,
+    *,
+    scenario: str,
+    tier: ModelTier,
+    without: Sequence[str],
+) -> dict:
     """The facts a replay must reproduce.
 
     Deliberately narrow: what was decided, why, and by which models. Latency,
@@ -218,6 +225,7 @@ def observed(detail, rows, *, tier: ModelTier, without: Sequence[str]) -> dict:
     }
     outcome = detail.outcome.model_dump() if detail.outcome is not None else {}
     return {
+        "scenario": scenario,
         "tier": tier.value,
         "without": sorted(without),
         "status": detail.status.value,
@@ -249,6 +257,11 @@ async def main() -> int:
         help="Defaults to free so premium spend is always deliberate.",
     )
     parser.add_argument(
+        "--scenario",
+        default="eu_refund_spike",
+        help="Which governed question to run. Recorded into the cassette.",
+    )
+    parser.add_argument(
         "--without",
         action="append",
         default=[],
@@ -268,6 +281,7 @@ async def main() -> int:
         expected = json.loads((CASSETTE_ROOT / args.replay / EXPECT_FILE).read_text())
         args.tier = expected["tier"]
         args.without = expected["without"]
+        args.scenario = expected["scenario"]
 
     tier = ModelTier(args.tier)
     tenant_id, user_id = await seed_tenant(args.tier)
@@ -290,7 +304,7 @@ async def main() -> int:
     )
 
     started = datetime.now(UTC)
-    detail = await service.start(actor, scenario_key="eu_refund_spike")
+    detail = await service.start(actor, scenario_key=args.scenario)
     print(f"started  {detail.investigation_id}  status={detail.status.value}")
     print("running the agents...\n")
 
@@ -343,7 +357,7 @@ async def main() -> int:
         for rung in entry.fallbacks:
             print(f"      fell through: {rung}")
 
-    actual = observed(detail, rows, tier=tier, without=args.without)
+    actual = observed(detail, rows, scenario=args.scenario, tier=tier, without=args.without)
     status = 0
 
     if args.record is not None:

@@ -1,0 +1,11 @@
+{
+  "requested_model": "sql_analyst",
+  "text": "{\"result_summary\":\"The partner sales channel accounted for the increase in North America revenue from October to November 2026, with revenue rising while web sales channel revenue remained constant.\",\"metrics\":[{\"metric\":\"Partner Channel Net Revenue\",\"previous_value\":\"3000.00\",\"current_value\":\"12000.00\",\"unit\":\"USD\"},{\"metric\":\"Web Channel Net Revenue\",\"previous_value\":\"10000.00\",\"current_value\":\"10000.00\",\"unit\":\"USD\"}],\"sample_size\":300,\"confidence\":0.95}",
+  "usage": {
+    "input_tokens": 734,
+    "output_tokens": 130,
+    "cost_usd": "0.00",
+    "model": "gemini/gemini-3.6-flash"
+  },
+  "fallbacks": []
+}

@@ -1,4 +1,5 @@
 {
+  "scenario": "eu_refund_spike",
   "tier": "premium",
   "without": [],
   "status": "awaiting_approval",
@@ -9,5 +10,5 @@
   "evaluator_model": "claude-opus-5",
   "analyst_sample_size": 8,
   "evaluator_sample_size": 8,
-  "note": "Sonnet checked by Opus: PARTIAL, ceiling 0.85. Neither ceiling bit, because Claude reported 0.55 unaided \u2014 the calibration_method is its own. Worth keeping precisely because nothing was capped: it proves the bounds are a ceiling on overconfidence, not a blanket discount, and that premium is no longer gated for lack of independence."
+  "note": "Sonnet checked by Opus on the eight-order refund question. Neither ceiling bit: Claude reported 0.55 unaided, below both bounds, so calibration_method is its own. Kept precisely because nothing was capped \u2014 evidence that the bounds cap overconfidence rather than discounting every answer."
 }

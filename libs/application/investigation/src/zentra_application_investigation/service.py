@@ -30,8 +30,41 @@ from zentra_domain_investigation import (
     directive_for_outcome,
 )
 
-SCENARIO_KEY = "eu_refund_spike"
-CANONICAL_QUESTION = "Why did EU refunds increase from June to July 2026?"
+
+@dataclass(frozen=True, slots=True)
+class Scenario:
+    """One governed question the product will answer, and how to describe it.
+
+    `facts` are neutral descriptors for the launcher — region, window, scale.
+    Never a predicted outcome: a demo that promises "this one publishes" is
+    asserting the answer before the evidence, which is the habit this whole
+    system exists to break.
+    """
+
+    key: str
+    question: str
+    facts: tuple[str, ...]
+
+
+# The two scenarios differ in what the evidence can actually support, which is
+# the point. The refund question asks *why*, and aggregate data can only show
+# association — eight orders of it. The channel question asks *which*, which is
+# an accounting claim the data settles outright over three hundred orders.
+SCENARIOS: dict[str, Scenario] = {
+    "eu_refund_spike": Scenario(
+        key="eu_refund_spike",
+        question="Why did EU refunds increase from June to July 2026?",
+        facts=("EU commerce", "June → July 2026", "8 orders"),
+    ),
+    "na_channel_growth": Scenario(
+        key="na_channel_growth",
+        question=(
+            "Which sales channel accounted for the increase in North America "
+            "revenue from October to November 2026?"
+        ),
+        facts=("NA commerce", "October → November 2026", "300 orders"),
+    ),
+}
 
 
 class Role(StrEnum):
@@ -276,7 +309,8 @@ class InvestigationService:
         """Register the investigation and return. The agents run afterwards, so
         the caller is not held open for the length of the pipeline."""
         self._require_create_role(actor)
-        if scenario_key != SCENARIO_KEY:
+        scenario = SCENARIOS.get(scenario_key)
+        if scenario is None:
             raise UnsupportedScenarioError(
                 f"Unsupported investigation scenario: {scenario_key}"
             )
@@ -285,7 +319,7 @@ class InvestigationService:
         investigation = Investigation.create(
             investigation_id=self._new_id(),
             tenant_id=actor.tenant_id,
-            question=CANONICAL_QUESTION,
+            question=scenario.question,
             scenario_key=scenario_key,
             now=now,
         )

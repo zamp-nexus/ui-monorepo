@@ -1,0 +1,17 @@
+{
+  "scenario": "na_channel_growth",
+  "tier": "free",
+  "without": [
+    "anthropic",
+    "openai"
+  ],
+  "status": "awaiting_approval",
+  "approval_reason": "contradiction_unresolved",
+  "score": 0.95,
+  "calibration_method": "evaluator_independent_recheck",
+  "analyst_model": "gemini/gemini-3.6-flash",
+  "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "analyst_sample_size": 300,
+  "evaluator_sample_size": 104,
+  "note": "The free tier gets the right answer and cannot publish it. Gemini and Nemotron both agree the partner channel accounts for the entire $9,000, at 0.95 with FULL independence and nothing capped \u2014 but they disagree about how much data they read: 300 records against 104. Their queries are identical in scope, so one of them miscounted its own result, and the system refuses to auto-publish on a disagreement about the evidence itself. Compare na_growth_premium, where Sonnet and Opus both counted 300 and it published. The gate is discriminating by model quality on identical data."
+}

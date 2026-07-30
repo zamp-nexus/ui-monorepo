@@ -439,3 +439,24 @@ async def test_a_well_evidenced_independent_result_still_publishes() -> None:
     assert detail.status == "completed"
     assert isinstance(detail.outcome, ConfidenceOutcome)
     assert detail.outcome.score == 0.92
+
+
+@pytest.mark.asyncio
+async def test_a_second_scenario_carries_its_own_question() -> None:
+    """The question is looked up from the registry, not a module constant, so
+    each scenario reaches the agents with the wording it was written for."""
+    application = service(UnitOfWork())
+
+    detail = await application.start(actor(), scenario_key="na_channel_growth")
+
+    assert detail.scenario_key == "na_channel_growth"
+    assert "sales channel" in detail.question
+    assert "North America" in detail.question
+
+
+@pytest.mark.asyncio
+async def test_an_unregistered_scenario_is_still_refused() -> None:
+    application = service(UnitOfWork())
+
+    with pytest.raises(UnsupportedScenarioError):
+        await application.start(actor(), scenario_key="made_up_scenario")

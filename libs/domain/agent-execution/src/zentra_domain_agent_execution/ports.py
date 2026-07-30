@@ -33,6 +33,12 @@ class SemanticDimension(BaseModel):
 
     name: str = Field(min_length=1)
     type: str = Field(min_length=1)
+    # The values this dimension actually holds, where there are few enough to
+    # list. A member name alone tells an agent that `Commerce.region` exists
+    # but not that it is spelled "NA" — and a filter on a value that does not
+    # exist returns zero rows rather than an error. Empty means unconstrained,
+    # not empty.
+    values: tuple[str, ...] = ()
 
 
 class SemanticCatalog(BaseModel):

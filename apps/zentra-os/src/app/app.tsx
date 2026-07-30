@@ -54,7 +54,7 @@ interface MetricComparison {
 interface Investigation {
   readonly investigation_id: string;
   readonly canonical_question: string;
-  readonly scenario_key: 'eu_refund_spike';
+  readonly scenario_key: string;
   readonly status:
     | 'pending'
     | 'running'
@@ -118,8 +118,11 @@ const apiUrl =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ??
   'http://localhost:8000';
 
-const scenarioQuestion =
-  'Why did EU refunds increase from June to July 2026?';
+interface Scenario {
+  readonly key: string;
+  readonly question: string;
+  readonly facts: readonly string[];
+}
 
 const requestJson = async <T,>(
   url: string,
@@ -261,11 +264,19 @@ const Launcher = ({
   readonly identity: IdentityContext;
 }) => {
   const navigate = useNavigate();
+  // The catalogue comes from the API rather than living here. The question text
+  // used to be written out in this file and again in the service; a second
+  // scenario would have made that three copies to keep in step.
+  const scenarios = useQuery({
+    queryKey: ['scenarios'],
+    queryFn: () => requestJson<Scenario[]>('/v1/scenarios', token),
+    enabled: Boolean(token),
+  });
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (scenarioKey: string) =>
       requestJson<Investigation>('/v1/investigations', token, {
         method: 'POST',
-        body: JSON.stringify({ scenario_key: 'eu_refund_spike' }),
+        body: JSON.stringify({ scenario_key: scenarioKey }),
       }),
     onSuccess: (investigation) =>
       navigate(`/investigations/${investigation.investigation_id}`, {
@@ -273,36 +284,60 @@ const Launcher = ({
       }),
   });
 
+  const isViewer = identity.role === 'viewer';
+
   return (
     <section className={styles.launcher}>
       <div className={styles.launchIndex} aria-hidden="true">
-        01 / Evidence inquiry
+        Evidence inquiries
       </div>
       <div className={styles.launchContent}>
-        <p className={styles.eyebrow}>Governed synthetic scenario</p>
-        <motion.h1 layoutId="investigation-question">
-          {scenarioQuestion}
-        </motion.h1>
-        <p className={styles.launchBrief}>
-          Trace a refund anomaly through Cube-governed metrics, an independent
-          recheck, and a Human Approval gate that opens on low confidence.
-        </p>
-        <div className={styles.scenarioFacts} aria-label="Scenario constraints">
-          <span>EU commerce</span>
-          <span>June → July 2026</span>
-          <span>Governed metrics only</span>
-        </div>
-        <Button
-          className={styles.launchButton}
-          size="lg"
-          loading={mutation.isPending}
-          disabled={identity.role === 'viewer'}
-          onClick={() => mutation.mutate()}
-        >
-          {identity.role === 'viewer'
-            ? 'Viewer access · read only'
-            : 'Begin evidence trace'}
-        </Button>
+        <p className={styles.eyebrow}>Governed synthetic scenarios</p>
+        <ul className={styles.scenarioList}>
+          {(scenarios.data ?? []).map((scenario, index) => (
+            <li className={styles.scenarioCard} key={scenario.key}>
+              <span className={styles.launchIndex} aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <motion.h1
+                // Only the card being launched carries the shared-element id:
+                // two elements with one layoutId at the same time cannot animate.
+                layoutId={
+                  mutation.variables === scenario.key
+                    ? 'investigation-question'
+                    : undefined
+                }
+              >
+                {scenario.question}
+              </motion.h1>
+              <div
+                className={styles.scenarioFacts}
+                aria-label="Scenario constraints"
+              >
+                {scenario.facts.map((fact) => (
+                  <span key={fact}>{fact}</span>
+                ))}
+                <span>Governed metrics only</span>
+              </div>
+              <Button
+                className={styles.launchButton}
+                size="lg"
+                loading={
+                  mutation.isPending && mutation.variables === scenario.key
+                }
+                disabled={isViewer || mutation.isPending}
+                onClick={() => mutation.mutate(scenario.key)}
+              >
+                {isViewer ? 'Viewer access · read only' : 'Begin evidence trace'}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        {scenarios.error ? (
+          <p className={styles.error} role="alert">
+            {scenarios.error.message}
+          </p>
+        ) : null}
         {mutation.error ? (
           <p className={styles.error} role="alert">
             {mutation.error.message}

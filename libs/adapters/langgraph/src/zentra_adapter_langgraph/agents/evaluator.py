@@ -110,7 +110,12 @@ class EvaluatorAgent:
             response_schema=RECHECK_SCHEMA,
         )
         recheck = parse_json_object(recheck_response.text)
-        usage = plan_response.usage + recheck_response.usage
+        # The recheck is the judgement. If the chain served it from a
+        # different provider than the planning call, that provider is the
+        # one that actually checked the analyst.
+        usage = (plan_response.usage + recheck_response.usage).model_copy(
+            update={"model": recheck_response.usage.model}
+        )
 
         discrepancy = abs(float(recheck["discrepancy_pct"]))
         passed = (

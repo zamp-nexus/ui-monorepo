@@ -289,3 +289,45 @@ def test_approval_request_validates_reason_before_service(monkeypatch) -> None:
 
     assert response.status_code == 422
     assert service.last_decision is None
+
+
+def test_scenarios_require_authentication() -> None:
+    with client() as test_client:
+        response = test_client.get("/v1/scenarios")
+
+    assert response.status_code == 401
+
+
+def test_scenarios_are_served_so_the_client_never_hardcodes_a_question(
+    monkeypatch,
+) -> None:
+    """The launcher renders whatever this returns. Question text lived in both
+    the service and the React bundle before; a second scenario would have made
+    it three copies."""
+
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="owner@example.com",
+            tenant_name="Acme Europe",
+            role="owner",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+
+    with client() as test_client:
+        response = test_client.get(
+            "/v1/scenarios",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.status_code == 200
+    scenarios = {item["key"]: item for item in response.json()}
+    assert set(scenarios) == {"eu_refund_spike", "na_channel_growth"}
+    assert "EU refunds" in scenarios["eu_refund_spike"]["question"]
+    assert scenarios["na_channel_growth"]["facts"] == [
+        "NA commerce",
+        "October → November 2026",
+        "300 orders",
+    ]

@@ -140,8 +140,19 @@ class ReplayModelClient:
             usage=ExecutionUsage(
                 input_tokens=usage["input_tokens"],
                 output_tokens=usage["output_tokens"],
-                cost_usd=Decimal(usage["cost_usd"]),
+                # Zero, always. No provider was called, so nothing was spent —
+                # and the pipeline writes this straight into agent_executions,
+                # which is what cost governance reads. Replaying the premium
+                # cassette a few times while verifying a change had already
+                # booked several times its real cost as if it were spend. The
+                # cassette keeps the recorded figure; the ledger must not.
+                cost_usd=Decimal("0"),
                 model=usage["model"],
             ),
             fallbacks=tuple(recorded.get("fallbacks", ())),
         )
+
+    @staticmethod
+    def recorded_cost(path: Path) -> Decimal:
+        """What the original call cost, for reporting on the recording itself."""
+        return Decimal(json.loads(path.read_text())["usage"]["cost_usd"])

@@ -117,11 +117,26 @@ const response = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+const scenariosResponse = [
+  {
+    key: 'eu_refund_spike',
+    question: 'Why did EU refunds increase from June to July 2026?',
+    facts: ['EU commerce', 'June \u2192 July 2026', '8 orders'],
+  },
+  {
+    key: 'na_channel_growth',
+    question:
+      'Which sales channel accounted for the increase in North America revenue from October to November 2026?',
+    facts: ['NA commerce', 'October \u2192 November 2026', '300 orders'],
+  },
+];
+
 const mockApi = (detail: unknown = investigation) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
     const url = String(input);
     if (url.endsWith('/health/ready')) return response(readyResponse);
     if (url.endsWith('/v1/context')) return response(contextResponse);
+    if (url.endsWith('/v1/scenarios')) return response(scenariosResponse);
     if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
       return response(detail, 201);
     }
@@ -194,8 +209,8 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('launches only the governed synthetic scenario', async () => {
-    mockApi();
+  it('launches only the governed synthetic scenarios the API offers', async () => {
+    const fetchMock = mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
       isInitializing: false,
@@ -205,15 +220,58 @@ describe('App', () => {
     });
     renderApp();
     expect(await screen.findByText('Acme Europe')).toBeTruthy();
-    const launch = screen.getByRole('button', {
+
+    // Rendered from the API, not from a question hardcoded in this bundle.
+    expect(
+      await screen.findByRole('heading', { name: /eu refunds increase/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /which sales channel/i }),
+    ).toBeTruthy();
+
+    const launches = screen.getAllByRole('button', {
       name: /begin evidence trace/i,
     });
-    fireEvent.click(launch);
+    expect(launches).toHaveLength(2);
+    fireEvent.click(launches[0]);
     expect(
       await screen.findByRole('heading', {
         name: /eu refunds rose \$240 in july/i,
       }),
     ).toBeTruthy();
+
+    const posted = fetchMock.mock.calls.find(
+      ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+    );
+    expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
+      scenario_key: 'eu_refund_spike',
+    });
+  });
+
+  it('launches the second scenario with its own key', async () => {
+    const fetchMock = mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+    renderApp();
+    await screen.findByRole('heading', { name: /which sales channel/i });
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
+    );
+
+    await waitFor(() => {
+      const posted = fetchMock.mock.calls.find(
+        ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+      );
+      expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
+        scenario_key: 'na_channel_growth',
+      });
+    });
   });
 
   it('shows persisted evidence and owner approval controls on refresh', async () => {

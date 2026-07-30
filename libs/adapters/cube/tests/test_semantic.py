@@ -40,7 +40,14 @@ class StubCubeClient:
 
     async def load(self, query: dict[str, Any]) -> dict[str, Any]:
         self.queries.append(query)
+        if query.get("dimensions") == ["Commerce.region"] and "measures" not in query:
+            # Value discovery for the catalog, not a caller's query.
+            return {"data": [{"Commerce.region": "EU"}, {"Commerce.region": "NA"}]}
         return {"data": [{"Commerce.refundAmount": "260.00"}]}
+
+    @property
+    def caller_queries(self) -> list[dict[str, Any]]:
+        return [query for query in self.queries if "measures" in query]
 
 
 @pytest.mark.asyncio
@@ -58,6 +65,14 @@ async def test_catalog_exposes_governed_members_and_is_cached() -> None:
         "Commerce.orderedAt",
         "Commerce.region",
     }
+    # Discovered once and cached with the catalog: an agent that cannot see how
+    # a value is spelled filters on "North America" and silently gets nothing.
+    region = next(d for d in catalog.dimensions if d.name == "Commerce.region")
+    assert region.values == ("EU", "NA")
+    time_dimension = next(
+        d for d in catalog.dimensions if d.name == "Commerce.orderedAt"
+    )
+    assert time_dimension.values == ()
 
 
 @pytest.mark.asyncio
@@ -85,7 +100,7 @@ async def test_query_is_translated_to_the_cube_payload() -> None:
         )
     )
 
-    assert client.queries == [
+    assert client.caller_queries == [
         {
             "measures": ["Commerce.refundAmount"],
             "timeDimensions": [
@@ -115,4 +130,4 @@ async def test_ungoverned_member_is_refused_before_any_query_runs() -> None:
     with pytest.raises(UnknownSemanticMemberError, match="commerce_facts.margin"):
         await layer.query(SemanticQuery(measures=("commerce_facts.margin",)))
 
-    assert client.queries == []
+    assert client.caller_queries == []

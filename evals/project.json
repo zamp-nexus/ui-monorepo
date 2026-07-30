@@ -19,7 +19,9 @@
         "commands": [
           "uv run python tools/evals/live_run.py --replay free_tier",
           "uv run python tools/evals/live_run.py --replay free_collapsed",
-          "uv run python tools/evals/live_run.py --replay premium_tier"
+          "uv run python tools/evals/live_run.py --replay premium_tier",
+          "uv run python tools/evals/live_run.py --replay na_growth_free",
+          "uv run python tools/evals/live_run.py --replay na_growth_premium"
         ],
         "parallel": false,
         "cwd": "."

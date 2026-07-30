@@ -5,6 +5,7 @@ from typing import Any
 
 from zentra_domain_agent_execution import (
     SemanticCatalog,
+    SemanticDimension,
     SemanticFilter,
     SemanticQuery,
     SemanticTimeDimension,
@@ -162,11 +163,24 @@ def semantic_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
         ) from error
 
 
+def _render_dimension(dimension: SemanticDimension) -> str:
+    """Name, type, and the values it holds where they are few enough to list.
+
+    Without the values an agent can only guess how they are spelled — a filter
+    on "North America" against data storing "NA" returns zero rows rather than
+    an error, and the agent correctly reports that it found nothing.
+    """
+    line = f"- {dimension.name} ({dimension.type})"
+    if dimension.values:
+        return f"{line} — one of: {', '.join(dimension.values)}"
+    return line
+
+
 def render_catalog(catalog: SemanticCatalog) -> str:
     measures = "\n".join(
         f"- {measure.name} ({measure.type})" for measure in catalog.measures
     )
     dimensions = "\n".join(
-        f"- {dimension.name} ({dimension.type})" for dimension in catalog.dimensions
+        _render_dimension(dimension) for dimension in catalog.dimensions
     )
     return f"Measures:\n{measures}\n\nDimensions:\n{dimensions}"

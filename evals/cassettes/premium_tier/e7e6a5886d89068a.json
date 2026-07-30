@@ -1,0 +1,11 @@
+{
+  "requested_model": "evaluator",
+  "text": "{\"recheck_passed\": true, \"discrepancy_pct\": 0.0, \"sample_size\": 8, \"confidence\": 0.55, \"issues\": [\"The '100%' refund rate for both months is computed within the refunded-order subgroup, not across all EU orders; it carries no comparative information and should not be presented as a metric that 'stayed flat'.\", \"The stated driver is incomplete: refunded EU orders rose from 1 in June to 3 in July, and average refund per refunded order rose from $20.00 to ~$86.67. The reason-code change from size_issue to shipping_delay is a label on the affected orders, not a demonstrated cause.\", \"Total order count of 4 per month is correct but conceals the mix shift (June: 1 refunded / 3 not; July: 3 refunded / 1 not).\", \"Very small sample: only 8 underlying EU orders across both months, so a single order materially moves every figure. Any conclusion is directionally suggestive at best.\", \"Gross revenue context omitted (June $400 vs July $400 total), which would show the refund rate on all EU revenue rose from 5% to 65%.\"]}",
+  "usage": {
+    "input_tokens": 1534,
+    "output_tokens": 669,
+    "cost_usd": "0.02522875",
+    "model": "claude-opus-5"
+  },
+  "fallbacks": []
+}

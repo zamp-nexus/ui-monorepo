@@ -107,7 +107,11 @@ class SqlAnalystAgent:
             response_schema=ANALYSIS_SCHEMA,
         )
         analysis = parse_json_object(analysis_response.text)
-        usage = plan_response.usage + analysis_response.usage
+        # The interpretation call is the one that produced the number and
+        # the confidence, so its model is what independence is graded on.
+        usage = (plan_response.usage + analysis_response.usage).model_copy(
+            update={"model": analysis_response.usage.model}
+        )
 
         return validate_agent_output(
             self,

@@ -84,11 +84,19 @@ class ExecutionUsage(BaseModel):
     model: str | None = None
 
     def __add__(self, other: ExecutionUsage) -> ExecutionUsage:
+        """Tokens and cost add up. The model does not.
+
+        Deliberately drops it rather than picking one. An agent makes several
+        calls and the chain can serve them from different providers — a live
+        free-tier run had the Evaluator plan on Nemotron and recheck on Opus.
+        Keeping the first silently recorded Nemotron as the checker, which
+        under-graded the independence and hid $0.08 of Anthropic spend behind a
+        free model's name. Which call decided is the agent's to say.
+        """
         return ExecutionUsage(
             input_tokens=self.input_tokens + other.input_tokens,
             output_tokens=self.output_tokens + other.output_tokens,
             cost_usd=self.cost_usd + other.cost_usd,
-            model=self.model or other.model,
         )
 
 
