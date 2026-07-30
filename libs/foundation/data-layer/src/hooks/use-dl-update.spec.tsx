@@ -76,25 +76,31 @@ describe('useDLUpdate', () => {
     const { result } = renderHook(
       () =>
         useDLUpdate({
+          // Default type parameters: ApiMutationDescriptor is contravariant in
+          // TArgs, so a narrowed descriptor does not satisfy the hook's
+          // `TMutation extends ApiMutationDescriptor` constraint.
           mutation: {
             method: 'PATCH',
-            path: ({ id }: { id: string }) => `/events/${id}`,
-            body: ({ id: _entityId, ...payload }: { id: string; name?: string }) => payload,
-          } as ApiMutationDescriptor<{ id: string; name?: string }, { id: string; name: string }>,
+            path: (args) => `/events/${(args as { id: string }).id}`,
+            body: (args) => {
+              const { id: _entityId, ...payload } = args as { id: string; name?: string };
+              return payload;
+            },
+          } as ApiMutationDescriptor,
           table: 'events',
           listQueryKey: ['events'],
           itemQueryKey: (id) => ['events', id],
-          getEntityId: (variables: { id: string }) => variables.id,
+          getEntityId: (variables) => (variables as { id: string }).id,
           onOptimistic: (variables, previous) => ({
-            ...(previous ?? {}),
-            id: variables.id,
+            ...((previous as object | undefined) ?? {}),
+            id: (variables as { id: string }).id,
             name: 'new-name',
           }),
         }),
       { wrapper: createWrapper(internals) },
     );
 
-    let response: { id: string; name: string } | undefined;
+    let response: unknown;
     await act(async () => {
       response = await result.current.mutateAsync({ id: 'evt_1' });
     });

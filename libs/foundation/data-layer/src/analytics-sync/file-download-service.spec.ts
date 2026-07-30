@@ -37,13 +37,10 @@ const makeArrayBuffer = (size = 8): ArrayBuffer => new ArrayBuffer(size);
 // Mocks
 // ---------------------------------------------------------------------------
 
-const createMockAxios = () => {
-  const instance = vi.fn();
-  instance.get = vi.fn();
-  return instance as unknown as {
-    get: ReturnType<typeof vi.fn>;
-  } & ReturnType<typeof vi.fn>;
-};
+// Object.assign rather than assigning onto the mock: a vi.fn() has no `get`,
+// so the property has to exist when the object is built for the type to carry
+// it, and then no cast is needed to read it back.
+const createMockAxios = () => Object.assign(vi.fn(), { get: vi.fn() });
 
 const createMockOpfs = (): OpfsManagerOperations & { writeFile: ReturnType<typeof vi.fn> } => ({
   writeFile: vi.fn().mockResolvedValue(undefined),

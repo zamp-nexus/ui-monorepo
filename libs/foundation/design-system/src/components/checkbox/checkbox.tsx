@@ -46,7 +46,7 @@ const MinusIcon = () => <Icon name="minus" size="xs" />;
  * // Indeterminate state
  * <Checkbox indeterminate />
  */
-export const Checkbox: CheckboxComponent = React.forwardRef<HTMLButtonElement, CheckboxProps>(
+export const Checkbox: CheckboxComponent = React.forwardRef<HTMLSpanElement, CheckboxProps>(
   function Checkbox(
     {
       className,
@@ -60,13 +60,17 @@ export const Checkbox: CheckboxComponent = React.forwardRef<HTMLButtonElement, C
       required,
       name,
       id,
+      ...rest
     },
     ref,
   ) {
     const theme = useTheme('checkbox', checkboxDefaultTheme);
 
     return (
+      // rest first: caller-supplied lang, aria and data attributes reach the
+      // root, but never at the cost of the props managed here.
       <CheckboxPrimitive.Root
+        {...rest}
         ref={ref}
         className={theme.root({
           className,

@@ -61,7 +61,11 @@ export interface DrawerTriggerProps extends OIDefaultProps {
   className?: string;
 }
 
-export interface DrawerContentProps extends OIDefaultProps {
+// Drawer's own root renders no DOM node, so Content is the component's real
+// root element and carries the root-element contract.
+export interface DrawerContentProps
+  extends OIDefaultProps,
+    Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> {
   children?: React.ReactNode;
   className?: string;
 }
@@ -113,7 +117,9 @@ export interface DrawerComponent {
   (props: DrawerProps): React.ReactNode;
   displayName?: string;
   Trigger: React.FC<DrawerTriggerProps>;
-  Content: React.FC<DrawerContentProps>;
+  Content: React.ForwardRefExoticComponent<
+    DrawerContentProps & React.RefAttributes<HTMLDivElement>
+  >;
   Header: React.FC<DrawerHeaderProps>;
   Title: React.FC<DrawerTitleProps>;
   Description: React.FC<DrawerDescriptionProps>;

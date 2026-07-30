@@ -11,6 +11,13 @@ describeComponent(
     variants: TooltipVariants,
     modifiers: TooltipModifiers,
     shouldSupportPolymorphism: false,
-    shouldSupportForwardRef: false,
+    shouldSupportForwardRef: true,
+    // The tooltip's root element is its popup — that is what theme.root styles
+    // and the only div in the tree — so it only exists while open.
+    renderRoot: (rootProps) => (
+      <Tooltip open content="Tooltip text" {...rootProps}>
+        <button>Hover me</button>
+      </Tooltip>
+    ),
   },
 );

@@ -87,15 +87,16 @@ export interface MultiSelectOwnProps
 /**
  * MultiSelect component props
  */
-export type MultiSelectProps = OIDefaultProps & MultiSelectOwnProps;
+export type MultiSelectProps = OIDefaultProps &
+  MultiSelectOwnProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, keyof MultiSelectOwnProps | 'className'>;
 
 /**
  * MultiSelect component type
  */
-export interface MultiSelectComponent {
-  (props: MultiSelectProps): React.ReactNode;
-  displayName?: string;
-}
+export type MultiSelectComponent = React.ForwardRefExoticComponent<
+  MultiSelectProps & React.RefAttributes<HTMLDivElement>
+>;
 
 /**
  * Default theme configuration for MultiSelect

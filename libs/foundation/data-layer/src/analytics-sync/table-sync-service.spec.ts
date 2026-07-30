@@ -79,7 +79,9 @@ function createService(overrides: Partial<TableSyncServiceConfig> = {}): {
 } {
   const database = createMockDatabase();
   const service = new TableSyncService({
-    axiosInstance: { request: vi.fn(), defaults: {} } as TableSyncServiceConfig['axiosInstance'],
+    // The service only calls `request`; via unknown because a two-property
+    // stand-in does not overlap the full AxiosInstance surface.
+    axiosInstance: { request: vi.fn(), defaults: {} } as unknown as TableSyncServiceConfig['axiosInstance'],
     datasourceEndpoint: MOCK_DATASOURCE_API,
     database,
     debug: false,

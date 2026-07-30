@@ -52,7 +52,8 @@ export interface TabsOwnProps extends OIDefaultProps {
 /**
  * Tabs component props
  */
-export type TabsProps = TabsOwnProps;
+export type TabsProps = TabsOwnProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, keyof TabsOwnProps | 'className'>;
 
 /**
  * Tabs List props
@@ -93,9 +94,8 @@ export interface TabContentProps extends OIDefaultProps {
 /**
  * Tabs component type with sub-components
  */
-export interface TabsComponent {
-  (props: TabsProps): React.ReactNode;
-  displayName?: string;
+export interface TabsComponent
+  extends React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>> {
   List: React.FC<TabsListProps>;
   Trigger: React.FC<TabTriggerProps>;
   Content: React.FC<TabContentProps>;

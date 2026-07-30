@@ -63,10 +63,13 @@ export interface ModalTriggerProps extends OIDefaultProps {
   asChild?: boolean;
 }
 
-export interface ModalContentProps extends OIDefaultProps {
-  children?: React.ReactNode;
-  className?: string;
-}
+// Modal's own root renders no DOM node — it is a context provider wrapping
+// Dialog.Root — so Content is the component's real root element and carries the
+// root-element contract: className, ozid, ref, and arbitrary HTML attributes.
+export type ModalContentProps = OIDefaultProps &
+  Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> & {
+    children?: React.ReactNode;
+  };
 
 export interface ModalHeaderProps extends OIDefaultProps {
   children?: React.ReactNode;
@@ -117,7 +120,9 @@ export interface ModalComponent {
   (props: ModalProps): React.ReactNode;
   displayName?: string;
   Trigger: React.FC<ModalTriggerProps>;
-  Content: React.FC<ModalContentProps>;
+  Content: React.ForwardRefExoticComponent<
+    ModalContentProps & React.RefAttributes<HTMLDivElement>
+  >;
   Header: React.FC<ModalHeaderProps>;
   Title: React.FC<ModalTitleProps>;
   Description: React.FC<ModalDescriptionProps>;

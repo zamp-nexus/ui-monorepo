@@ -442,13 +442,24 @@ export const DataLayerProvider = ({
   const lastRealtimeErrorCodeRef = useRef<string | null>(null);
   const authScopeKeyRef = useRef<string | null>(null);
 
-  const loggerRef = useRef<Logger>(
-    createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' }),
+  // The logger only varies with config.debug, so it is built when that changes
+  // rather than on every render, which is what the render-phase assignment here
+  // used to do — a fresh logger per render, immediately discarded.
+  const logger = useMemo(
+    () => createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' }),
+    [config.debug],
   );
-  loggerRef.current = createLogger('DataLayerProvider', { level: config.debug ? 'debug' : 'warn' });
 
+  // Latest-value refs for the effects and callbacks below, which read them long
+  // after commit. Written in an effect so nothing is mutated during render;
+  // useRef seeds both with the right value for the first commit.
+  const loggerRef = useRef<Logger>(logger);
   const configRef = useRef<DataLayerConfig>(config);
-  configRef.current = config;
+
+  useEffect(() => {
+    loggerRef.current = logger;
+    configRef.current = config;
+  }, [logger, config]);
   const resolvedAuthScope = authScope ?? config.authScope ?? null;
   const authScopeKey = resolvedAuthScope?.scopeKey ?? 'anonymous';
 
@@ -793,10 +804,14 @@ export const DataLayerProvider = ({
     })();
   }, [authScopeKey, clearOnAuthScopeChange, deps, shouldOwnSocket]);
 
+  // Depends on `deps` rather than `deps?.syncCoordinator`: the optional-chained
+  // dependency defeats the compiler, which cannot match it to the access it
+  // infers and so skips memoising the callback entirely. `deps` is state, set
+  // once per container, so its members only change identity when it does.
   const syncNow = useCallback(async () => {
     if (!deps?.syncCoordinator) return;
     await deps.syncCoordinator.sync();
-  }, [deps?.syncCoordinator]);
+  }, [deps]);
 
   const clearCache = useCallback(async () => {
     deps?.realtimeClient.disconnect();
@@ -809,7 +824,7 @@ export const DataLayerProvider = ({
     if (deps?.realtimeClient && shouldOwnSocket) {
       await deps.realtimeClient.connect();
     }
-  }, [deps?.database, deps?.queryClient, deps?.realtimeClient, shouldOwnSocket]);
+  }, [deps, shouldOwnSocket]);
 
   const syncState = useMemo(() => {
     if (!deps?.syncCoordinator) return null;

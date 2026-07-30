@@ -5,7 +5,7 @@
  * A dropdown that allows selecting multiple options.
  * Uses CheckboxGroup internally for selection state management.
  */
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
@@ -17,7 +17,7 @@ import { cn } from '../../utils/cn';
 import { Checkbox } from '../checkbox';
 import { CheckboxGroupContext } from '../checkbox-group/checkbox-group.context';
 import { ScrollArea } from '../scroll-area';
-import type { MultiSelectComponent } from './types';
+import type { MultiSelectProps } from './types';
 import { multiSelectDefaultTheme } from './types';
 
 /**
@@ -41,27 +41,31 @@ import { multiSelectDefaultTheme } from './types';
  *   showCounter
  * />
  */
-export const MultiSelect: MultiSelectComponent = ({
-  ozid,
-  size = 'md',
-  feedback = 'default',
-  disabled,
-  readOnly,
-  showCounter = true,
-  value: controlledValue,
-  defaultValue = [],
-  onValueChange: controlledOnValueChange,
-  options,
-  placeholder = 'Select...',
-  start,
-  end,
-  searchPlaceholder = 'Search...',
-  searchable = false,
-  maxHeight = 300,
-  closeOnSelect = false,
-  label,
-  className,
-}) => {
+export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(function MultiSelect(
+  {
+    ozid,
+    size = 'md',
+    feedback = 'default',
+    disabled,
+    readOnly,
+    showCounter = true,
+    value: controlledValue,
+    defaultValue = [],
+    onValueChange: controlledOnValueChange,
+    options,
+    placeholder = 'Select...',
+    start,
+    end,
+    searchPlaceholder = 'Search...',
+    searchable = false,
+    maxHeight = 300,
+    closeOnSelect = false,
+    label,
+    className,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme('multiSelect', multiSelectDefaultTheme);
 
   // Internal state for uncontrolled mode
@@ -128,7 +132,11 @@ export const MultiSelect: MultiSelectComponent = ({
   return (
     <CheckboxGroupContext.Provider value={checkboxGroupContext}>
       <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+        {/* rest first: caller-supplied lang, aria and data attributes reach the
+            root, but never at the cost of the props managed here. */}
         <div
+          {...rest}
+          ref={ref}
           className={
             theme.root?.({ className, size, feedback, disabled, readOnly, showCounter }) ??
             className
@@ -254,6 +262,6 @@ export const MultiSelect: MultiSelectComponent = ({
       </PopoverPrimitive.Root>
     </CheckboxGroupContext.Provider>
   );
-};
+});
 
 MultiSelect.displayName = 'MultiSelect';

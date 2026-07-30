@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { OPERATIONS } from '@open-zentra/foundation-data-model';
+import { DATA_FRESHNESS, OPERATIONS } from '@open-zentra/foundation-data-model';
 
 import type { DecisionContext, DecisionTableConfig } from '../types/decision';
 import { DECISION_REASONS } from '../types/decision';
@@ -175,13 +175,15 @@ describe('DecisionEngine', () => {
 
   it('prefers analytics path when option set and freshness is eventual', () => {
     const ctx = makeContext({
-      tableConfigs: new Map([
+      // Typed like the map at the top of this file, so the literal is checked
+      // against DecisionTableConfig rather than widened to its own shape.
+      tableConfigs: new Map<string, DecisionTableConfig>([
         [
           'users',
           {
             source: 'api',
             api: { list: {} as unknown },
-            analytics: { freshness: 'eventual' },
+            analytics: { freshness: DATA_FRESHNESS.EVENTUAL },
           },
         ],
       ]),

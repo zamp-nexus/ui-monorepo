@@ -86,7 +86,12 @@ describe('useDLGet', () => {
       } as unknown as DataLayerInternals['axiosInstance'],
     });
 
-    const queryRef = { path: '/events/evt_1' } as ApiQueryDescriptor<{ id: string }, typeof apiResult>;
+    // Left at the default type parameters. ApiQueryDescriptor is contravariant
+    // in TArgs (it appears in `path`'s parameter position), so a descriptor
+    // narrowed to { id: string } does not satisfy the hook's own
+    // `TQuery extends ApiQueryDescriptor` constraint. The assertions below are
+    // structural, so nothing here needs the narrower type.
+    const queryRef: ApiQueryDescriptor = { path: '/events/evt_1' };
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_1' } }),
       { wrapper: createWrapper(internals) },
@@ -110,10 +115,7 @@ describe('useDLGet', () => {
       database: { queries } as unknown as DataLayerInternals['database'],
     });
 
-    const queryRef = { path: '/events/evt_cached' } as ApiQueryDescriptor<
-      { id: string },
-      typeof cachedResult
-    >;
+    const queryRef: ApiQueryDescriptor = { path: '/events/evt_cached' };
     const { result } = renderHook(
       () => useDLGet({ query: queryRef, table: 'events', args: { id: 'evt_cached' } }),
       { wrapper: createWrapper(internals) },

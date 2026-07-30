@@ -42,7 +42,10 @@ const IconButtonImpl = <T extends React.ElementType = 'button'>(
   const theme = useTheme('iconButton', iconButtonDefaultTheme);
   const Element = component ?? 'button';
 
-  const isDisabled = disabled || loading;
+  // Boolean(), not `||`: with disabled={false} and loading unset this yields
+  // undefined, and the theme resolver only applies a modifier for an actual
+  // boolean — so the modifier's `false` class would silently never apply.
+  const isDisabled = Boolean(disabled || loading);
   const spinnerSize = size === 'lg' ? 'md' : size === 'md' ? 'sm' : 'xs';
 
   return (

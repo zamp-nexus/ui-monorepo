@@ -2,7 +2,7 @@
  * Tabs component
  * @module components/tabs
  */
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
@@ -11,7 +11,7 @@ import { TabsContent } from './tabs-content';
 import { TabsList } from './tabs-list';
 import { TabsTrigger } from './tabs-trigger';
 import { TabsContext } from './tabs.context';
-import type { TabsComponent, TabsContextValue } from './types';
+import type { TabsComponent, TabsContextValue, TabsProps } from './types';
 import { tabsDefaultTheme } from './types';
 
 /**
@@ -29,16 +29,21 @@ import { tabsDefaultTheme } from './types';
  *   <Tabs.Content value="tab2">Content 2</Tabs.Content>
  * </Tabs>
  */
-const TabsRoot: TabsComponent = ({
-  ozid,
-  size = 'md',
-  variant = 'default',
-  fullWidth,
-  value,
-  defaultValue,
-  onValueChange,
-  children,
-}) => {
+const TabsRoot = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
+  {
+    ozid,
+    size = 'md',
+    variant = 'default',
+    fullWidth,
+    value,
+    defaultValue,
+    onValueChange,
+    children,
+    className,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme('tabs', tabsDefaultTheme);
 
   // Context value for sub-components
@@ -53,7 +58,11 @@ const TabsRoot: TabsComponent = ({
 
   return (
     <TabsContext.Provider value={contextValue}>
+      {/* rest first: caller-supplied lang, aria and data attributes reach the
+          root, but never at the cost of the props managed here. */}
       <TabsPrimitive.Root
+        {...rest}
+        ref={ref}
         value={value}
         defaultValue={defaultValue}
         onValueChange={(newValue) => {
@@ -61,14 +70,14 @@ const TabsRoot: TabsComponent = ({
             onValueChange?.(newValue);
           }
         }}
-        className={theme.root?.({ size, variant, fullWidth }) ?? ''}
+        className={theme.root?.({ className, size, variant, fullWidth }) ?? className}
         data-ozid={ozid}
       >
         {children}
       </TabsPrimitive.Root>
     </TabsContext.Provider>
   );
-};
+}) as TabsComponent;
 
 // Attach sub-components
 TabsRoot.displayName = 'Tabs';

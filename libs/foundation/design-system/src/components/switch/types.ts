@@ -6,7 +6,6 @@
 import type {
   ComponentThemeConfigStructure,
   OIComponentOwnProps,
-  OIComponentRef,
   OIDefaultProps,
 } from '../../types';
 
@@ -51,15 +50,17 @@ export interface SwitchOwnProps
 /**
  * Switch component props
  */
+// Base UI's Switch.Root renders a span carrying role="switch", not a button, so
+// the element type here follows what actually reaches the DOM.
 export type SwitchProps = OIDefaultProps &
   SwitchOwnProps &
-  Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof SwitchOwnProps | 'className'>;
+  Omit<React.HTMLAttributes<HTMLSpanElement>, keyof SwitchOwnProps | 'className'>;
 
 /**
  * Switch component type
  */
 export type SwitchComponent = React.ForwardRefExoticComponent<
-  SwitchProps & { ref?: OIComponentRef<'button'> }
+  SwitchProps & { ref?: React.Ref<HTMLSpanElement> }
 >;
 
 /**

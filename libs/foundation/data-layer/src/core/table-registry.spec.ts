@@ -152,7 +152,8 @@ describe('TableRegistry', () => {
       it('should return all registered table configs', () => {
         const tables = registry.getAllTables();
         expect(tables).toHaveLength(allMockTables.length);
-        expect(tables).toEqual(expect.arrayContaining(allMockTables));
+        // Spread because arrayContaining takes a mutable array; allMockTables is readonly.
+        expect(tables).toEqual(expect.arrayContaining([...allMockTables]));
       });
 
       it('should return an empty array for an empty registry', () => {

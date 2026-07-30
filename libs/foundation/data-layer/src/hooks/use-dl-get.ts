@@ -83,14 +83,21 @@ export const useDLGet = <
     [customQueryKey, table, entityId, args],
   );
 
+  // Latest-value refs, so the cache-write effect below can use the current
+  // database, table and cache config without re-running whenever their
+  // identity changes — re-running it would rewrite the same cache entry.
+  // Written after commit rather than during render: both readers (the offline
+  // queryFn and the effect) run after commit, and useRef already seeds the
+  // correct value for the first one.
   const databaseRef = useRef(database);
-  databaseRef.current = database;
-
   const tableRef = useRef(table);
-  tableRef.current = table;
-
   const cacheConfigRef = useRef(cacheConfig);
-  cacheConfigRef.current = cacheConfig;
+
+  useEffect(() => {
+    databaseRef.current = database;
+    tableRef.current = table;
+    cacheConfigRef.current = cacheConfig;
+  }, [database, table, cacheConfig]);
 
   const resolvedArgs = (args ?? ({} as QueryDescriptorArgs<TQuery>)) as QueryDescriptorArgs<TQuery>;
 

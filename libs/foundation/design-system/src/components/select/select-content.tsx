@@ -31,18 +31,22 @@ export const SelectContent: SelectContentComponent = React.forwardRef<
   },
   ref: React.ForwardedRef<HTMLDivElement>,
 ) {
-  const { size, ozid: contextOzid } = useSelectContext();
+  const { size, disabled, ozid: contextOzid } = useSelectContext();
   const theme = useTheme('select', selectDefaultTheme);
   const ozid = propOzid ?? (contextOzid ? `${contextOzid}__content` : undefined);
 
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner side={side} align={align} sideOffset={sideOffset}>
+        {/* rest first: caller-supplied lang, aria and data attributes reach the
+            root, but never at the cost of the props managed here — spread last,
+            a stray data-ozid in rest would silently replace the real one. */}
         <SelectPrimitive.Popup
-          ref={ref}
-          className={theme.content?.({ className, size }) ?? ''}
-          data-ozid={ozid}
           {...rest}
+          ref={ref}
+          // disabled is a declared modifier, so the theme has to see it.
+          className={theme.content?.({ className, size, disabled }) ?? ''}
+          data-ozid={ozid}
         >
           <div className="p-1">{children}</div>
         </SelectPrimitive.Popup>

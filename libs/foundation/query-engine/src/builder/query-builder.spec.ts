@@ -128,10 +128,12 @@ describe('QueryBuilder', () => {
 
     it('should add dimension with options', () => {
       const query = builder
-        .dimension('orders.status', { alias: 'status', format: 'uppercase' })
+        // 'uppercase' is not one of DIMENSION_FORMAT_TYPES; the point of this
+        // test is that options travel through, so it uses a real format.
+        .dimension('orders.status', { alias: 'status', format: 'currency' })
         .build();
       expect(query.dimensions![0].alias).toBe('status');
-      expect(query.dimensions![0].format).toBe('uppercase');
+      expect(query.dimensions![0].format).toBe('currency');
     });
 
     it('should add multiple dimensions via groupBy', () => {

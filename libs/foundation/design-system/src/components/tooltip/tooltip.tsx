@@ -2,11 +2,13 @@
  * Tooltip component - Contextual information on hover
  * @module components/tooltip
  */
+import React from 'react';
+
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
-import type { TooltipComponent, TooltipProps } from './types';
+import type { TooltipProps } from './types';
 import { tooltipDefaultTheme } from './types';
 
 /**
@@ -60,27 +62,39 @@ const TooltipArrowSvg = (props: React.ComponentProps<'svg'>) => (
  *   <Button>Hover me</Button>
  * </Tooltip>
  */
-export const Tooltip: TooltipComponent = function Tooltip({
-  children,
-  ozid,
-  content,
-  shortcut,
-  side = 'top',
-  align = 'center',
-  arrow = false,
-  raw = false,
-  delayDuration = 200,
-  sideOffset = 4,
-  open,
-  defaultOpen,
-  onOpenChange,
-}: TooltipProps) {
+export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(
+  {
+    children,
+    ozid,
+    content,
+    shortcut,
+    side = 'top',
+    align = 'center',
+    arrow = false,
+    raw = false,
+    delayDuration = 200,
+    sideOffset = 4,
+    open,
+    defaultOpen,
+    onOpenChange,
+    className,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme('tooltip', tooltipDefaultTheme);
 
   return (
     <TooltipPrimitive.Provider delay={delayDuration}>
       <TooltipPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-        <TooltipPrimitive.Trigger data-ozid={ozid} render={<span className="inline-flex" />}>
+        {/* The plain ozid identifies the element theme.root styles, which is
+            the popup below — every other component in the library follows that
+            rule, and rootInstanceOf here has always been HTMLDivElement, which
+            only the popup is. The trigger takes a suffixed id. */}
+        <TooltipPrimitive.Trigger
+          data-ozid={ozid ? `${ozid}__trigger` : undefined}
+          render={<span className="inline-flex" />}
+        >
           {children}
         </TooltipPrimitive.Trigger>
 
@@ -91,9 +105,13 @@ export const Tooltip: TooltipComponent = function Tooltip({
             align={align}
             className={theme.positioner?.({}) ?? ''}
           >
+            {/* rest first: caller-supplied lang, aria and data attributes reach
+                the root, but never at the cost of the props managed here. */}
             <TooltipPrimitive.Popup
-              className={theme.root({ side, align, arrow, raw })}
-              data-ozid={ozid ? `${ozid}__popup` : undefined}
+              {...rest}
+              ref={ref}
+              className={theme.root({ className, side, align, arrow, raw })}
+              data-ozid={ozid}
             >
               {/* Arrow pointer (not overridable) */}
               {arrow && (
@@ -129,6 +147,6 @@ export const Tooltip: TooltipComponent = function Tooltip({
       </TooltipPrimitive.Root>
     </TooltipPrimitive.Provider>
   );
-};
+});
 
 Tooltip.displayName = 'Tooltip';

@@ -4,7 +4,9 @@
  * @module core/container.spec
  */
 
-import { createDataLayerContainer, DataLayerContainer } from './container';
+import type { AxiosInstance } from 'axios';
+
+import { createDataLayerContainer, DataLayerContainer, type ContainerConfig } from './container';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -41,34 +43,43 @@ const createMockSyncCoordinator = () => ({
   invalidateQueries: vi.fn(),
 });
 
-const createConfig = (overrides: Record<string, unknown> = {}) => {
+// The container only ever calls `request` on the axios instance, so the mock
+// stops there. The cast is what says so out loud; annotating `config` as
+// ContainerConfig keeps every other field genuinely checked, including the
+// websocket auth mode, which infers as a bare string without it.
+const createMockAxios = () =>
+  ({ request: vi.fn(), defaults: {} }) as unknown as AxiosInstance;
+
+const createConfig = (overrides: Partial<ContainerConfig> = {}) => {
   const mockDatabase = createMockDatabase();
   const mockSyncCoordinator = createMockSyncCoordinator();
 
-  return {
-    config: {
-      axiosInstance: { request: vi.fn(), defaults: {} },
-      websocket: {
-        url: 'wss://example.test/realtime',
-        auth: {
-          mode: 'ticket',
-          getTicket: vi.fn(async () => 'ticket_123'),
-        },
+  const config: ContainerConfig = {
+    axiosInstance: createMockAxios(),
+    websocket: {
+      url: 'wss://example.test/realtime',
+      auth: {
+        mode: 'ticket',
+        getTicket: vi.fn(async () => 'ticket_123'),
       },
-      factories: {
-        database: () => mockDatabase as never,
-        syncCoordinator: () => mockSyncCoordinator as never,
-        realtimeClient: () =>
-          ({
-            subscribeStatus: vi.fn(() => vi.fn()),
-            subscribeMessages: vi.fn(() => vi.fn()),
-            connect: vi.fn(async () => undefined),
-            disconnect: vi.fn(),
-            send: vi.fn(),
-          } as never),
-      },
-      ...overrides,
     },
+    factories: {
+      database: () => mockDatabase as never,
+      syncCoordinator: () => mockSyncCoordinator as never,
+      realtimeClient: () =>
+        ({
+          subscribeStatus: vi.fn(() => vi.fn()),
+          subscribeMessages: vi.fn(() => vi.fn()),
+          connect: vi.fn(async () => undefined),
+          disconnect: vi.fn(),
+          send: vi.fn(),
+        } as never),
+    },
+    ...overrides,
+  };
+
+  return {
+    config,
     mocks: { mockDatabase, mockSyncCoordinator },
   };
 };

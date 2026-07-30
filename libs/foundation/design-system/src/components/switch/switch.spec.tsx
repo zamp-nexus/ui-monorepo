@@ -3,7 +3,8 @@ import { Switch, SwitchModifiers, SwitchVariants } from './index';
 
 describeComponent(<Switch />, {
   name: 'Switch',
-  rootInstanceOf: window.HTMLButtonElement,
+  // Base UI's Switch.Root renders a span with role="switch", not a button.
+  rootInstanceOf: window.HTMLSpanElement,
   variants: SwitchVariants,
   modifiers: SwitchModifiers,
   shouldSupportPolymorphism: false,

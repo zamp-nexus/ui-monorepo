@@ -189,10 +189,15 @@ export function hasIcon(name: IconName): boolean {
 /**
  * Get all registered icon names
  *
+ * Reads the registry, not `ICON_NAMES`. The constant is the catalogue of names
+ * the library ships; the registry is what has actually been registered, which
+ * is what a caller asking this question wants — including icons registered at
+ * runtime, and excluding the built-ins after `clearRegistry`.
+ *
  * @returns Array of all registered icon names
  */
 export function getAllIconNames(): IconName[] {
-  return Object.values(ICON_NAMES);
+  return Array.from(iconRegistry.keys());
 }
 
 /**

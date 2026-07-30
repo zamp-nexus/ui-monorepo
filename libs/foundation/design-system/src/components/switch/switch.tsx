@@ -30,7 +30,7 @@ import { switchDefaultTheme } from './types';
  *   <span>Enable notifications</span>
  * </label>
  */
-export const Switch: SwitchComponent = React.forwardRef<HTMLButtonElement, SwitchProps>(
+export const Switch: SwitchComponent = React.forwardRef<HTMLSpanElement, SwitchProps>(
   function Switch(
     {
       className,
@@ -43,13 +43,17 @@ export const Switch: SwitchComponent = React.forwardRef<HTMLButtonElement, Switc
       required,
       name,
       id,
+      ...rest
     },
     ref,
   ) {
     const theme = useTheme('switch', switchDefaultTheme);
 
     return (
+      // rest first: caller-supplied lang, aria and data attributes reach the
+      // root, but never at the cost of the props managed here.
       <SwitchPrimitive.Root
+        {...rest}
         ref={ref}
         className={theme.root({ className, size, disabled, checked: !!checked })}
         data-ozid={ozid}

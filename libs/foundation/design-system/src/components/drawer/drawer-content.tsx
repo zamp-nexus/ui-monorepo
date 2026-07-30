@@ -37,30 +37,39 @@ function getSizeClass(
  *
  * Container for the drawer content. Renders backdrop and sliding panel.
  */
-export const DrawerContent: React.FC<DrawerContentProps> = ({ children, className, ozid }) => {
-  const theme = useTheme('drawer', drawerDefaultTheme);
-  const { direction, size, titleId, descriptionId } = useDrawerContext();
+export const DrawerContent = React.forwardRef<HTMLDivElement, DrawerContentProps>(
+  function DrawerContent({ children, className, ozid, ...rest }, ref) {
+    const theme = useTheme('drawer', drawerDefaultTheme);
+    const { direction, size, titleId, descriptionId } = useDrawerContext();
 
-  const sizeClass = getSizeClass(direction, size);
+    const sizeClass = getSizeClass(direction, size);
 
-  return (
-    <Dialog.Portal>
-      <Dialog.Backdrop
-        className={theme.backdrop?.({}) ?? ''}
-        data-ozid={ozid ? `${ozid}__backdrop` : undefined}
-      />
-      <Dialog.Popup
-        className={cn(theme.popup?.({ direction }) ?? '', sizeClass, className)}
-        data-ozid={ozid}
-        data-slot="content"
-        data-direction={direction}
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-      >
-        {children}
-      </Dialog.Popup>
-    </Dialog.Portal>
-  );
-};
+    return (
+      <Dialog.Portal>
+        <Dialog.Backdrop
+          className={theme.backdrop?.({}) ?? ''}
+          data-ozid={ozid ? `${ozid}__backdrop` : undefined}
+        />
+        {/* rest first: caller-supplied lang, aria and data attributes reach the
+            root, but never at the cost of the props this component manages. */}
+        <Dialog.Popup
+          {...rest}
+          ref={ref}
+          // size is passed to the theme as well as to getSizeClass: the built-in
+          // geometry is direction-dependent so it cannot be a flat theme
+          // variant, but a theme override on the size variant must still apply.
+          className={cn(theme.popup?.({ direction, size }) ?? '', sizeClass, className)}
+          data-ozid={ozid}
+          data-slot="content"
+          data-direction={direction}
+          aria-labelledby={rest['aria-labelledby'] ?? titleId}
+          aria-describedby={rest['aria-describedby'] ?? descriptionId}
+        >
+          {children}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    );
+  },
+);
 
 DrawerContent.displayName = 'Drawer.Content';
