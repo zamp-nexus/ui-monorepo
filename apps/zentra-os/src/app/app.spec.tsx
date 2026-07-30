@@ -394,4 +394,26 @@ describe('App', () => {
       .filter(Boolean);
     expect(new Set(sent).size).toBeGreaterThan(1);
   });
+
+  it('never captions a metric with a month the scenario did not run in', async () => {
+    // These read "June X -> July Y", hardcoded from the only scenario that
+    // existed. The first live run of the second scenario captioned an
+    // October-to-November finding as June to July.
+    mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    // The question itself may name months — this scenario's does. The caption
+    // must not, because it does not know which scenario it belongs to.
+    const caption = screen.getByText(/20\.00 → 260\.00 USD/);
+    expect(caption.textContent).not.toMatch(/june|july/i);
+  });
 });

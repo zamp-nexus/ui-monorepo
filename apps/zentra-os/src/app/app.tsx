@@ -565,9 +565,13 @@ const MetricField = ({ metric }: { readonly metric: MetricComparison }) => {
           transition={{ duration: 0.32, delay: 0.08 }}
         />
       </div>
+      {/* No month names. These were hardcoded to June and July from the one
+          scenario that existed, and captioned an October-to-November finding
+          with the wrong months the first time a second scenario ran. The
+          period is already stated in the question above; a metric knows only
+          its own before and after. */}
       <small>
-        June {metric.previous_value} → July {metric.current_value}{' '}
-        {metric.unit}
+        {metric.previous_value} → {metric.current_value} {metric.unit}
       </small>
     </div>
   );
