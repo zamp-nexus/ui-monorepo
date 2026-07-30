@@ -35,7 +35,25 @@ delivers them at least once with stable event IDs. Replay merges delivered
 ClickHouse rows with pending outbox rows and deduplicates by event ID.
 
 Audit entries may contain hashes, metric names, status, typed outcome kind,
-timing, cost/token fields, tools/errors metadata, and `artifact://` references.
+timing, cost/token fields, the provider rungs that failed before one answered,
+tools/errors metadata, and `artifact://` references.
+
+Cost is attributed to the model that **answered**, not the identifier requested:
+several routing entries are aliases — `openrouter/free` resolved to a Nemotron
+variant on a live run — and pricing the alias records one model's cost against
+another. Where a served identifier has no recorded price the requested one is
+used, because a cost lookup must never fail a call that already succeeded.
+
+A model is priced at its paid list rate whenever a paid tier exists for it, even
+where this deployment holds a free key. The code cannot tell key classes apart,
+so it assumes the expensive case: over-reporting is survivable, and silently
+spending is not. `gemini-3.6-flash` was recorded at zero under a "free tiers
+incur no charge" comment while the deployment ran a paid key.
+
+Replaying a recorded run reports **zero** cost, because no provider was called.
+The pipeline writes that figure straight into `agent_executions`, which is what
+cost governance reads, so carrying the recorded cost through meant a premium
+run's spend was booked again on every verification replay.
 They must not contain prompts, raw Cube rows, uploaded values, reviewer prose,
 credentials, or hidden reasoning.
 

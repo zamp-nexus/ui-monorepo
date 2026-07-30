@@ -45,7 +45,7 @@ traffic they receive.**
 
 | Provider | Role | Data handling |
 | --- | --- | --- |
-| **Gemini** | **Analyst and Orchestrator primary** | **Free-tier content is used to improve Google's products** |
+| **Gemini** | **Analyst and Orchestrator primary** | **Free-tier content is used to improve Google's products. Paid-tier API data is not** |
 | **NVIDIA** | **Evaluator second; Analyst second** | **Inputs and outputs on free endpoints are recorded and used to train NVIDIA's models. NVIDIA warns against sending personal data. Only self-hosted NIM avoids this.** |
 | Cerebras | Evaluator primary | Does not retain inputs or outputs |
 | Groq | Later rung | Contractually barred from training |
@@ -62,6 +62,28 @@ paid provider, or whatever Cerebras ships next.
 Today the only dataset is the synthetic commerce seed, so nothing a real person
 would recognise reaches a training provider. That changes the moment a tenant
 connects a real warehouse.
+
+## The key class decides, and the code cannot see it
+
+The same provider trains or does not train depending on which key a deployment
+holds. This one runs a **paid** Gemini key, which Google does not train on — but
+`trains_on_input` stays `True` for Gemini regardless, because nothing in the
+process can tell the key classes apart and privacy takes the pessimistic
+reading. `_assert_premium_never_trains()` therefore still keeps Gemini out of
+every premium chain. Moving it in on the strength of a paid key is a deliberate
+decision that has to revisit that flag first.
+
+## The free tier's independence has a daily cap
+
+Gemini's free API tier allows 20 requests a day — roughly three investigations.
+Past that the chain falls through to the next rung, and because the Analyst and
+Evaluator chains overlap below Gemini, both agents land on the same provider:
+the recheck collapses from `FULL` independence to `NONE` and confidence is
+capped at 0.50. Observed live on 2026-07-29.
+
+The fall-through trail is recorded on every successful call and carried into the
+audit ledger, so this degradation is visible in Replay rather than inferred from
+a confidence score that quietly dropped.
 
 Before the first real connector ships to a free tenant:
 

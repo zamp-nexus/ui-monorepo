@@ -34,11 +34,22 @@ Never record values or tokens in this vault.
 | ClickHouse | `CLICKHOUSE_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `DATABASE`, `SECURE` |
 | Cube | `CUBE_URL`, `CUBE_API_SECRET` |
 | Clerk | `CLERK_ISSUER`, `CLERK_AUDIENCE` |
+| Model providers | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` |
 | Telemetry | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` |
 | Validation only | `E2B_API_KEY` |
 
 `DATABASE_OWNER_URL` is consumed by migration tooling, not ordinary request
 handling.
+
+A provider with no key is skipped in its chain rather than failing, so the
+system runs on `ANTHROPIC_API_KEY` alone. Only the premium chains are guaranteed
+to reach a provider that does not train on input.
+
+`CLERK_AUDIENCE` must stay **empty** unless a Clerk JWT template is configured
+to mint a matching `aud` claim. The app requests a default session token, which
+carries no such claim, and a blank value is treated as unconfigured — an empty
+string is not an absent one, and conflating them rejected every valid token
+until it was fixed. See [[Set Up Clerk for Local Development]].
 
 ## Frontend
 
