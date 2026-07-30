@@ -6,6 +6,11 @@ import {
 } from 'react';
 
 import { Button } from '@open-zentra/foundation-design-system';
+import {
+  DraftFindingPanel,
+  LegacyFindingNotice,
+  type DraftFinding,
+} from './draft-finding-panel';
 import { useAuth, useAuthSession } from '@open-zentra/foundation-auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -78,6 +83,9 @@ interface Investigation {
     readonly metrics: readonly MetricComparison[];
     readonly evidence_references: readonly string[];
   } | null;
+  // Present only for Investigations that ran through the Insight Agent.
+  // Null means legacy narrative, not missing evidence.
+  readonly draft_finding: DraftFinding | null;
   readonly outcome:
     | {
         readonly kind: 'validation';
@@ -804,6 +812,11 @@ const InvestigationWorkspace = ({
                   <MetricField key={metric.metric} metric={metric} />
                 ))}
               </div>
+              {investigation.draft_finding ? (
+                <DraftFindingPanel draft={investigation.draft_finding} />
+              ) : (
+                <LegacyFindingNotice />
+              )}
               <OutcomePanel investigation={investigation} />
               <footer className={styles.artifact}>
                 <span>Evidence reference</span>

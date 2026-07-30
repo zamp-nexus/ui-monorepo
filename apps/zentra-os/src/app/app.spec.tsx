@@ -66,6 +66,9 @@ const investigation = {
       'artifact://semantic/eu-refund-spike/2026-06_2026-07',
     ],
   },
+  // Legacy by default: every Investigation that ran before Insight has a
+  // narrative Finding and no structured draft.
+  draft_finding: null,
   outcome: {
     kind: 'confidence',
     score: 0.42,
@@ -456,5 +459,114 @@ describe('App', () => {
     // refund_rate carries null labels in the fixture.
     const caption = screen.getByText(/25 → 75 percent/);
     expect(caption.textContent).not.toMatch(/june|july|2026/i);
+  });
+
+  const structuredDraft = {
+    draft_finding_id: '70000000-0000-0000-0000-000000000001',
+    version: 2,
+    created_at: '2026-07-29T00:00:00Z',
+    produced_by_execution_id: null,
+    headline: 'EU refunds rose $240 in July',
+    summary: 'Governed EU refund amount rose from $20 to $260.',
+    claims: [
+      {
+        claim_id: '80000000-0000-0000-0000-000000000001',
+        kind: 'observed',
+        text: 'EU refund amount rose from $20.00 to $260.00.',
+        position: 0,
+        citation_ids: [],
+      },
+      {
+        claim_id: '80000000-0000-0000-0000-000000000002',
+        kind: 'interpretation',
+        text: 'The rise is concentrated in a single week.',
+        position: 1,
+        citation_ids: [],
+      },
+    ],
+    contradictions: [
+      { detail: 'Recheck counted 8 rows, not 12.', resolved: false },
+    ],
+    root_cause: 'unresolved',
+    confidence: { score: 0.42, calibration_method: 'capped_sample_size' },
+  };
+
+  const signedIn = () => {
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+  };
+
+  it('says a legacy investigation predates structured claims', async () => {
+    // Rendering nothing would read as "no evidence here", which is both
+    // harsher and less true than "this one ran before claims were separable".
+    mockApi();
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(
+      screen.getByText(/ran before claims were recorded separately/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/root cause unresolved/i)).toBeNull();
+  });
+
+  it('labels measured claims apart from interpreted ones', async () => {
+    // The one distinction a reviewer most needs, carried as a visible word
+    // rather than a colour — a reader who cannot tell the swatches apart
+    // still gets it.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText('Measured')).toBeTruthy();
+    expect(screen.getByText('Interpretation')).toBeTruthy();
+    expect(
+      screen.queryByText(/ran before claims were recorded separately/i),
+    ).toBeNull();
+  });
+
+  it('renders claims in the order the draft recorded', async () => {
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    const claims = screen.getAllByRole('listitem').map((el) => el.textContent);
+    const observed = claims.findIndex((t) => t?.includes('$260.00'));
+    const interpreted = claims.findIndex((t) => t?.includes('single week'));
+    expect(observed).toBeGreaterThanOrEqual(0);
+    expect(observed).toBeLessThan(interpreted);
+  });
+
+  it('says root cause is unresolved out loud', async () => {
+    // ADR 0011 turns on the product stating this rather than letting a reader
+    // assume causality was established.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText(/root cause unresolved/i)).toBeTruthy();
+  });
+
+  it('surfaces an unresolved contradiction rather than smoothing it away', async () => {
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText(/Recheck counted 8 rows, not 12\./)).toBeTruthy();
+    expect(screen.getByText(/unresolved contradiction/i)).toBeTruthy();
   });
 });

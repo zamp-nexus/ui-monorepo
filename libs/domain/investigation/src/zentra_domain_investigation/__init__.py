@@ -1,5 +1,13 @@
 """Investigation domain."""
 
+from .draft_finding import (
+    Claim,
+    ClaimKind,
+    Contradiction,
+    DraftFinding,
+    DraftFindingError,
+    RootCauseState,
+)
 from .model import (
     ApprovalDecision,
     ApprovalReason,
@@ -23,8 +31,13 @@ from .model import (
 __all__ = [
     "ApprovalDecision",
     "ApprovalReason",
+    "Claim",
+    "ClaimKind",
     "CompletionOutcome",
+    "Contradiction",
     "DomainEvent",
+    "DraftFinding",
+    "DraftFindingError",
     "EvaluationDirective",
     "EvidenceReference",
     "FailureOutcome",
@@ -36,6 +49,7 @@ __all__ = [
     "InvestigationTransitionError",
     "MetricComparison",
     "RejectionReason",
+    "RootCauseState",
     "confidence_ceiling",
     "directive_for_outcome",
 ]

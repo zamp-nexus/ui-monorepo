@@ -66,12 +66,28 @@ decisions return `409`.
 - `422`: unsupported scenario or invalid request/reason.
 - `503`: sanitized governed-metric dependency failure with no misleading result.
 
+## Draft Finding — additive, current
+
+`InvestigationDetailResponse` carries an optional `draft_finding` block beside
+the existing `finding`. Additive on purpose: `finding` is unchanged, so every
+Phase 1 client keeps working, and the two are served together rather than one
+replacing the other.
+
+`draft_finding` is `null` for an Investigation that ran before the Insight
+Agent existed. That null is the signal a client uses to tell a legacy narrative
+apart from claims that are structured and will become individually citable —
+reporting the old shape as the new one would assert its sentences are
+followable when nothing can resolve them.
+
+Each claim carries `kind` (`observed` or `interpretation`), a `position`
+contiguous from zero, and `citation_ids`, which stays empty until Evidence
+Citations exist. `root_cause` is always `unresolved` in Phase 2.
+
 ## Phase 2 planned contract
 
-Phase 2 requires Tenant-authorized Evidence Citation resolution and explicit
-missing, denied, and Tombstone results. Endpoint shapes are deliberately not
-specified until implementation; current `artifact://` strings must not be
-misreported as this completed contract. See
-[[Phase 2 - Insight Auditor and Replay]].
+Evidence Citation resolution, and its explicit missing, denied, and Tombstone
+results, remain unimplemented. Endpoint shapes are deliberately not specified
+until then; current `artifact://` strings must not be misreported as that
+completed contract. See [[Phase 2 - Insight Auditor and Replay]].
 
 Parent: [[APIs MOC]]

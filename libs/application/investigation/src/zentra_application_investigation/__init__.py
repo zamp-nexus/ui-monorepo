@@ -9,6 +9,7 @@ from .service import (
     AuditWriter,
     AuthenticatedActor,
     ConflictError,
+    DraftFindingRepository,
     HumanApprovalRepository,
     InvestigationDetail,
     InvestigationNotFoundError,
@@ -29,6 +30,7 @@ from .service import (
 
 __all__ = [
     "AgentExecutionRepository",
+    "DraftFindingRepository",
     "AuditDelivery",
     "AuditReader",
     "AuditReplay",

@@ -14,5 +14,9 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "semantic_metrics",
         "agent_registry",
         "audit_outbox",
+        # Phase 2, added beside the Phase 1 narrative Finding rather than
+        # replacing it.
+        "draft_findings",
+        "draft_finding_claims",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"

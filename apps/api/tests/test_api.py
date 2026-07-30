@@ -12,10 +12,15 @@ from zentra_application_investigation import (
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
+    Claim,
+    ClaimKind,
+    Contradiction,
+    DraftFinding,
     EvidenceReference,
     Finding,
     InvestigationStatus,
     MetricComparison,
+    RootCauseState,
 )
 
 from zentra_api.auth import AuthenticationError, ClerkPrincipal
@@ -189,7 +194,11 @@ def test_context_denies_unbound_organization(monkeypatch) -> None:
     assert response.json()["detail"] == "Identity organization is not bound to a tenant"
 
 
-def investigation_detail() -> InvestigationDetail:
+def investigation_detail(
+    draft_finding: DraftFinding | None = None,
+) -> InvestigationDetail:
+    """Defaults to the legacy shape — a narrative Finding and no draft —
+    because that is what every Investigation that ran before Insight has."""
     now = datetime(2026, 7, 29, tzinfo=UTC)
     return InvestigationDetail(
         investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
@@ -217,6 +226,7 @@ def investigation_detail() -> InvestigationDetail:
             ),
             evidence_refs=(EvidenceReference("artifact://semantic/eu-refunds"),),
         ),
+        draft_finding=draft_finding,
         outcome=ConfidenceOutcome(
             score=0.42,
             calibration_method="evaluator_independent_recheck",
@@ -424,3 +434,126 @@ def test_a_trailing_slash_on_the_issuer_does_not_change_it() -> None:
     verifier = ClerkJwtVerifier("https://example.clerk.accounts.dev/", None)
 
     assert verifier._issuer == "https://example.clerk.accounts.dev"
+
+
+def structured_draft() -> DraftFinding:
+    return DraftFinding(
+        draft_finding_id=UUID("40000000-0000-0000-0000-000000000004"),
+        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
+        version=2,
+        created_at=datetime(2026, 7, 29, tzinfo=UTC),
+        produced_by_execution_id=None,
+        headline="EU refunds rose $240 in July.",
+        summary="Governed EU refund amount rose from $20 to $260.",
+        claims=(
+            Claim(
+                claim_id=UUID("50000000-0000-0000-0000-000000000001"),
+                kind=ClaimKind.OBSERVED,
+                text="EU refund amount rose from $20.00 to $260.00.",
+                position=0,
+            ),
+            Claim(
+                claim_id=UUID("50000000-0000-0000-0000-000000000002"),
+                kind=ClaimKind.INTERPRETATION,
+                text="The rise is concentrated in a single week.",
+                position=1,
+            ),
+        ),
+        contradictions=(Contradiction(detail="Recheck counted 8 rows, not 12."),),
+        root_cause=RootCauseState.UNRESOLVED,
+        confidence=ConfidenceOutcome(
+            score=0.42,
+            calibration_method="capped_sample_size"
+        ),
+    )
+
+
+def authenticated(monkeypatch) -> None:
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="owner@example.com",
+            tenant_name="Acme Europe",
+            role="owner",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+
+
+def test_a_legacy_investigation_is_not_dressed_up_as_a_structured_draft(
+    monkeypatch,
+) -> None:
+    """The whole point of keeping the two side by side. An Investigation that
+    ran before Insight has narrative and opaque pointers; reporting it as a
+    Draft Finding would claim its sentences are individually citable when
+    nothing can resolve them."""
+    authenticated(monkeypatch)
+    service = InvestigationServiceStub()
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["draft_finding"] is None
+    # And the legacy shape is untouched — this is an additive change.
+    assert body["finding"]["headline"] == "EU refunds rose $240 in July"
+    assert body["finding"]["evidence_references"] == [
+        "artifact://semantic/eu-refunds"
+    ]
+
+
+def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
+    """Claim order, the observed/interpretation split, the contradiction and
+    the unresolved root cause all have to arrive as data — a client cannot
+    re-derive any of them from prose."""
+    authenticated(monkeypatch)
+    service = InvestigationServiceStub()
+    service.detail = investigation_detail(draft_finding=structured_draft())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    draft = response.json()["draft_finding"]
+    assert response.status_code == 200
+    assert draft["version"] == 2
+    assert draft["root_cause"] == "unresolved"
+    assert [claim["position"] for claim in draft["claims"]] == [0, 1]
+    assert [claim["kind"] for claim in draft["claims"]] == [
+        "observed",
+        "interpretation",
+    ]
+    assert draft["claims"][0]["citation_ids"] == []
+    assert draft["contradictions"] == [
+        {"detail": "Recheck counted 8 rows, not 12.", "resolved": False}
+    ]
+    assert draft["confidence"] == {
+        "kind": "confidence",
+        "score": 0.42,
+        "calibration_method": "capped_sample_size",
+    }
+
+
+def test_the_legacy_finding_is_still_served_beside_a_structured_draft(
+    monkeypatch,
+) -> None:
+    """Additive means both, not either. Dropping `finding` the moment a draft
+    exists would break every client written against Phase 1."""
+    authenticated(monkeypatch)
+    service = InvestigationServiceStub()
+    service.detail = investigation_detail(draft_finding=structured_draft())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    body = response.json()
+    assert body["finding"] is not None
+    assert body["draft_finding"] is not None
