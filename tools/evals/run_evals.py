@@ -105,7 +105,9 @@ class ReplayRegistry:
     async def enabled_agents(self) -> tuple[RegisteredAgent, ...]:
         return tuple(
             RegisteredAgent(
-                agent_id=AGENT_IDS[role],
+                # A role with no implemented agent still has to be nameable
+                # in a case, or the vocabulary is not actually accepted.
+                agent_id=AGENT_IDS.get(role, role),
                 role=AgentRole(role),
                 version="1",
             )

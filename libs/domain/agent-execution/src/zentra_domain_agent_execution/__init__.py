@@ -1,6 +1,8 @@
 """ZentraOS agent execution domain contract"""
 
 from .contracts import (
+    CANONICAL_ROLES,
+    LEGACY_ROLES,
     OUTCOME_ADAPTER,
     AgentDescriptor,
     AgentInput,
@@ -10,12 +12,14 @@ from .contracts import (
     ConfidenceOutcome,
     ExecutionUsage,
     IndependenceLevel,
+    LegacyRoleWriteError,
     OutcomeSignal,
     ToolAccess,
     ToolScope,
     ValidationOutcome,
     independence_of,
     model_family,
+    reject_legacy_role,
     validate_agent_output,
 )
 from .ports import (
@@ -52,6 +56,9 @@ __all__ = [
     "ExecutionStatus",
     "ExecutionUsage",
     "IndependenceLevel",
+    "CANONICAL_ROLES",
+    "LEGACY_ROLES",
+    "LegacyRoleWriteError",
     "ModelMessage",
     "ModelPort",
     "ModelResponse",
@@ -73,5 +80,6 @@ __all__ = [
     "ValidationOutcome",
     "independence_of",
     "model_family",
+    "reject_legacy_role",
     "validate_agent_output",
 ]

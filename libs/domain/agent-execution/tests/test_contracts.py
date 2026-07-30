@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -5,15 +6,22 @@ import pytest
 from pydantic import ValidationError
 
 from zentra_domain_agent_execution import (
+    CANONICAL_ROLES,
+    LEGACY_ROLES,
     AgentDescriptor,
+    AgentExecutionRecord,
     AgentInput,
     AgentOutput,
     AgentRole,
     ConfidenceOutcome,
+    ExecutionStatus,
     ExecutionUsage,
+    LegacyRoleWriteError,
+    RegisteredAgent,
     ToolAccess,
     ToolScope,
     ValidationOutcome,
+    reject_legacy_role,
     validate_agent_output,
 )
 
@@ -113,6 +121,76 @@ async def test_agent_port_shape_is_usable() -> None:
     )
 
     assert validate_agent_output(agent, output) == output
+
+
+def _legacy_execution() -> dict[str, object]:
+    """A Phase 1 execution row, as it was written before the Insight Agent
+    existed as an implementation."""
+    moment = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
+    return {
+        "execution_id": str(uuid4()),
+        "investigation_id": str(uuid4()),
+        "tenant_id": str(uuid4()),
+        "agent_id": "orchestrator_v1",
+        "role": "insight_root_cause",
+        "step": 3,
+        "input": {"question": "Why did refunds increase?"},
+        "output": {"headline": "Refunds rose 18%"},
+        "outcome": {
+            "kind": "confidence",
+            "score": 0.72,
+            "calibration_method": "evaluator_independent_recheck",
+        },
+        "status": "success",
+        "latency_ms": 4120,
+        "started_at": moment.isoformat(),
+        "completed_at": moment.isoformat(),
+    }
+
+
+def test_the_canonical_insight_role_does_not_claim_causality() -> None:
+    """ADR 0011 forbids naming the Agent for a promise its evidence cannot
+    keep. The wire value is what leaks the promise, so it is what is pinned."""
+    assert AgentRole.INSIGHT.value == "insight"
+    assert "root_cause" not in AgentRole.INSIGHT.value
+
+
+def test_the_legacy_insight_role_stays_readable() -> None:
+    assert AgentRole("insight_root_cause") is AgentRole.INSIGHT_ROOT_CAUSE
+    assert AgentRole.INSIGHT_ROOT_CAUSE in LEGACY_ROLES
+    assert AgentRole.INSIGHT not in LEGACY_ROLES
+
+
+def test_a_phase_1_execution_record_still_deserialises() -> None:
+    """Replay has to keep rendering investigations that ran before the rename.
+    Dropping the value would make them unreadable, not merely mislabelled."""
+    record = AgentExecutionRecord.model_validate(_legacy_execution())
+
+    assert record.role is AgentRole.INSIGHT_ROOT_CAUSE
+    assert record.status is ExecutionStatus.SUCCESS
+    assert record.confidence == 0.72
+
+    # And it survives a full round trip, which is what Replay actually does.
+    assert (
+        AgentExecutionRecord.model_validate(record.model_dump(mode="json")) == record
+    )
+
+
+def test_a_legacy_registry_row_still_deserialises() -> None:
+    agent = RegisteredAgent.model_validate(
+        {"agent_id": "insight_v0", "role": "insight_root_cause", "version": "0"}
+    )
+
+    assert agent.role is AgentRole.INSIGHT_ROOT_CAUSE
+
+
+def test_reject_legacy_role_refuses_only_the_legacy_value() -> None:
+    """The expand step changes what may be written, not what may be read."""
+    for role in CANONICAL_ROLES:
+        reject_legacy_role(role)
+
+    with pytest.raises(LegacyRoleWriteError, match="insight_root_cause"):
+        reject_legacy_role(AgentRole.INSIGHT_ROOT_CAUSE)
 
 
 def test_adding_usage_drops_the_model_rather_than_guessing() -> None:

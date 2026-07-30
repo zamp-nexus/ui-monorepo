@@ -7,7 +7,11 @@ from zentra_adapter_langgraph import InvestigationGraph
 from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_application_investigation import PipelineResult
-from zentra_domain_agent_execution import AgentExecutionRecord, ExecutionStatus
+from zentra_domain_agent_execution import (
+    AgentExecutionRecord,
+    ExecutionStatus,
+    reject_legacy_role,
+)
 from zentra_domain_investigation import (
     DomainEvent,
     EvidenceReference,
@@ -43,6 +47,10 @@ class PostgresExecutionRecorder:
         self._unit_of_work_factory = unit_of_work_factory
 
     async def record(self, execution: AgentExecutionRecord) -> None:
+        # Before the transaction opens. The role travels into the audit
+        # ledger's metadata, and Audit Entries are immutable — a legacy value
+        # written there could never be corrected.
+        reject_legacy_role(execution.role)
         async with self._unit_of_work_factory(
             execution.tenant_id,
             SYSTEM_TRACE_ID,
