@@ -1,7 +1,10 @@
 import type { InternalAxiosRequestConfig } from 'axios';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AuthTransport } from '@open-zentra/foundation-auth';
+import type {
+  AuthTransport,
+  ResolvedAuthTransport,
+} from '@open-zentra/foundation-auth';
 
 import { createAuthInterceptor } from './auth-interceptor';
 
@@ -11,7 +14,12 @@ const makeConfig = (): InternalAxiosRequestConfig =>
 describe('createAuthInterceptor', () => {
   it('injects bearer auth from AuthTransport', async () => {
     const transport: AuthTransport = {
-      getTransport: vi.fn(async () => ({ kind: 'bearer', token: 'token-1' })),
+      getTransport: vi.fn(
+        async (): Promise<ResolvedAuthTransport> => ({
+          kind: 'bearer',
+          token: 'token-1',
+        }),
+      ),
       getScope: vi.fn(() => null),
       subscribeScope: vi.fn(() => () => undefined),
       invalidate: vi.fn(async () => undefined),
@@ -33,7 +41,9 @@ describe('createAuthInterceptor', () => {
 
   it('enables credentials without Authorization for cookie transport', async () => {
     const transport: AuthTransport = {
-      getTransport: vi.fn(async () => ({ kind: 'cookie' })),
+      getTransport: vi.fn(
+        async (): Promise<ResolvedAuthTransport> => ({ kind: 'cookie' }),
+      ),
       getScope: vi.fn(() => null),
       subscribeScope: vi.fn(() => () => undefined),
       invalidate: vi.fn(async () => undefined),

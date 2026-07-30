@@ -4,7 +4,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { ValidationResultData } from '@open-zentra/foundation-data-model';
+import {
+  Milliseconds,
+  type ValidationResultData,
+} from '@open-zentra/foundation-data-model';
 import {
   assert,
   assertDefined,
@@ -77,14 +80,14 @@ describe('validatePoolConfig', () => {
   });
 
   it('should fail for negative defaultQueryTimeout', () => {
-    const result = validatePoolConfig({ defaultQueryTimeout: -1 });
+    const result = validatePoolConfig({ defaultQueryTimeout: Milliseconds.from(-1) });
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain('defaultQueryTimeout must be non-negative');
   });
 
   it('should warn for defaultQueryTimeout > 300000', () => {
-    const result = validatePoolConfig({ defaultQueryTimeout: 400000 });
+    const result = validatePoolConfig({ defaultQueryTimeout: Milliseconds.from(400000) });
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain(
@@ -93,21 +96,21 @@ describe('validatePoolConfig', () => {
   });
 
   it('should fail for workerInitTimeout < 1000', () => {
-    const result = validatePoolConfig({ workerInitTimeout: 500 });
+    const result = validatePoolConfig({ workerInitTimeout: Milliseconds.from(500) });
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain('workerInitTimeout should be at least 1000ms');
   });
 
   it('should warn for workerInitTimeout > 60000', () => {
-    const result = validatePoolConfig({ workerInitTimeout: 70000 });
+    const result = validatePoolConfig({ workerInitTimeout: Milliseconds.from(70000) });
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain('workerInitTimeout should not exceed 60000ms');
   });
 
   it('should fail for negative workerIdleTimeout', () => {
-    const result = validatePoolConfig({ workerIdleTimeout: -1 });
+    const result = validatePoolConfig({ workerIdleTimeout: Milliseconds.from(-1) });
 
     expect(result.valid).toBe(false);
     expect(getMessages(result)).toContain('workerIdleTimeout must be non-negative');
@@ -123,7 +126,7 @@ describe('validatePoolConfig', () => {
     const result = validatePoolConfig({
       workerCount: 0,
       maxQueuePerWorker: -1,
-      defaultQueryTimeout: -100,
+      defaultQueryTimeout: Milliseconds.from(-100),
     });
 
     expect(result.valid).toBe(false);
@@ -316,7 +319,7 @@ describe('resolvePoolConfig', () => {
     const resolved = resolvePoolConfig({
       workerCount: 2,
       maxQueuePerWorker: 5,
-      defaultQueryTimeout: 15000,
+      defaultQueryTimeout: Milliseconds.from(15000),
       debug: true,
     });
 
@@ -333,7 +336,7 @@ describe('resolvePoolConfig', () => {
   });
 
   it('should handle explicit workerIdleTimeout', () => {
-    const resolved = resolvePoolConfig({ workerIdleTimeout: 60000 });
+    const resolved = resolvePoolConfig({ workerIdleTimeout: Milliseconds.from(60000) });
 
     expect(resolved.workerIdleTimeout).toBe(60000);
   });
