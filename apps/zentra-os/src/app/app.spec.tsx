@@ -350,4 +350,48 @@ describe('App', () => {
     );
     expect(screen.getByText('completed')).toBeTruthy();
   });
+
+  it('mints a fresh token for every request rather than reusing one', async () => {
+    // Clerk session tokens expire after 60 seconds. Caching one in component
+    // state meant a page left open sent a dead token on the next click, and the
+    // API's "Invalid bearer token" read like a configuration fault.
+    const getAccessToken = vi
+      .fn()
+      .mockResolvedValueOnce('token-1')
+      .mockResolvedValueOnce('token-2')
+      .mockResolvedValue('token-3');
+    authMocks.useAuthSession.mockReturnValue({ getAccessToken });
+    const fetchMock = mockApi();
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: { id: 'org_123', name: 'Acme' },
+      user: { email: 'owner@example.com' },
+    });
+
+    renderApp();
+    await screen.findByRole('heading', { name: /which sales channel/i });
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
+        ),
+      ).toBe(true),
+    );
+
+    // One call per authenticated request, not one for the whole session.
+    expect(getAccessToken.mock.calls.length).toBeGreaterThan(1);
+    const sent = fetchMock.mock.calls
+      .map(([, options]) =>
+        new Headers((options as RequestInit | undefined)?.headers).get(
+          'Authorization',
+        ),
+      )
+      .filter(Boolean);
+    expect(new Set(sent).size).toBeGreaterThan(1);
+  });
 });

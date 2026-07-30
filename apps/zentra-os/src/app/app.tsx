@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -124,11 +125,19 @@ interface Scenario {
   readonly facts: readonly string[];
 }
 
+// A Clerk session token lives 60 seconds. Holding one in component state and
+// reusing it means the first click on a page left open sends a dead token — the
+// API answers "Invalid bearer token" and it reads like a configuration fault.
+// Minting per request costs nothing: Clerk caches internally and refreshes near
+// expiry, so this is a memory read almost every time.
+type TokenSource = () => Promise<string | null>;
+
 const requestJson = async <T,>(
   url: string,
-  token: string | null,
+  getToken: TokenSource,
   options?: RequestInit,
 ): Promise<T> => {
+  const token = await getToken();
   const response = await fetch(`${apiUrl}${url}`, {
     ...options,
     headers: {
@@ -257,10 +266,10 @@ const ObservatoryShell = ({
 };
 
 const Launcher = ({
-  token,
+  getToken,
   identity,
 }: {
-  readonly token: string | null;
+  readonly getToken: TokenSource;
   readonly identity: IdentityContext;
 }) => {
   const navigate = useNavigate();
@@ -269,12 +278,12 @@ const Launcher = ({
   // scenario would have made that three copies to keep in step.
   const scenarios = useQuery({
     queryKey: ['scenarios'],
-    queryFn: () => requestJson<Scenario[]>('/v1/scenarios', token),
-    enabled: Boolean(token),
+    queryFn: () => requestJson<Scenario[]>('/v1/scenarios', getToken),
+    enabled: true,
   });
   const mutation = useMutation({
     mutationFn: (scenarioKey: string) =>
-      requestJson<Investigation>('/v1/investigations', token, {
+      requestJson<Investigation>('/v1/investigations', getToken, {
         method: 'POST',
         body: JSON.stringify({ scenario_key: scenarioKey }),
       }),
@@ -669,17 +678,17 @@ const ApprovalInspector = ({
 };
 
 const InvestigationWorkspace = ({
-  token,
+  getToken,
 }: {
-  readonly token: string | null;
+  readonly getToken: TokenSource;
 }) => {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['investigation', id],
     queryFn: () =>
-      requestJson<Investigation>(`/v1/investigations/${id}`, token),
-    enabled: Boolean(id && token),
+      requestJson<Investigation>(`/v1/investigations/${id}`, getToken),
+    enabled: Boolean(id),
     refetchInterval: (result) => {
       const data = result.state.data;
       if (!data) return false;
@@ -707,7 +716,7 @@ const InvestigationWorkspace = ({
       }
       return requestJson<Investigation>(
         `/v1/investigations/${id}/approvals/${approval.approval_id}/decision`,
-        token,
+        getToken,
         {
           method: 'POST',
           body: JSON.stringify({ decision: choice, reason }),
@@ -813,13 +822,10 @@ const InvestigationWorkspace = ({
 const AuthenticatedWorkspace = () => {
   const { logout, tenant } = useAuth();
   const { getAccessToken } = useAuthSession();
-  const tokenQuery = useQuery({
-    queryKey: ['access-token', tenant?.id],
-    queryFn: () => getAccessToken({ audience: 'first_party_http' }),
-    enabled: Boolean(tenant?.id),
-    staleTime: 30_000,
-  });
-  const token = tokenQuery.data ?? null;
+  const getToken = useCallback<TokenSource>(
+    () => getAccessToken({ audience: 'first_party_http' }),
+    [getAccessToken],
+  );
   const readiness = useQuery({
     queryKey: ['readiness'],
     queryFn: requestReadiness,
@@ -828,8 +834,8 @@ const AuthenticatedWorkspace = () => {
   });
   const identity = useQuery({
     queryKey: ['identity-context', tenant?.id],
-    queryFn: () => requestJson<IdentityContext>('/v1/context', token),
-    enabled: Boolean(token),
+    queryFn: () => requestJson<IdentityContext>('/v1/context', getToken),
+    enabled: Boolean(tenant?.id),
     retry: false,
   });
 
@@ -849,7 +855,7 @@ const AuthenticatedWorkspace = () => {
     );
   }
 
-  if (tokenQuery.isPending || identity.isPending) {
+  if (identity.isPending) {
     return (
       <main className={styles.centered} aria-live="polite">
         <ProductMark />
@@ -880,11 +886,11 @@ const AuthenticatedWorkspace = () => {
       <Routes>
         <Route
           path="/"
-          element={<Launcher token={token} identity={identity.data} />}
+          element={<Launcher getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/investigations/:id"
-          element={<InvestigationWorkspace token={token} />}
+          element={<InvestigationWorkspace getToken={getToken} />}
         />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
