@@ -109,6 +109,28 @@ class FindingResponse(BaseModel):
     evidence_references: list[str]
 
 
+class ClaimResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    claim_id: UUID
+    # The distinction the reader most needs, and the one prose cannot be
+    # trusted to carry. Spelled out rather than `str` so the API keeps the
+    # constraint the domain enum already makes.
+    kind: Literal["observed", "interpretation"]
+    text: str
+    position: int
+    # Empty until Evidence Citations exist. Present now so a client written
+    # against this shape does not need changing when they arrive.
+    citation_ids: list[UUID]
+
+
+class ContradictionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    detail: str
+    resolved: bool
+
+
 class ValidationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -130,6 +152,31 @@ OutcomeResponse = Annotated[
     ConfidenceResponse | ValidationResponse,
     Field(discriminator="kind"),
 ]
+
+
+class DraftFindingResponse(BaseModel):
+    """The Phase 2 structured draft.
+
+    Sits beside `finding` rather than replacing it. An Investigation that ran
+    before Insight existed has `finding` and a null `draft_finding`, which is
+    how a client tells a legacy narrative apart from claims that are genuinely
+    structured and will become individually citable.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    draft_finding_id: UUID
+    version: int
+    created_at: datetime
+    produced_by_execution_id: UUID | None
+    headline: str
+    summary: str
+    claims: list[ClaimResponse]
+    contradictions: list[ContradictionResponse]
+    # ADR 0011 admits no Root Cause Claim until a causal-evidence standard
+    # is accepted, so this is the only value Phase 2 can produce.
+    root_cause: Literal["unresolved"]
+    confidence: ConfidenceResponse | None
 
 
 class ApprovalResponse(BaseModel):
@@ -168,6 +215,7 @@ class InvestigationDetailResponse(BaseModel):
     updated_at: datetime
     finished_at: datetime | None
     finding: FindingResponse | None
+    draft_finding: DraftFindingResponse | None
     outcome: OutcomeResponse | None
     pending_approval: ApprovalResponse | None
     timeline: list[TimelineResponse]
@@ -194,6 +242,43 @@ class InvestigationDetailResponse(BaseModel):
                 evidence_references=[
                     reference.value for reference in detail.finding.evidence_refs
                 ],
+            )
+        draft = None
+        if detail.draft_finding is not None:
+            source = detail.draft_finding
+            draft = DraftFindingResponse(
+                draft_finding_id=source.draft_finding_id,
+                version=source.version,
+                created_at=source.created_at,
+                produced_by_execution_id=source.produced_by_execution_id,
+                headline=source.headline,
+                summary=source.summary,
+                claims=[
+                    ClaimResponse(
+                        claim_id=claim.claim_id,
+                        kind=claim.kind.value,
+                        text=claim.text,
+                        position=claim.position,
+                        citation_ids=list(claim.citation_ids),
+                    )
+                    for claim in source.claims
+                ],
+                contradictions=[
+                    ContradictionResponse(
+                        detail=contradiction.detail,
+                        resolved=contradiction.resolved,
+                    )
+                    for contradiction in source.contradictions
+                ],
+                root_cause=source.root_cause.value,
+                confidence=(
+                    ConfidenceResponse(
+                        score=source.confidence.score,
+                        calibration_method=source.confidence.calibration_method,
+                    )
+                    if source.confidence is not None
+                    else None
+                ),
             )
         outcome: OutcomeResponse | None = None
         if isinstance(detail.outcome, ConfidenceOutcome):
@@ -226,6 +311,7 @@ class InvestigationDetailResponse(BaseModel):
             updated_at=detail.updated_at,
             finished_at=detail.finished_at,
             finding=finding,
+            draft_finding=draft,
             outcome=outcome,
             pending_approval=approval,
             timeline=[

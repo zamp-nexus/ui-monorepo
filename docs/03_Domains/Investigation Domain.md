@@ -16,6 +16,7 @@ aliases: [investigation]
 related: ["[[Domains MOC]]", "[[Investigation Trust Loop]]", "[[Investigation Core]]"]
 repo_path: libs/domain/investigation
 code_refs:
+  - libs/domain/investigation/src/zentra_domain_investigation/draft_finding.py
   - libs/domain/investigation/CONTEXT.md
   - libs/domain/investigation/src/zentra_domain_investigation/model.py
 ---
@@ -63,8 +64,37 @@ that cited evidence was deliberately erased without retaining its values.
 
 A **Root Cause Claim** is not a synonym for an observed driver or association.
 It remains inadmissible until a separate causal-evidence standard is accepted
-and satisfied. These are planned contracts, not current implementation. See
-[[Phase 2 - Insight Auditor and Replay]].
+and satisfied. See [[Phase 2 - Insight Auditor and Replay]].
+
+### Draft Finding shape — current
+
+The Draft Finding is now a persisted, structured record rather than a planned
+contract. It has its own identity, Tenant and Investigation ownership, version,
+creation metadata, bounded confidence, and an ordered set of claims. What used
+to be readable only by a person reading prose is now data:
+
+- **Claim kind** — every claim is `observed` or `interpretation`. The
+  distinction a reviewer most needs is the one narrative carried least
+  reliably.
+- **Claim position** — contiguous from zero, enforced in the domain and by a
+  unique constraint. A gap means a claim was lost between Insight and the
+  reader, and the assembly fails rather than silently reordering.
+- **Contradiction** — typed data with a `resolved` flag, so an open
+  disagreement can be *rendered* as a state instead of buried in a sentence.
+- **Root cause state** — a single-member enum, `unresolved`. Modelled as a
+  state rather than a missing field precisely so the product can say "root
+  cause unresolved" out loud.
+- **Citation identifiers** — carried per claim, empty until Evidence Citations
+  exist, so adding them is a write rather than another migration.
+
+Nothing here decides whether a draft publishes; that is the Investigation's
+deterministic policy, deliberately elsewhere. Insight does not yet produce
+these — the shape lands before its producer does.
+
+The Phase 1 narrative `Finding` is untouched and still lives in
+`investigations.state`. An Investigation that ran before Insight has a
+`finding` and no draft, and every surface says so rather than presenting
+narrative as claims that could be individually cited.
 
 Canonical language:
 [Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:

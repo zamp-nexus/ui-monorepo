@@ -273,6 +273,127 @@ Index(
     agent_executions.c.step,
 )
 
+# Phase 2. Additive: the Phase 1 narrative Finding stays where it is, inside
+# `investigations.state`, and is neither moved nor rewritten. A structured draft
+# is a separate row an Investigation may or may not have, so an Investigation
+# that ran before Insight existed reads back exactly as it did.
+draft_findings = Table(
+    "draft_findings",
+    metadata,
+    Column(
+        "draft_finding_id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    ),
+    Column(
+        "investigation_id",
+        UUID(as_uuid=True),
+        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("version", Integer, nullable=False, server_default="1"),
+    # The Insight Agent Execution that produced it. Nullable through the
+    # migration window only — Insight does not run yet.
+    Column(
+        "produced_by_execution_id",
+        UUID(as_uuid=True),
+        ForeignKey("agent_executions.execution_id", ondelete="SET NULL"),
+    ),
+    Column("headline", Text, nullable=False),
+    Column("summary", Text, nullable=False),
+    Column("contradictions", JSON, nullable=False, server_default="[]"),
+    Column("root_cause", String(32), nullable=False),
+    Column("confidence", Numeric(4, 3)),
+    Column("confidence_method", Text),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    # ADR 0011 admits no Root Cause Claim until a causal-evidence standard is
+    # accepted, so the database refuses any other value rather than trusting
+    # every future writer to remember.
+    CheckConstraint(
+        "root_cause IN ('unresolved')",
+        name="ck_draft_findings_root_cause",
+    ),
+    CheckConstraint(
+        "confidence IS NULL OR confidence BETWEEN 0 AND 1",
+        name="ck_draft_findings_confidence",
+    ),
+    # A score with no calibration method is an unexplained number, which is
+    # exactly what bounded confidence exists to stop.
+    CheckConstraint(
+        "(confidence IS NULL) = (confidence_method IS NULL)",
+        name="ck_draft_findings_confidence_is_explained",
+    ),
+    CheckConstraint("version >= 1", name="ck_draft_findings_version"),
+    UniqueConstraint(
+        "investigation_id",
+        "version",
+        name="uq_draft_findings_investigation_version",
+    ),
+)
+Index(
+    "ix_draft_findings_tenant_investigation",
+    draft_findings.c.tenant_id,
+    draft_findings.c.investigation_id,
+    draft_findings.c.version,
+)
+
+draft_finding_claims = Table(
+    "draft_finding_claims",
+    metadata,
+    Column(
+        "claim_id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    ),
+    Column(
+        "draft_finding_id",
+        UUID(as_uuid=True),
+        ForeignKey("draft_findings.draft_finding_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("kind", String(16), nullable=False),
+    Column("claim_text", Text, nullable=False),
+    Column("position", Integer, nullable=False),
+    # Populated when Evidence Citations exist. Present now so that adding them
+    # is a write rather than another migration.
+    Column("citation_ids", JSON, nullable=False, server_default="[]"),
+    CheckConstraint(
+        "kind IN ('observed', 'interpretation')",
+        name="ck_draft_finding_claims_kind",
+    ),
+    CheckConstraint("position >= 0", name="ck_draft_finding_claims_position"),
+    # Order is the contract, not an accident of insertion.
+    UniqueConstraint(
+        "draft_finding_id",
+        "position",
+        name="uq_draft_finding_claims_position",
+    ),
+)
+Index(
+    "ix_draft_finding_claims_draft_position",
+    draft_finding_claims.c.draft_finding_id,
+    draft_finding_claims.c.position,
+)
+
 human_approvals = Table(
     "human_approvals",
     metadata,

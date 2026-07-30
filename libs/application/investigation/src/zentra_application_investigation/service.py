@@ -17,6 +17,7 @@ from zentra_domain_agent_execution import (
 from zentra_domain_investigation import (
     ApprovalDecision,
     DomainEvent,
+    DraftFinding,
     EvaluationDirective,
     FailureOutcome,
     Finding,
@@ -187,6 +188,11 @@ class InvestigationDetail:
     updated_at: datetime
     finished_at: datetime | None
     finding: Finding | None
+    # The Phase 2 structured draft, when the Investigation has one. An
+    # Investigation that ran before Insight existed has `finding` without
+    # `draft_finding`, and the API says so rather than dressing the
+    # narrative up as resolvable evidence.
+    draft_finding: DraftFinding | None
     outcome: OutcomeSignal | None
     pending_approval: PendingApproval | None
     timeline: tuple[TimelineEntry, ...]
@@ -240,6 +246,15 @@ class AgentExecutionRepository(Protocol):
     async def add(self, execution: AgentExecutionRecord) -> None: ...
 
 
+class DraftFindingRepository(Protocol):
+    async def add(self, draft: DraftFinding) -> None: ...
+
+    async def latest_for_investigation(
+        self,
+        investigation_id: UUID,
+    ) -> DraftFinding | None: ...
+
+
 class TenantPolicyRepository(Protocol):
     async def confidence_threshold(self, tenant_id: UUID) -> float: ...
 
@@ -254,6 +269,7 @@ class InvestigationUnitOfWork(Protocol):
     investigations: InvestigationRepository
     approvals: HumanApprovalRepository
     agent_executions: AgentExecutionRepository
+    draft_findings: DraftFindingRepository
     policies: TenantPolicyRepository
     outbox: AuditOutboxRepository
 
@@ -472,7 +488,12 @@ class InvestigationService:
             approval = await unit_of_work.approvals.get_for_investigation(
                 investigation_id
             )
-        return await self._detail(actor, investigation, approval)
+            # Read inside the same tenant-scoped transaction, so RLS decides
+            # visibility rather than a second unguarded round trip.
+            draft = await unit_of_work.draft_findings.latest_for_investigation(
+                investigation_id
+            )
+        return await self._detail(actor, investigation, approval, draft_finding=draft)
 
     async def decide(
         self,
@@ -526,6 +547,9 @@ class InvestigationService:
                     await unit_of_work.approvals.save(approval)
                     await unit_of_work.outbox.enqueue(new_events)
                     await unit_of_work.commit()
+                draft = await unit_of_work.draft_findings.latest_for_investigation(
+                    investigation_id
+                )
             except InvestigationTransitionError as error:
                 raise ConflictError(str(error)) from error
 
@@ -539,6 +563,7 @@ class InvestigationService:
             actor,
             investigation,
             approval,
+            draft_finding=draft,
             fallback_events=new_events,
             delivered=delivered,
         )
@@ -549,6 +574,7 @@ class InvestigationService:
         investigation: Investigation,
         approval: HumanApproval | None,
         *,
+        draft_finding: DraftFinding | None = None,
         fallback_events: Sequence[DomainEvent] = (),
         delivered: bool = True,
     ) -> InvestigationDetail:
@@ -592,6 +618,7 @@ class InvestigationService:
             updated_at=investigation.updated_at,
             finished_at=investigation.finished_at,
             finding=investigation.finding,
+            draft_finding=draft_finding,
             outcome=investigation.outcome,
             pending_approval=pending_approval,
             timeline=merged_timeline,

@@ -29,6 +29,7 @@ from zentra_domain_investigation import (
 )
 
 from .database import Database, set_tenant_context
+from .draft_finding import PostgresDraftFindingRepository
 from .schema import (
     agent_executions,
     audit_outbox,
@@ -475,6 +476,7 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
         self.investigations = PostgresInvestigationRepository(connection)
         self.approvals = PostgresHumanApprovalRepository(connection)
         self.agent_executions = PostgresAgentExecutionRepository(connection)
+        self.draft_findings = PostgresDraftFindingRepository(connection)
         self.policies = PostgresTenantPolicyRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection,

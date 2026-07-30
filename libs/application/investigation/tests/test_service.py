@@ -153,6 +153,17 @@ class AgentExecutions:
         self.rows.append(execution)
 
 
+class DraftFindings:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, object] = {}
+
+    async def add(self, draft: object) -> None:
+        self.rows[draft.investigation_id] = draft
+
+    async def latest_for_investigation(self, investigation_id: UUID) -> object | None:
+        return self.rows.get(investigation_id)
+
+
 class Policies:
     def __init__(self, threshold: float = 0.7, tier: str = "free") -> None:
         self.threshold = threshold
@@ -170,6 +181,7 @@ class UnitOfWork:
         self.investigations = Investigations()
         self.approvals = Approvals()
         self.agent_executions = AgentExecutions()
+        self.draft_findings = DraftFindings()
         self.policies = Policies()
         self.outbox = Outbox()
         self.commits = 0
