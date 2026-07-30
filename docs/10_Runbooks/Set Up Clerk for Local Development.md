@@ -127,6 +127,6 @@ combination that reaches the publish path.
 | "An active Clerk organization is required" | organizations disabled, or no org active in the session |
 | "This organization is not bound to a ZentraOS tenant" | step 4 not run |
 | "Failed to fetch" | the API is down or on another port; check `curl localhost:8000/health/live` |
-| 401 on every request | `CLERK_AUDIENCE` is set — clear it |
+| 401 on every request, log says `MissingRequiredClaimError: "aud"` | `CLERK_AUDIENCE` holds a value the token does not carry. Blank is handled — it means unconfigured |
 
 Parent: [[Runbooks MOC]]
