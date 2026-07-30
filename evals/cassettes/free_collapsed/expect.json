@@ -17,5 +17,5 @@
   "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
   "analyst_sample_size": 8,
   "evaluator_sample_size": 8,
-  "note": "Nvidia deliberately the only reachable provider, so this reproduces one model checking its own work regardless of anyone's daily quota. The recheck disagreed and the loop retried before settling at 0.20 \u2014 evaluator-optimizer convergence and the hard exit at three attempts, on real output."
+  "note": "Nvidia deliberately the only reachable provider, so one model checks its own work regardless of anyone's daily quota. The recheck disagreed once and the loop retried, settling at 0.20 on the second attempt \u2014 the evaluator-optimizer loop converging on real output. It does not reach the hard exit at three attempts; nothing recorded here does."
 }

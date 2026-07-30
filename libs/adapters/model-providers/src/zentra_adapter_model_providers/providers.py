@@ -57,8 +57,15 @@ PROVIDERS: dict[Provider, ProviderConfig] = {
         base_url="https://api.cerebras.ai/v1",
         trains_on_input=False,
     ),
-    # Gemini, NVIDIA, and OpenRouter train on free-tier traffic. They are
-    # reachable only from the free chain; ROUTING asserts at import that none
+    # Gemini, NVIDIA, and OpenRouter train on free-tier traffic. The flag
+    # assumes a free-tier key: Google does not train on paid-tier API data, so a
+    # paid Gemini key does not in fact train — but the code cannot tell the key
+    # classes apart, and privacy takes the pessimistic reading rather than an
+    # assumption. Moving Gemini into a premium chain on the strength of a paid
+    # key is a deliberate decision that has to revisit this flag first.
+    #
+    # They are reachable only from the free chain; ROUTING asserts at import
+    # that none
     # appears in a premium one.
     Provider.GEMINI: ProviderConfig(
         provider=Provider.GEMINI,
@@ -123,12 +130,21 @@ _PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     "claude-sonnet-5": (Decimal("3.00"), Decimal("15.00")),
     "claude-opus-5": (Decimal("5.00"), Decimal("25.00")),
     "gpt-5.5": (Decimal("5.00"), Decimal("30.00")),
-    # Free tiers: no charge is incurred, so none is recorded.
+    # Google's paid list price. Priced rather than zeroed because the same model
+    # id costs nothing on a free key and real money on a paid one, and the code
+    # cannot tell which a deployment holds — so it assumes the expensive case,
+    # for the same reason Sonnet uses list price above. A free-tier key
+    # over-reports, which is the safe direction.
+    "gemini-3.6-flash": (Decimal("1.50"), Decimal("7.50")),
+    # Free tiers with no paid equivalent in use: no charge is incurred, so none
+    # is recorded.
     "zai-glm-4.7": _ZERO,
     "openai/gpt-oss-120b": _ZERO,
     "openai/gpt-oss-20b": _ZERO,
-    "gemini-3.6-flash": _ZERO,
     "nvidia/nemotron-3-ultra-550b-a55b": _ZERO,
+    # An alias, not a model: OpenRouter picks what answers. Priced at zero
+    # because only its `:free` variants are routed to, and `token_cost_usd`
+    # prices whatever actually served when that id is known.
     "openrouter/free": _ZERO,
 }
 

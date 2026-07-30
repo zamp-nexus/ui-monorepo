@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from zentra_domain_agent_execution import AgentRole
 
@@ -12,6 +14,7 @@ from zentra_adapter_model_providers import (
     model_family,
     token_cost_usd,
 )
+from zentra_adapter_model_providers.openai_compatible import _cost
 
 
 def test_no_premium_chain_touches_a_provider_that_trains_on_input() -> None:
@@ -104,3 +107,64 @@ def test_only_anthropic_uses_a_native_sdk() -> None:
             assert config.base_url is None
         else:
             assert config.base_url is not None
+
+
+def test_a_paid_gemini_key_is_priced_rather_than_recorded_as_free() -> None:
+    """The same id costs nothing on a free key and real money on a paid one.
+    The code cannot tell which a deployment holds, so it assumes the expensive
+    case — the ledger over-reporting is survivable, silently spending is not."""
+    cost = token_cost_usd(
+        "gemini-3.6-flash", input_tokens=1_000_000, output_tokens=1_000_000
+    )
+
+    assert cost == Decimal("9.00")
+
+
+def test_pricing_follows_the_model_that_answered_not_the_alias_asked_for() -> None:
+    """`openrouter/free` is an alias; a live run resolved it to a Nemotron
+    variant. Pricing the alias records the alias's cost for another model."""
+    served = _cost(
+        served="claude-opus-5",
+        requested="openrouter/free",
+        input_tokens=1_000_000,
+        output_tokens=0,
+        cache_read_tokens=0,
+    )
+
+    assert served == Decimal("5.00")
+
+
+def test_an_unpriced_served_model_falls_back_to_the_requested_one() -> None:
+    """OpenRouter can serve anything. A cost lookup must not fail a call that
+    already succeeded, so an unknown served id falls back rather than raising."""
+    cost = _cost(
+        served="some-model-openrouter-picked-today",
+        requested="openrouter/free",
+        input_tokens=1_000_000,
+        output_tokens=1_000_000,
+        cache_read_tokens=0,
+    )
+
+    assert cost == Decimal("0")
+
+
+def test_both_ids_unpriced_still_fails_loudly() -> None:
+    with pytest.raises(UnknownModelError):
+        _cost(
+            served="mystery-a",
+            requested="mystery-b",
+            input_tokens=1,
+            output_tokens=1,
+            cache_read_tokens=0,
+        )
+
+
+def test_a_rung_is_not_held_to_another_providers_token_budget() -> None:
+    """The 8000 default is Groq's constraint. NIM does not share it, and a
+    reasoning model leading the Evaluator chain needs the room — at 8000 it
+    truncated on the 300-order scenario and killed the whole investigation."""
+    evaluator = ROUTING[ModelTier.FREE][AgentRole.EVALUATOR]
+    nemotron = next(c for c in evaluator if c.provider is Provider.NVIDIA)
+    groq = next(c for c in evaluator if c.provider is Provider.GROQ)
+
+    assert nemotron.max_tokens > groq.max_tokens

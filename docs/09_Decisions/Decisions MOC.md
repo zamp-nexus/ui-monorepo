@@ -27,6 +27,7 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0006-metadata-only-audit-ledger]]
 - [[adr/0007-transactional-audit-outbox]]
 - [[adr/0009-tiered-model-provider-routing]]
+- [[adr/0010-confidence-bounded-by-evidence]]
 
 ## Governance
 
