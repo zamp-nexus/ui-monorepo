@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: high
@@ -30,8 +30,8 @@ an explicit non-product state.
 
 ## Start the governed scenario
 
-An authorized user launches the only supported scenario from `/`. The server,
-not the caller, supplies the canonical question. The browser moves to
+An authorized user launches one of the two supported scenarios from `/`. The
+server, not the caller, supplies the canonical question. The browser moves to
 `/investigations/{id}` after creation.
 
 ## Review evidence
@@ -42,9 +42,11 @@ state. It does not expose prompts or chain-of-thought.
 
 ## Decide
 
-An owner/admin approves or rejects with a structured rejection reason. Members
-and viewers see the gate but cannot decide. Approval completes the Investigation;
-rejection records the terminal reason.
+When an Investigation gates, an owner/admin approves or rejects with a
+structured rejection reason. Members and viewers see the gate but cannot decide.
+Approval completes the Investigation; rejection records the terminal reason.
+An Investigation whose converged, bounded confidence clears policy can complete
+without Human Approval.
 
 ## Refresh and recover
 

@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -63,5 +63,14 @@ question.
 Result rows never enter the audit ledger or travel between Agents. They live in
 `agent_executions.output` and are reachable only through the `artifact://`
 pointer the ledger carries.
+
+## Phase 2 change
+
+The sequence above is current behavior. Phase 2 replaces step 7 with a
+separately registered Insight Agent that produces a Draft Finding. Publication
+then additionally requires complete, resolvable Evidence Citations. Replay
+combines ClickHouse process truth with authorized evidence artifacts, and
+deleted evidence resolves to Tombstones. See
+[[Phase 2 - Insight Auditor and Replay]].
 
 Parent: [[Workflows MOC]]

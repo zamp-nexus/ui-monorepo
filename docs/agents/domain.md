@@ -1,51 +1,50 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+How engineering skills consume this repository's domain documentation.
 
-This is an Nx monorepo (`apps/*`, `libs/*`, `tools/*`), so it uses the **multi-context** layout.
+This Nx monorepo uses a multi-context domain layout.
 
-## Before exploring, read these
+## Before exploring
 
-- **`CONTEXT-MAP.md`** at the repo root — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`** — system-wide decisions. Read ADRs that touch the area you're about to work in.
-- **`apps/<app>/docs/adr/`** or **`libs/<area>/docs/adr/`** — context-scoped decisions for the area you're about to work in.
+- Read the root `CONTEXT-MAP.md`.
+- Read each linked `CONTEXT.md` relevant to the work.
+- Read system-wide decisions under `docs/adr/`.
+- Check for context-specific `docs/adr/` directories in the affected area.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+If an optional context or ADR directory does not exist, proceed silently. Domain
+documentation is created lazily when terminology or a durable architectural
+decision is actually resolved.
 
-## File structure
+## Current structure
 
 ```
 /
 ├── CONTEXT-MAP.md
-├── docs/adr/                          ← system-wide decisions
-├── apps/
-│   └── zentra-os/
-│       ├── CONTEXT.md
-│       └── docs/adr/                  ← app-specific decisions
-├── libs/
-│   ├── foundation/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/
-│   ├── shared/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/
-│   ├── shop/                          ← reserved in workspaces, not yet populated
-│   └── api/products/                  ← reserved in workspaces, not yet populated
-└── tools/
-    ├── CONTEXT.md
-    └── docs/adr/
+├── docs/
+│   └── adr/                              ← system-wide decisions
+└── libs/
+    └── domain/
+        ├── CONTEXT.md                    ← shared ZentraOS language
+        ├── agent-execution/
+        │   └── CONTEXT.md
+        └── investigation/
+            └── CONTEXT.md
 ```
 
-Each context corresponds to a top-level workspace area declared in `package.json`'s `workspaces` field (`apps/*`, `libs/foundation/*`, `libs/shared/*`, `libs/shop/*`, `libs/api/products`, `tools/*`), not to every individual package inside it — e.g. `libs/foundation` is one context even though it contains 15+ packages (auth, authz, database, http, sync-engine, etc.), unless one of those packages grows a distinct enough domain vocabulary to warrant splitting out its own `CONTEXT.md`.
+The context map is authoritative for which contexts exist and how they relate.
+Do not infer contexts merely from workspace package boundaries.
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in the relevant `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
+When output names a domain concept—in an issue title, specification, test,
+hypothesis, or implementation—use the canonical term from the relevant
+`CONTEXT.md`. Do not drift to synonyms listed under `_Avoid_`.
 
-If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
+If a required concept is absent, either reconsider whether it is genuinely a
+domain term or resolve it through domain modeling before introducing it.
 
 ## Flag ADR conflicts
 
-If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
-
-> _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+If proposed work contradicts an existing ADR, surface the conflict explicitly.
+Do not silently override an accepted decision. Accepted ADRs are superseded by
+a new linked ADR rather than rewritten.

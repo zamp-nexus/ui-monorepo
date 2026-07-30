@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: high
@@ -36,7 +36,7 @@ code_refs: [package.json, nx.json, CONTEXT-MAP.md]
 | Local topology | `docker-compose.yml` |
 | Managed infrastructure | `infra/terraform` |
 | CI behavior | `.github/workflows/ci.yml` |
-| Work planning | `.scratch/` conventions in `docs/agents/issue-tracker.md` |
+| Work planning | GitHub Issues conventions in `docs/agents/issue-tracker.md` |
 
 When a note disagrees with an executable source, treat the source as current
 behavior, investigate intent through ADRs/context, and correct the note or code

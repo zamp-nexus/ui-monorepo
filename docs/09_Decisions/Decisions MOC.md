@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 priority: high
 tags: [adr, decisions, index]
@@ -28,6 +28,7 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0007-transactional-audit-outbox]]
 - [[adr/0009-tiered-model-provider-routing]]
 - [[adr/0010-confidence-bounded-by-evidence]]
+- [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]
 
 ## Governance
 

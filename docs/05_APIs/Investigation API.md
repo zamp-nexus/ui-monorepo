@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -65,5 +65,13 @@ decisions return `409`.
 - `409`: invalid transition or conflicting decision.
 - `422`: unsupported scenario or invalid request/reason.
 - `503`: sanitized governed-metric dependency failure with no misleading result.
+
+## Phase 2 planned contract
+
+Phase 2 requires Tenant-authorized Evidence Citation resolution and explicit
+missing, denied, and Tombstone results. Endpoint shapes are deliberately not
+specified until implementation; current `artifact://` strings must not be
+misreported as this completed contract. See
+[[Phase 2 - Insight Auditor and Replay]].
 
 Parent: [[APIs MOC]]

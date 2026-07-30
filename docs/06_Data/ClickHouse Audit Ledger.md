@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -39,5 +39,13 @@ replay deduplicates stable `entry_id`.
 
 Forbidden data includes prompts, raw analytical rows, uploaded values,
 credentials, reviewer prose, and hidden reasoning.
+
+## Phase 2 authority
+
+ClickHouse remains authoritative for Replay chronology, participants, lifecycle
+transitions, evaluation outcomes, publication decisions, and audit integrity.
+It does not become an evidence store. Phase 2 resolves evidence content through
+Tenant-authorized Evidence Citations from the artifact store; deleted evidence
+resolves to a Tombstone while Audit Entries remain immutable.
 
 Parent: [[Data MOC]]

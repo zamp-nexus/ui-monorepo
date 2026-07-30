@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -22,12 +22,18 @@ code_refs: [README.md, apps/api/src/zentra_api/routes.py]
 ## Current product
 
 ZentraOS converts a governed business question into a tenant-isolated,
-evidence-backed Investigation. Phase 1A supports only
-`eu_refund_spike`: “Why did EU refunds increase from June to July 2026?”
+evidence-backed Investigation. The current deployment exposes two fixed
+scenarios: `eu_refund_spike` and `na_channel_growth`.
 
-The workflow queries governed Cube metrics, validates deterministic values,
-requires Human Approval because the sample is small, and exposes a safe replay
-timeline. It never presents model confidence or hidden reasoning.
+The workflow uses an Orchestrator, SQL Analyst, and Evaluator over governed Cube
+metrics. Confidence is bounded by sample size and model independence before
+publication policy applies. The EU scenario requires Human Approval; the NA
+scenario can publish automatically when evaluation converges. Both expose a
+safe Replay timeline without hidden reasoning or raw analytical rows.
+
+Phase 2 is now defined but incomplete. It adds an independent Insight Agent,
+resolvable Evidence Citations, deletion Tombstones, and external Replay
+comprehension. See [[Phase 2 - Insight Auditor and Replay]].
 
 ## Current users
 
@@ -40,8 +46,8 @@ Users participate through a Tenant Membership:
 ## Deliberately outside the boundary
 
 - Arbitrary questions, uploads, customer datasets, and generalized connectors.
-- Model-backed agents, LangGraph orchestration, or E2B sandbox execution.
-- Agent registry management or enabled Agent rows.
+- Insight, Statistician, and later analytical Agents.
+- Resolvable evidence artifacts and deletion Tombstones.
 - Investigation listing, streaming, full replay, or cancellation APIs.
 - Production deployment automation and cloud operational sign-off.
 

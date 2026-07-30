@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: high
@@ -48,6 +48,19 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - OpenTelemetry trace correlation and configurable OTLP export.
 - Local Docker environment and managed Neon/ClickHouse Terraform definitions.
 
+## Product phase
+
+Phase 2 — Insight, Auditor, and Replay — is **in progress**. The current
+implementation already supplies the deterministic Auditor, Human Approval,
+tenant-filtered ClickHouse Replay, and an Orchestrator-synthesized Finding.
+
+Phase 2 is not complete because Insight is not an independent registered Agent,
+Finding claims expose opaque artifact pointers rather than resolvable Evidence
+Citations, evidence deletion has no Tombstone workflow, and no external
+Replay-comprehension exercise has been recorded. See
+[[Phase 2 - Insight Auditor and Replay]] and
+[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
+
 ## Configured but not operationally signed off
 
 Clerk, Neon, ClickHouse Cloud, Langfuse, E2B, and every model provider
@@ -61,11 +74,11 @@ provider and its independence grade drops to `NONE`.
 
 ## Not implemented
 
-Insight/Root-Cause and the remaining Growth-stage Agents, deletion tombstones,
-the cost-ceiling circuit breaker, a cross-vendor Evaluator for the premium tier,
-recovery for a pipeline interrupted mid-run, generalized
-scheduling, arbitrary datasets/questions, production application deployment,
-and a release process.
+The Insight Agent, resolvable claim-level Evidence Citations, evidence-deletion
+Tombstones, the Statistician and later Agents, the cost-ceiling circuit breaker,
+a cross-vendor Evaluator for the premium tier, recovery for a pipeline
+interrupted mid-run, generalized scheduling, arbitrary datasets/questions,
+production application deployment, and a release process.
 
 ## Verification caveat
 

@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -55,5 +55,13 @@ Status changes use live regions and the approval heading receives focus.
 The app explicitly handles missing Clerk configuration, signed-out, missing
 organization, unbound membership, degraded dependencies, read-only approval,
 completed, and rejected states.
+
+## Phase 2 gap
+
+The current Finding shows opaque `artifact://` values. Phase 2 requires each
+substantive claim to expose authorized, resolvable Evidence Citations and to
+render explicit missing, denied, and Tombstone states. The phase is not complete
+until an uncoached design-partner reviewer can explain both an automatically
+published and a gated Investigation from Replay.
 
 Parent: [[Components MOC]]

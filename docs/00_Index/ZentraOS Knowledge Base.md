@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 priority: critical
 tags: [zentraos, index, engineering]
@@ -52,9 +52,11 @@ judgment, and immutable audit trail fit together.
 
 ## Current boundary
 
-Phase 1A implements one deterministic scenario and a Human Approval gate. No
-model-backed agent, LangGraph workflow, generalized connector, scheduler, or
-production deployment pipeline is present.
+Phase 1 implements two governed scenarios, model-backed Orchestrator, SQL
+Analyst, and Evaluator roles, confidence-bounded publication, Human Approval,
+and ClickHouse-backed Replay. [[01_Overview/Phase 2 - Insight Auditor and Replay]]
+is in progress; generalized data/questions, scheduling, and production
+deployment remain outside the current boundary.
 
 Source of truth: [root README](../../README.md) and
 [context map](../../CONTEXT-MAP.md).

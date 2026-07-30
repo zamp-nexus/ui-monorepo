@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 priority: normal
 tags: [change, release, incident, index]
@@ -26,7 +26,7 @@ open-question notes that need team visibility. Use the templates in
 - [[2026-07-30 Metric Periods and a Green Baseline]] — a metric states the
   period it compares, and CI passes for the first time.
 
-Issue/spec work remains under `.scratch/`. Promote only durable conclusions into
-the vault.
+Issue and PRD work remains in GitHub Issues. Promote only durable conclusions
+into the vault.
 
 Parent: [[ZentraOS Knowledge Base]]

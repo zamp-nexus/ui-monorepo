@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: context-map
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -53,6 +53,18 @@ bound applied. Agents that disagree about the sample size by more than 2x open
 Validation is deterministic checks and issues, not a confidence score. Evidence
 must use `artifact://`. Approval replay is idempotent only when the decision and
 structured reason match.
+
+## Phase 2 language
+
+Phase 2 distinguishes the Insight Agent's unpublished **Draft Finding** from a
+published **Finding**. Every substantive Draft Finding claim must carry a
+tenant-authorized, resolvable **Evidence Citation**. A **Tombstone** explains
+that cited evidence was deliberately erased without retaining its values.
+
+A **Root Cause Claim** is not a synonym for an observed driver or association.
+It remains inadmissible until a separate causal-evidence standard is accepted
+and satisfied. These are planned contracts, not current implementation. See
+[[Phase 2 - Insight Auditor and Replay]].
 
 Canonical language:
 [Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:

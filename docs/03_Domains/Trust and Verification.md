@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: context-map
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
@@ -43,5 +43,18 @@ and judgment.
 
 The UI displays structured rationale and audit facts. It never exposes hidden
 chain-of-thought or invents confidence.
+
+## Phase 2 trust conditions
+
+Phase 2 permits automatic publication only when evaluation converged, bounded
+confidence clears the Tenant threshold, every substantive claim has a
+resolvable Evidence Citation, and no unresolved contradiction remains.
+Otherwise Human Approval is mandatory.
+
+ClickHouse remains authoritative for immutable process truth; authorized
+artifacts supply evidence content. Evidence deletion erases content while
+Tombstones explain its absence. These conditions are accepted targets and are
+not all implemented. See
+[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
 
 Parent: [[Domains MOC]]

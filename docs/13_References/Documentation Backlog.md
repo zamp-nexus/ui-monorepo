@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: mixed
 implementation: current
 priority: normal
@@ -17,6 +17,9 @@ repo_path: docs
 ---
 
 # Documentation Backlog
+
+These phases describe documentation-system maturity. They are unrelated to the
+product roadmap in [[Phase 2 - Insight Auditor and Replay]].
 
 ## Phase 1 — critical onboarding and architecture
 
@@ -49,6 +52,6 @@ repo_path: docs
 - [x] Automated metadata/link/source validation in CI.
 - [ ] Add release records when a release strategy is accepted.
 - [ ] Review critical notes monthly and all active notes quarterly.
-- [ ] Promote durable findings from `.scratch/` investigations.
+- [ ] Promote durable findings from GitHub issue investigations.
 
 Parent: [[References MOC]]

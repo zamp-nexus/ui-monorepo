@@ -1,5 +1,9 @@
 # Foundation Libraries Architecture Review and Remediation Plan
 
+> The phases in this file sequence foundation-package remediation only. They are
+> unrelated to product [[Phase 2 - Insight Auditor and Replay]] and must be
+> re-verified against current code before execution.
+
 ## Scope
 
 - Included foundation libraries:

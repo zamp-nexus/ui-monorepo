@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: mixed
 priority: critical
 tags: [documentation, governance, obsidian]
@@ -181,6 +181,10 @@ have a dedicated MOC. [[Repository Source Map]] points back to authoritative
 files and [[Nx Project Catalog]] records the actual workspace topology.
 
 ## 9. Prioritized documentation backlog
+
+The phases in this section describe vault maturity, not product delivery. Product
+Phase 2 is defined separately in
+[[Phase 2 - Insight Auditor and Replay]].
 
 - Phase 1: root navigation, repository overview, system context, trust loop,
   local development, and first-day onboarding.

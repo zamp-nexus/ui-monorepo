@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 priority: critical
 tags: [overview, index]
@@ -21,6 +21,7 @@ repo_path: docs/01_Overview
 - [[Product Boundaries]]
 - [[User Workflows]]
 - [[Current Implementation Status]]
+- [[Phase 2 - Insight Auditor and Replay]]
 - [[Documentation System Specification]]
 
 Use this hub to answer what ZentraOS is, what exists today, and where a new

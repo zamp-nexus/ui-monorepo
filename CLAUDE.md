@@ -73,11 +73,15 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ### Issue tracker
 
-Issues and specs live as markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Issues and PRDs live in GitHub Issues for `openzentra/nexus`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels defined for this repository. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Multi-context layout: root `CONTEXT-MAP.md` points to per-area `CONTEXT.md` files under `apps/*` and `libs/*`. See `docs/agents/domain.md`.
+Multi-context layout: root `CONTEXT-MAP.md` points to the relevant domain `CONTEXT.md` files. See `docs/agents/domain.md`.
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

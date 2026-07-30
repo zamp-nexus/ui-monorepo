@@ -1,30 +1,50 @@
-# Issue tracker: Local Markdown
+# Issue tracker: GitHub
 
-Issues and specs (you may know a spec as a PRD) for this repo live as markdown files in `.scratch/`.
+Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+
+## Repository
+
+The repository is `openzentra/nexus`. Infer it from `git remote -v`; `gh` does
+this automatically when run inside this clone.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
-- Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- **Create an issue**: `gh issue create --title "..." --body "..."`
+- **Read an issue**: `gh issue view <number> --comments`
+- **List issues**: use `gh issue list` with the appropriate state and label
+  filters and request structured JSON when processing results.
+- **Comment on an issue**: `gh issue comment <number> --body "..."`
+- **Apply or remove labels**: use `gh issue edit <number> --add-label "..."`
+  or `--remove-label "..."`.
+- **Close an issue**: `gh issue close <number> --comment "..."`
+
+## Pull requests as a triage surface
+
+**PRs as a request surface: no.**
+
+GitHub shares one number space across issues and pull requests. When a bare
+reference such as `#42` is ambiguous, resolve it before acting.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
+Create a GitHub issue.
 
 ## When a skill says "fetch the relevant ticket"
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+Run `gh issue view <number> --comments`.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+The map is one GitHub issue and its tickets are child issues.
 
-- **Map**: `.scratch/<effort>/map.md` — the Notes / Decisions-so-far / Fog body.
-- **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.
-- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
-- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
-- **Claim**: set `Status: claimed` and save before any work.
-- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+- **Map**: an issue labelled `wayfinder:map`, containing Notes,
+  Decisions-so-far, and Fog.
+- **Child ticket**: a GitHub sub-issue linked to the map and labelled
+  `wayfinder:<type>`, where type is `research`, `prototype`, `grilling`, or
+  `task`.
+- **Blocking**: use GitHub native issue dependencies. Fall back to a
+  `Blocked by: #<n>` line only when dependencies are unavailable.
+- **Frontier**: choose the first open, unblocked, unassigned child in map order.
+- **Claim**: assign the issue to the current user before beginning writes.
+- **Resolve**: add the answer as a comment, close the child issue, and append a
+  concise context pointer to the map's Decisions-so-far section.

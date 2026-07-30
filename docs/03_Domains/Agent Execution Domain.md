@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: context-map
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: high
@@ -58,6 +58,15 @@ dimensions, not only member names. Without them an agent filtering
 The Semantic Layer Port is the only capability in the tree that reaches data.
 No raw-SQL port exists for an Agent to be granted, which is what makes the SQL
 Analyst's inability to see raw tables structural rather than instructed.
+
+## Phase 2 boundary
+
+Phase 2 adds the Insight Agent as the fourth implemented autonomous role. It is
+separately registered and evaluated, produces a Draft Finding from validated
+upstream evidence, and never guarantees a Root Cause Claim. The Orchestrator
+continues to delegate and arbitrate but stops synthesizing Findings. The
+Statistician remains deferred. See
+[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
 
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).

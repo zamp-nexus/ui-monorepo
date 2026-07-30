@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: governance
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-07-30
+reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: high
@@ -46,8 +46,9 @@ Release notes describe user/operator-visible behavior, not commit lists.
 
 ## Research and work tracking
 
-`.scratch/` remains the issue/spec workspace. Completed research becomes a vault
-note only when it contains durable, reusable knowledge.
+GitHub Issues are the issue and PRD workspace. Completed research becomes a
+vault note only when it contains durable, reusable knowledge. Repository
+conventions live in `docs/agents/issue-tracker.md`.
 
 ## Enforcement
 

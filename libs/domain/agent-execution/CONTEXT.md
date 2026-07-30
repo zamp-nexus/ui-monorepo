@@ -12,6 +12,10 @@ _Avoid_: Bot, participant, human reviewer
 One bounded invocation of an Agent for one Investigation and Tenant.
 _Avoid_: Agent run, task process
 
+**Insight Agent**:
+A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish.
+_Avoid_: Root-Cause Agent, Finding writer, synthesis step
+
 **Outcome Signal**:
 Role-appropriate evidence about an Agent Execution: either calibrated confidence or an explicit validation result.
 _Avoid_: Universal confidence score, quality score
