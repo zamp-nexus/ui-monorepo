@@ -171,6 +171,11 @@ class PendingApproval:
     reason: str
     requested_at: datetime
     can_decide: bool
+    # Every condition the deterministic policy found failing, in its own
+    # vocabulary. `reason` is the headline; this is the whole picture, and
+    # a reviewer deciding on the headline alone would be deciding on part
+    # of it.
+    failed_conditions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

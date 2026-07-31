@@ -391,3 +391,50 @@ def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert seen == [UUID("20000000-0000-0000-0000-000000000002")]
+
+
+def gated_detail(*failed: str):
+    from zentra_application_investigation import PendingApproval
+
+    detail = investigation_detail(draft_finding=structured_draft())
+    return replace(
+        detail,
+        pending_approval=PendingApproval(
+            approval_id=UUID("40000000-0000-0000-0000-000000000004"),
+            reason="evidence_incomplete",
+            requested_at=datetime(2026, 7, 29, tzinfo=UTC),
+            can_decide=True,
+            failed_conditions=failed,
+        ),
+    )
+
+
+def test_the_api_reports_every_failed_publication_condition(monkeypatch) -> None:
+    """A client shown only the headline would show a reviewer part of the
+    picture. Both use the policy's own vocabulary."""
+    authenticated(monkeypatch)
+    service = InvestigationServiceStub()
+    service.detail = gated_detail("converged", "confident", "evidenced")
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    approval = response.json()["pending_approval"]
+    assert approval["reason"] == "evidence_incomplete"
+    assert approval["failed_conditions"] == ["converged", "confident", "evidenced"]
+
+
+def test_an_automatically_published_investigation_reports_no_gate(
+    monkeypatch,
+) -> None:
+    authenticated(monkeypatch)
+    service = InvestigationServiceStub()
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.json()["pending_approval"] is None

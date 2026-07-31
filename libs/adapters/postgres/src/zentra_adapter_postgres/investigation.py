@@ -25,6 +25,7 @@ from zentra_domain_investigation import (
     Investigation,
     InvestigationStatus,
     MetricComparison,
+    PublicationCondition,
     RejectionReason,
 )
 
@@ -228,6 +229,7 @@ class PostgresHumanApprovalRepository:
                 investigation_id=approval.investigation_id,
                 tenant_id=approval.tenant_id,
                 reason=approval.reason.value,
+                failed_conditions=[c.value for c in approval.failed_conditions],
                 status=approval.status.value,
                 requested_at=approval.requested_at,
             )
@@ -256,6 +258,10 @@ class PostgresHumanApprovalRepository:
             investigation_id=row.investigation_id,
             tenant_id=row.tenant_id,
             reason=ApprovalReason(row.reason),
+            failed_conditions=tuple(
+                PublicationCondition(condition)
+                for condition in (row.failed_conditions or [])
+            ),
             status=HumanApprovalStatus(row.status),
             requested_at=row.requested_at,
             decided_at=row.decided_at,

@@ -32,6 +32,11 @@ from .model import (
     confidence_ceiling,
     directive_for_outcome,
 )
+from .publication import (
+    PublicationCondition,
+    PublicationDecision,
+    evaluate_publication,
+)
 
 __all__ = [
     "ApprovalDecision",
@@ -56,8 +61,11 @@ __all__ = [
     "InvestigationStatus",
     "InvestigationTransitionError",
     "MetricComparison",
+    "PublicationCondition",
+    "PublicationDecision",
     "RejectionReason",
     "RootCauseState",
     "confidence_ceiling",
     "directive_for_outcome",
+    "evaluate_publication",
 ]

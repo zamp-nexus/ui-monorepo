@@ -246,9 +246,13 @@ class ApprovalResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     approval_id: UUID
+    # The headline reason, and every condition behind it. Both use the
+    # publication policy's vocabulary, so the API, the UI and Replay are
+    # describing the same decision in the same words.
     reason: str
     requested_at: datetime
     can_decide: bool
+    failed_conditions: list[str]
 
 
 class TimelineResponse(BaseModel):
@@ -358,6 +362,7 @@ class InvestigationDetailResponse(BaseModel):
                 reason=detail.pending_approval.reason,
                 requested_at=detail.pending_approval.requested_at,
                 can_decide=detail.pending_approval.can_decide,
+                failed_conditions=list(detail.pending_approval.failed_conditions),
             )
         return cls(
             investigation_id=detail.investigation_id,

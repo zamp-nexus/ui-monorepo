@@ -51,6 +51,51 @@ bound applied. Agents that disagree about the sample size by more than 2x open
 `ESCALATE` to a human. A non-converged run escalates rather than returning to
 `running`, so no investigation can settle in a non-terminal state.
 
+## Publication policy — current
+
+Publication authority is deterministic Investigation policy. Not the Insight
+Agent, not the Orchestrator: ADR 0011 puts it here precisely so that no Agent —
+however confident, however well-evidenced — publishes its own conclusion.
+
+Four conditions, evaluated independently. A Draft Finding publishes
+automatically only when **all four** pass; anything else opens a Human Approval
+gate.
+
+| Condition | Fails when |
+| --- | --- |
+| `converged` | The Evaluator's recheck disagreed, or the two agents counted samples differing by more than the divergence factor |
+| `confident` | Bounded confidence is below the Tenant threshold, or unknown |
+| `evidenced` | A substantive claim cites nothing, or cites evidence that does not resolve |
+| `uncontradicted` | A contradiction is still open |
+
+They are separate rather than folded into one score because a reviewer opening
+that gate needs to know *which* failed, and a single number cannot say "the
+recheck disagreed" and "nothing backs claim 2" at once.
+
+**Every failure is recorded, not just the first.** A reviewer told only that
+confidence was low, when the evidence was also unreachable, would approve on a
+false picture of what is wrong. `ApprovalReason` remains the headline — leading
+with whichever failure most stops a reviewer working — and the complete list
+travels beside it, through the audit event, the API and the UI, in the policy's
+own vocabulary.
+
+Two rules that look like edge cases and are not:
+
+- **An unknown confidence gates.** The score being unknown is exactly when a
+  human should look; treating absence as a pass would let the least-evidenced
+  case publish itself.
+- **A draft with nothing substantive is not evidenced.** "Nothing to check" is
+  not "everything checks out", and conflating them is how a vacuous Finding
+  reaches a reader.
+
+A structurally invalid draft never reaches the policy at all. An observed claim
+citing nothing cannot be constructed, so it fails closed rather than opening a
+gate — gating is for a conclusion a reviewer can judge.
+
+The Phase 1 path is unchanged: a narrative Finding was never citable, and
+gating every legacy Investigation on a contract that did not exist when it ran
+would be a change of behaviour rather than a policy.
+
 Validation is deterministic checks and issues, not a confidence score. Evidence
 must use `artifact://`. Approval replay is idempotent only when the decision and
 structured reason match.
