@@ -16,6 +16,10 @@ _Avoid_: Answer, response, insight blob
 An unpublished analytical conclusion proposed by the Insight Agent after evaluation and before publication policy or Human Approval decides its outcome.
 _Avoid_: Finding, answer draft, Orchestrator synthesis
 
+**Measurement**:
+The governed metric, value, and period an observed claim rests on, copied from the validated aggregate rather than restated by the Agent.
+_Avoid_: Figure, number, data point
+
 **Evidence Citation**:
 A Tenant-authorized reference connecting one substantive Draft Finding claim to its governed metric, query context, producing Agent Execution, validated aggregate result, and Evaluator outcome.
 _Avoid_: Evidence Reference, opaque artifact pointer, raw source row

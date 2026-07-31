@@ -7,6 +7,11 @@ export interface Claim {
   readonly kind: 'observed' | 'interpretation';
   readonly text: string;
   readonly position: number;
+  // The measurement behind an observed claim. Null on an interpretation,
+  // which is a reading of someone else's measurement.
+  readonly metric: string | null;
+  readonly value: string | null;
+  readonly period: string | null;
   readonly citation_ids: readonly string[];
 }
 
@@ -75,7 +80,18 @@ export function DraftFindingPanel({ draft }: { draft: DraftFinding }) {
             >
               {claimLabels[claim.kind]}
             </Badge>
-            <p>{claim.text}</p>
+            <div>
+              <p>{claim.text}</p>
+              {/* Shown, not implied. A reader should be able to see the
+                  figure a claim rests on without following anything. */}
+              {claim.metric && claim.value ? (
+                <p className={styles.measurement}>
+                  <span>{claim.metric}</span>
+                  <span>{claim.value}</span>
+                  {claim.period ? <span>{claim.period}</span> : null}
+                </p>
+              ) : null}
+            </div>
           </li>
         ))}
       </ol>

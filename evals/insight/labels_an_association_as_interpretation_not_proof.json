@@ -50,13 +50,15 @@
           "kind": "observed",
           "text": "EU refund amount rose to $260.00.",
           "metric": "refund_amount",
-          "value": "260.00"
+          "value": "260.00",
+          "period": "July 2026"
         },
         {
           "kind": "interpretation",
           "text": "Refunds and order count did not move together.",
           "metric": "order_count",
-          "value": null
+          "value": null,
+          "period": null
         }
       ],
       "contradictions": [],
@@ -73,13 +75,15 @@
           "kind": "observed",
           "text": "EU refund amount rose to $260.00.",
           "metric": "refund_amount",
-          "value": "260.00"
+          "value": "260.00",
+          "period": "July 2026"
         },
         {
           "kind": "interpretation",
           "text": "Refunds and order count did not move together.",
           "metric": "order_count",
-          "value": null
+          "value": null,
+          "period": null
         }
       ]
     }

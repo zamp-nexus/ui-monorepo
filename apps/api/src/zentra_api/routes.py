@@ -119,6 +119,11 @@ class ClaimResponse(BaseModel):
     kind: Literal["observed", "interpretation"]
     text: str
     position: int
+    # The measurement behind an observed claim: which governed metric, what
+    # value, and which period that value covers. Null on an interpretation.
+    metric: str | None
+    value: str | None
+    period: str | None
     # Empty until Evidence Citations exist. Present now so a client written
     # against this shape does not need changing when they arrive.
     citation_ids: list[UUID]
@@ -259,6 +264,9 @@ class InvestigationDetailResponse(BaseModel):
                         kind=claim.kind.value,
                         text=claim.text,
                         position=claim.position,
+                        metric=claim.metric,
+                        value=claim.value,
+                        period=claim.period,
                         citation_ids=list(claim.citation_ids),
                     )
                     for claim in source.claims

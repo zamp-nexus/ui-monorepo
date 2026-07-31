@@ -244,6 +244,12 @@ def _draft_finding(
                 kind=ClaimKind(str(claim["kind"])),
                 text=str(claim["text"]),
                 position=position,
+                # The measurement the agent already validated against the
+                # aggregate. Dropping it here would leave `observed` as a
+                # label a reader has to take on trust.
+                metric=_optional_str(claim.get("metric")),
+                value=_optional_str(claim.get("value")),
+                period=_optional_str(claim.get("period")),
                 # Populated when Evidence Citations exist.
                 citation_ids=(),
             )

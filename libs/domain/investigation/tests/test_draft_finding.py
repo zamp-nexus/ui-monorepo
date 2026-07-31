@@ -30,11 +30,15 @@ INVESTIGATION_ID = UUID("bb000000-0000-0000-0000-000000000001")
 
 
 def claim(position: int, kind: ClaimKind = ClaimKind.OBSERVED, **overrides) -> Claim:
+    measured = kind is ClaimKind.OBSERVED
     defaults = {
         "claim_id": uuid4(),
         "kind": kind,
         "text": f"Claim {position}",
         "position": position,
+        "metric": "refund_amount" if measured else None,
+        "value": "260.00" if measured else None,
+        "period": "July 2026" if measured else None,
         "citation_ids": (),
     }
     return Claim(**(defaults | overrides))
@@ -137,3 +141,29 @@ def test_a_draft_is_owned_by_exactly_one_tenant_and_investigation() -> None:
 
     assert subject.tenant_id == TENANT_ID
     assert subject.investigation_id == INVESTIGATION_ID
+
+
+def test_an_observed_claim_must_carry_its_measurement() -> None:
+    """Otherwise `observed` is a formatting choice rather than a statement
+    about evidence, and a reader is asked to take the label on trust."""
+    with pytest.raises(DraftFindingError, match="no measurement"):
+        draft(claims=(claim(0, metric=None),))
+
+    with pytest.raises(DraftFindingError, match="no measurement"):
+        draft(claims=(claim(0, value=None),))
+
+
+def test_an_interpretation_needs_no_measurement_of_its_own() -> None:
+    """It is a reading of someone else's."""
+    reading = claim(0, ClaimKind.INTERPRETATION)
+
+    assert draft(claims=(reading,)).claims[0].metric is None
+
+
+def test_an_observed_claim_carries_the_period_its_value_covers() -> None:
+    """"Refunds were $260" is not a fact until it says when."""
+    measured = draft().claims[0]
+
+    assert measured.metric == "refund_amount"
+    assert measured.value == "260.00"
+    assert measured.period == "July 2026"

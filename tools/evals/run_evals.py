@@ -74,6 +74,10 @@ REQUIRED_CASES: dict[str, frozenset[str]] = {
         {
             "reports_an_observed_change_against_the_validated_aggregate",
             "accepts_a_claim_stating_the_earlier_side_of_the_comparison",
+            "refuses_a_value_captioned_with_the_other_periods_label",
+            "refuses_a_period_the_aggregate_never_measured",
+            "accepts_a_flat_metric_captioned_with_either_period",
+            "refuses_an_observed_claim_that_names_no_period",
             "labels_an_association_as_interpretation_not_proof",
             "states_root_cause_unresolved_even_when_the_recheck_agreed",
             "refuses_a_resolved_root_cause",

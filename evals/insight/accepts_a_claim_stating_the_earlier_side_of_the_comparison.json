@@ -50,7 +50,8 @@
           "kind": "observed",
           "text": "EU refund amount was $20.00 in June 2026.",
           "metric": "refund_amount",
-          "value": "20.00"
+          "value": "20.00",
+          "period": "June 2026"
         }
       ],
       "contradictions": [],
@@ -67,7 +68,8 @@
           "kind": "observed",
           "text": "EU refund amount was $20.00 in June 2026.",
           "metric": "refund_amount",
-          "value": "20.00"
+          "value": "20.00",
+          "period": "June 2026"
         }
       ]
     }
