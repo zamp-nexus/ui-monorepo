@@ -9,7 +9,12 @@ from .agents.insight import (
 )
 from .agents.orchestrator import NoEnabledAgentError, OrchestratorAgent
 from .agents.sql_analyst import SqlAnalystAgent
-from .graph import InsightOutcome, InvestigationGraph, PipelineOutcome
+from .graph import (
+    InsightOutcome,
+    InvestigationGraph,
+    PipelineOutcome,
+    ValidatedEvidence,
+)
 from .schemas import MalformedAgentResponseError
 
 __all__ = [
@@ -25,4 +30,5 @@ __all__ = [
     "SqlAnalystAgent",
     "UngroundedClaimError",
     "UnsupportedCausalClaimError",
+    "ValidatedEvidence",
 ]

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4, uuid5
 
-from zentra_adapter_langgraph import InsightOutcome, InvestigationGraph
+from zentra_adapter_langgraph import (
+    InsightOutcome,
+    InvestigationGraph,
+    ValidatedEvidence,
+)
 from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_application_investigation import PipelineResult
@@ -13,20 +17,28 @@ from zentra_domain_agent_execution import (
     AgentExecutionStart,
     ConfidenceOutcome,
     ExecutionStatus,
+    OutcomeSignal,
     reject_legacy_role,
 )
 from zentra_domain_investigation import (
+    CitationFilter,
     Claim,
     ClaimKind,
     Contradiction,
     DomainEvent,
     DraftFinding,
+    EvidenceCitation,
     EvidenceReference,
     Finding,
     InvestigationStatus,
     MetricComparison,
     RootCauseState,
 )
+
+
+class UncitableClaimError(RuntimeError):
+    """A substantive claim has no validated evidence to cite."""
+
 
 SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
@@ -174,6 +186,13 @@ class LangGraphInvestigationPipeline:
             tenant_id=tenant_id,
             question=question,
         )
+        draft, citations = _draft_with_citations(
+            outcome.insight,
+            outcome.evidence,
+            evaluator_outcome=outcome.outcome,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+        )
         return PipelineResult(
             finding=Finding(
                 headline=outcome.headline,
@@ -202,34 +221,90 @@ class LangGraphInvestigationPipeline:
             evaluator_model=outcome.evaluator_model,
             analyst_sample_size=outcome.analyst_sample_size,
             evaluator_sample_size=outcome.evaluator_sample_size,
-            draft_finding=_draft_finding(
-                outcome.insight,
-                investigation_id=investigation_id,
-                tenant_id=tenant_id,
-            ),
+            draft_finding=draft,
+            evidence_citations=citations,
         )
 
 
-def _draft_finding(
+def _draft_with_citations(
     insight: InsightOutcome | None,
+    evidence: Sequence[ValidatedEvidence],
     *,
+    evaluator_outcome: OutcomeSignal,
     investigation_id: UUID,
     tenant_id: UUID,
-) -> DraftFinding | None:
-    """Assemble the domain object from what the Insight execution reported.
+) -> tuple[DraftFinding | None, tuple[EvidenceCitation, ...]]:
+    """Assemble the Draft Finding and the Citations its claims rest on.
 
-    Here rather than in the graph adapter, because building an Investigation
-    domain object is not the agent runtime's job — and because this is the
-    layer that already knows both sides.
+    Here rather than in the graph adapter, because building Investigation
+    domain objects is not the agent runtime's job — and here rather than in the
+    agent, because a Citation assembled from Insight's output would be a second
+    account of the same claim rather than evidence for it.
 
-    The claim ordering is the agent's, preserved by position. `root_cause`
-    passes through `RootCauseState` rather than being hardcoded here, so if the
-    accepted causal-evidence standard ever adds a second state this converts it
-    instead of silently reporting the wrong one.
+    Citations are keyed by metric and period and reused, so two claims about
+    July's refunds share one measurement instead of holding copies that can
+    drift.
     """
     if insight is None:
-        return None
-    return DraftFinding(
+        return None, ()
+
+    by_metric: dict[str, ValidatedEvidence] = {}
+    for item in evidence:
+        if item.metric in by_metric:
+            # Last-write-wins here would leave a citation carrying filters the
+            # claim does not rest on, which is precisely the corroboration
+            # this whole contract exists to prevent.
+            raise UncitableClaimError(
+                f"Upstream state carries two measurements for {item.metric!r}; "
+                f"a citation cannot say which one a claim rests on"
+            )
+        by_metric[item.metric] = item
+    citations: dict[tuple[str, str | None], EvidenceCitation] = {}
+    claims: list[Claim] = []
+
+    for position, raw in enumerate(insight.claims):
+        kind = ClaimKind(str(raw["kind"]))
+        metric = _optional_str(raw.get("metric"))
+        value = _optional_str(raw.get("value"))
+        period = _optional_str(raw.get("period"))
+        citation_ids: tuple[UUID, ...] = ()
+
+        if kind is ClaimKind.OBSERVED:
+            measured = by_metric.get(metric or "")
+            if measured is None:
+                # The agent already refuses a claim citing a metric the
+                # aggregate lacks. Reaching here means upstream state and the
+                # draft disagree, which is not something to paper over.
+                raise UncitableClaimError(
+                    f"Claim {position} cannot be cited: no validated evidence "
+                    f"for its metric"
+                )
+            key = (measured.metric, period)
+            if key not in citations:
+                citations[key] = _citation(
+                    measured,
+                    value=value or "",
+                    period=period,
+                    evaluator_outcome=evaluator_outcome,
+                    investigation_id=investigation_id,
+                    tenant_id=tenant_id,
+                )
+            citation_ids = (citations[key].citation_id,)
+
+        claims.append(
+            Claim(
+                claim_id=uuid4(),
+                kind=kind,
+                text=str(raw["text"]),
+                position=position,
+                metric=metric,
+                value=value,
+                period=period,
+                citation_ids=citation_ids,
+            )
+        )
+
+    draft = DraftFinding(
         draft_finding_id=uuid4(),
         tenant_id=tenant_id,
         investigation_id=investigation_id,
@@ -238,23 +313,7 @@ def _draft_finding(
         produced_by_execution_id=insight.execution_id,
         headline=insight.headline,
         summary=insight.summary,
-        claims=tuple(
-            Claim(
-                claim_id=uuid4(),
-                kind=ClaimKind(str(claim["kind"])),
-                text=str(claim["text"]),
-                position=position,
-                # The measurement the agent already validated against the
-                # aggregate. Dropping it here would leave `observed` as a
-                # label a reader has to take on trust.
-                metric=_optional_str(claim.get("metric")),
-                value=_optional_str(claim.get("value")),
-                period=_optional_str(claim.get("period")),
-                # Populated when Evidence Citations exist.
-                citation_ids=(),
-            )
-            for position, claim in enumerate(insight.claims)
-        ),
+        claims=tuple(claims),
         contradictions=tuple(
             Contradiction(detail=detail) for detail in insight.contradictions
         ),
@@ -263,3 +322,51 @@ def _draft_finding(
             insight.outcome if isinstance(insight.outcome, ConfidenceOutcome) else None
         ),
     )
+    return draft, tuple(citations.values())
+
+
+def _citation(
+    measured: ValidatedEvidence,
+    *,
+    value: str,
+    period: str | None,
+    evaluator_outcome: OutcomeSignal,
+    investigation_id: UUID,
+    tenant_id: UUID,
+) -> EvidenceCitation:
+    """The citation's figure *is* the claim's figure.
+
+    Taken from the claim rather than re-derived from the period, because the
+    two can disagree: where the aggregate names no label for a side, a claim
+    may legitimately carry that side's value with no period, and choosing by
+    period would then cite the other side. A citation whose figure differs
+    from its claim's is worse than no citation — it looks like corroboration.
+
+    The claim's value is already proven to be one of this metric's two sides
+    by the Insight Agent, so copying it here cannot launder an invention.
+    """
+    if value not in {measured.previous_value, measured.current_value}:
+        raise UncitableClaimError(
+            f"A claim's value for {measured.metric!r} is not one the validated "
+            f"aggregate carries"
+        )
+    return EvidenceCitation(
+        citation_id=uuid4(),
+        tenant_id=tenant_id,
+        investigation_id=investigation_id,
+        metric=measured.metric,
+        filters=tuple(
+            CitationFilter(
+                member=str(item.get("member", "")),
+                operator=str(item.get("operator", "")),
+                values=tuple(str(v) for v in item.get("values", [])),
+            )
+            for item in measured.filters
+        ),
+        period=period,
+        grain=measured.grain,
+        producing_execution_id=measured.producing_execution_id,
+        aggregate_value=value,
+        evaluator_outcome=evaluator_outcome,
+    )
+

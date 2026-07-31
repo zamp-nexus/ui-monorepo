@@ -13,6 +13,7 @@ from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
     DraftFinding,
+    EvidenceCitation,
     EvidenceReference,
     Finding,
     InvestigationStatus,
@@ -192,6 +193,7 @@ def test_context_denies_unbound_organization(monkeypatch) -> None:
 
 def investigation_detail(
     draft_finding: DraftFinding | None = None,
+    evidence_citations: tuple[EvidenceCitation, ...] = (),
 ) -> InvestigationDetail:
     """Defaults to the legacy shape — a narrative Finding and no draft —
     because that is what every Investigation that ran before Insight has."""
@@ -223,6 +225,7 @@ def investigation_detail(
             evidence_refs=(EvidenceReference("artifact://semantic/eu-refunds"),),
         ),
         draft_finding=draft_finding,
+        evidence_citations=evidence_citations,
         outcome=ConfidenceOutcome(
             score=0.42,
             calibration_method="evaluator_independent_recheck",

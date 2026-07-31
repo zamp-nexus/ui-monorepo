@@ -15,6 +15,23 @@ export interface Claim {
   readonly citation_ids: readonly string[];
 }
 
+export interface CitationFilter {
+  readonly member: string;
+  readonly operator: string;
+  readonly values: readonly string[];
+}
+
+export interface EvidenceCitation {
+  readonly citation_id: string;
+  readonly metric: string;
+  readonly filters: readonly CitationFilter[];
+  readonly period: string | null;
+  readonly grain: string | null;
+  readonly producing_execution_id: string | null;
+  readonly aggregate_value: string;
+  readonly state: 'active' | 'unavailable' | 'tombstoned';
+}
+
 export interface DraftFinding {
   readonly draft_finding_id: string;
   readonly version: number;
@@ -32,6 +49,9 @@ export interface DraftFinding {
     readonly score: number;
     readonly calibration_method: string;
   } | null;
+  // Shared across claims, so they arrive once. A claim's `citation_ids` index
+  // into these.
+  readonly citations: readonly EvidenceCitation[];
 }
 
 const claimLabels: Record<Claim['kind'], string> = {
@@ -55,9 +75,73 @@ export function LegacyFindingNotice() {
   );
 }
 
+/**
+ * The evidence behind one claim, as a disclosure rather than a link.
+ *
+ * A `<details>` because the reader is choosing to inspect evidence, not
+ * navigate away — and because it is keyboard-operable and announced without
+ * any scripting to get wrong.
+ */
+function CitationDisclosure({
+  citations,
+  claimText,
+}: {
+  citations: readonly EvidenceCitation[];
+  claimText: string;
+}) {
+  if (citations.length === 0) return null;
+
+  return (
+    <details className={styles.evidence}>
+      <summary>
+        Evidence
+        <span className={styles.srOnly}> for: {claimText}</span>
+      </summary>
+      <ul>
+        {citations.map((citation) => (
+          <li key={citation.citation_id}>
+            <dl>
+              <dt>Metric</dt>
+              <dd>{citation.metric}</dd>
+              <dt>Value</dt>
+              <dd>{citation.aggregate_value}</dd>
+              {citation.period ? (
+                <>
+                  <dt>Period</dt>
+                  <dd>{citation.period}</dd>
+                </>
+              ) : null}
+              {citation.grain ? (
+                <>
+                  <dt>Grain</dt>
+                  <dd>{citation.grain}</dd>
+                </>
+              ) : null}
+              {citation.filters.length > 0 ? (
+                <>
+                  <dt>Filters</dt>
+                  <dd>
+                    {citation.filters
+                      .map(
+                        (filter) =>
+                          `${filter.member} ${filter.operator} ${filter.values.join(', ')}`,
+                      )
+                      .join('; ')}
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function DraftFindingPanel({ draft }: { draft: DraftFinding }) {
   const headingId = `draft-${draft.draft_finding_id}`;
   const unresolved = draft.contradictions.filter((c) => !c.resolved);
+  const byId = new Map(draft.citations.map((c) => [c.citation_id, c]));
 
   return (
     <section
@@ -91,6 +175,12 @@ export function DraftFindingPanel({ draft }: { draft: DraftFinding }) {
                   {claim.period ? <span>{claim.period}</span> : null}
                 </p>
               ) : null}
+              <CitationDisclosure
+                claimText={claim.text}
+                citations={claim.citation_ids
+                  .map((id) => byId.get(id))
+                  .filter((c): c is EvidenceCitation => c !== undefined)}
+              />
             </div>
           </li>
         ))}

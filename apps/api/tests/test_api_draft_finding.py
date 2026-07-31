@@ -12,10 +12,13 @@ from uuid import UUID
 
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
+    CitationFilter,
+    CitationState,
     Claim,
     ClaimKind,
     Contradiction,
     DraftFinding,
+    EvidenceCitation,
     RootCauseState,
 )
 
@@ -25,6 +28,28 @@ from .test_api import (
     client,
     investigation_detail,
 )
+
+
+def structured_citation() -> EvidenceCitation:
+    return EvidenceCitation(
+        citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
+        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
+        metric="refund_amount",
+        filters=(
+            CitationFilter(
+                member="Commerce.region", operator="equals", values=("EU",)
+            ),
+        ),
+        period="July 2026",
+        grain="month",
+        producing_execution_id=UUID("70000000-0000-0000-0000-000000000007"),
+        aggregate_value="260.00",
+        evaluator_outcome=ConfidenceOutcome(
+            score=0.82, calibration_method="evaluator_independent_recheck"
+        ),
+        state=CitationState.ACTIVE,
+    )
 
 
 def structured_draft() -> DraftFinding:
@@ -46,6 +71,7 @@ def structured_draft() -> DraftFinding:
                 metric="refund_amount",
                 value="260.00",
                 period="July 2026",
+                citation_ids=(UUID("cc000000-0000-0000-0000-000000000001"),),
             ),
             Claim(
                 claim_id=UUID("50000000-0000-0000-0000-000000000002"),
@@ -107,7 +133,10 @@ def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
     re-derive any of them from prose."""
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
-    service.detail = investigation_detail(draft_finding=structured_draft())
+    service.detail = investigation_detail(
+            draft_finding=structured_draft(),
+            evidence_citations=(structured_citation(),),
+        )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -123,7 +152,7 @@ def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
         "observed",
         "interpretation",
     ]
-    assert draft["claims"][0]["citation_ids"] == []
+    assert len(draft["claims"][0]["citation_ids"]) == 1
     assert draft["contradictions"] == [
         {"detail": "Recheck counted 8 rows, not 12.", "resolved": False}
     ]
@@ -141,7 +170,10 @@ def test_the_legacy_finding_is_still_served_beside_a_structured_draft(
     exists would break every client written against Phase 1."""
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
-    service.detail = investigation_detail(draft_finding=structured_draft())
+    service.detail = investigation_detail(
+            draft_finding=structured_draft(),
+            evidence_citations=(structured_citation(),),
+        )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -159,7 +191,10 @@ def test_the_api_distinguishes_measurement_from_interpretation(monkeypatch) -> N
     cause is known. Each arrives as its own field."""
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
-    service.detail = investigation_detail(draft_finding=structured_draft())
+    service.detail = investigation_detail(
+            draft_finding=structured_draft(),
+            evidence_citations=(structured_citation(),),
+        )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -192,7 +227,10 @@ def test_root_cause_unresolved_is_reported_even_on_a_confident_draft(
     fully-agreeing Investigation reading as though the cause were established."""
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
-    service.detail = investigation_detail(draft_finding=structured_draft())
+    service.detail = investigation_detail(
+            draft_finding=structured_draft(),
+            evidence_citations=(structured_citation(),),
+        )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",

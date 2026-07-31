@@ -115,13 +115,19 @@ class DraftFinding:
                 f"duplicate means a claim was lost. Got {positions}."
             )
         for claim in self.claims:
-            if claim.kind is ClaimKind.OBSERVED and not (
-                claim.metric and claim.value
-            ):
+            if claim.kind is not ClaimKind.OBSERVED:
+                continue
+            if not (claim.metric and claim.value):
                 # An observed claim with no measurement is an interpretation
                 # wearing the wrong label, which is the one confusion this
                 # whole type exists to prevent.
                 raise DraftFindingError(
                     f"Claim {claim.position} is observed but carries no "
                     f"measurement"
+                )
+            if not claim.citation_ids:
+                # A substantive claim a reader cannot follow to its evidence is
+                # the thing Phase 2 exists to stop shipping.
+                raise DraftFindingError(
+                    f"Claim {claim.position} is observed but cites no evidence"
                 )

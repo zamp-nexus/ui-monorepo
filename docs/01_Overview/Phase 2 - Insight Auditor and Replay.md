@@ -48,7 +48,7 @@ unresolved” when the available evidence cannot establish causality.
 | Replay chronology | Current | Tenant-filtered ClickHouse timeline with pending-outbox merge |
 | Finding narrative | Partial | Orchestrator still synthesizes the published Finding; Insight drafts alongside it |
 | Insight Agent | Partial | Registered, evaluation-gated, and executed after the Evaluator behind `insight_enabled`; produces a persisted Draft Finding but does not yet publish |
-| Evidence Citation | Partial | `artifact://execution/...` pointers exist but are not a resolvable claim-level contract |
+| Evidence Citation | Partial | Claim-level Citations carry metric, filters, period, grain, execution, aggregate and Evaluator outcome; Tenant-authorized resolution is not built |
 | Split-authority Replay | Partial | Process timeline exists; evidence resolution and explicit missing states do not |
 | Tombstone deletion | Missing | No content-erasure and citation-resolution workflow exists |
 | External comprehension | Missing | No dated design-partner Replay exercise exists |

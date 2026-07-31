@@ -1,5 +1,10 @@
 """Investigation domain."""
 
+from .citation import (
+    CitationFilter,
+    CitationState,
+    EvidenceCitation,
+)
 from .draft_finding import (
     Claim,
     ClaimKind,
@@ -31,6 +36,8 @@ from .model import (
 __all__ = [
     "ApprovalDecision",
     "ApprovalReason",
+    "CitationFilter",
+    "CitationState",
     "Claim",
     "ClaimKind",
     "CompletionOutcome",
@@ -39,6 +46,7 @@ __all__ = [
     "DraftFinding",
     "DraftFindingError",
     "EvaluationDirective",
+    "EvidenceCitation",
     "EvidenceReference",
     "FailureOutcome",
     "Finding",

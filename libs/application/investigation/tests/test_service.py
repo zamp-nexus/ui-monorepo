@@ -160,6 +160,19 @@ class AgentExecutions:
         self.rows.append(execution)
 
 
+class Citations:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, tuple[object, ...]] = {}
+
+    async def add(self, citations) -> None:
+        for citation in citations:
+            existing = self.rows.setdefault(citation.investigation_id, ())
+            self.rows[citation.investigation_id] = (*existing, citation)
+
+    async def for_investigation(self, investigation_id: UUID) -> tuple[object, ...]:
+        return self.rows.get(investigation_id, ())
+
+
 class DraftFindings:
     def __init__(self) -> None:
         self.rows: dict[UUID, object] = {}
@@ -189,6 +202,7 @@ class UnitOfWork:
         self.approvals = Approvals()
         self.agent_executions = AgentExecutions()
         self.draft_findings = DraftFindings()
+        self.citations = Citations()
         self.policies = Policies()
         self.outbox = Outbox()
         self.commits = 0
@@ -500,6 +514,7 @@ def structured_draft() -> DraftFinding:
                 metric="refund_amount",
                 value="260.00",
                 period="July 2026",
+                citation_ids=(UUID("cc000000-0000-0000-0000-000000000001"),),
             ),
         ),
         contradictions=(),
