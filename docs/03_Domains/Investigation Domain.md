@@ -192,6 +192,46 @@ The Phase 1 narrative `Finding` is untouched and still lives in
 `finding` and no draft, and every surface says so rather than presenting
 narrative as claims that could be individually cited.
 
+## Evidence erasure — internal
+
+A Tenant asking for their evidence to be erased touches six surfaces across
+four tables, must survive a crash halfway through, and must never report
+success while any of it remains. That is an operation with a lifecycle, not a
+delete statement.
+
+`EvidenceSurface` enumerates every place evidence or its derivatives can be —
+Agent Execution input and output, the Phase 1 narrative Finding inside
+`investigations.state`, a Draft Finding's narrative, its claims, and a
+citation's validated aggregate. Enumerated rather than described, so "did we
+get all of it?" has an answer a test can check: the integration harness seeds a
+distinct marker on each surface, proves every one is reachable, erases, and
+proves none is.
+
+Four guarantees carry the design:
+
+- **One transaction.** A partial erasure that committed would be content
+  surviving a deletion the operation could then call successful, and no retry
+  would know which half was left.
+- **A partial failure is never a success.** `failed` is a resting place, not a
+  terminus; only `completed` is settled, and the database refuses a completion
+  time on anything that did not complete.
+- **Content goes, rows stay.** Identity, lifecycle, publication decisions,
+  Human Approval decisions and non-sensitive execution metadata survive,
+  because Replay must still prove the work happened after its content is gone.
+  A citation is tombstoned rather than deleted — a claim resolving to nothing
+  would be indistinguishable from a claim that never had evidence.
+- **Audit Entries are outside the boundary by construction.** The module
+  imports nothing that could reach the ledger, which is a stronger statement
+  than remembering not to.
+
+Only a terminal Investigation is eligible. Erasing under a live pipeline races
+every write still to come, and the Agent Executions it has not finished would
+reintroduce exactly what was erased.
+
+This is a prefactor: no route reaches it. The shape and its guarantees land
+before the workflow that invokes them, so the first thing a Tenant can do is
+not the thing that has never run.
+
 Canonical language:
 [Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:
 [domain model](../../libs/domain/investigation/src/zentra_domain_investigation/model.py).
