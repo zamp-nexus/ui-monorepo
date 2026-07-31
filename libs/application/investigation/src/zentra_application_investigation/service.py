@@ -265,6 +265,43 @@ class InvestigationService:
             evidence_citations=citations,
         )
 
+    async def resolve_citation(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        investigation_id: UUID,
+        citation_id: UUID,
+    ) -> EvidenceCitation:
+        """Follow one claim's evidence.
+
+        Tenant identity comes from `actor` and nowhere else — the caller cannot
+        name a Tenant, so there is no parameter to get wrong. The transaction
+        sets `app.tenant_id` from it, and RLS decides visibility.
+
+        Every way of not being allowed to see this collapses to the same
+        answer. "Another Tenant's", "another Investigation's" and "does not
+        exist" are indistinguishable on purpose: a caller who can tell them
+        apart can confirm that somebody else's evidence exists by copying an
+        identifier.
+        """
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            # The Investigation first, so a citation id from a readable
+            # Investigation cannot be used to probe an unreadable one.
+            investigation = await unit_of_work.investigations.get(investigation_id)
+            if investigation is None:
+                raise InvestigationNotFoundError("Investigation was not found")
+            citation = await unit_of_work.citations.resolve(
+                investigation_id,
+                citation_id,
+            )
+        if citation is None:
+            raise InvestigationNotFoundError("Evidence was not found")
+        return citation
+
     async def decide(
         self,
         actor: AuthenticatedActor,

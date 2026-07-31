@@ -138,7 +138,10 @@ const scenariosResponse = [
   },
 ];
 
-const mockApi = (detail: unknown = investigation) =>
+const mockApi = (
+  detail: unknown = investigation,
+  citation?: { body: unknown; status?: number },
+) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
     const url = String(input);
     if (url.endsWith('/health/ready')) return response(readyResponse);
@@ -146,6 +149,14 @@ const mockApi = (detail: unknown = investigation) =>
     if (url.endsWith('/v1/scenarios')) return response(scenariosResponse);
     if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
       return response(detail, 201);
+    }
+    // Following a citation is its own Tenant-authorized read, so it gets its
+    // own stub: a test can make it succeed, deny, or break independently of
+    // the Investigation it hangs off.
+    if (url.includes('/citations/')) {
+      return citation
+        ? response(citation.body, citation.status ?? 200)
+        : response({ detail: 'Evidence was not found' }, 404);
     }
     if (url.includes('/v1/investigations/')) return response(detail);
     return response({ detail: 'Not found' }, 404);
@@ -590,23 +601,6 @@ describe('App', () => {
     expect(screen.getByText(/unresolved contradiction/i)).toBeTruthy();
   });
 
-  it('shows the figure a measured claim rests on', async () => {
-    // A reader should not have to follow anything to see the number. The label
-    // "Measured" without the measurement is a claim about formatting.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
-    signedIn();
-
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
-
-    // Twice each, and that is the point: once on the claim, once in the
-    // citation behind it. A citation whose figure could differ from the
-    // claim's would be worse than none — it would look like corroboration.
-    expect(screen.getAllByText('refund_amount')).toHaveLength(2);
-    expect(screen.getAllByText('260.00')).toHaveLength(2);
-    expect(screen.getAllByText('July 2026')).toHaveLength(2);
-  });
-
   it('offers an evidence affordance on every substantive claim', async () => {
     // A disclosure rather than a link: the reader is inspecting evidence, not
     // navigating away, and `<details>` is keyboard-operable and announced
@@ -624,19 +618,6 @@ describe('App', () => {
     expect(summaries[0].textContent).toContain('EU refund amount rose');
   });
 
-  it('shows the governed context a citation carries', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft });
-    signedIn();
-
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
-
-    expect(screen.getByText('month')).toBeTruthy();
-    expect(
-      screen.getByText(/Commerce\.region equals EU/),
-    ).toBeTruthy();
-  });
-
   it('offers no evidence affordance on an interpretation', async () => {
     mockApi({ ...investigation, draft_finding: structuredDraft });
     signedIn();
@@ -647,5 +628,102 @@ describe('App', () => {
     // One disclosure, for the one observed claim. The interpretation has no
     // measurement of its own, so it has nothing to disclose.
     expect(document.querySelectorAll('summary')).toHaveLength(1);
+  });
+
+  const activeCitation = {
+    citation_id: 'cc000000-0000-0000-0000-000000000001',
+    metric: 'refund_amount',
+    filters: [
+      { member: 'Commerce.region', operator: 'equals', values: ['EU'] },
+    ],
+    period: 'July 2026',
+    grain: 'month',
+    producing_execution_id: '60000000-0000-0000-0000-000000000006',
+    aggregate_value: '260.00',
+    evaluator_outcome: null,
+    state: 'active',
+  };
+
+  const openEvidence = async () => {
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    // jsdom does not toggle `open` from a click on `summary`, so the state is
+    // set the way a browser would and the event fired.
+    const details = document.querySelector('details') as HTMLDetailsElement;
+    details.open = true;
+    fireEvent(details, new Event('toggle'));
+  };
+
+  it('shows the figure a measured claim rests on', async () => {
+    // On the claim itself, without following anything.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText('refund_amount')).toBeTruthy();
+    expect(screen.getByText('260.00')).toBeTruthy();
+    expect(screen.getByText('July 2026')).toBeTruthy();
+  });
+
+  it('resolves the governed context a citation carries', async () => {
+    mockApi(
+      { ...investigation, draft_finding: structuredDraft },
+      { body: activeCitation },
+    );
+    signedIn();
+    await openEvidence();
+
+    expect(await screen.findByText('month')).toBeTruthy();
+    expect(screen.getByText(/Commerce\.region equals EU/)).toBeTruthy();
+  });
+
+  it('says unavailable evidence is lost, not deleted', async () => {
+    // A Tenant who erased something asked for that. A reader told "deleted"
+    // about data loss is being reassured wrongly.
+    mockApi(
+      { ...investigation, draft_finding: structuredDraft },
+      { body: { ...activeCitation, state: 'unavailable' } },
+    );
+    signedIn();
+    await openEvidence();
+
+    expect(await screen.findByText(/cannot currently be reached/i)).toBeTruthy();
+    expect(screen.queryByText(/deleted/i)).toBeNull();
+  });
+
+  it('says evidence you may not see is not a failure', async () => {
+    // 404 is the deliberate invisible-resource answer. Telling the reader the
+    // system broke would be a different, and false, claim.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+    await openEvidence();
+
+    expect(await screen.findByText(/not available to you/i)).toBeTruthy();
+    expect(screen.queryByText(/could not be loaded/i)).toBeNull();
+  });
+
+  it('says a server fault is a failure, not a permission problem', async () => {
+    mockApi(
+      { ...investigation, draft_finding: structuredDraft },
+      { body: { detail: 'boom' }, status: 500 },
+    );
+    signedIn();
+    await openEvidence();
+
+    expect(await screen.findByText(/could not be loaded/i)).toBeTruthy();
+    expect(screen.queryByText(/not available to you/i)).toBeNull();
+  });
+
+  it('announces resolution progress in a live region', async () => {
+    mockApi(
+      { ...investigation, draft_finding: structuredDraft },
+      { body: activeCitation },
+    );
+    signedIn();
+    await openEvidence();
+
+    expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
   });
 });

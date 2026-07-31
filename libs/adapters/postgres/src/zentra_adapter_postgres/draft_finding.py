@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import insert, select
+from sqlalchemy import and_, case, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_domain_agent_execution import OUTCOME_ADAPTER, ConfidenceOutcome
 from zentra_domain_investigation import (
@@ -31,6 +31,7 @@ from zentra_domain_investigation import (
 )
 
 from .schema import (
+    agent_executions,
     draft_finding_claim_citations,
     draft_finding_claims,
     draft_findings,
@@ -239,18 +240,81 @@ class PostgresEvidenceCitationRepository:
             ],
         )
 
+    async def resolve(
+        self,
+        investigation_id: UUID,
+        citation_id: UUID,
+    ) -> EvidenceCitation | None:
+        """One citation, with its state decided against the evidence itself.
+
+        `None` means the citation is not visible to this connection — which
+        covers "belongs to another Tenant", "belongs to another Investigation",
+        and "does not exist". They must be indistinguishable: telling a caller
+        which one applies confirms that somebody else's evidence exists.
+
+        A citation whose producing execution is gone resolves `unavailable`.
+        That is a fault, not a Tenant's deliberate erasure, so it is never
+        reported as a Tombstone.
+        """
+        row = (
+            await self._connection.execute(
+                _resolvable().where(
+                    evidence_citations.c.citation_id == citation_id,
+                    evidence_citations.c.investigation_id == investigation_id,
+                )
+            )
+        ).one_or_none()
+        return _citation_from_row(row) if row is not None else None
+
     async def for_investigation(
         self,
         investigation_id: UUID,
     ) -> tuple[EvidenceCitation, ...]:
+        """The same derivation the single-citation path uses.
+
+        Two derivations would let one citation read `active` in the Draft
+        Finding and `unavailable` when followed, having already shown the
+        reader a figure the other surface says it cannot stand behind.
+        """
         rows = (
             await self._connection.execute(
-                select(evidence_citations).where(
+                _resolvable().where(
                     evidence_citations.c.investigation_id == investigation_id
                 )
             )
         ).all()
         return tuple(_citation_from_row(row) for row in rows)
+
+
+def _resolvable():
+    """Citations, with `active` decided against the evidence itself.
+
+    One LEFT JOIN rather than a follow-up query per citation: the state is a
+    fact about whether the producing execution is still there, and asking once
+    is both cheaper and impossible to get inconsistent between callers.
+
+    `producing_execution_id` is `ON DELETE SET NULL`, and every citation is
+    written with an execution, so a null one means loss rather than absence.
+    """
+    return select(
+        evidence_citations,
+        case(
+            (
+                and_(
+                    evidence_citations.c.state == CitationState.ACTIVE.value,
+                    agent_executions.c.execution_id.is_(None),
+                ),
+                CitationState.UNAVAILABLE.value,
+            ),
+            else_=evidence_citations.c.state,
+        ).label("resolved_state"),
+    ).select_from(
+        evidence_citations.outerjoin(
+            agent_executions,
+            agent_executions.c.execution_id
+            == evidence_citations.c.producing_execution_id,
+        )
+    )
 
 
 def _citation_from_row(row: Any) -> EvidenceCitation:
@@ -276,5 +340,6 @@ def _citation_from_row(row: Any) -> EvidenceCitation:
             if row.evaluator_outcome
             else None
         ),
-        state=CitationState(row.state),
+        # The derived state, not the stored one.
+        state=CitationState(row.resolved_state),
     )

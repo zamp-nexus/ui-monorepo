@@ -6,6 +6,8 @@ import {
 } from 'react';
 
 import { Button } from '@open-zentra/foundation-design-system';
+
+import { apiUrl, requestJson, type TokenSource } from './api';
 import {
   DraftFindingPanel,
   LegacyFindingNotice,
@@ -125,10 +127,6 @@ type RejectionReason =
   | 'policy_mismatch'
   | 'needs_more_analysis';
 
-const apiUrl =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ??
-  'http://localhost:8000';
-
 interface Scenario {
   readonly key: string;
   readonly question: string;
@@ -140,31 +138,6 @@ interface Scenario {
 // API answers "Invalid bearer token" and it reads like a configuration fault.
 // Minting per request costs nothing: Clerk caches internally and refreshes near
 // expiry, so this is a memory read almost every time.
-type TokenSource = () => Promise<string | null>;
-
-const requestJson = async <T,>(
-  url: string,
-  getToken: TokenSource,
-  options?: RequestInit,
-): Promise<T> => {
-  const token = await getToken();
-  const response = await fetch(`${apiUrl}${url}`, {
-    ...options,
-    headers: {
-      ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as {
-      detail?: string;
-    } | null;
-    throw new Error(error?.detail ?? 'ZentraOS could not complete this request.');
-  }
-  return (await response.json()) as T;
-};
-
 const requestReadiness = async (): Promise<ReadinessResponse> => {
   const response = await fetch(`${apiUrl}/health/ready`);
   return (await response.json()) as ReadinessResponse;
@@ -813,7 +786,10 @@ const InvestigationWorkspace = ({
                 ))}
               </div>
               {investigation.draft_finding ? (
-                <DraftFindingPanel draft={investigation.draft_finding} />
+                <DraftFindingPanel
+                  draft={investigation.draft_finding}
+                  investigationId={investigation.investigation_id}
+                />
               ) : (
                 <LegacyFindingNotice />
               )}

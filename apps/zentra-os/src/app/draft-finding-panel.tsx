@@ -1,4 +1,10 @@
+import { useState } from 'react';
+
 import { Badge } from '@open-zentra/foundation-design-system';
+import { useAuthSession } from '@open-zentra/foundation-auth';
+import { useQuery } from '@tanstack/react-query';
+
+import { ApiError, requestJson } from './api';
 
 import styles from './draft-finding-panel.module.scss';
 
@@ -76,72 +82,157 @@ export function LegacyFindingNotice() {
 }
 
 /**
- * The evidence behind one claim, as a disclosure rather than a link.
+ * The evidence behind one claim, resolved when the reader asks for it.
  *
- * A `<details>` because the reader is choosing to inspect evidence, not
- * navigate away — and because it is keyboard-operable and announced without
- * any scripting to get wrong.
+ * A `<details>` because the reader is inspecting evidence, not navigating
+ * away — and because it is keyboard-operable and announced without any
+ * scripting to get wrong.
+ *
+ * It fetches on open rather than rendering what the Investigation payload
+ * already carried. Following a citation is a Tenant-authorized read with its
+ * own outcomes, and five of them have to stay apart: still loading, resolved
+ * and readable, resolved but unreachable, not permitted, and broken. Rendering
+ * the inline copy would collapse the last three into silence.
  */
 function CitationDisclosure({
-  citations,
+  investigationId,
+  citationId,
   claimText,
 }: {
-  citations: readonly EvidenceCitation[];
+  investigationId: string;
+  citationId: string;
   claimText: string;
 }) {
-  if (citations.length === 0) return null;
+  const [open, setOpen] = useState(false);
+  const { getAccessToken } = useAuthSession();
+
+  const resolved = useQuery({
+    queryKey: ['citation', investigationId, citationId],
+    enabled: open,
+    retry: false,
+    queryFn: () =>
+      requestJson<EvidenceCitation>(
+        `/v1/investigations/${investigationId}/citations/${citationId}`,
+        () => getAccessToken({ audience: 'first_party_http' }),
+      ),
+  });
 
   return (
-    <details className={styles.evidence}>
+    <details
+      className={styles.evidence}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary>
         Evidence
         <span className={styles.srOnly}> for: {claimText}</span>
       </summary>
-      <ul>
-        {citations.map((citation) => (
-          <li key={citation.citation_id}>
-            <dl>
-              <dt>Metric</dt>
-              <dd>{citation.metric}</dd>
-              <dt>Value</dt>
-              <dd>{citation.aggregate_value}</dd>
-              {citation.period ? (
-                <>
-                  <dt>Period</dt>
-                  <dd>{citation.period}</dd>
-                </>
-              ) : null}
-              {citation.grain ? (
-                <>
-                  <dt>Grain</dt>
-                  <dd>{citation.grain}</dd>
-                </>
-              ) : null}
-              {citation.filters.length > 0 ? (
-                <>
-                  <dt>Filters</dt>
-                  <dd>
-                    {citation.filters
-                      .map(
-                        (filter) =>
-                          `${filter.member} ${filter.operator} ${filter.values.join(', ')}`,
-                      )
-                      .join('; ')}
-                  </dd>
-                </>
-              ) : null}
-            </dl>
-          </li>
-        ))}
-      </ul>
+      <div aria-live="polite">
+        <CitationBody
+          state={resolutionState(resolved.isPending, resolved.error, resolved.data)}
+          citation={resolved.data}
+        />
+      </div>
     </details>
   );
 }
 
-export function DraftFindingPanel({ draft }: { draft: DraftFinding }) {
+type ResolutionState =
+  | 'loading'
+  | 'active'
+  | 'unavailable'
+  | 'tombstoned'
+  | 'inaccessible'
+  | 'failed';
+
+function resolutionState(
+  isPending: boolean,
+  error: unknown,
+  citation?: EvidenceCitation,
+): ResolutionState {
+  if (error) {
+    // 404 is the deliberate invisible-resource answer, and covers another
+    // Tenant's, another Investigation's, and nonexistent alike. Anything else
+    // is a fault, and a reader should not be told it is a permission problem.
+    return error instanceof ApiError && error.status === 404
+      ? 'inaccessible'
+      : 'failed';
+  }
+  if (isPending || !citation) return 'loading';
+  return citation.state;
+}
+
+const stateCopy: Record<Exclude<ResolutionState, 'active'>, string> = {
+  loading: 'Resolving evidence…',
+  // Recorded, and not reachable. Deliberately not worded as a deletion: a
+  // Tenant who erased something asked for that, and a reader told "deleted"
+  // about data loss is being reassured wrongly.
+  unavailable:
+    'This evidence is unavailable. It was recorded, and cannot currently be reached.',
+  tombstoned:
+    'This evidence was deleted at the Tenant\u2019s request. What it supported is recorded; its values are not.',
+  inaccessible: 'This evidence is not available to you.',
+  failed: 'Evidence could not be loaded. Try again.',
+};
+
+function CitationBody({
+  state,
+  citation,
+}: {
+  state: ResolutionState;
+  citation?: EvidenceCitation;
+}) {
+  if (state !== 'active' || !citation) {
+    return (
+      <p className={styles.evidenceState} data-state={state}>
+        {stateCopy[state as Exclude<ResolutionState, 'active'>]}
+      </p>
+    );
+  }
+
+  return (
+    <dl>
+      <dt>Metric</dt>
+      <dd>{citation.metric}</dd>
+      <dt>Value</dt>
+      <dd>{citation.aggregate_value}</dd>
+      {citation.period ? (
+        <>
+          <dt>Period</dt>
+          <dd>{citation.period}</dd>
+        </>
+      ) : null}
+      {citation.grain ? (
+        <>
+          <dt>Grain</dt>
+          <dd>{citation.grain}</dd>
+        </>
+      ) : null}
+      {citation.filters.length > 0 ? (
+        <>
+          <dt>Filters</dt>
+          <dd>
+            {citation.filters
+              .map(
+                (filter) =>
+                  `${filter.member} ${filter.operator} ${filter.values.join(', ')}`,
+              )
+              .join('; ')}
+          </dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
+
+export function DraftFindingPanel({
+  draft,
+  investigationId,
+}: {
+  draft: DraftFinding;
+  investigationId: string;
+}) {
   const headingId = `draft-${draft.draft_finding_id}`;
   const unresolved = draft.contradictions.filter((c) => !c.resolved);
-  const byId = new Map(draft.citations.map((c) => [c.citation_id, c]));
 
   return (
     <section
@@ -175,12 +266,14 @@ export function DraftFindingPanel({ draft }: { draft: DraftFinding }) {
                   {claim.period ? <span>{claim.period}</span> : null}
                 </p>
               ) : null}
-              <CitationDisclosure
-                claimText={claim.text}
-                citations={claim.citation_ids
-                  .map((id) => byId.get(id))
-                  .filter((c): c is EvidenceCitation => c !== undefined)}
-              />
+              {claim.citation_ids.map((citationId) => (
+                <CitationDisclosure
+                  key={citationId}
+                  investigationId={investigationId}
+                  citationId={citationId}
+                  claimText={claim.text}
+                />
+              ))}
             </div>
           </li>
         ))}
