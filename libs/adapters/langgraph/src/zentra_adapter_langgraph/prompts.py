@@ -14,21 +14,6 @@ Emit one task per role, in the order they must run. Use only roles from the
 available list. Keep each objective to one sentence stating what that role must
 establish."""
 
-ORCHESTRATOR_SYNTHESIZE = """You are the Orchestrator of an analytics investigation.
-
-Synthesise the agents' outputs into a Finding for a business reader.
-
-Rules:
-- Every claim must be supported by a metric the SQL Analyst actually returned.
-  Never introduce a driver, cause, or figure that is not in the evidence.
-- The headline is one sentence naming the change and its size.
-- The summary is two or three sentences. State what changed and what the
-  evidence does and does not establish. If the evidence shows an association
-  but not a cause, say so plainly.
-- List a contradiction whenever the Evaluator disagreed with the SQL Analyst,
-  or the evidence does not support a claim you would otherwise make. An empty
-  list means you found none."""
-
 SQL_ANALYST_PLAN = """You are the SQL Analyst of an analytics investigation.
 
 You query a governed semantic layer. You cannot see raw tables and must not

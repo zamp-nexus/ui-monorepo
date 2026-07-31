@@ -84,7 +84,6 @@ class AppDependencies:
                 registry=registry,
                 semantic_layer=semantic_layer,
                 recorder=recorder,
-                insight_enabled=settings.insight_enabled,
             )
             for tier in ModelTier
         }
@@ -128,7 +127,6 @@ def _build_graph(
     registry: PostgresAgentRegistry,
     semantic_layer: CubeSemanticLayer,
     recorder: PostgresExecutionRecorder,
-    insight_enabled: bool,
 ) -> InvestigationGraph:
     """One compiled graph per tier.
 
@@ -140,21 +138,17 @@ def _build_graph(
         clients=models.as_dict(),
         breaker=breaker,
     )
-    # Two switches that compose rather than duplicate. This one shapes the
-    # graph; the registry decides whether an enabled, eval-passing Insight
-    # exists. Flag on with no promoted Insight is the fail-closed case: the
-    # Orchestrator refuses at plan time rather than silently running Phase 1.
-    required_roles = (
-        (*REQUIRED_ROLES, AgentRole.INSIGHT) if insight_enabled else REQUIRED_ROLES
-    )
+    # Insight is required, not optional. Nothing else writes a Finding, so a
+    # deployment whose registry has not promoted it must refuse at plan time
+    # rather than reach the last node with nothing to run.
     return InvestigationGraph(
         orchestrator=OrchestratorAgent(
             model=model,
             registry=registry,
-            required_roles=required_roles,
+            required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
         ),
         sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
-        insight=InsightAgent(model=model) if insight_enabled else None,
+        insight=InsightAgent(model=model),
         recorder=recorder,
     )

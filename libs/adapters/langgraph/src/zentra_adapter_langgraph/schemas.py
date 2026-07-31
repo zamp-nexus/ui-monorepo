@@ -115,13 +115,9 @@ TASK_LEDGER_SCHEMA = _obj(
     }
 )
 
-SYNTHESIS_SCHEMA = _obj(
-    {
-        "headline": {"type": "string"},
-        "summary": {"type": "string"},
-        "contradictions": _STRINGS,
-    }
-)
+# `SYNTHESIS_SCHEMA` was the Orchestrator's. It is gone with the node that
+# used it; the Insight Agent's `DRAFT_FINDING_SCHEMA` is the only shape a
+# conclusion now takes.
 
 # The Insight Agent's structured output.
 #

@@ -256,6 +256,11 @@ async def _run_case(path: Path) -> CaseResult:
     for key in expect.get("field_present", []):
         if key not in output.fields:
             problems.append(f"missing field {key}")
+    # The other direction. Without it a case named for what must be absent
+    # cannot fail, and its name is a claim nothing backs.
+    for key in expect.get("field_absent", []):
+        if key in output.fields:
+            problems.append(f"field {key} should not be present")
     if "fallbacks" in expect and list(output.fallbacks) != expect["fallbacks"]:
         problems.append(
             f"{len(output.fallbacks)} fallback rungs attributed, "

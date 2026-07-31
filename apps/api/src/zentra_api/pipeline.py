@@ -227,13 +227,13 @@ class LangGraphInvestigationPipeline:
 
 
 def _draft_with_citations(
-    insight: InsightOutcome | None,
+    insight: InsightOutcome,
     evidence: Sequence[ValidatedEvidence],
     *,
     evaluator_outcome: OutcomeSignal,
     investigation_id: UUID,
     tenant_id: UUID,
-) -> tuple[DraftFinding | None, tuple[EvidenceCitation, ...]]:
+) -> tuple[DraftFinding, tuple[EvidenceCitation, ...]]:
     """Assemble the Draft Finding and the Citations its claims rest on.
 
     Here rather than in the graph adapter, because building Investigation
@@ -245,9 +245,6 @@ def _draft_with_citations(
     July's refunds share one measurement instead of holding copies that can
     drift.
     """
-    if insight is None:
-        return None, ()
-
     by_metric: dict[str, ValidatedEvidence] = {}
     for item in evidence:
         if item.metric in by_metric:

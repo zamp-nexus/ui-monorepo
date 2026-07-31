@@ -39,7 +39,6 @@ from zentra_adapter_langgraph.schemas import (
     DRAFT_FINDING_SCHEMA,
     QUERY_PLAN_SCHEMA,
     RECHECK_SCHEMA,
-    SYNTHESIS_SCHEMA,
     TASK_LEDGER_SCHEMA,
 )
 
@@ -202,12 +201,6 @@ class ScriptedModel:
                 "root_cause_resolved": False,
                 "confidence": 0.9,
             }
-        if schema == SYNTHESIS_SCHEMA:
-            return {
-                "headline": "EU refunds rose $240 in July.",
-                "summary": "Governed EU refund amount rose from $20 to $260.",
-                "contradictions": [] if self._recheck_passed else ["Recheck failed."],
-            }
         raise AssertionError(f"Unscripted schema: {schema}")
 
 
@@ -241,13 +234,10 @@ def build_graph(
     recheck_passed: bool,
     roles: Sequence[AgentRole] | None = None,
     fallbacks: tuple[str, ...] = (),
-    with_insight: bool = False,
 ) -> tuple[InvestigationGraph, RecordingRecorder, StubSemanticLayer]:
     model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
     if roles is None:
-        roles = (
-            (*REQUIRED_ROLES, AgentRole.INSIGHT) if with_insight else REQUIRED_ROLES
-        )
+        roles = (*REQUIRED_ROLES, AgentRole.INSIGHT)
     layer = StubSemanticLayer()
     recorder = RecordingRecorder()
     clock = iter(
@@ -258,18 +248,12 @@ def build_graph(
         orchestrator=OrchestratorAgent(
             model=model,
             registry=StubRegistry(roles),
-            # Mirrors what `_build_graph` does: turning Insight on makes it a
-            # required role. Without this the Phase 2 tests would run a
-            # configuration production never produces.
-            required_roles=(
-                (*REQUIRED_ROLES, AgentRole.INSIGHT)
-                if with_insight
-                else REQUIRED_ROLES
-            ),
+            # Insight is required now: nothing else can write a Finding.
+            required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
         ),
         sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
-        insight=InsightAgent(model=model) if with_insight else None,
+        insight=InsightAgent(model=model),
         recorder=recorder,
         now=lambda: next(clock),
     )
@@ -293,12 +277,13 @@ async def test_converged_run_produces_a_confidence_capped_by_the_recheck() -> No
     assert outcome.outcome.score == pytest.approx(0.86)
     assert outcome.metrics == METRICS
     assert outcome.contradictions == ()
-    # plan, analyze, evaluate, synthesize
+    # plan, analyze, evaluate, insight. The Orchestrator appears once,
+    # because planning is all it does now.
     assert [record.role for record in recorder.records] == [
         AgentRole.ORCHESTRATOR,
         AgentRole.SQL_ANALYST,
         AgentRole.EVALUATOR,
-        AgentRole.ORCHESTRATOR,
+        AgentRole.INSIGHT,
     ]
 
 
@@ -314,7 +299,9 @@ async def test_failing_recheck_exits_at_exactly_three_attempts() -> None:
 
     assert outcome.attempts == MAX_EVALUATION_ATTEMPTS
     assert outcome.converged is False
-    assert outcome.contradictions == ("Recheck failed.",)
+    # The Evaluator's own issues, preserved by Insight rather than restated
+    # by a second model.
+    assert outcome.contradictions == ("Figures disagree.",)
     assert isinstance(outcome.outcome, ConfidenceOutcome)
     assert outcome.outcome.score < 0.5
     evaluations = [
@@ -351,9 +338,9 @@ async def test_result_rows_never_leave_the_execution_record() -> None:
     analyst = next(r for r in recorder.records if r.role is AgentRole.SQL_ANALYST)
     assert analyst.output is not None
     assert analyst.output["rows"] == [{"Commerce.refundAmount": "260.00"}]
-    # The synthesising Orchestrator is handed the state object; rows are absent.
-    synthesis = recorder.records[-1]
-    assert "rows" not in json.dumps(synthesis.input)
+    # The insighting Orchestrator is handed the state object; rows are absent.
+    insight = recorder.records[-1]
+    assert "rows" not in json.dumps(insight.input)
 
 
 @pytest.mark.asyncio

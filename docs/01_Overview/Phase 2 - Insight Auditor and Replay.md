@@ -46,8 +46,8 @@ unresolved” when the available evidence cannot establish causality.
 | Auditor | Current | Deterministic outbox subscriber writes metadata-only Audit Entries |
 | Human Reviewer | Current | Owner/admin User decides at a Human Approval gate |
 | Replay chronology | Current | Tenant-filtered ClickHouse timeline with pending-outbox merge |
-| Finding narrative | Partial | Orchestrator still synthesizes the published Finding; Insight drafts alongside it |
-| Insight Agent | Partial | Registered, evaluation-gated, and executed after the Evaluator behind `insight_enabled`; produces a persisted Draft Finding but does not yet publish |
+| Finding narrative | Current | The Insight Agent is the only Agent that writes a conclusion; the Orchestrator plans, delegates and arbitrates |
+| Insight Agent | Current | Registered, evaluation-gated, required, and the sole producer of a Draft Finding |
 | Evidence Citation | Partial | Claim-level Citations carry the full governed context and resolve through a Tenant-authorized endpoint; `active` and `unavailable` are decided against the evidence, Tombstones are not built |
 | Split-authority Replay | Partial | Process timeline exists; evidence resolution and explicit missing states do not |
 | Tombstone deletion | Missing | No content-erasure and citation-resolution workflow exists |
