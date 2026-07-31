@@ -10,6 +10,7 @@ from uuid import UUID
 import pytest
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
+    AgentExecutionStart,
     AgentRole,
     ConfidenceOutcome,
     ExecutionUsage,
@@ -25,13 +26,17 @@ from zentra_domain_agent_execution import (
 
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
+    InsightAgent,
     InvestigationGraph,
+    NoEnabledAgentError,
     OrchestratorAgent,
     SqlAnalystAgent,
 )
+from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 from zentra_adapter_langgraph.schemas import (
     ANALYSIS_SCHEMA,
+    DRAFT_FINDING_SCHEMA,
     QUERY_PLAN_SCHEMA,
     RECHECK_SCHEMA,
     SYNTHESIS_SCHEMA,
@@ -112,6 +117,9 @@ ROLE_MODELS = {
     "orchestrator": "gemini/gemini-3-flash",
     "sql_analyst": "cerebras/zai-glm-4.7",
     "evaluator": "groq/openai/gpt-oss-120b",
+    # Deliberately distinct from every other role, so a test asserting Insight's
+    # attribution cannot pass by picking up another agent's model.
+    "insight": "nvidia/nemotron-3-ultra-550b-a55b",
 }
 
 
@@ -178,6 +186,22 @@ class ScriptedModel:
                 "sample_size": 240,
                 "issues": [] if self._recheck_passed else ["Figures disagree."],
             }
+        if schema == DRAFT_FINDING_SCHEMA:
+            return {
+                "headline": "EU refunds rose $240 in July.",
+                "summary": "Governed EU refund amount rose from $20 to $260.",
+                "claims": [
+                    {
+                        "kind": "observed",
+                        "text": "EU refund amount rose to $260.00.",
+                        "metric": "refund_amount",
+                        "value": "260.00",
+                    }
+                ],
+                "contradictions": [],
+                "root_cause_resolved": False,
+                "confidence": 0.9,
+            }
         if schema == SYNTHESIS_SCHEMA:
             return {
                 "headline": "EU refunds rose $240 in July.",
@@ -187,9 +211,26 @@ class ScriptedModel:
         raise AssertionError(f"Unscripted schema: {schema}")
 
 
+def _keys(value: Any) -> set[str]:
+    """Every key at every depth."""
+    found: set[str] = set()
+    if isinstance(value, dict):
+        for key, child in value.items():
+            found.add(str(key))
+            found |= _keys(child)
+    elif isinstance(value, list):
+        for child in value:
+            found |= _keys(child)
+    return found
+
+
 class RecordingRecorder:
     def __init__(self) -> None:
         self.records: list[AgentExecutionRecord] = []
+        self.starts: list[AgentExecutionStart] = []
+
+    async def record_started(self, start: AgentExecutionStart) -> None:
+        self.starts.append(start)
 
     async def record(self, execution: AgentExecutionRecord) -> None:
         self.records.append(execution)
@@ -198,10 +239,15 @@ class RecordingRecorder:
 def build_graph(
     *,
     recheck_passed: bool,
-    roles: Sequence[AgentRole] = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR),
+    roles: Sequence[AgentRole] | None = None,
     fallbacks: tuple[str, ...] = (),
+    with_insight: bool = False,
 ) -> tuple[InvestigationGraph, RecordingRecorder, StubSemanticLayer]:
     model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
+    if roles is None:
+        roles = (
+            (*REQUIRED_ROLES, AgentRole.INSIGHT) if with_insight else REQUIRED_ROLES
+        )
     layer = StubSemanticLayer()
     recorder = RecordingRecorder()
     clock = iter(
@@ -209,9 +255,21 @@ def build_graph(
         for n in range(1000)
     )
     graph = InvestigationGraph(
-        orchestrator=OrchestratorAgent(model=model, registry=StubRegistry(roles)),
+        orchestrator=OrchestratorAgent(
+            model=model,
+            registry=StubRegistry(roles),
+            # Mirrors what `_build_graph` does: turning Insight on makes it a
+            # required role. Without this the Phase 2 tests would run a
+            # configuration production never produces.
+            required_roles=(
+                (*REQUIRED_ROLES, AgentRole.INSIGHT)
+                if with_insight
+                else REQUIRED_ROLES
+            ),
+        ),
         sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
+        insight=InsightAgent(model=model) if with_insight else None,
         recorder=recorder,
         now=lambda: next(clock),
     )
@@ -300,7 +358,6 @@ async def test_result_rows_never_leave_the_execution_record() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_required_role_refuses_rather_than_proceeding() -> None:
-    from zentra_adapter_langgraph import NoEnabledAgentError
 
     graph, recorder, _ = build_graph(
         recheck_passed=True,

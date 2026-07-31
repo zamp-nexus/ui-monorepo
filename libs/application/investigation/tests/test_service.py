@@ -9,12 +9,16 @@ import pytest
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
+    Claim,
+    ClaimKind,
+    DraftFinding,
     EvidenceReference,
     Finding,
     HumanApproval,
     Investigation,
     MetricComparison,
     RejectionReason,
+    RootCauseState,
 )
 
 from zentra_application_investigation import (
@@ -46,7 +50,9 @@ class Pipeline:
         evaluator_model: str = "nvidia/nemotron-3-ultra-550b-a55b",
         analyst_sample_size: int | None = 500,
         evaluator_sample_size: int | None = 500,
+        draft_finding: DraftFinding | None = None,
     ) -> None:
+        self._draft_finding = draft_finding
         self._score = score
         self._converged = converged
         self._analyst_model = analyst_model
@@ -86,6 +92,7 @@ class Pipeline:
             evaluator_model=self._evaluator_model,
             analyst_sample_size=self._analyst_sample,
             evaluator_sample_size=self._evaluator_sample,
+            draft_finding=self._draft_finding,
         )
 
 
@@ -472,3 +479,82 @@ async def test_an_unregistered_scenario_is_still_refused() -> None:
 
     with pytest.raises(UnsupportedScenarioError):
         await application.start(actor(), scenario_key="made_up_scenario")
+
+
+def structured_draft() -> DraftFinding:
+    return DraftFinding(
+        draft_finding_id=UUID("90000000-0000-0000-0000-000000000001"),
+        tenant_id=TENANT_ID,
+        investigation_id=INVESTIGATION_ID,
+        version=1,
+        created_at=NOW,
+        produced_by_execution_id=UUID("91000000-0000-0000-0000-000000000001"),
+        headline="EU refund rate increased from 25% to 75%",
+        summary="Governed EU refund amount rose from $20 to $260.",
+        claims=(
+            Claim(
+                claim_id=UUID("92000000-0000-0000-0000-000000000001"),
+                kind=ClaimKind.OBSERVED,
+                text="EU refund amount rose to $260.00.",
+                position=0,
+            ),
+        ),
+        contradictions=(),
+        root_cause=RootCauseState.UNRESOLVED,
+        confidence=ConfidenceOutcome(
+            score=0.42,
+            calibration_method="insight_bounded_by_evaluator",
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_drafted_investigation_stores_the_draft_with_its_state_change(
+) -> None:
+    """Committed alongside the Investigation's own change. A reader must never
+    see a completed evaluation whose draft is missing."""
+    unit_of_work = UnitOfWork()
+    draft = structured_draft()
+    application = service(unit_of_work, pipeline=Pipeline(draft_finding=draft))
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    assert unit_of_work.draft_findings.rows[INVESTIGATION_ID] is draft
+
+
+@pytest.mark.asyncio
+async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight(
+) -> None:
+    """Insight is a paid model call, and regenerating narrative per read would
+    let two readers of the same Investigation see different conclusions."""
+    unit_of_work = UnitOfWork()
+    draft = structured_draft()
+    pipeline = Pipeline(draft_finding=draft)
+    application = service(unit_of_work, pipeline=pipeline)
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    runs_after_execute = len(pipeline.calls)
+
+    first = await application.get(actor(), INVESTIGATION_ID)
+    second = await application.get(actor(), INVESTIGATION_ID)
+
+    assert first.draft_finding is draft
+    assert second.draft_finding is draft
+    assert first.draft_finding.claims[0].position == 0
+    assert len(pipeline.calls) == runs_after_execute
+
+
+@pytest.mark.asyncio
+async def test_the_phase_1_path_stores_no_draft_and_stays_readable() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline())
+
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert unit_of_work.draft_findings.rows == {}
+    assert detail.draft_finding is None
+    assert detail.finding is not None

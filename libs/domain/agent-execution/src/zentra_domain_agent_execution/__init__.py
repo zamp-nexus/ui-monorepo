@@ -25,6 +25,7 @@ from .contracts import (
 from .ports import (
     AgentExecutionRecord,
     AgentExecutionRecorder,
+    AgentExecutionStart,
     AgentRegistryPort,
     ExecutionStatus,
     ModelMessage,
@@ -49,6 +50,7 @@ __all__ = [
     "AgentOutput",
     "AgentExecutionRecord",
     "AgentExecutionRecorder",
+    "AgentExecutionStart",
     "AgentPort",
     "AgentRegistryPort",
     "AgentRole",

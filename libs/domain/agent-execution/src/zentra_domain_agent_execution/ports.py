@@ -208,9 +208,31 @@ class AgentExecutionRecord(BaseModel):
         return None
 
 
+class AgentExecutionStart(BaseModel):
+    """That an Agent Execution began, before anyone knows how it ends.
+
+    Recorded separately because completion cannot describe a start. An agent
+    that hangs, or a process killed mid-call, leaves no completion record at
+    all — and Replay showing nothing is indistinguishable from the step never
+    having been attempted.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: UUID
+    investigation_id: UUID
+    tenant_id: UUID
+    agent_id: str = Field(min_length=1)
+    role: AgentRole
+    step: int = Field(ge=0)
+    started_at: datetime
+
+
 class AgentExecutionRecorder(Protocol):
     """Persists a completed step before the next one starts, so an interrupted
     investigation still has a replayable trail of what already ran."""
+
+    def record_started(self, start: AgentExecutionStart) -> Awaitable[None]: ...
 
     def record(self, execution: AgentExecutionRecord) -> Awaitable[None]: ...
 

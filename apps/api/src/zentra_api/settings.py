@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     e2b_api_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"
 
+    # The controlled Phase 2 route. Off by default: turning it on makes
+    # the Insight Agent a required role, so a deployment whose registry
+    # has not promoted `insight_v1` refuses every investigation rather
+    # than quietly running the Phase 1 path.
+    insight_enabled: bool = False
+
     @model_validator(mode="before")
     @classmethod
     def _blank_is_unset(cls, values: Any) -> Any:

@@ -9,10 +9,12 @@ from zentra_adapter_clickhouse import AuditRepository
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
+    InsightAgent,
     InvestigationGraph,
     OrchestratorAgent,
     SqlAnalystAgent,
 )
+from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
 from zentra_adapter_model_providers import (
     ModelTier,
     ProviderCircuitBreaker,
@@ -24,6 +26,7 @@ from zentra_adapter_postgres import (
     PostgresInvestigationUnitOfWorkFactory,
 )
 from zentra_application_investigation import InvestigationService
+from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
@@ -81,6 +84,7 @@ class AppDependencies:
                 registry=registry,
                 semantic_layer=semantic_layer,
                 recorder=recorder,
+                insight_enabled=settings.insight_enabled,
             )
             for tier in ModelTier
         }
@@ -124,6 +128,7 @@ def _build_graph(
     registry: PostgresAgentRegistry,
     semantic_layer: CubeSemanticLayer,
     recorder: PostgresExecutionRecorder,
+    insight_enabled: bool,
 ) -> InvestigationGraph:
     """One compiled graph per tier.
 
@@ -135,9 +140,21 @@ def _build_graph(
         clients=models.as_dict(),
         breaker=breaker,
     )
+    # Two switches that compose rather than duplicate. This one shapes the
+    # graph; the registry decides whether an enabled, eval-passing Insight
+    # exists. Flag on with no promoted Insight is the fail-closed case: the
+    # Orchestrator refuses at plan time rather than silently running Phase 1.
+    required_roles = (
+        (*REQUIRED_ROLES, AgentRole.INSIGHT) if insight_enabled else REQUIRED_ROLES
+    )
     return InvestigationGraph(
-        orchestrator=OrchestratorAgent(model=model, registry=registry),
+        orchestrator=OrchestratorAgent(
+            model=model,
+            registry=registry,
+            required_roles=required_roles,
+        ),
         sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+        insight=InsightAgent(model=model) if insight_enabled else None,
         recorder=recorder,
     )

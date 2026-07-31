@@ -1,27 +1,40 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from uuid import UUID
+from datetime import UTC, datetime
+from uuid import UUID, uuid4, uuid5
 
-from zentra_adapter_langgraph import InvestigationGraph
+from zentra_adapter_langgraph import InsightOutcome, InvestigationGraph
 from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_application_investigation import PipelineResult
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
+    AgentExecutionStart,
+    ConfidenceOutcome,
     ExecutionStatus,
     reject_legacy_role,
 )
 from zentra_domain_investigation import (
+    Claim,
+    ClaimKind,
+    Contradiction,
     DomainEvent,
+    DraftFinding,
     EvidenceReference,
     Finding,
     InvestigationStatus,
     MetricComparison,
+    RootCauseState,
 )
 
 SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
+
+# The completion event already uses the execution id as its event id, and
+# the outbox deduplicates on that. Deriving the start's id keeps both
+# stable across an at-least-once retry without colliding with each other.
+_STARTED_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000001")
 
 
 def _optional_str(value: object) -> str | None:
@@ -46,6 +59,16 @@ class PostgresExecutionRecorder:
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
 
+    async def record_started(self, start: AgentExecutionStart) -> None:
+        reject_legacy_role(start.role)
+        async with self._unit_of_work_factory(
+            start.tenant_id,
+            SYSTEM_TRACE_ID,
+            SYSTEM_SPAN_ID,
+        ) as unit_of_work:
+            await unit_of_work.outbox.enqueue([_started_event(start)])
+            await unit_of_work.commit()
+
     async def record(self, execution: AgentExecutionRecord) -> None:
         # Before the transaction opens. The role travels into the audit
         # ledger's metadata, and Audit Entries are immutable — a legacy value
@@ -61,6 +84,28 @@ class PostgresExecutionRecorder:
             # disagree with what was actually persisted.
             await unit_of_work.outbox.enqueue([_audit_event(execution)])
             await unit_of_work.commit()
+
+
+def _started_event(start: AgentExecutionStart) -> DomainEvent:
+    """Identity and position only.
+
+    There is nothing to say about the work yet — no outcome, no usage, no
+    evidence. Saying only that it began is the whole point.
+    """
+    return DomainEvent(
+        event_id=uuid5(_STARTED_NAMESPACE, str(start.execution_id)),
+        event_type="agent.execution_started",
+        investigation_id=start.investigation_id,
+        tenant_id=start.tenant_id,
+        status=InvestigationStatus.RUNNING,
+        occurred_at=start.started_at,
+        metadata={
+            "agent_id": start.agent_id,
+            "role": start.role.value,
+            "step": start.step,
+            "execution_id": str(start.execution_id),
+        },
+    )
 
 
 def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
@@ -157,4 +202,58 @@ class LangGraphInvestigationPipeline:
             evaluator_model=outcome.evaluator_model,
             analyst_sample_size=outcome.analyst_sample_size,
             evaluator_sample_size=outcome.evaluator_sample_size,
+            draft_finding=_draft_finding(
+                outcome.insight,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+            ),
         )
+
+
+def _draft_finding(
+    insight: InsightOutcome | None,
+    *,
+    investigation_id: UUID,
+    tenant_id: UUID,
+) -> DraftFinding | None:
+    """Assemble the domain object from what the Insight execution reported.
+
+    Here rather than in the graph adapter, because building an Investigation
+    domain object is not the agent runtime's job — and because this is the
+    layer that already knows both sides.
+
+    The claim ordering is the agent's, preserved by position. `root_cause`
+    passes through `RootCauseState` rather than being hardcoded here, so if the
+    accepted causal-evidence standard ever adds a second state this converts it
+    instead of silently reporting the wrong one.
+    """
+    if insight is None:
+        return None
+    return DraftFinding(
+        draft_finding_id=uuid4(),
+        tenant_id=tenant_id,
+        investigation_id=investigation_id,
+        version=1,
+        created_at=datetime.now(UTC),
+        produced_by_execution_id=insight.execution_id,
+        headline=insight.headline,
+        summary=insight.summary,
+        claims=tuple(
+            Claim(
+                claim_id=uuid4(),
+                kind=ClaimKind(str(claim["kind"])),
+                text=str(claim["text"]),
+                position=position,
+                # Populated when Evidence Citations exist.
+                citation_ids=(),
+            )
+            for position, claim in enumerate(insight.claims)
+        ),
+        contradictions=tuple(
+            Contradiction(detail=detail) for detail in insight.contradictions
+        ),
+        root_cause=RootCauseState(insight.root_cause),
+        confidence=(
+            insight.outcome if isinstance(insight.outcome, ConfidenceOutcome) else None
+        ),
+    )
