@@ -93,6 +93,36 @@ cannot establish, so the two now sit on opposite sides of a read/write split:
 This is the expand step. Removing the legacy read path is a separate decision
 and is not part of Phase 2 completion.
 
+### Registration gating
+
+`agent_registry` decides which Agents may reach a Tenant, and
+`ck_agent_registry_enabled_requires_passing_eval` means a row cannot be
+`enabled` without `eval_status = 'passing'`. `nx run evals:promote` is the only
+thing that sets it, so an Agent existing in the table is not the same as an
+Agent being allowed to run.
+
+Insight is registered by `0007_register_insight_agent` disabled and `pending`,
+exactly as the Phase 1 agents were. Promotion refuses it in three distinct
+situations, each of which demotes it to `failing` and `enabled = false`:
+
+- **Absent** — no suite under `evals/insight`.
+- **Incomplete** — the suite is missing a case named in `REQUIRED_CASES`. A
+  suite stays green while someone deletes the case that hurt, so passing every
+  case it happens to contain is a weaker claim than having been tested for what
+  matters. Insight is the only Agent that declares required coverage; the
+  Phase 1 agents predate the requirement.
+- **Failing** — any case in the suite fails.
+
+Insight's descriptor grants **no** tool permissions. It is the one Agent that
+reaches no capability at all — it works only on state the SQL Analyst and
+Evaluator already validated — which is what makes "did it invent this?" a
+question with a decidable answer. Its fallback policy is the role-keyed
+provider chain, attributed through `AgentOutput.fallbacks` and proved by the
+suite's fallback-attribution case.
+
+`nx run evals:check` runs the gate in CI. Before Phase 2 nothing did, so a
+deleted suite or an unregistered Agent left the build green.
+
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).
 

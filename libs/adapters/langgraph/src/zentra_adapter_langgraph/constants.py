@@ -8,6 +8,7 @@ from zentra_domain_agent_execution import AgentRole
 ORCHESTRATOR_MODEL = AgentRole.ORCHESTRATOR.value
 SQL_ANALYST_MODEL = AgentRole.SQL_ANALYST.value
 EVALUATOR_MODEL = AgentRole.EVALUATOR.value
+INSIGHT_MODEL = AgentRole.INSIGHT.value
 
 # Requested ceiling. The routed chain lowers it per rung, because free-tier
 # token budgets are far tighter than Anthropic's.
