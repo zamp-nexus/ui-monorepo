@@ -8,6 +8,7 @@ shared by two claims is stored once.
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -33,6 +34,7 @@ from zentra_adapter_postgres.draft_finding import (
     PostgresEvidenceCitationRepository,
 )
 from zentra_adapter_postgres.schema import (
+    agent_executions,
     draft_findings,
     evidence_citations,
     investigations,
@@ -275,7 +277,10 @@ async def test_a_citation_round_trips_its_governed_context() -> None:
         assert stored.filters[0].member == "Commerce.region"
         assert stored.filters[0].values == ("EU",)
         assert stored.evaluator_outcome is not None
-        assert stored.state is CitationState.ACTIVE
+        # This fixture names no producing execution, and a null one means the
+        # evidence is gone — so the governed context survives while the state
+        # honestly reports that it cannot be followed.
+        assert stored.state is CitationState.UNAVAILABLE
     finally:
         await runtime.dispose()
         await cleanup()
@@ -312,3 +317,147 @@ async def test_no_prohibited_payload_reaches_a_stored_citation() -> None:
         "token",
     ):
         assert prohibited not in columns, f"{prohibited} became a citation column"
+
+
+@pytest.mark.asyncio
+async def test_resolution_is_blind_to_another_tenants_citation() -> None:
+    """The three ways of not being allowed to see it must be one answer.
+    Proved against RLS rather than against a Python branch, because RLS is what
+    actually decides."""
+    await seed()
+    await cleanup()
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(
+                [citation(JULY, "July 2026", "260.00")]
+            )
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_B)
+            repository = PostgresEvidenceCitationRepository(connection)
+            # Another Tenant's citation, and one that never existed.
+            foreign = await repository.resolve(INVESTIGATION, JULY)
+            unknown = await repository.resolve(INVESTIGATION, uuid4())
+
+        assert foreign is None
+        assert unknown is None
+    finally:
+        await runtime.dispose()
+        await cleanup()
+
+
+@pytest.mark.asyncio
+async def test_a_citation_from_another_investigation_does_not_resolve() -> None:
+    """A citation id from a readable Investigation must not resolve against a
+    different one, or the pair becomes a way to probe."""
+    await seed()
+    await cleanup()
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(
+                [citation(JULY, "July 2026", "260.00")]
+            )
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            mismatched = await PostgresEvidenceCitationRepository(
+                connection
+            ).resolve(uuid4(), JULY)
+
+        assert mismatched is None
+    finally:
+        await runtime.dispose()
+        await cleanup()
+
+
+@pytest.mark.asyncio
+async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> None:
+    """The transition, driven for real.
+
+    An execution is written, the citation resolves `active` against it, the
+    execution is deleted, and the same citation resolves `unavailable`. The
+    column is `ON DELETE SET NULL`, so this is the path production actually
+    takes — a fixture that starts at null would never exercise it.
+    """
+    await seed()
+    await cleanup()
+    execution_id = uuid4()
+
+    owner = create_async_engine(OWNER_URL)
+    try:
+        async with owner.begin() as connection:
+            await connection.execute(
+                postgres_insert(agent_executions)
+                .values(
+                    execution_id=execution_id,
+                    investigation_id=INVESTIGATION,
+                    tenant_id=TENANT_A,
+                    agent_id="sql_analyst_v1",
+                    step=1,
+                    input={},
+                    status="success",
+                )
+                .on_conflict_do_nothing()
+            )
+    finally:
+        await owner.dispose()
+
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(
+                [
+                    replace(
+                        citation(JULY, "July 2026", "260.00"),
+                        producing_execution_id=execution_id,
+                    )
+                ]
+            )
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            before = await PostgresEvidenceCitationRepository(connection).resolve(
+                INVESTIGATION, JULY
+            )
+            inline_before = await PostgresEvidenceCitationRepository(
+                connection
+            ).for_investigation(INVESTIGATION)
+        assert before is not None
+        assert before.state is CitationState.ACTIVE
+        # Both surfaces agree. One deriving state and the other not would show
+        # a figure inline that the detail view says it cannot stand behind.
+        assert inline_before[0].state is CitationState.ACTIVE
+
+        owner = create_async_engine(OWNER_URL)
+        try:
+            async with owner.begin() as connection:
+                await connection.execute(
+                    agent_executions.delete().where(
+                        agent_executions.c.execution_id == execution_id
+                    )
+                )
+        finally:
+            await owner.dispose()
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            after = await PostgresEvidenceCitationRepository(connection).resolve(
+                INVESTIGATION, JULY
+            )
+            inline_after = await PostgresEvidenceCitationRepository(
+                connection
+            ).for_investigation(INVESTIGATION)
+
+        assert after is not None
+        assert after.state is CitationState.UNAVAILABLE
+        assert inline_after[0].state is CitationState.UNAVAILABLE
+        # A fault, never a Tenant's deliberate erasure.
+        assert after.state is not CitationState.TOMBSTONED
+    finally:
+        await runtime.dispose()
+        await cleanup()

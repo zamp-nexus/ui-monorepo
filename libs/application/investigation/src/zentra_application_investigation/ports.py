@@ -81,6 +81,12 @@ class EvidenceCitationRepository(Protocol):
         investigation_id: UUID,
     ) -> tuple[EvidenceCitation, ...]: ...
 
+    async def resolve(
+        self,
+        investigation_id: UUID,
+        citation_id: UUID,
+    ) -> EvidenceCitation | None: ...
+
 
 class DraftFindingRepository(Protocol):
     async def add(self, draft: DraftFinding) -> None: ...

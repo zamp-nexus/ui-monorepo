@@ -7,9 +7,11 @@ than copied, so the two files cannot drift about what a request looks like.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+from zentra_application_investigation import InvestigationNotFoundError
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     CitationFilter,
@@ -238,3 +240,154 @@ def test_root_cause_unresolved_is_reported_even_on_a_confident_draft(
         )
 
     assert response.json()["draft_finding"]["root_cause"] == "unresolved"
+
+
+def resolving(service: InvestigationServiceStub, result):
+    """Point the stub's resolver at one outcome — a citation or an exception."""
+
+    async def resolve(*args: object, **kwargs: object):
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    service.resolve_citation = resolve  # type: ignore[method-assign]
+    return service
+
+
+def test_an_authorized_reader_resolves_an_active_citation(monkeypatch) -> None:
+    """Everything ADR 0011 says a citation identifies, in one response."""
+    authenticated(monkeypatch)
+    service = resolving(InvestigationServiceStub(), structured_citation())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["state"] == "active"
+    assert body["metric"] == "refund_amount"
+    assert body["filters"] == [
+        {"member": "Commerce.region", "operator": "equals", "values": ["EU"]}
+    ]
+    assert body["period"] == "July 2026"
+    assert body["grain"] == "month"
+    assert body["aggregate_value"] == "260.00"
+    assert body["producing_execution_id"] == "70000000-0000-0000-0000-000000000007"
+    assert body["evaluator_outcome"]["kind"] == "confidence"
+
+
+def test_a_resolved_citation_carries_no_prohibited_payload(monkeypatch) -> None:
+    """`extra="forbid"` makes this a property of the type, but the assertion is
+    on the wire because that is where a future field would show up."""
+    authenticated(monkeypatch)
+    service = resolving(InvestigationServiceStub(), structured_citation())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    body = response.text.lower()
+    for prohibited in ("rows", "prompt", "reasoning", "credential", "secret", "token"):
+        assert prohibited not in body
+
+
+def test_unexpectedly_missing_evidence_is_unavailable_not_a_tombstone(
+    monkeypatch,
+) -> None:
+    """A fault and a Tenant's deliberate erasure are different facts. Reporting
+    loss as a deletion would reassure a reader about data that is simply gone."""
+    authenticated(monkeypatch)
+    lost = replace(structured_citation(), state=CitationState.UNAVAILABLE)
+    service = resolving(InvestigationServiceStub(), lost)
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "unavailable"
+    assert "tombstone" not in response.text.lower()
+
+
+def test_another_tenants_citation_is_indistinguishable_from_nothing(
+    monkeypatch,
+) -> None:
+    """A caller who could tell "not yours" from "does not exist" could confirm
+    somebody else's evidence exists by copying an identifier."""
+    authenticated(monkeypatch)
+    service = resolving(
+        InvestigationServiceStub(),
+        InvestigationNotFoundError("Evidence was not found"),
+    )
+    with client(investigations=service) as test_client:
+        foreign = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+            headers={"Authorization": "Bearer valid"},
+        )
+        unknown = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/99999999-9999-4999-8999-999999999999",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert foreign.status_code == unknown.status_code == 404
+    assert foreign.json() == unknown.json()
+    # And the message says nothing about which case applied.
+    assert foreign.json()["detail"] == "Evidence was not found"
+
+
+def test_a_malformed_citation_id_discloses_nothing(monkeypatch) -> None:
+    authenticated(monkeypatch)
+    service = resolving(InvestigationServiceStub(), structured_citation())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/not-a-uuid",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.status_code == 422
+    assert "refund" not in response.text.lower()
+
+
+def test_resolution_requires_authentication() -> None:
+    service = resolving(InvestigationServiceStub(), structured_citation())
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+        )
+
+    assert response.status_code == 401
+
+
+def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
+    """There is no Tenant parameter to override. Identity comes from the
+    verified token, so a supplied one is simply ignored rather than trusted."""
+    authenticated(monkeypatch)
+    seen: list[object] = []
+
+    async def resolve(actor, **kwargs: object):
+        seen.append(actor.tenant_id)
+        return structured_citation()
+
+    service = InvestigationServiceStub()
+    service.resolve_citation = resolve  # type: ignore[method-assign]
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/citations/cc000000-0000-0000-0000-000000000001"
+            "?tenant_id=11111111-1111-4111-8111-111111111111",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.status_code == 200
+    assert seen == [UUID("20000000-0000-0000-0000-000000000002")]

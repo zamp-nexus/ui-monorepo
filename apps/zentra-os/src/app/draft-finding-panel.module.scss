@@ -96,6 +96,17 @@
   }
 }
 
+.evidenceState {
+  margin: 0 0 8px;
+  color: #d98a55;
+  font-size: 12px;
+  line-height: 1.5;
+
+  &[data-state='tombstoned'] {
+    color: #9ba39c;
+  }
+}
+
 .contradictions {
   display: grid;
   padding: 16px 18px;

@@ -23,6 +23,18 @@ def correlate_tenant(tenant_id: UUID) -> None:
     trace.get_current_span().set_attribute("zentra.tenant_id", str(tenant_id))
 
 
+def record_citation_resolution(*, state: str, duration_ms: int) -> None:
+    """How a citation resolution went, and how long it took.
+
+    Deliberately only these two. An operator needs to tell "slow" from
+    "missing" from "denied"; none of that requires the evidence itself, and a
+    span attribute is one of the easiest places for it to leak.
+    """
+    span = trace.get_current_span()
+    span.set_attribute("zentra.citation.state", state)
+    span.set_attribute("zentra.citation.duration_ms", duration_ms)
+
+
 def current_trace_ids() -> tuple[UUID, UUID]:
     context = trace.get_current_span().get_span_context()
     trace_id = UUID(int=context.trace_id) if context.trace_id else uuid4()
