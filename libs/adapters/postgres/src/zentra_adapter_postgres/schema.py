@@ -31,6 +31,7 @@ from .schema_phase_2 import (
     draft_finding_claim_citations,
     draft_finding_claims,
     draft_findings,
+    erasure_operations,
     evidence_citations,
 )
 
@@ -449,6 +450,7 @@ __all__ = [
     "draft_finding_claim_citations",
     "draft_finding_claims",
     "draft_findings",
+    "erasure_operations",
     "evidence_citations",
     "human_approvals",
     "identity_subjects",

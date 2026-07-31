@@ -32,6 +32,10 @@ _Avoid_: Driver, association, reason code
 A non-sensitive record that cited evidence and its derived content were erased, retaining only the deletion category and timestamp needed to explain their absence.
 _Avoid_: Deleted evidence, placeholder, missing artifact
 
+**Erasure Operation**:
+One durable, retryable request to erase a terminal Investigation's evidence, which reports success only when every governed surface is clear.
+_Avoid_: Delete job, purge, hard delete
+
 **Evaluation Attempt**:
 One bounded validation pass that either permits completion, requests retry, or opens a Human Approval gate.
 _Avoid_: Evaluator run, confidence check

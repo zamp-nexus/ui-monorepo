@@ -22,6 +22,19 @@ class InvestigationStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+#: The four states an Investigation cannot leave. Named here rather than
+#: rediscovered by each caller: "terminal" is a property of the lifecycle, and
+#: evidence erasure is one of several things that must not act on a live one.
+TERMINAL_STATUSES: frozenset[InvestigationStatus] = frozenset(
+    {
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.REJECTED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    }
+)
+
+
 class EvaluationDirective(StrEnum):
     PASS = "pass"
     REVIEW = "review"

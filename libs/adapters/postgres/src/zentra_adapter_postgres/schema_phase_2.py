@@ -250,3 +250,67 @@ draft_finding_claim_citations = Table(
         name="uq_draft_finding_claim_citations_position",
     ),
 )
+
+
+# One row per erasure request. Idempotent by construction: the unique
+# constraint means asking twice reaches the same row rather than starting a
+# second erasure that could race the first.
+erasure_operations = Table(
+    "erasure_operations",
+    metadata,
+    Column(
+        "erasure_id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    ),
+    Column(
+        "investigation_id",
+        UUID(as_uuid=True),
+        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("category", String(32), nullable=False),
+    Column("progress", String(16), nullable=False, server_default="requested"),
+    Column(
+        "requested_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column("completed_at", TIMESTAMP(timezone=True)),
+    Column("attempts", Integer, nullable=False, server_default="0"),
+    # A category, never a message. A failed erasure must not become the place
+    # the erased value is quoted back.
+    Column("failure_code", Text),
+    CheckConstraint(
+        "category IN ('tenant_request')",
+        name="ck_erasure_operations_category",
+    ),
+    CheckConstraint(
+        "progress IN ('requested', 'erasing', 'completed', 'failed')",
+        name="ck_erasure_operations_progress",
+    ),
+    # The database refuses the one answer this must never give: a completion
+    # time on something that did not complete, or a completion without one.
+    CheckConstraint(
+        "(progress = 'completed') = (completed_at IS NOT NULL)",
+        name="ck_erasure_operations_completion_is_recorded",
+    ),
+    CheckConstraint(
+        "progress <> 'failed' OR failure_code IS NOT NULL",
+        name="ck_erasure_operations_failure_is_explained",
+    ),
+    CheckConstraint("attempts >= 0", name="ck_erasure_operations_attempts"),
+    UniqueConstraint(
+        "investigation_id",
+        "category",
+        name="uq_erasure_operations_request",
+    ),
+)
