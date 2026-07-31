@@ -11,6 +11,8 @@ from zentra_domain_agent_execution import (
 )
 from zentra_domain_investigation import (
     ApprovalDecision,
+    CitationState,
+    ClaimKind,
     DomainEvent,
     DraftFinding,
     EvaluationDirective,
@@ -20,9 +22,10 @@ from zentra_domain_investigation import (
     HumanApprovalStatus,
     Investigation,
     InvestigationTransitionError,
+    PublicationDecision,
     RejectionReason,
     confidence_ceiling,
-    directive_for_outcome,
+    evaluate_publication,
 )
 
 from .dto import (
@@ -148,13 +151,14 @@ class InvestigationService:
         expected_version = investigation.version
         investigation.begin_evaluation(now)
         outcome = _bounded_outcome(result)
+        decision = _publication_decision(result, outcome, threshold=threshold)
+        # Publication authority lives in the policy, not in a score comparison
+        # and not in any Agent. `directive` is now a translation of what the
+        # policy already decided, kept because the aggregate's lifecycle speaks
+        # it.
         directive = (
-            directive_for_outcome(outcome, confidence_threshold=threshold)
-            if result.converged and not _sample_sizes_diverge(result)
-            # A recheck that never converged, or that counted a wildly
-            # different sample from the analyst, is never allowed to
-            # auto-publish however confident the final score looks. The loop is
-            # already spent by this point, so this escalates rather than retrying.
+            EvaluationDirective.PASS
+            if decision.publishes
             else EvaluationDirective.ESCALATE
         )
         approval_reason = investigation.record_evaluation(
@@ -162,6 +166,7 @@ class InvestigationService:
             outcome=outcome,
             finding=result.finding,
             now=now,
+            failed_conditions=decision.failed,
         )
         approval = (
             HumanApproval(
@@ -169,6 +174,7 @@ class InvestigationService:
                 investigation_id=investigation.investigation_id,
                 tenant_id=actor.tenant_id,
                 reason=approval_reason,
+                failed_conditions=decision.failed,
                 status=HumanApprovalStatus.PENDING,
                 requested_at=now,
             )
@@ -414,6 +420,9 @@ class InvestigationService:
                 reason=approval.reason.value,
                 requested_at=approval.requested_at,
                 can_decide=actor.role in {Role.OWNER, Role.ADMIN},
+                failed_conditions=tuple(
+                    condition.value for condition in approval.failed_conditions
+                ),
             )
         return InvestigationDetail(
             investigation_id=investigation.investigation_id,
@@ -448,6 +457,64 @@ class InvestigationService:
 # A wider gap than this between two independently counted samples is not a
 # rounding difference — the agents are describing different things.
 _SAMPLE_DIVERGENCE_FACTOR = 2
+
+
+def _publication_decision(
+    result: PipelineResult,
+    outcome: OutcomeSignal,
+    *,
+    threshold: float,
+) -> PublicationDecision:
+    """Settle the four facts, then let the policy add them up.
+
+    Convergence here means more than the Evaluator's own verdict: two agents
+    that disagree about the sample size by more than the divergence factor have
+    not converged, whatever the recheck said about the figures.
+
+    A draft with no citations at all — the Phase 1 path — is not treated as
+    unevidenced, because the Orchestrator's narrative was never citable and
+    gating every legacy Investigation on a contract that did not exist when it
+    ran would be a change of behaviour, not a policy.
+    """
+    draft = result.draft_finding
+    if draft is None:
+        # Say so, rather than fabricating a satisfied claim. The policy's own
+        # rule is that nothing-to-check is not everything-checks-out, and a
+        # caller inventing a claim to get past it would make that rule
+        # unenforceable from outside.
+        substantive = resolvable = 0
+        contradictions = 0
+    else:
+        substantive_claims = [
+            claim for claim in draft.claims if claim.kind is ClaimKind.OBSERVED
+        ]
+        resolvable_ids = {
+            citation.citation_id
+            for citation in result.evidence_citations
+            if citation.state is CitationState.ACTIVE
+        }
+        substantive = len(substantive_claims)
+        resolvable = sum(
+            1
+            for claim in substantive_claims
+            if claim.citation_ids
+            and all(cid in resolvable_ids for cid in claim.citation_ids)
+        )
+        contradictions = sum(
+            1 for c in draft.contradictions if not c.resolved
+        )
+
+    return evaluate_publication(
+        converged=result.converged and not _sample_sizes_diverge(result),
+        confidence=(
+            outcome.score if isinstance(outcome, ConfidenceOutcome) else None
+        ),
+        confidence_threshold=threshold,
+        substantive_claims=substantive,
+        resolvable_claims=resolvable,
+        unresolved_contradictions=contradictions,
+        evidence_applicable=draft is not None,
+    )
 
 
 def _sample_sizes_diverge(result: PipelineResult) -> bool:

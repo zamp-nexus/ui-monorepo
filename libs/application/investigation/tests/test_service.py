@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -9,9 +10,13 @@ import pytest
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
+    CitationState,
     Claim,
     ClaimKind,
+    Contradiction,
     DraftFinding,
+    DraftFindingError,
+    EvidenceCitation,
     EvidenceReference,
     Finding,
     HumanApproval,
@@ -37,6 +42,7 @@ TENANT_ID = UUID("51000000-0000-0000-0000-000000000001")
 USER_ID = UUID("52000000-0000-0000-0000-000000000002")
 INVESTIGATION_ID = UUID("53000000-0000-0000-0000-000000000003")
 APPROVAL_ID = UUID("54000000-0000-0000-0000-000000000004")
+CITATION_ID = UUID("cc000000-0000-0000-0000-000000000001")
 NOW = datetime(2026, 7, 29, 9, 0, tzinfo=UTC)
 
 
@@ -51,8 +57,10 @@ class Pipeline:
         analyst_sample_size: int | None = 500,
         evaluator_sample_size: int | None = 500,
         draft_finding: DraftFinding | None = None,
+        evidence_citations: tuple = (),
     ) -> None:
         self._draft_finding = draft_finding
+        self._citations = evidence_citations
         self._score = score
         self._converged = converged
         self._analyst_model = analyst_model
@@ -93,6 +101,7 @@ class Pipeline:
             analyst_sample_size=self._analyst_sample,
             evaluator_sample_size=self._evaluator_sample,
             draft_finding=self._draft_finding,
+            evidence_citations=self._citations,
         )
 
 
@@ -576,3 +585,180 @@ async def test_the_phase_1_path_stores_no_draft_and_stays_readable() -> None:
     assert unit_of_work.draft_findings.rows == {}
     assert detail.draft_finding is None
     assert detail.finding is not None
+
+
+def cited_draft(*, contradiction: bool = False, cited: bool = True) -> DraftFinding:
+    return DraftFinding(
+        draft_finding_id=UUID("90000000-0000-0000-0000-000000000002"),
+        tenant_id=TENANT_ID,
+        investigation_id=INVESTIGATION_ID,
+        version=1,
+        created_at=NOW,
+        produced_by_execution_id=UUID("91000000-0000-0000-0000-000000000001"),
+        headline="EU refunds rose $240 in July.",
+        summary="Governed EU refund amount rose from $20 to $260.",
+        claims=(
+            Claim(
+                claim_id=UUID("92000000-0000-0000-0000-000000000002"),
+                kind=ClaimKind.OBSERVED,
+                text="EU refund amount rose to $260.00.",
+                position=0,
+                metric="refund_amount",
+                value="260.00",
+                period="July 2026",
+                citation_ids=(CITATION_ID,) if cited else (),
+            ),
+        ),
+        contradictions=(
+            (Contradiction(detail="Recheck counted 8 rows, not 12."),)
+            if contradiction
+            else ()
+        ),
+        root_cause=RootCauseState.UNRESOLVED,
+        confidence=None,
+    )
+
+
+def active_citation() -> EvidenceCitation:
+    return EvidenceCitation(
+        citation_id=CITATION_ID,
+        tenant_id=TENANT_ID,
+        investigation_id=INVESTIGATION_ID,
+        metric="refund_amount",
+        filters=(),
+        period="July 2026",
+        grain="month",
+        producing_execution_id=UUID("91000000-0000-0000-0000-000000000001"),
+        aggregate_value="260.00",
+        evaluator_outcome=None,
+        state=CitationState.ACTIVE,
+    )
+
+
+async def run_policy(unit_of_work: UnitOfWork, **pipeline: object):
+    application = service(unit_of_work, pipeline=Pipeline(**pipeline))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    return await application.get(actor(), INVESTIGATION_ID)
+
+
+@pytest.mark.asyncio
+async def test_all_four_conditions_passing_publishes_without_a_human() -> None:
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.91,
+        draft_finding=cited_draft(),
+        evidence_citations=(active_citation(),),
+    )
+
+    assert detail.status == "completed"
+    assert detail.pending_approval is None
+
+
+def test_an_uncited_draft_fails_closed_rather_than_opening_a_gate() -> None:
+    """Gating is for a conclusion a reviewer can judge. A substantive claim
+    citing nothing is not weak evidence, it is a structurally invalid draft —
+    and it never becomes one to gate on."""
+    with pytest.raises(DraftFindingError, match="cites no evidence"):
+        cited_draft(cited=False)
+
+
+@pytest.mark.asyncio
+async def test_unresolvable_evidence_gates_even_when_the_claim_cites_it() -> None:
+    """A citation that cannot be followed backs a claim no better than none."""
+    lost = replace(active_citation(), state=CitationState.UNAVAILABLE)
+
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.99,
+        draft_finding=cited_draft(),
+        evidence_citations=(lost,),
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert "evidenced" in detail.pending_approval.failed_conditions
+
+
+@pytest.mark.asyncio
+async def test_an_open_contradiction_gates() -> None:
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.99,
+        draft_finding=cited_draft(contradiction=True),
+        evidence_citations=(active_citation(),),
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval.reason == "contradiction_unresolved"
+    assert "uncontradicted" in detail.pending_approval.failed_conditions
+
+
+@pytest.mark.asyncio
+async def test_every_failed_condition_is_reported_not_just_the_headline() -> None:
+    """A reviewer told only the headline would decide on part of the picture."""
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.42,
+        converged=False,
+        draft_finding=cited_draft(contradiction=True),
+        # The citation the claim names is not among them, so its evidence
+        # cannot be followed.
+        evidence_citations=(),
+    )
+
+    failed = set(detail.pending_approval.failed_conditions)
+    assert failed == {"converged", "confident", "evidenced", "uncontradicted"}
+    # The headline leads with the one that most stops a reviewer working.
+    assert detail.pending_approval.reason == "evidence_incomplete"
+
+
+@pytest.mark.asyncio
+async def test_a_gated_draft_stays_reviewable() -> None:
+    """Gating is asking a human to look, so there has to be something to look
+    at. A gate that hid the draft would be a refusal wearing a gate's name."""
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.42,
+        draft_finding=cited_draft(),
+        evidence_citations=(active_citation(),),
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert detail.draft_finding is not None
+    assert detail.draft_finding.claims[0].citation_ids == (CITATION_ID,)
+
+
+@pytest.mark.asyncio
+async def test_the_phase_1_path_still_publishes_on_confidence_alone() -> None:
+    """A narrative Finding was never citable, and gating every legacy
+    Investigation on a contract that did not exist when it ran would be a
+    change of behaviour rather than a policy."""
+    detail = await run_policy(UnitOfWork(), score=0.91)
+
+    assert detail.status == "completed"
+
+
+@pytest.mark.asyncio
+async def test_re_evaluating_cannot_produce_a_conflicting_decision() -> None:
+    """The lifecycle refuses a second evaluation on a terminal Investigation,
+    so a duplicate policy run cannot flip a published Finding into a gate."""
+    unit_of_work = UnitOfWork()
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(
+            score=0.91,
+            draft_finding=cited_draft(),
+            evidence_citations=(active_citation(),),
+        ),
+    )
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    # The lifecycle refuses it; which error it raises is the aggregate's
+    # business, and the property under test is that the decision stands.
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        await application.execute(actor(), INVESTIGATION_ID)
+
+    detail = await application.get(actor(), INVESTIGATION_ID)
+    assert detail.status == "completed"
+    assert detail.pending_approval is None

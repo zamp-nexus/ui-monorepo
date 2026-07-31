@@ -722,6 +722,16 @@
   box-shadow: inset 2px 0 #c76e65;
 }
 
+.failedConditions {
+  display: grid;
+  margin: 0 0 4px;
+  padding-left: 18px;
+  gap: 6px;
+  color: #cfd4d0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .decisionControls {
   display: grid;
   margin-top: 36px;

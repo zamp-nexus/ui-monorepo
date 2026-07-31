@@ -106,6 +106,9 @@ interface Investigation {
     readonly reason: string;
     readonly requested_at: string;
     readonly can_decide: boolean;
+    // Every condition the deterministic policy found failing, in its own
+    // vocabulary — the same words the API and Replay use.
+    readonly failed_conditions: readonly string[];
   } | null;
   readonly timeline: readonly {
     readonly entry_id: string;
@@ -455,6 +458,17 @@ const approvalHeadings: Record<string, string> = {
   tenant_policy: 'Review required by tenant policy',
   irreversible_action: 'Irreversible action requires approval',
   regulatory_exposure: 'Regulated data requires approval',
+  evidence_incomplete: 'A claim cannot be followed to its evidence',
+};
+
+// The publication policy's own words. The heading leads with one reason; this
+// is every condition that failed, because a reviewer deciding on the headline
+// alone would be deciding on part of the picture.
+const conditionLabels: Record<string, string> = {
+  converged: 'The independent recheck did not agree',
+  confident: 'Bounded confidence is below the tenant threshold',
+  evidenced: 'A substantive claim has no evidence that can be followed',
+  uncontradicted: 'A contradiction is still open',
 };
 
 const OutcomePanel = ({
@@ -622,12 +636,23 @@ const ApprovalInspector = ({
     >
       <p className={styles.eyebrow}>Human Approval · required</p>
       <h2 id="approval-heading" ref={headingRef} tabIndex={-1}>
-        Evidence is coherent. The sample is small.
+        {approvalHeadings[approval.reason] ?? 'Human judgment required'}
       </h2>
-      <p>
-        Four governed orders appear in each month. Tenant policy requires a
-        human to accept or reject this interpretation.
-      </p>
+      {/* Every condition the policy found failing, not just the heading's.
+          Deciding on the headline alone is deciding on part of the picture —
+          and the copy here used to describe one scenario's sample size
+          regardless of why the gate actually opened. */}
+      {approval.failed_conditions.length > 0 ? (
+        <ul className={styles.failedConditions}>
+          {approval.failed_conditions.map((condition) => (
+            <li key={condition}>
+              {conditionLabels[condition] ?? condition.replace(/_/g, ' ')}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Tenant policy requires a human to accept or reject this finding.</p>
+      )}
       {approval.can_decide ? (
         <div className={styles.decisionControls}>
           <Button

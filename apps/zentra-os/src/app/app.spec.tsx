@@ -79,6 +79,7 @@ const investigation = {
     reason: 'low_confidence',
     requested_at: '2026-07-29T00:00:00Z',
     can_decide: true,
+    failed_conditions: ['confident'],
   },
   timeline: [
     {
@@ -304,10 +305,11 @@ describe('App', () => {
     renderApp(
       '/investigations/30000000-0000-0000-0000-000000000003',
     );
+    // The approve control rather than the heading: the outcome panel and the
+    // approval now legitimately share the policy's wording, so a heading query
+    // matches both.
     expect(
-      await screen.findByRole('heading', {
-        name: /evidence is coherent/i,
-      }),
+      await screen.findByRole('button', { name: /approve finding/i }),
     ).toBeTruthy();
     expect(screen.getByText('Question registered')).toBeTruthy();
     expect(screen.getByRole('button', { name: /approve finding/i })).toBeTruthy();
@@ -317,11 +319,13 @@ describe('App', () => {
     expect(screen.getByText('cerebras/zai-glm-4.7')).toBeTruthy();
     // A score below the tenant threshold gates on low confidence, not policy.
     expect(screen.getByText('42%')).toBeTruthy();
+    // Both the outcome panel and the approval say why, in the policy's own
+    // words — that agreement is the point, not a duplicate.
     expect(
-      screen.getByRole('heading', {
+      screen.getAllByRole('heading', {
         name: /confidence below the tenant threshold/i,
       }),
-    ).toBeTruthy();
+    ).toHaveLength(2);
   });
 
   it('renders read-only approval state for a viewer', async () => {
@@ -444,7 +448,7 @@ describe('App', () => {
     });
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     const caption = screen.getByText(/20\.00 → November 2026 260\.00 USD/);
     expect(caption.textContent).toContain('October 2026');
@@ -465,7 +469,7 @@ describe('App', () => {
     });
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     // refund_rate carries null labels in the fixture.
     const caption = screen.getByText(/25 → 75 percent/);
@@ -539,7 +543,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     expect(
       screen.getByText(/ran before claims were recorded separately/i),
@@ -555,7 +559,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     expect(screen.getByText('Measured')).toBeTruthy();
     expect(screen.getByText('Interpretation')).toBeTruthy();
@@ -569,7 +573,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     const claims = screen.getAllByRole('listitem').map((el) => el.textContent);
     const observed = claims.findIndex((t) => t?.includes('$260.00'));
@@ -585,7 +589,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     expect(screen.getByText(/root cause unresolved/i)).toBeTruthy();
   });
@@ -595,7 +599,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     expect(screen.getByText(/Recheck counted 8 rows, not 12\./)).toBeTruthy();
     expect(screen.getByText(/unresolved contradiction/i)).toBeTruthy();
@@ -609,7 +613,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     const summaries = document.querySelectorAll('summary');
     expect(summaries).toHaveLength(1);
@@ -623,7 +627,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     // One disclosure, for the one observed claim. The interpretation has no
     // measurement of its own, so it has nothing to disclose.
@@ -646,7 +650,7 @@ describe('App', () => {
 
   const openEvidence = async () => {
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
     // jsdom does not toggle `open` from a click on `summary`, so the state is
     // set the way a browser would and the event fired.
     const details = document.querySelector('details') as HTMLDetailsElement;
@@ -660,7 +664,7 @@ describe('App', () => {
     signedIn();
 
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
-    await screen.findByRole('heading', { name: /evidence is coherent/i });
+    await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
     expect(screen.getByText('refund_amount')).toBeTruthy();
     expect(screen.getByText('260.00')).toBeTruthy();
@@ -725,5 +729,37 @@ describe('App', () => {
     await openEvidence();
 
     expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
+  });
+
+  it('lists every condition the policy found failing', async () => {
+    // A reviewer told only the headline would be deciding on part of the
+    // picture. The copy here used to describe one scenario's sample size
+    // regardless of why the gate actually opened.
+    mockApi({
+      ...investigation,
+      pending_approval: {
+        ...investigation.pending_approval,
+        reason: 'evidence_incomplete',
+        failed_conditions: ['converged', 'confident', 'evidenced'],
+      },
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/independent recheck did not agree/i)).toBeTruthy();
+    expect(
+      screen.getByText(/bounded confidence is below the tenant threshold/i),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/no evidence that can be followed/i),
+    ).toBeTruthy();
+    // And the heading leads with the one that most stops a reviewer working.
+    expect(
+      screen.getAllByRole('heading', {
+        name: /cannot be followed to its evidence/i,
+      }).length,
+    ).toBeGreaterThan(0);
   });
 });

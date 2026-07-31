@@ -461,3 +461,67 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
     finally:
         await runtime.dispose()
         await cleanup()
+
+
+@pytest.mark.asyncio
+async def test_failed_conditions_survive_a_read_after_the_writing_request() -> None:
+    """The bug this column exists for.
+
+    They were derivable only from the Investigation's in-memory events, and
+    `_investigation_from_row` rehydrates those empty — so the API field was
+    correct exactly once, in the request that wrote it, and empty on every read
+    afterwards. An in-memory fake could never have caught it.
+    """
+    from zentra_domain_investigation import (
+        ApprovalReason,
+        HumanApproval,
+        HumanApprovalStatus,
+        PublicationCondition,
+    )
+
+    from zentra_adapter_postgres.investigation import (
+        PostgresHumanApprovalRepository,
+    )
+
+    await seed()
+    approval_id = uuid4()
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            await PostgresHumanApprovalRepository(connection).add(
+                HumanApproval(
+                    approval_id=approval_id,
+                    investigation_id=INVESTIGATION,
+                    tenant_id=TENANT_A,
+                    reason=ApprovalReason.EVIDENCE_INCOMPLETE,
+                    failed_conditions=(
+                        PublicationCondition.CONFIDENT,
+                        PublicationCondition.EVIDENCED,
+                    ),
+                    status=HumanApprovalStatus.PENDING,
+                    requested_at=NOW,
+                )
+            )
+
+        # A different connection, as a later request would be.
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            loaded = await PostgresHumanApprovalRepository(
+                connection
+            ).get_for_investigation(INVESTIGATION)
+
+        assert loaded is not None
+        assert loaded.failed_conditions == (
+            PublicationCondition.CONFIDENT,
+            PublicationCondition.EVIDENCED,
+        )
+        assert loaded.reason is ApprovalReason.EVIDENCE_INCOMPLETE
+    finally:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT_A)
+            await connection.exec_driver_sql(
+                "DELETE FROM human_approvals WHERE approval_id = %s",
+                (str(approval_id),),
+            )
+        await runtime.dispose()

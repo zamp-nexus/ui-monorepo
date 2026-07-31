@@ -321,9 +321,13 @@ human_approvals = Table(
     Column("decided_at", TIMESTAMP(timezone=True)),
     Column("decided_by", UUID(as_uuid=True), ForeignKey("users.user_id")),
     Column("decision_reason", String(32)),
+    # Every publication condition that failed. `reason` is the headline;
+    # this is the whole picture a reviewer needs.
+    Column("failed_conditions", JSON, nullable=False, server_default="[]"),
     CheckConstraint(
         "reason IN ('low_confidence', 'irreversible_action', "
-        "'contradiction_unresolved', 'regulatory_exposure', 'tenant_policy')",
+        "'contradiction_unresolved', 'regulatory_exposure', 'tenant_policy', "
+        "'evidence_incomplete')",
         name="ck_human_approvals_reason",
     ),
     CheckConstraint(

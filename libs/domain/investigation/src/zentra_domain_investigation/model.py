@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 
 from zentra_domain_agent_execution import ConfidenceOutcome, OutcomeSignal
 
+from .publication import PublicationCondition
+
 
 class InvestigationStatus(StrEnum):
     PENDING = "pending"
@@ -35,6 +37,10 @@ class ApprovalReason(StrEnum):
     TENANT_POLICY = "tenant_policy"
     CONTRADICTION_UNRESOLVED = "contradiction_unresolved"
     REGULATORY_EXPOSURE = "regulatory_exposure"
+    #: A substantive claim cites nothing, or cites evidence that cannot be
+    #: followed. Distinct from low confidence: the model may be perfectly sure
+    #: and the reviewer still unable to check a word of it.
+    EVIDENCE_INCOMPLETE = "evidence_incomplete"
 
 
 class ApprovalDecision(StrEnum):
@@ -168,6 +174,11 @@ class HumanApproval:
     reason: ApprovalReason
     status: HumanApprovalStatus
     requested_at: datetime
+    # Every publication condition that failed, in the policy's own vocabulary.
+    # Stored on the approval rather than derived on read: `reason` is the
+    # headline, and a reviewer deciding on the headline alone would be deciding
+    # on part of the picture.
+    failed_conditions: tuple[PublicationCondition, ...] = ()
     decided_at: datetime | None = None
     decided_by: UUID | None = None
     decision_reason: RejectionReason | None = None
@@ -270,6 +281,10 @@ class Investigation:
         outcome: OutcomeSignal,
         finding: Finding,
         now: datetime,
+        # Which publication conditions failed. Typed rather than strings so
+        # renaming a condition cannot silently degrade every gate to the
+        # fallback reason.
+        failed_conditions: tuple[PublicationCondition, ...] = (),
     ) -> ApprovalReason | None:
         self._require_status({InvestigationStatus.EVALUATING})
         if self.evaluation_attempts >= 3:
@@ -293,6 +308,9 @@ class Investigation:
                 "confidence": outcome.score
                 if isinstance(outcome, ConfidenceOutcome)
                 else None,
+                "failed_publication_conditions": [
+                    condition.value for condition in failed_conditions
+                ],
             },
         )
 
@@ -309,13 +327,21 @@ class Investigation:
             )
             return None
 
-        reason = self._approval_reason(directive, outcome)
+        reason = self._approval_reason(directive, outcome, failed_conditions)
         self._transition(
             expected={InvestigationStatus.EVALUATING},
             target=InvestigationStatus.AWAITING_APPROVAL,
             event_type="human_approval.requested",
             now=now,
-            metadata={"reason": reason.value},
+            metadata={
+                "reason": reason.value,
+                # Every failure, not the summarising one. A reviewer told only
+                # that confidence was low, when the evidence was also
+                # unreachable, would approve on a false picture.
+                "failed_publication_conditions": [
+                    condition.value for condition in failed_conditions
+                ],
+            },
         )
         return reason
 
@@ -411,7 +437,30 @@ class Investigation:
     def _approval_reason(
         directive: EvaluationDirective,
         outcome: OutcomeSignal,
+        failed_conditions: tuple[PublicationCondition, ...] = (),
     ) -> ApprovalReason:
+        """The headline a reviewer sees first.
+
+        The complete list of failed conditions travels alongside it; this is
+        only which one to lead with. Ordered by how much it stops a reviewer
+        doing their job: unfollowable evidence means they cannot check
+        anything, an open contradiction means the agents disagree, and low
+        confidence means the answer is merely weak.
+        """
+        for condition, reason in (
+            (PublicationCondition.EVIDENCED, ApprovalReason.EVIDENCE_INCOMPLETE),
+            (
+                PublicationCondition.UNCONTRADICTED,
+                ApprovalReason.CONTRADICTION_UNRESOLVED,
+            ),
+            (PublicationCondition.CONVERGED, ApprovalReason.CONTRADICTION_UNRESOLVED),
+            (PublicationCondition.CONFIDENT, ApprovalReason.LOW_CONFIDENCE),
+        ):
+            if condition in failed_conditions:
+                return reason
+
+        # No conditions supplied: the pre-policy path, kept so a caller that
+        # has not adopted the policy still gets a sensible reason.
         if directive in {
             EvaluationDirective.RETRY,
             EvaluationDirective.ESCALATE,
