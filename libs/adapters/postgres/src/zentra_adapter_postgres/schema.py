@@ -372,6 +372,15 @@ draft_finding_claims = Table(
     ),
     Column("kind", String(16), nullable=False),
     Column("claim_text", Text, nullable=False),
+    # The measurement an observed claim rests on, carried rather than
+    # re-derived. Null for an interpretation, which has none of its own.
+    #
+    # `claim_value` rather than `value` for the same reason as `claim_text`:
+    # both are SQL-adjacent words that read ambiguously in a query against a
+    # table full of other values.
+    Column("metric", Text),
+    Column("claim_value", Text),
+    Column("period", Text),
     Column("position", Integer, nullable=False),
     # Populated when Evidence Citations exist. Present now so that adding them
     # is a write rather than another migration.
@@ -381,6 +390,12 @@ draft_finding_claims = Table(
         name="ck_draft_finding_claims_kind",
     ),
     CheckConstraint("position >= 0", name="ck_draft_finding_claims_position"),
+    # An observed claim with no measurement is an interpretation wearing the
+    # wrong label. The domain refuses it; so does the database.
+    CheckConstraint(
+        "kind <> 'observed' OR (metric IS NOT NULL AND claim_value IS NOT NULL)",
+        name="ck_draft_finding_claims_observed_is_measured",
+    ),
     # Order is the contract, not an accident of insertion.
     UniqueConstraint(
         "draft_finding_id",

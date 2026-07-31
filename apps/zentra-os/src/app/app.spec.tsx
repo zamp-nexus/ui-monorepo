@@ -474,6 +474,9 @@ describe('App', () => {
         kind: 'observed',
         text: 'EU refund amount rose from $20.00 to $260.00.',
         position: 0,
+        metric: 'refund_amount',
+        value: '260.00',
+        period: 'July 2026',
         citation_ids: [],
       },
       {
@@ -481,6 +484,9 @@ describe('App', () => {
         kind: 'interpretation',
         text: 'The rise is concentrated in a single week.',
         position: 1,
+        metric: null,
+        value: null,
+        period: null,
         citation_ids: [],
       },
     ],
@@ -568,5 +574,19 @@ describe('App', () => {
 
     expect(screen.getByText(/Recheck counted 8 rows, not 12\./)).toBeTruthy();
     expect(screen.getByText(/unresolved contradiction/i)).toBeTruthy();
+  });
+
+  it('shows the figure a measured claim rests on', async () => {
+    // A reader should not have to follow anything to see the number. The label
+    // "Measured" without the measurement is a claim about formatting.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText('refund_amount')).toBeTruthy();
+    expect(screen.getByText('260.00')).toBeTruthy();
+    expect(screen.getByText('July 2026')).toBeTruthy();
   });
 });

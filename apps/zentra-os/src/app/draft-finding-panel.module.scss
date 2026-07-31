@@ -47,6 +47,20 @@
   }
 }
 
+.measurement {
+  display: flex;
+  margin: 6px 0 0;
+  gap: 12px;
+  color: #7d857e;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+
+  span + span::before {
+    margin-right: 12px;
+    content: '·';
+  }
+}
+
 .contradictions {
   display: grid;
   padding: 16px 18px;

@@ -214,17 +214,10 @@ def _validated_claims(
                 )
             # Either side of the comparison is a legitimate thing to state —
             # "refunds were $20 in June" is as observed as "$260 in July" —
-            # but nothing outside the aggregate is.
-            metric = by_name[metric_name]
-            supported = {
-                str(metric.get("previous_value")),
-                str(metric.get("current_value")),
-            }
-            if str(claim.get("value")) not in supported:
-                raise UngroundedClaimError(
-                    f"Claim {position} states a value for {metric_name!r} that "
-                    f"the validated aggregate does not carry"
-                )
+            # but the value and the period must be the *same* side. Reporting
+            # July's figure under June's label is the one way to be precisely
+            # wrong while every individual token is real.
+            _require_matching_side(position, metric_name, by_name[metric_name], claim)
 
         validated.append(
             {
@@ -232,10 +225,63 @@ def _validated_claims(
                 "text": text,
                 "metric": metric_name or None,
                 "value": claim.get("value") if kind == OBSERVED else None,
+                "period": claim.get("period") if kind == OBSERVED else None,
             }
         )
 
     return validated
+
+
+def _require_matching_side(
+    position: int,
+    metric_name: str,
+    metric: dict[str, Any],
+    claim: dict[str, Any],
+) -> None:
+    """The claimed value and period must be the same side of the comparison.
+
+    Checking them separately would accept July's figure captioned June, which
+    is worse than an obvious invention: every token in it is real.
+    """
+    sides = (
+        (str(metric.get("previous_value")), metric.get("previous_label")),
+        (str(metric.get("current_value")), metric.get("current_label")),
+    )
+    value = str(claim.get("value"))
+    period = claim.get("period")
+
+    # Both sides are tried before anything is refused. A genuinely flat metric
+    # carries the same value on both, and the first side to match by value is
+    # not necessarily the side the claim meant — refusing there would reject a
+    # true claim for citing the period it actually held.
+    matched_value = False
+    labels: list[str] = []
+    for side_value, side_label in sides:
+        if value != side_value:
+            continue
+        matched_value = True
+        if side_label is None:
+            # The aggregate named no period for this side, so the claim cannot
+            # be held to one.
+            return
+        labels.append(str(side_label))
+        if period == side_label:
+            return
+
+    if not matched_value:
+        raise UngroundedClaimError(
+            f"Claim {position} states a value for {metric_name!r} that the "
+            f"validated aggregate does not carry"
+        )
+    if period is None:
+        raise UngroundedClaimError(
+            f"Claim {position} states a value for {metric_name!r} without the "
+            f"period it covers, which the aggregate names"
+        )
+    raise UngroundedClaimError(
+        f"Claim {position} captions its value for {metric_name!r} with a "
+        f"period the aggregate does not give that value"
+    )
 
 
 def _preserved_contradictions(

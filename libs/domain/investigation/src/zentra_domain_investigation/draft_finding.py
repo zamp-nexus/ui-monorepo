@@ -51,7 +51,16 @@ class RootCauseState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Claim:
-    """One substantive statement, and the evidence that will back it.
+    """One substantive statement, and the evidence that backs it.
+
+    An observed claim carries the measurement itself — the governed metric it
+    rests on, the value, and the period that value covers — not just prose
+    labelled `observed`. Without them a reader is asked to take the label on
+    trust, and "distinguish evidence from interpretation" becomes a claim about
+    formatting rather than about evidence.
+
+    They are optional because an interpretation legitimately has no measurement
+    of its own; `DraftFinding` is what refuses an observed claim missing one.
 
     `citation_ids` is empty until Evidence Citations exist. The field is here
     now so that adding them is a write, not a schema migration.
@@ -61,6 +70,9 @@ class Claim:
     kind: ClaimKind
     text: str
     position: int
+    metric: str | None = None
+    value: str | None = None
+    period: str | None = None
     citation_ids: tuple[UUID, ...] = ()
 
 
@@ -102,3 +114,14 @@ class DraftFinding:
                 "Claim positions must be contiguous from zero; a gap or a "
                 f"duplicate means a claim was lost. Got {positions}."
             )
+        for claim in self.claims:
+            if claim.kind is ClaimKind.OBSERVED and not (
+                claim.metric and claim.value
+            ):
+                # An observed claim with no measurement is an interpretation
+                # wearing the wrong label, which is the one confusion this
+                # whole type exists to prevent.
+                raise DraftFindingError(
+                    f"Claim {claim.position} is observed but carries no "
+                    f"measurement"
+                )

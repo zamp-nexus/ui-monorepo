@@ -114,9 +114,11 @@ Rules:
 - Every claim is either `observed` or `interpretation`. An observed claim
   restates a measured figure. An interpretation is your reading of one. Never
   label a reading as observed.
-- Every observed claim must name a metric from the metrics given to you, and
-  its `value` must be that metric's current value exactly as supplied. Do not
-  round, rescale, or restate it.
+- Every observed claim must name a metric from the metrics given to you. Its
+  `value` must be one of that metric's two supplied values, exactly as
+  supplied — do not round, rescale, or restate it — and its `period` must be
+  the label belonging to that same value. Reporting July's figure under June's
+  label is the one way to be precisely wrong.
 - Never introduce a metric, figure, period, filter, grain, or driver that is
   not in the evidence given to you. If you want to say something the evidence
   does not support, do not say it.

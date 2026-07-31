@@ -1,5 +1,5 @@
 {
-  "name": "preserves_an_evaluator_contradiction_the_model_dropped",
+  "name": "refuses_an_observed_claim_that_names_no_period",
   "agent": "insight",
   "state": {
     "question": "Why did EU refunds increase from June to July 2026?",
@@ -28,17 +28,15 @@
       ]
     },
     "evaluator": {
-      "recheck_passed": false,
-      "discrepancy_pct": 0.34,
-      "issues": [
-        "Recheck counted 8 underlying records, the analyst claimed 12."
-      ],
+      "recheck_passed": true,
+      "discrepancy_pct": 0.0,
+      "issues": [],
       "evidence_refs": [
         "artifact://execution/11000000-0000-0000-0000-000000000002"
       ],
       "outcome": {
         "kind": "confidence",
-        "score": 0.41,
+        "score": 0.82,
         "calibration_method": "evaluator_independent_recheck"
       }
     }
@@ -50,16 +48,9 @@
       "claims": [
         {
           "kind": "observed",
-          "text": "EU refund amount rose to $260.00 in July 2026.",
+          "text": "EU refund amount was $260.00.",
           "metric": "refund_amount",
           "value": "260.00",
-          "period": "July 2026"
-        },
-        {
-          "kind": "interpretation",
-          "text": "The rise is not explained by order volume, which barely moved.",
-          "metric": "order_count",
-          "value": null,
           "period": null
         }
       ],
@@ -69,11 +60,6 @@
     }
   ],
   "expect": {
-    "outcome_kind": "confidence",
-    "fields": {
-      "contradictions": [
-        "Recheck counted 8 underlying records, the analyst claimed 12."
-      ]
-    }
+    "raises": "UngroundedClaimError"
   }
 }

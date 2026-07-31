@@ -149,6 +149,7 @@ DRAFT_FINDING_SCHEMA = _obj(
                     "text": {"type": "string"},
                     "metric": _nullable({"type": "string"}),
                     "value": _nullable({"type": "string"}),
+                    "period": _nullable({"type": "string"}),
                 }
             ),
         },

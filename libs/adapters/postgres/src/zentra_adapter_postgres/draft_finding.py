@@ -73,6 +73,9 @@ class PostgresDraftFindingRepository:
                     "tenant_id": draft.tenant_id,
                     "kind": claim.kind.value,
                     "claim_text": claim.text,
+                    "metric": claim.metric,
+                    "claim_value": claim.value,
+                    "period": claim.period,
                     "position": claim.position,
                     "citation_ids": [str(cid) for cid in claim.citation_ids],
                 }
@@ -127,6 +130,9 @@ class PostgresDraftFindingRepository:
                     kind=ClaimKind(claim.kind),
                     text=claim.claim_text,
                     position=claim.position,
+                    metric=claim.metric,
+                    value=claim.claim_value,
+                    period=claim.period,
                     citation_ids=tuple(
                         UUID(cid) for cid in (claim.citation_ids or [])
                     ),
