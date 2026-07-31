@@ -51,13 +51,16 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 ## Product phase
 
 Phase 2 — Insight, Auditor, and Replay — is **in progress**. The current
-implementation already supplies the deterministic Auditor, Human Approval,
-tenant-filtered ClickHouse Replay, and an Orchestrator-synthesized Finding.
+implementation supplies the deterministic Auditor, Human Approval,
+tenant-filtered ClickHouse Replay, a registered and evaluation-gated Insight
+Agent that is the sole producer of a Draft Finding, claim-level Evidence
+Citations that resolve through a Tenant-authorized endpoint, and a
+deterministic four-condition publication policy no Agent can override.
 
-Phase 2 is not complete because Insight is not an independent registered Agent,
-Finding claims expose opaque artifact pointers rather than resolvable Evidence
-Citations, evidence deletion has no Tombstone workflow, and no external
-Replay-comprehension exercise has been recorded. See
+Phase 2 is not complete because evidence deletion has no user-facing Tombstone
+workflow, Replay does not yet compose ClickHouse process truth with authorized
+evidence content, and no external Replay-comprehension exercise has been
+recorded. See
 [[Phase 2 - Insight Auditor and Replay]] and
 [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
 

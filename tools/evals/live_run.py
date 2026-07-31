@@ -37,6 +37,7 @@ from zentra_adapter_clickhouse import AuditRepository
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
+    InsightAgent,
     InvestigationGraph,
     OrchestratorAgent,
     SqlAnalystAgent,
@@ -112,9 +113,10 @@ async def seed_tenant(tier: str) -> tuple[UUID, UUID]:
             .all()
         )
     await engine.dispose()
-    if len(enabled) < 3:
+    if len(enabled) < 4:
         raise SystemExit(
-            f"Only {len(enabled)} agents enabled. Run:\n"
+            f"Only {len(enabled)} agents enabled; Insight is required "
+            f"since the Orchestrator stopped synthesising. Run:\n"
             "  DATABASE_OWNER_URL=... npx nx run evals:promote"
         )
     return tenant_id, user_id
@@ -150,7 +152,12 @@ def build(
     if without:
         print(f"deliberately withheld: {sorted(without)}")
     print(f"tier: {tier.value}")
-    for role in (AgentRole.ORCHESTRATOR, AgentRole.SQL_ANALYST, AgentRole.EVALUATOR):
+    for role in (
+        AgentRole.ORCHESTRATOR,
+        AgentRole.SQL_ANALYST,
+        AgentRole.EVALUATOR,
+        AgentRole.INSIGHT,
+    ):
         chain = " -> ".join(str(c) for c in chain_for(tier, role))
         reachable = [c for c in chain_for(tier, role) if c.provider in models.available]
         print(f"  {role.value:14s} {chain}")
@@ -182,6 +189,10 @@ def _assemble(
         orchestrator=OrchestratorAgent(model=model, registry=PostgresAgentRegistry(database)),
         sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+        # Required since the Orchestrator stopped synthesising. A recorded
+        # scenario that skipped Insight would be exercising a pipeline the
+        # product no longer has.
+        insight=InsightAgent(model=model),
         recorder=PostgresExecutionRecorder(uow),
     )
     audit = AuditRepository.connect(

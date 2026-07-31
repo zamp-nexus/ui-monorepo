@@ -22,7 +22,7 @@ from zentra_domain_agent_execution import (
 
 from .agents.evaluator import EvaluatorAgent
 from .agents.insight import InsightAgent
-from .agents.orchestrator import PLAN, SYNTHESIZE, OrchestratorAgent
+from .agents.orchestrator import OrchestratorAgent
 from .agents.sql_analyst import SqlAnalystAgent
 from .constants import MAX_EVALUATION_ATTEMPTS
 
@@ -46,7 +46,6 @@ class GraphState(TypedDict, total=False):
     analyst: Annotated[dict[str, Any], _last]
     evaluator: Annotated[dict[str, Any], _last]
     insight: Annotated[dict[str, Any], _last]
-    synthesis: Annotated[dict[str, Any], _last]
 
 
 @dataclass(slots=True)
@@ -104,6 +103,10 @@ class PipelineOutcome:
     converged: bool
     contradictions: tuple[str, ...]
     attempts: int
+    # Never absent: the graph raises rather than reaching the end without one.
+    # Typed non-optional so the shape of the fallback this ticket removed
+    # cannot quietly return.
+    insight: InsightOutcome
     # What each agent's provider actually served. The application grades the
     # recheck's independence from these, so they must be the real model ids.
     analyst_model: str | None = None
@@ -113,9 +116,6 @@ class PipelineOutcome:
     # divergence.
     analyst_sample_size: int | None = None
     evaluator_sample_size: int | None = None
-    # Absent on the Phase 1 path, where the Orchestrator still writes the
-    # narrative and no Insight Agent runs.
-    insight: InsightOutcome | None = None
     # What the Analyst measured, scoped how. Carried so Evidence Citations
     # can be built from validated state rather than from Insight's prose.
     evidence: tuple[ValidatedEvidence, ...] = ()
@@ -132,10 +132,11 @@ class InvestigationGraph:
         sql_analyst: SqlAnalystAgent,
         evaluator: EvaluatorAgent,
         recorder: AgentExecutionRecorder,
-        # Omitted on the Phase 1 path. Supplying one is what turns on the
-        # controlled Phase 2 route, and the graph is shaped differently for
-        # each rather than branching at run time.
-        insight: InsightAgent | None = None,
+        # Required. The Orchestrator no longer synthesises, so an
+        # Investigation without Insight has nothing that could write a Finding
+        # — and a graph that could be built without it would fail at the last
+        # node rather than at construction.
+        insight: InsightAgent,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
         checkpointer: Any | None = None,
@@ -154,26 +155,20 @@ class InvestigationGraph:
         builder.add_node("plan", self._plan_node)
         builder.add_node("analyze", self._analyze_node)
         builder.add_node("evaluate", self._evaluate_node)
-        builder.add_node("synthesize", self._synthesize_node)
+        # Insight sits after the loop, never inside it. It reads the terminal
+        # Evaluator outcome, so running it on an attempt that is about to be
+        # retried would draft a conclusion from evidence the recheck rejected.
+        builder.add_node("insight", self._insight_node)
 
         builder.add_edge(START, "plan")
         builder.add_edge("plan", "analyze")
         builder.add_edge("analyze", "evaluate")
-
-        # Insight sits after the loop, never inside it. It reads the terminal
-        # Evaluator outcome, so running it on an attempt that is about to be
-        # retried would draft a conclusion from evidence the recheck rejected.
-        settled = "insight" if self._insight else "synthesize"
-        if self._insight:
-            builder.add_node("insight", self._insight_node)
-            builder.add_edge("insight", "synthesize")
-
         builder.add_conditional_edges(
             "evaluate",
             self._after_evaluate,
-            {"retry": "analyze", "settled": settled},
+            {"retry": "analyze", "settled": "insight"},
         )
-        builder.add_edge("synthesize", END)
+        builder.add_edge("insight", END)
         return builder.compile(checkpointer=checkpointer)
 
     async def run(
@@ -203,7 +198,7 @@ class InvestigationGraph:
         output, step, _ = await self._run_agent(
             self._orchestrator,
             state,
-            {"question": state["question"], "phase": PLAN},
+            {"question": state["question"]},
         )
         return {"tasks": list(output.fields.get("tasks", [])), "step": step}
 
@@ -236,23 +231,7 @@ class InvestigationGraph:
             "attempts": state.get("attempts", 0) + 1,
         }
 
-    async def _synthesize_node(self, state: GraphState) -> GraphState:
-        output, step, _ = await self._run_agent(
-            self._orchestrator,
-            state,
-            {
-                "question": state["question"],
-                "phase": SYNTHESIZE,
-                "analyst": state["analyst"],
-                "evaluator": state["evaluator"],
-            },
-        )
-        return {"synthesis": self._for_state(output), "step": step}
-
     async def _insight_node(self, state: GraphState) -> GraphState:
-        assert self._insight is not None
-        analyst = state["analyst"]
-        evaluator = state["evaluator"]
         output, step, execution_id = await self._run_agent(
             self._insight,
             state,
@@ -261,8 +240,8 @@ class InvestigationGraph:
                 # Already row-free: `_for_state` strips `rows` on the way in,
                 # so what reaches Insight is validated aggregates and the
                 # artifact pointers that lead to the rest.
-                "analyst": analyst,
-                "evaluator": evaluator,
+                "analyst": state["analyst"],
+                "evaluator": state["evaluator"],
             },
         )
         return {
@@ -412,8 +391,9 @@ class InvestigationGraph:
     def _outcome(self, state: GraphState) -> PipelineOutcome:
         analyst = state["analyst"]
         evaluator = state["evaluator"]
-        synthesis = state["synthesis"]
-        contradictions = tuple(synthesis["fields"].get("contradictions", []))
+        insight = _insight_outcome(state.get("insight"))
+        if insight is None:  # pragma: no cover - the graph always runs Insight
+            raise RuntimeError("The pipeline produced no Draft Finding")
         converged = bool(evaluator.get("recheck_passed"))
 
         evidence: list[str] = []
@@ -424,21 +404,23 @@ class InvestigationGraph:
         # fall through and land both agents on the same weights. Grading is the
         # application's job, since it owns the confidence bounds.
         return PipelineOutcome(
-            headline=str(synthesis["fields"]["headline"]),
-            summary=str(synthesis["fields"]["summary"]),
+            # From the Agent that was evaluated for writing them. The
+            # Orchestrator plans and arbitrates; it no longer writes prose.
+            headline=insight.headline,
+            summary=insight.summary,
             metrics=list(analyst.get("metrics", [])),
             evidence_refs=tuple(dict.fromkeys(evidence)),
             # The Evaluator's recheck is the authoritative confidence: it is
             # already capped at the analyst's own score.
             outcome=_outcome_signal(evaluator["outcome"]),
             converged=converged,
-            contradictions=contradictions,
+            contradictions=insight.contradictions,
             attempts=int(state.get("attempts", 0)),
             analyst_model=analyst.get("model"),
             evaluator_model=evaluator.get("model"),
             analyst_sample_size=analyst.get("sample_size"),
             evaluator_sample_size=evaluator.get("sample_size"),
-            insight=_insight_outcome(state.get("insight")),
+            insight=insight,
             evidence=_validated_evidence(analyst),
         )
 

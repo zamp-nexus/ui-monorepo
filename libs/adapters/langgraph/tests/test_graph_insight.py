@@ -74,7 +74,7 @@ def phase_2_graph(
     insight: object | None = None,
     advertised: tuple[AgentRole, ...] = PHASE_2_ROLES,
 ) -> InvestigationGraph:
-    """The graph `_build_graph` produces with `insight_enabled` set.
+    """The graph `_build_graph` produces with `the required Insight role` set.
 
     `advertised` is what the registry offers, which is how a promoted Insight
     is told apart from an unpromoted one.
@@ -98,7 +98,7 @@ def phase_2_graph(
 async def test_insight_runs_after_the_evaluator_and_only_once() -> None:
     """Order is the whole point. Drafting before the recheck settles would
     conclude from evidence the Evaluator is about to reject."""
-    graph, recorder, _ = build_graph(recheck_passed=True, with_insight=True)
+    graph, recorder, _ = build_graph(recheck_passed=True)
 
     outcome = await graph.run(
         investigation_id=INVESTIGATION_ID,
@@ -111,7 +111,6 @@ async def test_insight_runs_after_the_evaluator_and_only_once() -> None:
         AgentRole.SQL_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
-        AgentRole.ORCHESTRATOR,
     ]
     assert outcome.insight is not None
 
@@ -120,7 +119,7 @@ async def test_insight_runs_after_the_evaluator_and_only_once() -> None:
 async def test_insight_does_not_draft_from_a_rejected_attempt() -> None:
     """Three failed rechecks, one Insight execution — at the end, on the
     terminal outcome, not once per attempt."""
-    graph, recorder, _ = build_graph(recheck_passed=False, with_insight=True)
+    graph, recorder, _ = build_graph(recheck_passed=False)
 
     await graph.run(
         investigation_id=INVESTIGATION_ID,
@@ -142,7 +141,6 @@ async def test_insight_does_not_draft_from_a_rejected_attempt() -> None:
 async def test_insight_records_its_own_execution_and_attribution() -> None:
     graph, recorder, _ = build_graph(
         recheck_passed=True,
-        with_insight=True,
         fallbacks=("gemini/gemini-3-flash: circuit open",),
     )
 
@@ -170,10 +168,10 @@ async def test_insight_records_its_own_execution_and_attribution() -> None:
 
 
 @pytest.mark.asyncio
-async def test_the_orchestrator_does_not_make_the_insight_model_call() -> None:
-    """Insight is a separate Agent Execution, not a phase of the Orchestrator's.
-    Two Orchestrator executions, and neither of them produced the draft."""
-    graph, recorder, _ = build_graph(recheck_passed=True, with_insight=True)
+async def test_exactly_one_execution_owns_the_draft_finding() -> None:
+    """The point of the contraction. One Orchestrator execution, and it plans;
+    one Insight execution, and it draws the conclusion."""
+    graph, recorder, _ = build_graph(recheck_passed=True)
 
     outcome = await graph.run(
         investigation_id=INVESTIGATION_ID,
@@ -182,17 +180,22 @@ async def test_the_orchestrator_does_not_make_the_insight_model_call() -> None:
     )
 
     orchestrations = [r for r in recorder.records if r.role is AgentRole.ORCHESTRATOR]
-    assert len(orchestrations) == 2
-    for record in orchestrations:
-        assert record.execution_id != outcome.insight.execution_id
-        assert "claims" not in (record.output or {})
+    drafters = [r for r in recorder.records if r.role is AgentRole.INSIGHT]
+
+    assert len(orchestrations) == 1
+    assert len(drafters) == 1
+    assert drafters[0].execution_id == outcome.insight.execution_id
+    # The Orchestrator's output is a task ledger and nothing else.
+    assert set(orchestrations[0].output or {}) == {"tasks"}
+    for field in ("headline", "summary", "claims", "contradictions"):
+        assert field not in (orchestrations[0].output or {})
 
 
 @pytest.mark.asyncio
 async def test_insight_never_receives_raw_result_rows() -> None:
     """`rows` is the one field that must not travel between agents. Insight is
     downstream of everything, so it is the most likely place to leak."""
-    graph, recorder, _ = build_graph(recheck_passed=True, with_insight=True)
+    graph, recorder, _ = build_graph(recheck_passed=True)
 
     await graph.run(
         investigation_id=INVESTIGATION_ID,
@@ -216,8 +219,11 @@ async def test_insight_never_receives_raw_result_rows() -> None:
 
 
 @pytest.mark.asyncio
-async def test_the_phase_1_path_runs_no_insight_execution() -> None:
-    graph, recorder, _ = build_graph(recheck_passed=True)
+async def test_the_finding_comes_from_the_agent_evaluated_for_writing_it() -> None:
+    """There is no Phase 1 path left. The headline a reader sees is the one
+    Insight produced under its own evaluation suite, not one an unevaluated
+    second Orchestrator call invented."""
+    graph, _, _ = build_graph(recheck_passed=True)
 
     outcome = await graph.run(
         investigation_id=INVESTIGATION_ID,
@@ -225,8 +231,10 @@ async def test_the_phase_1_path_runs_no_insight_execution() -> None:
         question=QUESTION,
     )
 
-    assert outcome.insight is None
-    assert not [r for r in recorder.records if r.role is AgentRole.INSIGHT]
+    assert outcome.insight is not None
+    assert outcome.headline == outcome.insight.headline
+    assert outcome.summary == outcome.insight.summary
+    assert outcome.contradictions == outcome.insight.contradictions
 
 
 @pytest.mark.asyncio

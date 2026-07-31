@@ -123,19 +123,23 @@ suite's fallback-attribution case.
 `nx run evals:check` runs the gate in CI. Before Phase 2 nothing did, so a
 deleted suite or an unregistered Agent left the build green.
 
-### The controlled Phase 2 route
+### One Agent owns the conclusion
 
-`insight_enabled` shapes the graph: with it set, an `insight` node sits between
-the evaluation loop and the terminal, and Insight reads the **terminal**
-Evaluator outcome. It is outside the loop deliberately — drafting on an attempt
-that is about to be retried would conclude from evidence the recheck is about
-to reject. Three failed rechecks still produce exactly one Insight execution.
+The pipeline is `plan → analyze → evaluate → insight`. There is no synthesis
+node, and the Orchestrator has no phase that writes prose. It planned and then
+wrote the Finding, which meant one Agent Execution both chose the work and drew
+the conclusion, with no independent evaluation of the second job.
 
-The flag and the registry are two switches that compose rather than duplicate.
-The flag decides whether Insight runs; the registry decides whether an enabled,
-eval-passing Insight exists. With the flag on and nothing promoted, the
-Orchestrator refuses at plan time rather than silently falling back to the
-Phase 1 path and producing an unattributed narrative.
+Insight sits outside the evaluation loop and reads the **terminal** Evaluator
+outcome — drafting on an attempt about to be retried would conclude from
+evidence the recheck is about to reject. Three failed rechecks still produce
+exactly one Insight execution.
+
+Insight is a required role, not a flag. Nothing else can write a Finding, so a
+deployment whose registry has not promoted it refuses at plan time rather than
+reaching the last node with nothing to run. The Orchestrator's declared
+`output_fields` are `{"tasks"}` and nothing more, so a regression that put
+prose back would be refused by the allowlist rather than published.
 
 Insight receives the same row-free projection every agent does — `rows` never
 travels in graph state — so it gets validated aggregates and the `artifact://`
@@ -143,11 +147,11 @@ pointers that lead to everything else. It records its own Agent Execution with
 its own id, model, provider fallbacks, tokens, cost, latency and status, and
 the Draft Finding names that execution.
 
-**Publication is unchanged.** The Orchestrator still synthesizes the published
-Finding and the existing confidence-gated completion path still decides it. The
-Draft Finding is stored alongside and published by nothing. Moving publication
-authority is a separate decision, and removing Orchestrator synthesis is
-another.
+**Compatibility is unchanged.** Historical executions recorded under the
+legacy role, and Findings the Orchestrator wrote before the contraction, remain
+readable — `insight_root_cause` is still a deserializable `AgentRole` and the
+Phase 1 narrative in `investigations.state` is untouched. Removing that read
+path is a separate decision.
 
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).

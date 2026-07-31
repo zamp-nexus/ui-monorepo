@@ -4,10 +4,12 @@ ZentraOS is a trust-first analytics system: investigations are tenant-isolated,
 results carry typed outcome evidence, governed work can stop at a human gate,
 and the process can be replayed without retaining raw customer data.
 
-Phase 1 runs the governed `eu_refund_spike` question through three agents: an
-Orchestrator that resolves the enabled roles from the registry and synthesises
-the Finding, a SQL Analyst that queries Cube, and an Evaluator that re-derives
-the number independently on a different model.
+The governed `eu_refund_spike` question runs through four agents: an
+Orchestrator that resolves the enabled roles from the registry and delegates,
+a SQL Analyst that queries Cube, an Evaluator that re-derives the number
+independently on a different model, and an Insight Agent that turns the
+validated result into a Draft Finding. The Orchestrator plans and arbitrates;
+it does not write the conclusion.
 
 Which model serves each agent is a per-tenant routing decision. Free tenants run
 on free inference — Gemini, Cerebras, Groq, OpenRouter — falling through on rate

@@ -1,9 +1,10 @@
 {
-  "name": "plans_only_registered_roles",
+  "name": "plans_insight_when_the_registry_offers_it",
   "agent": "orchestrator",
   "enabled_roles": [
     "sql_analyst",
-    "evaluator"
+    "evaluator",
+    "insight"
   ],
   "state": {
     "question": "Why did EU refunds increase from June to July 2026?"
@@ -18,6 +19,10 @@
         {
           "role": "evaluator",
           "objective": "Recheck the movement."
+        },
+        {
+          "role": "insight",
+          "objective": "Draft the finding."
         }
       ]
     }
@@ -33,6 +38,10 @@
         {
           "role": "evaluator",
           "objective": "Recheck the movement."
+        },
+        {
+          "role": "insight",
+          "objective": "Draft the finding."
         }
       ]
     }

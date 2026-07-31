@@ -42,7 +42,10 @@ question.
    it counts the sample independently rather than copying the figure.
 6. A failed recheck returns to step 4 with the disagreement attached. The loop
    exits hard at three attempts whatever the score.
-7. The Orchestrator synthesises a Finding and names any contradiction.
+7. The Insight Agent — separately registered and evaluation-gated — turns
+   the terminal result into a Draft Finding, preserving every Evaluator
+   contradiction and reporting root cause unresolved. It runs once, after
+   the loop settles, never on an attempt about to be retried.
 8. Each Agent Execution is persisted and enqueued to the audit outbox as it
    completes, so an interrupted Investigation is replayable up to that point.
 9. The confidence is bounded before it meets the Tenant threshold. A model may

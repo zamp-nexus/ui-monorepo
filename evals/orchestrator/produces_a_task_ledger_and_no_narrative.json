@@ -1,9 +1,10 @@
 {
-  "name": "plans_only_registered_roles",
+  "name": "produces_a_task_ledger_and_no_narrative",
   "agent": "orchestrator",
   "enabled_roles": [
     "sql_analyst",
-    "evaluator"
+    "evaluator",
+    "insight"
   ],
   "state": {
     "question": "Why did EU refunds increase from June to July 2026?"
@@ -35,6 +36,11 @@
           "objective": "Recheck the movement."
         }
       ]
-    }
+    },
+    "field_absent": [
+      "headline",
+      "summary",
+      "contradictions"
+    ]
   }
 }

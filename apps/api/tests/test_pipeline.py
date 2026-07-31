@@ -39,6 +39,81 @@ class StubGraph:
         return self._outcome
 
 
+EVIDENCE = None  # built lazily; see validated_evidence()
+
+
+def validated_evidence():
+    """What the Analyst measured. A claim can only be cited against this, so a
+    test that omits it is testing the refusal path whether it meant to or not.
+    """
+    from uuid import UUID as _UUID
+
+    from zentra_adapter_langgraph import ValidatedEvidence
+
+    return (
+        ValidatedEvidence(
+            metric="refund_amount",
+            previous_value="20.00",
+            current_value="260.00",
+            previous_period="June 2026",
+            current_period="July 2026",
+            filters=(
+                {
+                    "member": "Commerce.region",
+                    "operator": "equals",
+                    "values": ["EU"],
+                },
+            ),
+            grain="month",
+            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
+        ),
+        ValidatedEvidence(
+            metric="order_count",
+            previous_value="480",
+            current_value="486",
+            previous_period="June 2026",
+            current_period="July 2026",
+            filters=(),
+            grain="month",
+            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
+        ),
+    )
+
+
+def insight_outcome(**overrides: object):
+    from zentra_adapter_langgraph import InsightOutcome
+
+    defaults: dict[str, object] = {
+        "execution_id": UUID("70000000-0000-0000-0000-000000000007"),
+        "headline": "EU refunds rose $240 in July.",
+        "summary": "Governed EU refund amount rose from $20 to $260.",
+        "claims": [
+            {
+                "kind": "observed",
+                "text": "EU refund amount rose to $260.00.",
+                "metric": "refund_amount",
+                "value": "260.00",
+                "period": "July 2026",
+            },
+            {
+                "kind": "interpretation",
+                "text": "Order volume barely moved.",
+                "metric": "order_count",
+                "value": None,
+                "period": None,
+            },
+        ],
+        "contradictions": ("Recheck counted 8 rows, not 12.",),
+        "root_cause": "unresolved",
+        "outcome": ConfidenceOutcome(
+            score=0.42, calibration_method="insight_bounded_by_evaluator"
+        ),
+        "model": "nvidia/nemotron-3-ultra-550b-a55b",
+        "fallbacks": ("gemini/gemini-3.6-flash: circuit open",),
+    }
+    return InsightOutcome(**(defaults | overrides))  # type: ignore[arg-type]
+
+
 def outcome(**overrides: object) -> PipelineOutcome:
     defaults: dict[str, object] = {
         "headline": "EU refunds rose $240 in July.",
@@ -60,8 +135,10 @@ def outcome(**overrides: object) -> PipelineOutcome:
         "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
         "analyst_sample_size": 8,
         "evaluator_sample_size": 8,
-        "insight": None,
-        "evidence": (),
+        # The graph always produces one now; a fixture that omitted it
+        # would be testing a pipeline the product no longer has.
+        "insight": insight_outcome(),
+        "evidence": validated_evidence(),
     }
     return PipelineOutcome(**(defaults | overrides))  # type: ignore[arg-type]
 
@@ -206,87 +283,12 @@ def test_the_audit_event_carries_the_canonical_role() -> None:
     assert event.metadata["role"] == "insight"
 
 
-EVIDENCE = None  # built lazily; see validated_evidence()
-
-
-def validated_evidence():
-    """What the Analyst measured. A claim can only be cited against this, so a
-    test that omits it is testing the refusal path whether it meant to or not.
-    """
-    from uuid import UUID as _UUID
-
-    from zentra_adapter_langgraph import ValidatedEvidence
-
-    return (
-        ValidatedEvidence(
-            metric="refund_amount",
-            previous_value="20.00",
-            current_value="260.00",
-            previous_period="June 2026",
-            current_period="July 2026",
-            filters=(
-                {
-                    "member": "Commerce.region",
-                    "operator": "equals",
-                    "values": ["EU"],
-                },
-            ),
-            grain="month",
-            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
-        ),
-        ValidatedEvidence(
-            metric="order_count",
-            previous_value="480",
-            current_value="486",
-            previous_period="June 2026",
-            current_period="July 2026",
-            filters=(),
-            grain="month",
-            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
-        ),
-    )
-
-
-def insight_outcome(**overrides: object):
-    from zentra_adapter_langgraph import InsightOutcome
-
-    defaults: dict[str, object] = {
-        "execution_id": UUID("70000000-0000-0000-0000-000000000007"),
-        "headline": "EU refunds rose $240 in July.",
-        "summary": "Governed EU refund amount rose from $20 to $260.",
-        "claims": [
-            {
-                "kind": "observed",
-                "text": "EU refund amount rose to $260.00.",
-                "metric": "refund_amount",
-                "value": "260.00",
-                "period": "July 2026",
-            },
-            {
-                "kind": "interpretation",
-                "text": "Order volume barely moved.",
-                "metric": "order_count",
-                "value": None,
-                "period": None,
-            },
-        ],
-        "contradictions": ("Recheck counted 8 rows, not 12.",),
-        "root_cause": "unresolved",
-        "outcome": ConfidenceOutcome(
-            score=0.42, calibration_method="insight_bounded_by_evaluator"
-        ),
-        "model": "nvidia/nemotron-3-ultra-550b-a55b",
-        "fallbacks": ("gemini/gemini-3.6-flash: circuit open",),
-    }
-    return InsightOutcome(**(defaults | overrides))  # type: ignore[arg-type]
-
-
 @pytest.mark.asyncio
 async def test_the_draft_names_the_execution_that_produced_it() -> None:
     """Attribution is the point of running Insight separately. A draft that
     cannot say which Agent Execution wrote it is no better than the
     Orchestrator's unattributed narrative."""
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     draft = result.draft_finding
     assert draft is not None
@@ -299,7 +301,7 @@ async def test_the_draft_names_the_execution_that_produced_it() -> None:
 
 @pytest.mark.asyncio
 async def test_claim_order_and_kind_survive_the_adapter() -> None:
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     claims = result.draft_finding.claims
     assert [c.position for c in claims] == [0, 1]
@@ -313,7 +315,7 @@ async def test_claim_order_and_kind_survive_the_adapter() -> None:
 
 @pytest.mark.asyncio
 async def test_contradictions_and_unresolved_root_cause_survive_the_adapter() -> None:
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     draft = result.draft_finding
     assert draft.root_cause.value == "unresolved"
@@ -325,7 +327,7 @@ async def test_contradictions_and_unresolved_root_cause_survive_the_adapter() ->
 
 @pytest.mark.asyncio
 async def test_the_bounded_confidence_carries_its_calibration_reason() -> None:
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     confidence = result.draft_finding.confidence
     assert confidence is not None
@@ -334,20 +336,21 @@ async def test_the_bounded_confidence_carries_its_calibration_reason() -> None:
 
 
 @pytest.mark.asyncio
-async def test_no_insight_execution_means_no_draft_rather_than_an_empty_one() -> None:
-    """An empty draft would read as "Insight ran and found nothing", which is a
-    different and false claim from "no Insight ran"."""
+async def test_every_run_produces_a_draft_finding() -> None:
+    """There is no path left that does not. The Orchestrator no longer writes
+    a conclusion, so a run reaching the end without a draft would be a Finding
+    nobody was evaluated for."""
     result = await run()
 
-    assert result.draft_finding is None
-    assert result.finding is not None
+    assert result.draft_finding is not None
+    assert result.finding.headline == result.draft_finding.headline
 
 
 @pytest.mark.asyncio
 async def test_a_citation_is_built_from_upstream_state_not_from_insight() -> None:
     """The whole reason a Citation is evidence rather than a second account of
     the claim. Every field here comes from what the Analyst actually ran."""
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     citation = result.evidence_citations[0]
     assert citation.metric == "refund_amount"
@@ -439,7 +442,7 @@ async def test_no_citation_carries_a_prohibited_payload() -> None:
     quietly widening what a citation exposes."""
     import json
 
-    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+    result = await run()
 
     # The dataclass itself, not a hand-built projection of it: a projection
     # cannot catch a field somebody widens the citation with later.
