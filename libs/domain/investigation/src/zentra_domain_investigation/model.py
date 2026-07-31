@@ -391,6 +391,29 @@ class Investigation:
             finished=True,
         )
 
+    def record_denied_decision(
+        self,
+        now: datetime,
+        *,
+        role: str,
+        user_id: UUID,
+    ) -> None:
+        """Someone tried to decide a gate they may not decide.
+
+        Recorded rather than only refused. A refusal that leaves no trace means
+        the one event worth noticing — repeated attempts by a person who cannot
+        approve — is the one event Replay cannot show, and counting attempts
+        per *role* would not answer that question.
+
+        The internal user id, never an email or a name, and nothing at all
+        about the evidence.
+        """
+        self._record(
+            "human_approval.denied",
+            now,
+            metadata={"role": role, "user_id": str(user_id)},
+        )
+
     def fail(self, failure: FailureOutcome, now: datetime) -> None:
         self._require_status(
             {

@@ -317,7 +317,11 @@ class InvestigationService:
         decision: ApprovalDecision,
         rejection_reason: RejectionReason | None,
     ) -> InvestigationDetail:
-        self._require_decision_role(actor)
+        if actor.role not in {Role.OWNER, Role.ADMIN}:
+            await self._record_denial(actor, investigation_id, approval_id)
+            raise PermissionDeniedError(
+                "This membership cannot decide Human Approvals"
+            )
         changed = False
         new_events: Sequence[DomainEvent] = ()
         async with self._unit_of_work_factory(
@@ -448,10 +452,50 @@ class InvestigationService:
         if actor.role not in {Role.OWNER, Role.ADMIN, Role.MEMBER}:
             raise PermissionDeniedError("This membership cannot start investigations")
 
-    @staticmethod
-    def _require_decision_role(actor: AuthenticatedActor) -> None:
-        if actor.role not in {Role.OWNER, Role.ADMIN}:
-            raise PermissionDeniedError("This membership cannot decide Human Approvals")
+    async def _record_denial(
+        self,
+        actor: AuthenticatedActor,
+        investigation_id: UUID,
+        approval_id: UUID,
+    ) -> None:
+        """Leave a trace before refusing — but only where there was a gate.
+
+        Silent on a missing or invisible Investigation, because recording
+        against one the actor cannot see would confirm it exists. Silent too
+        when there is no pending approval matching `approval_id`: a denial
+        against a gate that never existed is noise, and writing one per request
+        would let anyone who can read an Investigation generate unbounded audit
+        rows by posting decisions at it.
+        """
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(investigation_id)
+            if investigation is None:
+                return
+            approval = await unit_of_work.approvals.get_for_investigation(
+                investigation_id
+            )
+            if (
+                approval is None
+                or approval.approval_id != approval_id
+                or approval.status is not HumanApprovalStatus.PENDING
+            ):
+                return
+            cursor = len(investigation.events)
+            investigation.record_denied_decision(
+                self._now(),
+                role=actor.role.value,
+                user_id=actor.user_id,
+            )
+            await unit_of_work.outbox.enqueue(investigation.events[cursor:])
+            await unit_of_work.commit()
+        await self._audit_writer.flush(
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation_id,
+        )
 
 
 # A wider gap than this between two independently counted samples is not a

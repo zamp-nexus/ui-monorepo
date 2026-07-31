@@ -601,7 +601,11 @@ describe('App', () => {
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', { name: /confidence below the tenant threshold/i, level: 2 });
 
-    expect(screen.getByText(/Recheck counted 8 rows, not 12\./)).toBeTruthy();
+    // Twice, on purpose: once in the Draft Finding, once beside the
+    // decision it bears on.
+    expect(screen.getAllByText(/Recheck counted 8 rows, not 12\./)).toHaveLength(
+      2,
+    );
     expect(screen.getByText(/unresolved contradiction/i)).toBeTruthy();
   });
 
@@ -761,5 +765,104 @@ describe('App', () => {
         name: /cannot be followed to its evidence/i,
       }).length,
     ).toBeGreaterThan(0);
+  });
+
+  const gated = (overrides = {}) => ({
+    ...investigation,
+    draft_finding: structuredDraft,
+    pending_approval: { ...investigation.pending_approval, ...overrides },
+  });
+
+  it('shows what the decision turns on, beside the decision', async () => {
+    // The Draft Finding panel is elsewhere on the page. A reviewer scrolling
+    // back and forth between the decision and the evidence is a reviewer who
+    // might not.
+    mockApi(gated());
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/42% · capped sample size/i)).toBeTruthy();
+    expect(screen.getByText('1 of 2')).toBeTruthy();
+    expect(screen.getByText(/1 citations, all resolvable/i)).toBeTruthy();
+    expect(
+      screen.getAllByText(/Recheck counted 8 rows, not 12\./).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('says when evidence cannot be followed, before the buttons', async () => {
+    mockApi({
+      ...gated(),
+      draft_finding: {
+        ...structuredDraft,
+        citations: [{ ...structuredDraft.citations[0], state: 'unavailable' }],
+      },
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/1 of 1 cannot be followed/i)).toBeTruthy();
+  });
+
+  it('explains what approving and rejecting do', async () => {
+    // While deciding, not afterwards.
+    mockApi(gated());
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    const consequence = screen.getByText(/Approving publishes this finding/i);
+    expect(consequence.textContent).toMatch(/rejecting records your reason/i);
+    expect(consequence.textContent).toMatch(/stay in Replay/i);
+  });
+
+  it('offers a viewer no way to decide, and says why', async () => {
+    mockApi({
+      ...gated({ can_decide: false }),
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByText(/owner or admin judgment is required/i);
+
+    expect(screen.queryByRole('button', { name: /approve finding/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /reject finding/i })).toBeNull();
+    // But the evidence is still shown: read-only is not blind.
+    expect(screen.getByText(/42% · capped sample size/i)).toBeTruthy();
+  });
+
+  it('counts erased evidence apart from lost evidence', async () => {
+    // Collapsing them would tell a reviewer their data is missing when a
+    // Tenant asked for it to go.
+    mockApi({
+      ...gated(),
+      draft_finding: {
+        ...structuredDraft,
+        citations: [{ ...structuredDraft.citations[0], state: 'tombstoned' }],
+      },
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/1 erased at the tenant's request/i)).toBeTruthy();
+    expect(screen.queryByText(/cannot be followed/i)).toBeNull();
+  });
+
+  it('says when a legacy investigation has no claim-level evidence', async () => {
+    // A reviewer seeing no evidence block would not know whether there is
+    // nothing to show or whether it failed to load.
+    mockApi({ ...investigation, draft_finding: null });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/predates structured claims/i)).toBeTruthy();
   });
 });

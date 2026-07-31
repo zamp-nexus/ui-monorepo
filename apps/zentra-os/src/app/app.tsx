@@ -584,6 +584,90 @@ const MetricField = ({ metric }: { readonly metric: MetricComparison }) => {
   );
 };
 
+/**
+ * What the reviewer is being asked to judge, in the place they judge it.
+ *
+ * The Draft Finding panel is elsewhere on the page; a reviewer scrolling back
+ * and forth between the decision and the evidence is a reviewer who might not.
+ * These are the four things a decision turns on — how far the evidence can be
+ * trusted, whether anything is still disputed, how many claims are followable,
+ * and whether any of them are not.
+ */
+const ApprovalEvidence = ({
+  investigation,
+}: {
+  readonly investigation: Investigation;
+}) => {
+  const draft = investigation.draft_finding;
+  if (!draft) {
+    // Said, not omitted. A reviewer seeing no evidence block would not know
+    // whether there is nothing to show or whether it failed to load.
+    return (
+      <p className={styles.consequence}>
+        This investigation predates structured claims. There is no claim-level
+        evidence to review; judge it from the narrative finding above.
+      </p>
+    );
+  }
+
+  const observed = draft.claims.filter((claim) => claim.kind === 'observed');
+  // Resolved from the payload the page already holds, not fetched on demand:
+  // a reviewer must not be able to decide before the evidence has answered.
+  //
+  // Lost and deliberately erased are counted apart. Collapsing them would tell
+  // a reviewer their data is missing when a Tenant asked for it to go.
+  const unavailable = draft.citations.filter((c) => c.state === 'unavailable');
+  const tombstoned = draft.citations.filter((c) => c.state === 'tombstoned');
+
+  return (
+    <dl className={styles.approvalEvidence}>
+      <dt>Confidence</dt>
+      <dd>
+        {draft.confidence
+          ? `${Math.round(draft.confidence.score * 100)}% · ${draft.confidence.calibration_method.replace(/_/g, ' ')}`
+          : 'Not reported'}
+      </dd>
+      <dt>Measured claims</dt>
+      <dd>
+        {observed.length} of {draft.claims.length}
+      </dd>
+      <dt>Evidence</dt>
+      <dd>
+        {unavailable.length === 0 && tombstoned.length === 0
+          ? `${draft.citations.length} citations, all resolvable`
+          : [
+              unavailable.length > 0
+                ? `${unavailable.length} of ${draft.citations.length} cannot be followed`
+                : null,
+              tombstoned.length > 0
+                ? `${tombstoned.length} erased at the tenant's request`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+      </dd>
+      <dt>Contradictions</dt>
+      <dd>
+        {draft.contradictions.filter((c) => !c.resolved).length === 0
+          ? 'None open'
+          : draft.contradictions
+              .filter((c) => !c.resolved)
+              .map((c) => c.detail)
+              .join('; ')}
+      </dd>
+      <dt>Root cause</dt>
+      {/* Read from the draft rather than asserted. The API's literal is
+          `unresolved` today; hardcoding the copy would make this row lie the
+          day a causal-evidence standard widens it. */}
+      <dd>
+        {draft.root_cause === 'unresolved'
+          ? 'Unresolved — the evidence shows what changed, not why'
+          : draft.root_cause}
+      </dd>
+    </dl>
+  );
+};
+
 const ApprovalInspector = ({
   investigation,
   onDecision,
@@ -653,6 +737,16 @@ const ApprovalInspector = ({
       ) : (
         <p>Tenant policy requires a human to accept or reject this finding.</p>
       )}
+
+      <ApprovalEvidence investigation={investigation} />
+
+      {/* Said before the buttons, not after. A reviewer should know what
+          approving does while deciding, not discover it afterwards. */}
+      <p className={styles.consequence}>
+        Approving publishes this finding to everyone in the tenant. Rejecting
+        records your reason and closes the investigation without publishing.
+        Either way the evidence, the decision and who made it stay in Replay.
+      </p>
       {approval.can_decide ? (
         <div className={styles.decisionControls}>
           <Button

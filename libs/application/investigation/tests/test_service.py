@@ -762,3 +762,121 @@ async def test_re_evaluating_cannot_produce_a_conflicting_decision() -> None:
     detail = await application.get(actor(), INVESTIGATION_ID)
     assert detail.status == "completed"
     assert detail.pending_approval is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [Role.MEMBER, Role.VIEWER])
+async def test_a_membership_that_cannot_decide_leaves_a_trace(role: Role) -> None:
+    """A refusal that leaves no trace means the one event worth noticing —
+    repeated attempts by a membership that cannot approve — is the one event
+    Replay cannot show."""
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.42))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    before = len(unit_of_work.outbox.events)
+
+    with pytest.raises(PermissionDeniedError):
+        await application.decide(
+            actor(role),
+            investigation_id=INVESTIGATION_ID,
+            approval_id=APPROVAL_ID,
+            decision=ApprovalDecision.APPROVE,
+            rejection_reason=None,
+        )
+
+    denied = [
+        event
+        for event in unit_of_work.outbox.events[before:]
+        if event.event_type == "human_approval.denied"
+    ]
+    assert len(denied) == 1
+    # The role and the internal user id — enough to count repeated attempts
+    # by one person, which counting per role could never answer. Nothing about
+    # the evidence, and no email or name.
+    assert denied[0].metadata == {"role": role.value, "user_id": str(USER_ID)}
+
+
+@pytest.mark.asyncio
+async def test_a_denied_attempt_changes_nothing() -> None:
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.42))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    with pytest.raises(PermissionDeniedError):
+        await application.decide(
+            actor(Role.VIEWER),
+            investigation_id=INVESTIGATION_ID,
+            approval_id=APPROVAL_ID,
+            decision=ApprovalDecision.APPROVE,
+            rejection_reason=None,
+        )
+    detail = await application.get(actor(), INVESTIGATION_ID)
+
+    assert detail.status == "awaiting_approval"
+    assert detail.pending_approval is not None
+
+
+@pytest.mark.asyncio
+async def test_decisions_appear_in_causal_order() -> None:
+    """Requested before denied before granted. A timeline that reordered them
+    would tell a different story about what happened."""
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.42))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    with pytest.raises(PermissionDeniedError):
+        await application.decide(
+            actor(Role.VIEWER),
+            investigation_id=INVESTIGATION_ID,
+            approval_id=APPROVAL_ID,
+            decision=ApprovalDecision.APPROVE,
+            rejection_reason=None,
+        )
+    await application.decide(
+        actor(),
+        investigation_id=INVESTIGATION_ID,
+        approval_id=APPROVAL_ID,
+        decision=ApprovalDecision.APPROVE,
+        rejection_reason=None,
+    )
+
+    approval_events = [
+        event.event_type
+        for event in unit_of_work.outbox.events
+        if event.event_type.startswith("human_approval.")
+    ]
+    assert approval_events == [
+        "human_approval.requested",
+        "human_approval.denied",
+        "human_approval.granted",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_no_decision_event_carries_customer_narrative() -> None:
+    """A decision is who, what and why-in-a-typed-reason. The Finding's prose
+    is not part of it, and ClickHouse is where it would become permanent."""
+    import json as json_module
+
+    unit_of_work = UnitOfWork()
+    application = service(unit_of_work, pipeline=Pipeline(score=0.42))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    await application.decide(
+        actor(),
+        investigation_id=INVESTIGATION_ID,
+        approval_id=APPROVAL_ID,
+        decision=ApprovalDecision.REJECT,
+        rejection_reason=RejectionReason.INSUFFICIENT_EVIDENCE,
+    )
+
+    for event in unit_of_work.outbox.events:
+        if not event.event_type.startswith("human_approval."):
+            continue
+        payload = json_module.dumps(event.metadata).lower()
+        assert "refund rate increased" not in payload
+        assert "shipping-delay" not in payload
+        assert "260.00" not in payload

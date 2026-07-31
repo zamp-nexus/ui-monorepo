@@ -722,6 +722,32 @@
   box-shadow: inset 2px 0 #c76e65;
 }
 
+.approvalEvidence {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  margin: 18px 0;
+  gap: 8px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+
+  dt {
+    color: #7d857e;
+  }
+
+  dd {
+    margin: 0;
+    color: #cfd4d0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.consequence {
+  margin: 0 0 16px;
+  color: #9ba39c;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .failedConditions {
   display: grid;
   margin: 0 0 4px;
