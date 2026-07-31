@@ -59,6 +59,7 @@ def outcome(**overrides: object) -> PipelineOutcome:
         "evaluator_model": "nvidia/nemotron-3-ultra-550b-a55b",
         "analyst_sample_size": 8,
         "evaluator_sample_size": 8,
+        "insight": None,
     }
     return PipelineOutcome(**(defaults | overrides))  # type: ignore[arg-type]
 
@@ -201,3 +202,95 @@ def test_the_audit_event_carries_the_canonical_role() -> None:
     event = _audit_event(execution(AgentRole.INSIGHT))
 
     assert event.metadata["role"] == "insight"
+
+
+def insight_outcome(**overrides: object):
+    from zentra_adapter_langgraph import InsightOutcome
+
+    defaults: dict[str, object] = {
+        "execution_id": UUID("70000000-0000-0000-0000-000000000007"),
+        "headline": "EU refunds rose $240 in July.",
+        "summary": "Governed EU refund amount rose from $20 to $260.",
+        "claims": [
+            {
+                "kind": "observed",
+                "text": "EU refund amount rose to $260.00.",
+                "metric": "refund_amount",
+                "value": "260.00",
+            },
+            {
+                "kind": "interpretation",
+                "text": "Order volume barely moved.",
+                "metric": "order_count",
+                "value": None,
+            },
+        ],
+        "contradictions": ("Recheck counted 8 rows, not 12.",),
+        "root_cause": "unresolved",
+        "outcome": ConfidenceOutcome(
+            score=0.42, calibration_method="insight_bounded_by_evaluator"
+        ),
+        "model": "nvidia/nemotron-3-ultra-550b-a55b",
+        "fallbacks": ("gemini/gemini-3.6-flash: circuit open",),
+    }
+    return InsightOutcome(**(defaults | overrides))  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_the_draft_names_the_execution_that_produced_it() -> None:
+    """Attribution is the point of running Insight separately. A draft that
+    cannot say which Agent Execution wrote it is no better than the
+    Orchestrator's unattributed narrative."""
+    result = await run(insight=insight_outcome())
+
+    draft = result.draft_finding
+    assert draft is not None
+    assert draft.produced_by_execution_id == UUID(
+        "70000000-0000-0000-0000-000000000007"
+    )
+    assert draft.investigation_id == INVESTIGATION_ID
+    assert draft.tenant_id == TENANT_ID
+
+
+@pytest.mark.asyncio
+async def test_claim_order_and_kind_survive_the_adapter() -> None:
+    result = await run(insight=insight_outcome())
+
+    claims = result.draft_finding.claims
+    assert [c.position for c in claims] == [0, 1]
+    assert [c.kind.value for c in claims] == ["observed", "interpretation"]
+    assert claims[0].text == "EU refund amount rose to $260.00."
+    # Citations arrive in a later slice; they must be empty, not invented.
+    assert claims[0].citation_ids == ()
+
+
+@pytest.mark.asyncio
+async def test_contradictions_and_unresolved_root_cause_survive_the_adapter() -> None:
+    result = await run(insight=insight_outcome())
+
+    draft = result.draft_finding
+    assert draft.root_cause.value == "unresolved"
+    assert [c.detail for c in draft.contradictions] == [
+        "Recheck counted 8 rows, not 12."
+    ]
+    assert draft.contradictions[0].resolved is False
+
+
+@pytest.mark.asyncio
+async def test_the_bounded_confidence_carries_its_calibration_reason() -> None:
+    result = await run(insight=insight_outcome())
+
+    confidence = result.draft_finding.confidence
+    assert confidence is not None
+    assert confidence.score == 0.42
+    assert confidence.calibration_method == "insight_bounded_by_evaluator"
+
+
+@pytest.mark.asyncio
+async def test_no_insight_execution_means_no_draft_rather_than_an_empty_one() -> None:
+    """An empty draft would read as "Insight ran and found nothing", which is a
+    different and false claim from "no Insight ran"."""
+    result = await run()
+
+    assert result.draft_finding is None
+    assert result.finding is not None

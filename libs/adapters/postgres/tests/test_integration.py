@@ -294,3 +294,59 @@ async def test_a_legacy_role_row_survives_the_rename_but_cannot_be_written() -> 
                 f"CHECK ({role_check}) NOT VALID"
             )
         await owner.dispose()
+
+
+@pytest.mark.asyncio
+async def test_an_unpromoted_agent_is_invisible_to_the_enabled_filter() -> None:
+    """What makes the Phase 2 route fail closed on a *disabled* Insight.
+
+    "Disabled" and "missing" have to reach the Orchestrator as the same answer,
+    and this is the predicate that makes them so. Asserted against a real
+    database because the guarantee is the `enabled` column, not any Python.
+    """
+    assert OWNER_URL is not None
+    owner = create_async_engine(OWNER_URL)
+    try:
+        async with owner.begin() as connection:
+            await connection.execute(
+                postgres_insert(agent_registry)
+                .values(
+                    agent_id="insight_disabled_probe",
+                    role="insight",
+                    version="1",
+                    enabled=False,
+                    eval_status="pending",
+                    eval_suite_ref="evals/insight",
+                )
+                .on_conflict_do_nothing()
+            )
+
+        async with owner.begin() as connection:
+            advertised = (
+                (
+                    await connection.execute(
+                        select(agent_registry.c.agent_id).where(
+                            agent_registry.c.enabled.is_(True)
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            exists = await connection.scalar(
+                select(func.count()).select_from(agent_registry).where(
+                    agent_registry.c.agent_id == "insight_disabled_probe"
+                )
+            )
+
+        # The row is there — it just is not offered to anyone.
+        assert exists == 1
+        assert "insight_disabled_probe" not in advertised
+    finally:
+        async with owner.begin() as connection:
+            await connection.execute(
+                agent_registry.delete().where(
+                    agent_registry.c.agent_id == "insight_disabled_probe"
+                )
+            )
+        await owner.dispose()

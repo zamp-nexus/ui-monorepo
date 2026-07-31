@@ -11,6 +11,7 @@ from zentra_domain_agent_execution import (
     OUTCOME_ADAPTER,
     AgentExecutionRecord,
     AgentExecutionRecorder,
+    AgentExecutionStart,
     AgentInput,
     AgentOutput,
     AgentPort,
@@ -20,6 +21,7 @@ from zentra_domain_agent_execution import (
 )
 
 from .agents.evaluator import EvaluatorAgent
+from .agents.insight import InsightAgent
 from .agents.orchestrator import PLAN, SYNTHESIZE, OrchestratorAgent
 from .agents.sql_analyst import SqlAnalystAgent
 from .constants import MAX_EVALUATION_ATTEMPTS
@@ -43,7 +45,32 @@ class GraphState(TypedDict, total=False):
     tasks: Annotated[list[dict[str, Any]], _last]
     analyst: Annotated[dict[str, Any], _last]
     evaluator: Annotated[dict[str, Any], _last]
+    insight: Annotated[dict[str, Any], _last]
     synthesis: Annotated[dict[str, Any], _last]
+
+
+@dataclass(slots=True)
+class InsightOutcome:
+    """What the Insight Agent proposed, and who proposed it.
+
+    Kept as one object rather than a spray of `insight_*` fields on
+    `PipelineOutcome`: these travel together or not at all, and the execution
+    id is the whole point — a Draft Finding has to name the Agent Execution
+    that produced it.
+
+    Deliberately not a `DraftFinding`. Assembling the domain object is the
+    application's job; this adapter's job is to report what ran.
+    """
+
+    execution_id: UUID
+    headline: str
+    summary: str
+    claims: list[dict[str, Any]]
+    contradictions: tuple[str, ...]
+    root_cause: str
+    outcome: OutcomeSignal
+    model: str | None
+    fallbacks: tuple[str, ...]
 
 
 @dataclass(slots=True)
@@ -67,6 +94,9 @@ class PipelineOutcome:
     # divergence.
     analyst_sample_size: int | None = None
     evaluator_sample_size: int | None = None
+    # Absent on the Phase 1 path, where the Orchestrator still writes the
+    # narrative and no Insight Agent runs.
+    insight: InsightOutcome | None = None
 
 
 class InvestigationGraph:
@@ -80,6 +110,10 @@ class InvestigationGraph:
         sql_analyst: SqlAnalystAgent,
         evaluator: EvaluatorAgent,
         recorder: AgentExecutionRecorder,
+        # Omitted on the Phase 1 path. Supplying one is what turns on the
+        # controlled Phase 2 route, and the graph is shaped differently for
+        # each rather than branching at run time.
+        insight: InsightAgent | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
         checkpointer: Any | None = None,
@@ -87,6 +121,7 @@ class InvestigationGraph:
         self._orchestrator = orchestrator
         self._sql_analyst = sql_analyst
         self._evaluator = evaluator
+        self._insight = insight
         self._recorder = recorder
         self._now = now
         self._new_id = new_id
@@ -102,10 +137,19 @@ class InvestigationGraph:
         builder.add_edge(START, "plan")
         builder.add_edge("plan", "analyze")
         builder.add_edge("analyze", "evaluate")
+
+        # Insight sits after the loop, never inside it. It reads the terminal
+        # Evaluator outcome, so running it on an attempt that is about to be
+        # retried would draft a conclusion from evidence the recheck rejected.
+        settled = "insight" if self._insight else "synthesize"
+        if self._insight:
+            builder.add_node("insight", self._insight_node)
+            builder.add_edge("insight", "synthesize")
+
         builder.add_conditional_edges(
             "evaluate",
             self._after_evaluate,
-            {"retry": "analyze", "synthesize": "synthesize"},
+            {"retry": "analyze", "settled": settled},
         )
         builder.add_edge("synthesize", END)
         return builder.compile(checkpointer=checkpointer)
@@ -134,7 +178,7 @@ class InvestigationGraph:
     # -- nodes ------------------------------------------------------------
 
     async def _plan_node(self, state: GraphState) -> GraphState:
-        output, step = await self._run_agent(
+        output, step, _ = await self._run_agent(
             self._orchestrator,
             state,
             {"question": state["question"], "phase": PLAN},
@@ -147,11 +191,11 @@ class InvestigationGraph:
         # is what makes this an optimizer loop rather than a plain repeat.
         if state.get("evaluator"):
             payload["previous_issues"] = state["evaluator"].get("issues", [])
-        output, step = await self._run_agent(self._sql_analyst, state, payload)
+        output, step, _ = await self._run_agent(self._sql_analyst, state, payload)
         return {"analyst": self._for_state(output), "step": step}
 
     async def _evaluate_node(self, state: GraphState) -> GraphState:
-        output, step = await self._run_agent(
+        output, step, _ = await self._run_agent(
             self._evaluator,
             state,
             {"question": state["question"], "analyst": state["analyst"]},
@@ -163,7 +207,7 @@ class InvestigationGraph:
         }
 
     async def _synthesize_node(self, state: GraphState) -> GraphState:
-        output, step = await self._run_agent(
+        output, step, _ = await self._run_agent(
             self._orchestrator,
             state,
             {
@@ -175,14 +219,38 @@ class InvestigationGraph:
         )
         return {"synthesis": self._for_state(output), "step": step}
 
+    async def _insight_node(self, state: GraphState) -> GraphState:
+        assert self._insight is not None
+        analyst = state["analyst"]
+        evaluator = state["evaluator"]
+        output, step, execution_id = await self._run_agent(
+            self._insight,
+            state,
+            {
+                "question": state["question"],
+                # Already row-free: `_for_state` strips `rows` on the way in,
+                # so what reaches Insight is validated aggregates and the
+                # artifact pointers that lead to the rest.
+                "analyst": analyst,
+                "evaluator": evaluator,
+            },
+        )
+        return {
+            "insight": {
+                **self._for_state(output),
+                "execution_id": str(execution_id),
+            },
+            "step": step,
+        }
+
     def _after_evaluate(self, state: GraphState) -> str:
         passed = bool(state["evaluator"]["fields"].get("recheck_passed"))
         if passed:
-            return "synthesize"
+            return "settled"
         # Hard exit on the counter, never on the score. A non-converging loop
         # escalates with the failure visible rather than spinning (§3.7).
         if state.get("attempts", 0) >= MAX_EVALUATION_ATTEMPTS:
-            return "synthesize"
+            return "settled"
         return "retry"
 
     # -- helpers ----------------------------------------------------------
@@ -192,13 +260,28 @@ class InvestigationGraph:
         agent: AgentPort,
         state: GraphState,
         payload: dict[str, Any],
-    ) -> tuple[AgentOutput, int]:
+    ) -> tuple[AgentOutput, int, UUID]:
         step = state.get("step", 0) + 1
         execution_id = self._new_id()
         investigation_id = UUID(state["investigation_id"])
         tenant_id = UUID(state["tenant_id"])
         started_at = self._now()
         agent_state = {**payload, "execution_id": str(execution_id)}
+
+        # Before the call, not after. A step that hangs or is killed mid-flight
+        # writes no completion at all, and Replay showing nothing there is
+        # indistinguishable from the step never having been attempted.
+        await self._recorder.record_started(
+            AgentExecutionStart(
+                execution_id=execution_id,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+                agent_id=agent.descriptor.agent_id,
+                role=agent.descriptor.role,
+                step=step,
+                started_at=started_at,
+            )
+        )
 
         try:
             output = await agent.invoke(
@@ -234,7 +317,7 @@ class InvestigationGraph:
             status=ExecutionStatus.SUCCESS,
             started_at=started_at,
         )
-        return output, step
+        return output, step, execution_id
 
     async def _record(
         self,
@@ -292,6 +375,7 @@ class InvestigationGraph:
             "outcome": output.outcome.model_dump(mode="json"),
             "evidence_refs": list(output.evidence_refs),
             "model": output.usage.model,
+            "fallbacks": list(output.fallbacks),
             "sample_size": output.fields.get("sample_size"),
         }
 
@@ -324,7 +408,25 @@ class InvestigationGraph:
             evaluator_model=evaluator.get("model"),
             analyst_sample_size=analyst.get("sample_size"),
             evaluator_sample_size=evaluator.get("sample_size"),
+            insight=_insight_outcome(state.get("insight")),
         )
+
+
+def _insight_outcome(state: dict[str, Any] | None) -> InsightOutcome | None:
+    if not state:
+        return None
+    fields = state["fields"]
+    return InsightOutcome(
+        execution_id=UUID(state["execution_id"]),
+        headline=str(fields["headline"]),
+        summary=str(fields["summary"]),
+        claims=list(fields.get("claims", [])),
+        contradictions=tuple(fields.get("contradictions", [])),
+        root_cause=str(fields["root_cause"]),
+        outcome=_outcome_signal(state["outcome"]),
+        model=state.get("model"),
+        fallbacks=tuple(state.get("fallbacks", [])),
+    )
 
 
 def _outcome_signal(payload: dict[str, Any]) -> OutcomeSignal:

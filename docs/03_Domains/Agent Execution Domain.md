@@ -123,6 +123,32 @@ suite's fallback-attribution case.
 `nx run evals:check` runs the gate in CI. Before Phase 2 nothing did, so a
 deleted suite or an unregistered Agent left the build green.
 
+### The controlled Phase 2 route
+
+`insight_enabled` shapes the graph: with it set, an `insight` node sits between
+the evaluation loop and the terminal, and Insight reads the **terminal**
+Evaluator outcome. It is outside the loop deliberately — drafting on an attempt
+that is about to be retried would conclude from evidence the recheck is about
+to reject. Three failed rechecks still produce exactly one Insight execution.
+
+The flag and the registry are two switches that compose rather than duplicate.
+The flag decides whether Insight runs; the registry decides whether an enabled,
+eval-passing Insight exists. With the flag on and nothing promoted, the
+Orchestrator refuses at plan time rather than silently falling back to the
+Phase 1 path and producing an unattributed narrative.
+
+Insight receives the same row-free projection every agent does — `rows` never
+travels in graph state — so it gets validated aggregates and the `artifact://`
+pointers that lead to everything else. It records its own Agent Execution with
+its own id, model, provider fallbacks, tokens, cost, latency and status, and
+the Draft Finding names that execution.
+
+**Publication is unchanged.** The Orchestrator still synthesizes the published
+Finding and the existing confidence-gated completion path still decides it. The
+Draft Finding is stored alongside and published by nothing. Moving publication
+authority is a separate decision, and removing Orchestrator synthesis is
+another.
+
 Canonical language:
 [Agent Execution context](../../libs/domain/agent-execution/CONTEXT.md).
 

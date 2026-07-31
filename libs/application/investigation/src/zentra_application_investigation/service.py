@@ -124,6 +124,10 @@ class PipelineResult:
     evaluator_model: str | None = None
     analyst_sample_size: int | None = None
     evaluator_sample_size: int | None = None
+    # Present only on the Phase 2 path. Absent means the Orchestrator wrote the
+    # narrative and no Insight Agent ran — not that Insight failed, which fails
+    # the run closed instead.
+    draft_finding: DraftFinding | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -437,6 +441,12 @@ class InvestigationService:
             )
             if approval is not None:
                 await unit_of_work.approvals.add(approval)
+            if result.draft_finding is not None:
+                # Same transaction as the Investigation's own state change, so
+                # a reader can never see a completed evaluation whose draft is
+                # missing. Stored, not regenerated: a refresh returns this row
+                # rather than running Insight again.
+                await unit_of_work.draft_findings.add(result.draft_finding)
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
 

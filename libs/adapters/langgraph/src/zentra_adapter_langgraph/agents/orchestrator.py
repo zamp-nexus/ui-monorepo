@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 
 from zentra_domain_agent_execution import (
     AgentDescriptor,
@@ -28,6 +29,10 @@ SYNTHESIZE = "synthesize"
 
 # The roles this workflow cannot run without. Resolved against the registry at
 # investigation start, never against a hardcoded list of implementations.
+#
+# Injectable because the Phase 2 route needs Insight to be required too, and a
+# route that needs an Agent must refuse when the registry has not promoted one
+# rather than quietly running without it.
 REQUIRED_ROLES = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR)
 
 DESCRIPTOR = AgentDescriptor(
@@ -56,9 +61,11 @@ class OrchestratorAgent:
         *,
         model: ModelPort,
         registry: AgentRegistryPort,
+        required_roles: Sequence[AgentRole] = REQUIRED_ROLES,
     ) -> None:
         self._model = model
         self._registry = registry
+        self._required_roles = tuple(required_roles)
 
     @property
     def descriptor(self) -> AgentDescriptor:
@@ -164,7 +171,9 @@ class OrchestratorAgent:
     async def _available_roles(self) -> set[str]:
         enabled = await self._registry.enabled_agents()
         available = {agent.role.value for agent in enabled}
-        missing = [role.value for role in REQUIRED_ROLES if role.value not in available]
+        missing = [
+            role.value for role in self._required_roles if role.value not in available
+        ]
         if missing:
             raise NoEnabledAgentError(
                 "No enabled agent is registered for required roles: "
