@@ -175,6 +175,35 @@ class EvidenceCitationResponse(BaseModel):
         )
 
 
+class TombstoneResponse(BaseModel):
+    """What a citation resolves to once its evidence was deliberately erased.
+
+    Identity, category, timestamp. `extra="forbid"` and the absence of every
+    other field are what stop a later change reintroducing the metric, the
+    period or the filters — a filter can carry customer values as readily as
+    an aggregate can.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal["tombstoned"] = "tombstoned"
+    citation_id: UUID
+    category: str
+    erased_at: datetime
+
+
+class EvidenceDeletionRequest(BaseModel):
+    """Deleting evidence is irreversible, so it is not a bare POST.
+
+    The caller states the Investigation it means. A confirmation the client can
+    default to would not be a confirmation.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    confirm_investigation_id: UUID
+
+
 class ValidationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -297,6 +326,9 @@ class InvestigationDetailResponse(BaseModel):
     pending_approval: ApprovalResponse | None
     timeline: list[TimelineResponse]
     audit_delivery: str
+    # Whether this caller may erase this Investigation's evidence. Decided
+    # by the server for the same reason `can_decide` is.
+    can_delete_evidence: bool
 
     @classmethod
     def from_detail(cls, detail: InvestigationDetail) -> InvestigationDetailResponse:
@@ -409,4 +441,5 @@ class InvestigationDetailResponse(BaseModel):
                 for entry in detail.timeline
             ],
             audit_delivery=detail.audit_delivery.value,
+            can_delete_evidence=detail.can_delete_evidence,
         )

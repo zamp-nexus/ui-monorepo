@@ -264,7 +264,19 @@ class PostgresErasureRepository:
                 .where(evidence_citations.c.investigation_id == investigation_id)
                 # Tombstoned, not deleted: a claim must still resolve to
                 # something that explains its own absence.
-                .values(aggregate_value=ERASED, state="tombstoned", filters=[])
+                #
+                # The governed context goes with the value. A Tombstone carries
+                # identity, category and instant — so leaving `metric`,
+                # `period` and `grain` on the row would let the citation *list*
+                # serve what resolving the same citation refuses.
+                .values(
+                    aggregate_value=ERASED,
+                    state="tombstoned",
+                    filters=[],
+                    metric=ERASED,
+                    period=None,
+                    grain=None,
+                )
             )
         elif surface is EvidenceSurface.DRAFT_FINDING_CONTRADICTIONS:
             await self._connection.execute(

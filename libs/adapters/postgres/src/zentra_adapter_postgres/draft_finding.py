@@ -12,6 +12,7 @@ have made both a parsing exercise.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -25,9 +26,11 @@ from zentra_domain_investigation import (
     Claim,
     ClaimKind,
     Contradiction,
+    DeletionCategory,
     DraftFinding,
     EvidenceCitation,
     RootCauseState,
+    Tombstone,
 )
 
 from .schema import (
@@ -35,6 +38,7 @@ from .schema import (
     draft_finding_claim_citations,
     draft_finding_claims,
     draft_findings,
+    erasure_operations,
     evidence_citations,
 )
 
@@ -244,7 +248,7 @@ class PostgresEvidenceCitationRepository:
         self,
         investigation_id: UUID,
         citation_id: UUID,
-    ) -> EvidenceCitation | None:
+    ) -> EvidenceCitation | Tombstone | None:
         """One citation, with its state decided against the evidence itself.
 
         `None` means the citation is not visible to this connection — which
@@ -264,7 +268,49 @@ class PostgresEvidenceCitationRepository:
                 )
             )
         ).one_or_none()
-        return _citation_from_row(row) if row is not None else None
+        if row is None:
+            return None
+        if row.resolved_state == CitationState.TOMBSTONED.value:
+            # A Tombstone, not a blanked citation. Returning the row with its
+            # values emptied would still hand back the metric, the period, the
+            # grain and the filters — and a filter can carry customer values as
+            # readily as an aggregate can.
+            erasure = await self._erasure_record(investigation_id)
+            return Tombstone(
+                citation_id=row.citation_id,
+                category=(
+                    erasure[0]
+                    if erasure
+                    else DeletionCategory.TENANT_REQUEST.value
+                ),
+                erased_at=erasure[1] if erasure else row.created_at,
+            )
+        return _citation_from_row(row)
+
+    async def _erasure_record(
+        self, investigation_id: UUID
+    ) -> tuple[str, datetime] | None:
+        """The category and instant the Tombstone reports.
+
+        Read from the erasure operation rather than inferred from the citation
+        row, because *why* and *when* content went are facts about the deletion
+        request, not about the thing deleted.
+        """
+        row = (
+            await self._connection.execute(
+                select(
+                    erasure_operations.c.category,
+                    erasure_operations.c.completed_at,
+                )
+                .where(
+                    erasure_operations.c.investigation_id == investigation_id,
+                    erasure_operations.c.completed_at.isnot(None),
+                )
+                .order_by(erasure_operations.c.completed_at.desc())
+                .limit(1)
+            )
+        ).one_or_none()
+        return (row.category, row.completed_at) if row is not None else None
 
     async def for_investigation(
         self,

@@ -19,6 +19,7 @@ the claim (`Claim.citation_ids`), not to the citation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -50,6 +51,24 @@ class CitationFilter:
     member: str
     operator: str
     values: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Tombstone:
+    """What a citation resolves to once its evidence is deliberately erased.
+
+    Identity, category, timestamp. Nothing else — not the metric, not the
+    period, not the filters. A Tombstone exists to explain an absence without
+    reconstructing what is absent, and a filter can carry customer values as
+    readily as an aggregate can.
+
+    Deliberately not a variant of `EvidenceCitation`: sharing the type would
+    make it one field-add away from leaking the thing it was built to hide.
+    """
+
+    citation_id: UUID
+    category: str
+    erased_at: datetime
 
 
 @dataclass(frozen=True, slots=True)

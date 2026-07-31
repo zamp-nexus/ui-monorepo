@@ -204,3 +204,25 @@ def test_one_claim_can_cite_several_records_in_order() -> None:
     cited = draft(claims=(claim(0, citation_ids=(CITATION_ID, second)),))
 
     assert cited.claims[0].citation_ids == (CITATION_ID, second)
+
+
+def test_a_draft_whose_evidence_was_erased_still_loads() -> None:
+    """The failure this invariant nearly caused.
+
+    Erasure empties a claim's value while leaving the field. Rejecting an
+    empty string would raise on every load of an Investigation whose evidence
+    a Tenant deleted — so the deletion would destroy the process record it
+    exists to preserve.
+    """
+    erased = draft(claims=(claim(0, value="", period=None),))
+
+    assert erased.claims[0].value == ""
+    assert erased.claims[0].metric == "refund_amount"
+
+
+def test_an_observed_claim_still_needs_a_metric_and_a_value_field() -> None:
+    """Relaxing to `is None` must not relax it to nothing."""
+    with pytest.raises(DraftFindingError, match="no measurement"):
+        draft(claims=(claim(0, value=None),))
+    with pytest.raises(DraftFindingError, match="no measurement"):
+        draft(claims=(claim(0, metric=None),))

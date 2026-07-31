@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from zentra_domain_agent_execution import ConfidenceOutcome
@@ -29,6 +29,7 @@ from zentra_domain_investigation import (
 from zentra_application_investigation import (
     AuditDelivery,
     AuthenticatedActor,
+    ConflictError,
     InvestigationDetail,
     InvestigationNotFoundError,
     InvestigationService,
@@ -212,6 +213,7 @@ class UnitOfWork:
         self.agent_executions = AgentExecutions()
         self.draft_findings = DraftFindings()
         self.citations = Citations()
+        self.erasures = Erasures()
         self.policies = Policies()
         self.outbox = Outbox()
         self.commits = 0
@@ -259,7 +261,11 @@ def service(
     *,
     pipeline: Pipeline | None = None,
 ) -> InvestigationService:
-    ids = iter((INVESTIGATION_ID, APPROVAL_ID))
+    # Investigation, approval, then erasure ids. A fixed sequence keeps the
+    # assertions readable; running out of it is what the cycle prevents.
+    ids = iter(
+        (INVESTIGATION_ID, APPROVAL_ID, *(uuid4() for _ in range(8)))
+    )
     return InvestigationService(
         unit_of_work_factory=UnitOfWorkFactory(unit_of_work),
         pipeline=pipeline or Pipeline(),
@@ -880,3 +886,127 @@ async def test_no_decision_event_carries_customer_narrative() -> None:
         assert "refund rate increased" not in payload
         assert "shipping-delay" not in payload
         assert "260.00" not in payload
+
+
+class Erasures:
+    """An in-memory erasure, honouring the two rules the service depends on:
+    a request for an already-completed erasure comes back completed, and only a
+    terminal Investigation may be erased."""
+
+    def __init__(self, terminal: bool = True) -> None:
+        self.completed: dict[UUID, object] = {}
+        self.erase_calls = 0
+        self._terminal = terminal
+
+    async def request(self, *, erasure_id, tenant_id, investigation_id, category, now):
+        from zentra_domain_investigation import (
+            ErasureError,
+            ErasureOperation,
+            ErasureProgress,
+        )
+
+        if not self._terminal:
+            raise ErasureError(
+                "Evidence can only be erased from a terminal Investigation; "
+                "this one is running"
+            )
+        existing = self.completed.get(investigation_id)
+        if existing is not None:
+            return existing
+        return ErasureOperation(
+            erasure_id=erasure_id,
+            tenant_id=tenant_id,
+            investigation_id=investigation_id,
+            category=category,
+            progress=ErasureProgress.REQUESTED,
+            requested_at=now,
+        )
+
+    async def erase(self, *, investigation_id, category, now):
+        from zentra_domain_investigation import ErasureOperation, ErasureProgress
+
+        self.erase_calls += 1
+        done = ErasureOperation(
+            erasure_id=UUID("93000000-0000-0000-0000-000000000001"),
+            tenant_id=TENANT_ID,
+            investigation_id=investigation_id,
+            category=category,
+            progress=ErasureProgress.COMPLETED,
+            requested_at=now,
+            completed_at=now,
+            attempts=1,
+        )
+        self.completed[investigation_id] = done
+        return done
+
+
+async def completed_investigation(unit_of_work: UnitOfWork):
+    application = service(unit_of_work, pipeline=Pipeline(score=0.91))
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+    return application
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [Role.MEMBER, Role.VIEWER])
+async def test_only_owners_and_admins_may_delete_evidence(role: Role) -> None:
+    """The real rule, not a stubbed service raising on command."""
+    unit_of_work = UnitOfWork()
+    unit_of_work.erasures = Erasures()
+    application = await completed_investigation(unit_of_work)
+
+    with pytest.raises(PermissionDeniedError):
+        await application.delete_evidence(
+            actor(role), investigation_id=INVESTIGATION_ID
+        )
+
+    assert unit_of_work.erasures.erase_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_an_owner_deletes_and_it_is_recorded_once() -> None:
+    unit_of_work = UnitOfWork()
+    unit_of_work.erasures = Erasures()
+    application = await completed_investigation(unit_of_work)
+
+    await application.delete_evidence(actor(), investigation_id=INVESTIGATION_ID)
+
+    erased = [
+        event
+        for event in unit_of_work.outbox.events
+        if event.event_type == "investigation.evidence_erased"
+    ]
+    assert len(erased) == 1
+    assert erased[0].metadata == {"category": "tenant_request"}
+
+
+@pytest.mark.asyncio
+async def test_asking_twice_erases_once_and_records_once() -> None:
+    """Re-recording would put a second event at a new instant on a timeline
+    where the content went once."""
+    unit_of_work = UnitOfWork()
+    unit_of_work.erasures = Erasures()
+    application = await completed_investigation(unit_of_work)
+
+    await application.delete_evidence(actor(), investigation_id=INVESTIGATION_ID)
+    await application.delete_evidence(actor(), investigation_id=INVESTIGATION_ID)
+
+    erased = [
+        event
+        for event in unit_of_work.outbox.events
+        if event.event_type == "investigation.evidence_erased"
+    ]
+    assert len(erased) == 1
+    assert unit_of_work.erasures.erase_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_a_live_investigation_is_a_conflict() -> None:
+    unit_of_work = UnitOfWork()
+    unit_of_work.erasures = Erasures(terminal=False)
+    application = await completed_investigation(unit_of_work)
+
+    with pytest.raises(ConflictError, match="terminal"):
+        await application.delete_evidence(actor(), investigation_id=INVESTIGATION_ID)
+
+    assert unit_of_work.erasures.erase_calls == 0

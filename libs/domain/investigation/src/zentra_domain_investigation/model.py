@@ -414,6 +414,23 @@ class Investigation:
             metadata={"role": role, "user_id": str(user_id)},
         )
 
+    def record_evidence_erased(self, now: datetime, *, category: str) -> None:
+        """That evidence was deliberately erased, and when.
+
+        The category and the instant, and nothing about what went. Replay must
+        be able to prove work happened and evidence was erased without being
+        able to reconstruct the erased conclusion — so this event is the last
+        place that content could hide.
+
+        Not a lifecycle transition: the Investigation stays terminal in the
+        state it reached. Deleting evidence does not re-decide anything.
+        """
+        self._record(
+            "investigation.evidence_erased",
+            now,
+            metadata={"category": category},
+        )
+
     def fail(self, failure: FailureOutcome, now: datetime) -> None:
         self._require_status(
             {

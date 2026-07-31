@@ -154,11 +154,12 @@ const scenariosResponse = [
 const mockApi = (
   detail: unknown = investigation,
   citation?: { body: unknown; status?: number },
+  context: unknown = contextResponse,
 ) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
     const url = String(input);
     if (url.endsWith('/health/ready')) return response(readyResponse);
-    if (url.endsWith('/v1/context')) return response(contextResponse);
+    if (url.endsWith('/v1/context')) return response(context);
     if (url.endsWith('/v1/scenarios')) return response(scenariosResponse);
     if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
       return response(detail, 201);
@@ -921,5 +922,68 @@ describe('App', () => {
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/v1 · 1240 ms/)).toBeTruthy();
+  });
+
+  const terminal = {
+    ...investigation,
+    status: 'completed',
+    pending_approval: null,
+    can_delete_evidence: true,
+  };
+
+  it('offers no one-click path to an irreversible action', async () => {
+    // A destructive action reachable by one click on a page a reader is
+    // scrolling is an action that will happen by accident.
+    mockApi(terminal);
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    const start = await screen.findByRole('button', { name: /delete evidence/i });
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    fireEvent.click(start);
+
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /erase this evidence/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /keep it/i })).toBeTruthy();
+  });
+
+  it('names what is being erased and what survives', async () => {
+    mockApi(terminal);
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    fireEvent.click(await screen.findByRole('button', { name: /delete evidence/i }));
+
+    const warning = screen.getByRole('alertdialog').textContent ?? '';
+    expect(warning).toContain('Why did EU refunds increase');
+    expect(warning).toMatch(/stays in Replay/i);
+    expect(warning).toMatch(/cannot be undone/i);
+  });
+
+  it('offers no deletion on a live investigation', async () => {
+    // Erasing under a running pipeline races every write still to come.
+    mockApi({
+      ...investigation,
+      status: 'running',
+      pending_approval: null,
+      can_delete_evidence: false,
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByText(/EU refunds rose/i);
+
+    expect(screen.queryByRole('button', { name: /delete evidence/i })).toBeNull();
+  });
+
+  it('offers no deletion to a member', async () => {
+    mockApi({ ...terminal, can_delete_evidence: false });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByText(/EU refunds rose/i);
+
+    expect(screen.queryByRole('button', { name: /delete evidence/i })).toBeNull();
   });
 });

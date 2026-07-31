@@ -48,9 +48,9 @@ unresolved” when the available evidence cannot establish causality.
 | Replay chronology | Current | Tenant-filtered ClickHouse timeline with pending-outbox merge |
 | Finding narrative | Current | The Insight Agent is the only Agent that writes a conclusion; the Orchestrator plans, delegates and arbitrates |
 | Insight Agent | Current | Registered, evaluation-gated, required, and the sole producer of a Draft Finding |
-| Evidence Citation | Partial | Claim-level Citations carry the full governed context and resolve through a Tenant-authorized endpoint; `active` and `unavailable` are decided against the evidence, Tombstones are not built |
-| Split-authority Replay | Partial | Process timeline exists; evidence resolution and explicit missing states do not |
-| Tombstone deletion | Missing | No content-erasure and citation-resolution workflow exists |
+| Evidence Citation | Current | Claim-level Citations carry the full governed context and resolve through a Tenant-authorized endpoint, with active, unavailable and tombstoned decided against the evidence |
+| Split-authority Replay | Current | ClickHouse process truth composed with Tenant-authorized evidence, with attribution, degradation and typed policy reasons |
+| Tombstone deletion | Current | Owner/admin deletion of a terminal Investigation erases every governed surface and resolves affected citations to minimal Tombstones |
 | External comprehension | Missing | No dated design-partner Replay exercise exists |
 
 ## Workstreams

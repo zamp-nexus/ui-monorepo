@@ -4,6 +4,7 @@ from .citation import (
     CitationFilter,
     CitationState,
     EvidenceCitation,
+    Tombstone,
 )
 from .draft_finding import (
     Claim,
@@ -82,6 +83,7 @@ __all__ = [
     "RejectionReason",
     "RootCauseState",
     "TERMINAL_STATUSES",
+    "Tombstone",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",

@@ -220,3 +220,7 @@ class InvestigationDetail:
     pending_approval: PendingApproval | None
     timeline: tuple[TimelineEntry, ...]
     audit_delivery: AuditDelivery
+    # Server-decided, like `can_decide` on an approval. The client asking
+    # its own role would be a second authorisation rule that can disagree
+    # with the one that actually applies.
+    can_delete_evidence: bool = False

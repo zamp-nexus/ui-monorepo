@@ -438,3 +438,133 @@ def test_an_automatically_published_investigation_reports_no_gate(
         )
 
     assert response.json()["pending_approval"] is None
+
+
+INVESTIGATION_UUID = "30000000-0000-0000-0000-000000000003"
+DELETION_URL = f"/v1/investigations/{INVESTIGATION_UUID}/evidence-deletion"
+
+
+def deleting(service: InvestigationServiceStub, result):
+    async def delete_evidence(*args: object, **kwargs: object):
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    service.delete_evidence = delete_evidence  # type: ignore[method-assign]
+    return service
+
+
+def test_deletion_requires_naming_the_investigation_being_deleted(
+    monkeypatch,
+) -> None:
+    """An irreversible action should be impossible to trigger by replaying a
+    URL, and a confirmation the client can default to would not be one."""
+    authenticated(monkeypatch)
+    service = deleting(InvestigationServiceStub(), InvestigationServiceStub().detail)
+    with client(investigations=service) as test_client:
+        wrong = test_client.post(
+            DELETION_URL,
+            headers={"Authorization": "Bearer valid"},
+            json={"confirm_investigation_id": "99999999-9999-4999-8999-999999999999"},
+        )
+        missing = test_client.post(
+            DELETION_URL,
+            headers={"Authorization": "Bearer valid"},
+            json={},
+        )
+
+    assert wrong.status_code == 422
+    assert missing.status_code == 422
+
+
+def test_a_confirmed_deletion_returns_the_investigation(monkeypatch) -> None:
+    authenticated(monkeypatch)
+    service = deleting(InvestigationServiceStub(), InvestigationServiceStub().detail)
+    with client(investigations=service) as test_client:
+        response = test_client.post(
+            DELETION_URL,
+            headers={"Authorization": "Bearer valid"},
+            json={"confirm_investigation_id": INVESTIGATION_UUID},
+        )
+
+    assert response.status_code == 200
+    # Chronology survives: the timeline is still served after deletion.
+    assert "timeline" in response.json()
+
+
+def test_a_member_cannot_delete_evidence(monkeypatch) -> None:
+    from zentra_application_investigation import PermissionDeniedError
+
+    authenticated(monkeypatch)
+    service = deleting(
+        InvestigationServiceStub(),
+        PermissionDeniedError("This membership cannot delete evidence"),
+    )
+    with client(investigations=service) as test_client:
+        response = test_client.post(
+            DELETION_URL,
+            headers={"Authorization": "Bearer valid"},
+            json={"confirm_investigation_id": INVESTIGATION_UUID},
+        )
+
+    assert response.status_code == 403
+
+
+def test_deleting_a_live_investigation_is_a_conflict_not_a_refusal(
+    monkeypatch,
+) -> None:
+    """"Not yet" is a different answer from "not allowed", and a caller that
+    conflated them would retry the wrong thing."""
+    from zentra_application_investigation import ConflictError
+
+    authenticated(monkeypatch)
+    service = deleting(
+        InvestigationServiceStub(),
+        ConflictError(
+            "Evidence can only be erased from a terminal Investigation; "
+            "this one is running"
+        ),
+    )
+    with client(investigations=service) as test_client:
+        response = test_client.post(
+            DELETION_URL,
+            headers={"Authorization": "Bearer valid"},
+            json={"confirm_investigation_id": INVESTIGATION_UUID},
+        )
+
+    assert response.status_code == 409
+    assert "terminal" in response.json()["detail"]
+
+
+def test_a_tombstone_response_carries_nothing_but_identity_and_time(
+    monkeypatch,
+) -> None:
+    """`extra="forbid"` plus the absence of every other field is what stops a
+    later change reintroducing the metric or the filters."""
+    from datetime import UTC as _UTC
+
+    from zentra_domain_investigation import Tombstone
+
+    authenticated(monkeypatch)
+    service = resolving(
+        InvestigationServiceStub(),
+        Tombstone(
+            citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
+            category="tenant_request",
+            erased_at=datetime(2026, 7, 31, 14, 0, tzinfo=_UTC),
+        ),
+    )
+    with client(investigations=service) as test_client:
+        response = test_client.get(
+            f"/v1/investigations/{INVESTIGATION_UUID}"
+            "/citations/cc000000-0000-0000-0000-000000000001",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert set(body) == {"state", "citation_id", "category", "erased_at"}
+    assert body["state"] == "tombstoned"
+    text = response.text.lower()
+    for erased in ("refund_amount", "260.00", "commerce.region", "july 2026"):
+        assert erased not in text
