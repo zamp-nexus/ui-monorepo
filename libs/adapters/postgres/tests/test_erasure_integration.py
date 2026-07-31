@@ -697,3 +697,74 @@ def test_the_erasure_never_reaches_the_audit_ledger() -> None:
     # Not even the outbox: nothing this writes becomes an event.
     assert "audit_outbox" not in imported
     assert "audit_entries" not in imported
+
+
+@pytest.mark.asyncio
+async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
+    """The aggregate bumps its own events by a microsecond, but a rehydrated
+    Investigation carries none — so two requests writing in the same instant
+    would sort by a random id, and Replay would show an order that never
+    happened."""
+    from zentra_domain_investigation import DomainEvent, InvestigationStatus
+
+    from zentra_adapter_postgres.investigation import PostgresAuditOutboxRepository
+    from zentra_adapter_postgres.schema import audit_outbox
+
+    await seed()
+    same_instant = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
+
+    def event(event_type: str) -> DomainEvent:
+        return DomainEvent(
+            event_id=uuid4(),
+            event_type=event_type,
+            investigation_id=INVESTIGATION,
+            tenant_id=TENANT,
+            status=InvestigationStatus.AWAITING_APPROVAL,
+            occurred_at=same_instant,
+        )
+
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        # Three separate requests, each with its own repository, all claiming
+        # the same microsecond.
+        for event_type in (
+            "human_approval.requested",
+            "human_approval.denied",
+            "human_approval.granted",
+        ):
+            async with runtime.begin() as connection:
+                await set_tenant_context(connection, TENANT)
+                await PostgresAuditOutboxRepository(
+                    connection,
+                    trace_id=uuid4(),
+                    span_id=uuid4(),
+                ).enqueue([event(event_type)])
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT)
+            rows = (
+                await connection.execute(
+                    select(audit_outbox.c.created_at, audit_outbox.c.payload)
+                    .where(audit_outbox.c.investigation_id == INVESTIGATION)
+                    .order_by(audit_outbox.c.created_at)
+                )
+            ).all()
+
+        stamps = [row.created_at for row in rows]
+        assert stamps == sorted(stamps)
+        assert len(set(stamps)) == 3, "two events share an instant"
+        assert [row.payload["event_type"] for row in rows] == [
+            "human_approval.requested",
+            "human_approval.denied",
+            "human_approval.granted",
+        ]
+    finally:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT)
+            await connection.execute(
+                audit_outbox.delete().where(
+                    audit_outbox.c.investigation_id == INVESTIGATION
+                )
+            )
+        await runtime.dispose()
+        await cleanup()
