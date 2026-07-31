@@ -383,6 +383,14 @@ audit_outbox = Table(
     Column("last_error_code", String(64)),
     CheckConstraint("attempts >= 0", name="ck_audit_outbox_attempts"),
 )
+# The ordering floor reads the latest `created_at` for one Investigation on
+# every enqueue. Without this it is a sequential scan over all history, in
+# the request path.
+Index(
+    "ix_audit_outbox_investigation_created",
+    audit_outbox.c.investigation_id,
+    audit_outbox.c.created_at,
+)
 Index(
     "ix_audit_outbox_tenant_pending",
     audit_outbox.c.tenant_id,

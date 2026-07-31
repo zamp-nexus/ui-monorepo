@@ -137,6 +137,16 @@ class TimelineEntry:
     # Which rungs failed before `model` answered. Replay shows the degradation
     # instead of only the provider that happened to succeed.
     fallbacks: tuple[str, ...] = ()
+    # Which publication conditions failed, in the policy's own vocabulary, so
+    # Replay can explain a decision rather than restate it.
+    failed_conditions: tuple[str, ...] = ()
+    # Safe usage: what the step cost and how long it took. Written to the
+    # ledger from the first Phase 1 execution and never read back, so
+    # Replay could not answer "why was this slow?" at all.
+    latency_ms: int | None = None
+    total_cost_usd: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
     @classmethod
     def from_domain_event(
@@ -156,6 +166,9 @@ class TimelineEntry:
             step=event.metadata.get("step"),
             model=event.metadata.get("model"),
             fallbacks=tuple(event.metadata.get("fallbacks") or ()),
+            failed_conditions=tuple(
+                event.metadata.get("failed_publication_conditions") or ()
+            ),
         )
 
 
@@ -176,6 +189,13 @@ class PendingApproval:
     # a reviewer deciding on the headline alone would be deciding on part
     # of it.
     failed_conditions: tuple[str, ...] = ()
+    # Safe usage: what the step cost and how long it took. Written to the
+    # ledger from the first Phase 1 execution and never read back, so
+    # Replay could not answer "why was this slow?" at all.
+    latency_ms: int | None = None
+    total_cost_usd: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

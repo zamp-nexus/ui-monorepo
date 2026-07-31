@@ -267,6 +267,16 @@ class TimelineResponse(BaseModel):
     agent_id: str | None = None
     step: int | None = None
     model: str | None = None
+    # The rungs that failed before `model` answered, and why a publication
+    # decision went the way it did — both in the vocabulary the rest of the
+    # product already uses.
+    fallbacks: list[str] = []
+    failed_conditions: list[str] = []
+    # Safe usage only: timing and spend, never the work itself.
+    latency_ms: int | None = None
+    total_cost_usd: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 class InvestigationDetailResponse(BaseModel):
@@ -389,6 +399,12 @@ class InvestigationDetailResponse(BaseModel):
                     agent_id=entry.agent_id,
                     step=entry.step,
                     model=entry.model,
+                    fallbacks=list(entry.fallbacks),
+                    failed_conditions=list(entry.failed_conditions),
+                    latency_ms=entry.latency_ms,
+                    total_cost_usd=entry.total_cost_usd,
+                    input_tokens=entry.input_tokens,
+                    output_tokens=entry.output_tokens,
                 )
                 for entry in detail.timeline
             ],

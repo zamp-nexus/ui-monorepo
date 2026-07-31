@@ -120,6 +120,12 @@ interface Investigation {
     readonly agent_id: string | null;
     readonly step: number | null;
     readonly model: string | null;
+    // The rungs that failed before `model` answered, and why a
+    // publication decision went the way it did.
+    readonly fallbacks: readonly string[];
+    readonly failed_conditions: readonly string[];
+    readonly latency_ms: number | null;
+    readonly total_cost_usd: string | null;
   }[];
   readonly audit_delivery: 'complete' | 'pending';
 }
@@ -431,8 +437,36 @@ const EvidenceSpine = ({
                       }`
                     : (eventLabels[entry.event_type] ?? entry.event_type)}
                 </strong>
+                {/* The version was in `agent_id` all along and stripped for
+                    readability, so Replay could not answer which build of an
+                    Agent produced a Finding. */}
+                {entry.agent_id?.match(/_v(\d+)$/) ? (
+                  <small className={styles.stepModel}>
+                    v{entry.agent_id.match(/_v(\d+)$/)?.[1]}
+                    {entry.latency_ms !== null
+                      ? ` · ${entry.latency_ms} ms`
+                      : ''}
+                  </small>
+                ) : null}
                 {entry.model ? (
                   <small className={styles.stepModel}>{entry.model}</small>
+                ) : null}
+                {/* The chain degrading is part of what happened. Showing only
+                    the provider that answered makes an outage invisible. */}
+                {entry.fallbacks.length > 0 ? (
+                  <small className={styles.stepFallbacks}>
+                    after {entry.fallbacks.length} failed{' '}
+                    {entry.fallbacks.length === 1 ? 'rung' : 'rungs'}
+                  </small>
+                ) : null}
+                {/* Why the gate opened, in the policy's own words, at the
+                    point in the timeline where it opened. */}
+                {entry.failed_conditions.length > 0 ? (
+                  <small className={styles.stepConditions}>
+                    {entry.failed_conditions
+                      .map((c) => conditionLabels[c] ?? c.replace(/_/g, ' '))
+                      .join(' · ')}
+                  </small>
                 ) : null}
                 <small>
                   {new Date(entry.created_at).toLocaleTimeString([], {

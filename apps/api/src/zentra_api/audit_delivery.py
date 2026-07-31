@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Sequence
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
@@ -17,6 +18,22 @@ from zentra_application_investigation import (
     AuditDelivery,
     TimelineEntry,
 )
+
+
+def _metadata(value: object) -> dict:
+    """ClickHouse hands back a JSON string; the outbox hands back a dict.
+
+    One reader for both, because a timeline that showed a field before
+    delivery and lost it afterwards is worse than one that never showed it.
+    """
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return value if isinstance(value, dict) else {}
+
 
 SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
@@ -105,6 +122,11 @@ class AuditDeliveryCoordinator:
         entries: dict[UUID, TimelineEntry] = {}
         for row in delivered_rows:
             entry_id = UUID(str(row["entry_id"]))
+            # The ledger's own columns for identity, and its redacted metadata
+            # for the rest. Reading only the columns dropped a delivered
+            # event's failed rungs, so degradation vanished from Replay the
+            # moment it reached ClickHouse.
+            metadata = _metadata(row.get("redacted_metadata"))
             entries[entry_id] = TimelineEntry(
                 entry_id=entry_id,
                 event_type=str(row["event_type"]),
@@ -115,11 +137,24 @@ class AuditDeliveryCoordinator:
                 agent_id=row.get("agent_id") or None,
                 step=row.get("step"),
                 model=row.get("model") or None,
+                fallbacks=tuple(metadata.get("fallbacks") or ()),
+                failed_conditions=tuple(
+                    metadata.get("failed_publication_conditions") or ()
+                ),
+                latency_ms=row.get("latency_ms"),
+                total_cost_usd=(
+                    str(row["total_cost_usd"])
+                    if row.get("total_cost_usd") is not None
+                    else None
+                ),
+                input_tokens=row.get("input_tokens"),
+                output_tokens=row.get("output_tokens"),
             )
         for record in outbox_rows:
             if record.dispatched_at is not None:
                 continue
             payload = record.payload
+            metadata = _metadata(payload.get("metadata"))
             entries.setdefault(
                 record.event_id,
                 TimelineEntry(
@@ -129,9 +164,17 @@ class AuditDeliveryCoordinator:
                     created_at=record.created_at,
                     artifact_refs=tuple(payload.get("artifact_refs", ())),
                     delivery=AuditDelivery.PENDING,
-                    agent_id=(payload.get("metadata") or {}).get("agent_id"),
-                    step=(payload.get("metadata") or {}).get("step"),
-                    model=(payload.get("metadata") or {}).get("model"),
+                    agent_id=metadata.get("agent_id"),
+                    step=metadata.get("step"),
+                    model=metadata.get("model"),
+                    fallbacks=tuple(metadata.get("fallbacks") or ()),
+                    failed_conditions=tuple(
+                        metadata.get("failed_publication_conditions") or ()
+                    ),
+                    latency_ms=metadata.get("latency_ms"),
+                    total_cost_usd=metadata.get("total_cost_usd"),
+                    input_tokens=metadata.get("input_tokens"),
+                    output_tokens=metadata.get("output_tokens"),
                 ),
             )
         return tuple(
@@ -209,5 +252,10 @@ class AuditDeliveryCoordinator:
             status=str(payload["status"]),
             artifact_refs=tuple(payload.get("artifact_refs", ())),
             redacted_metadata=metadata,
-            created_at=occurred_at,
+            # `record.created_at`, not the payload's `occurred_at`. The
+            # outbox is where each Investigation's timeline is made
+            # strictly increasing; delivering the un-floored instant
+            # would throw that away the moment an event reached the
+            # ledger, and Replay sorts on this column.
+            created_at=record.created_at,
         )

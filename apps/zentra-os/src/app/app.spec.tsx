@@ -92,6 +92,10 @@ const investigation = {
       agent_id: null,
       step: null,
       model: null,
+      fallbacks: [],
+      failed_conditions: [],
+      latency_ms: null,
+      total_cost_usd: null,
     },
     {
       entry_id: '50000000-0000-0000-0000-000000000007',
@@ -103,6 +107,10 @@ const investigation = {
       agent_id: 'sql_analyst_v1',
       step: 2,
       model: 'cerebras/zai-glm-4.7',
+      fallbacks: ['gemini/gemini-3.6-flash: circuit open'],
+      failed_conditions: [],
+      latency_ms: 1240,
+      total_cost_usd: '0.0012',
     },
     {
       entry_id: '50000000-0000-0000-0000-000000000006',
@@ -114,6 +122,10 @@ const investigation = {
       agent_id: null,
       step: null,
       model: null,
+      fallbacks: [],
+      failed_conditions: [],
+      latency_ms: null,
+      total_cost_usd: null,
     },
   ],
   audit_delivery: 'complete',
@@ -864,5 +876,50 @@ describe('App', () => {
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/predates structured claims/i)).toBeTruthy();
+  });
+
+  it('shows the chain degrading, not only what answered', async () => {
+    // An outage that a fallback survived is invisible if Replay reports only
+    // the provider that happened to answer.
+    mockApi();
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/after 1 failed rung/i)).toBeTruthy();
+  });
+
+  it('explains a gate at the point in the timeline where it opened', async () => {
+    mockApi({
+      ...investigation,
+      timeline: investigation.timeline.map((entry) =>
+        entry.event_type === 'human_approval.requested'
+          ? { ...entry, failed_conditions: ['confident', 'evidenced'] }
+          : entry,
+      ),
+    });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(
+      screen.getByText(
+        /Bounded confidence is below the tenant threshold · A substantive claim has no evidence that can be followed/i,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('names the version of the agent that ran, and what it cost in time', async () => {
+    // The version was in `agent_id` all along and stripped for readability, so
+    // Replay could not answer which build produced a Finding.
+    mockApi();
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('button', { name: /approve finding/i });
+
+    expect(screen.getByText(/v1 · 1240 ms/)).toBeTruthy();
   });
 });

@@ -3,13 +3,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_application_investigation import InvestigationUnitOfWork
 from zentra_domain_agent_execution import OUTCOME_ADAPTER, AgentExecutionRecord
@@ -314,10 +314,45 @@ class PostgresAuditOutboxRepository:
         self._span_id = span_id
 
     async def enqueue(self, events: Sequence[DomainEvent]) -> None:
+        """Append, keeping each Investigation's timeline strictly increasing.
+
+        The aggregate bumps `occurred_at` by a microsecond when two of its own
+        events share an instant, but `_investigation_from_row` rehydrates
+        `events=[]`, so that guard cannot span requests. A denial and the
+        approval that followed it, written in the same microsecond by two
+        requests, would then sort by a random `entry_id` — and Replay would
+        show them in an order that never happened.
+
+        The floor is read here, at the only place every event passes through.
+        """
         if not events:
             return
+
+        investigation_id = events[0].investigation_id
+        if any(event.investigation_id != investigation_id for event in events):
+            raise ValueError("One enqueue carries one Investigation's events")
+
+        # Held for the rest of the transaction. Two concurrent enqueues would
+        # otherwise both read the same maximum and both stamp it, which is the
+        # collision this floor exists to prevent.
+        await self._connection.execute(
+            select(investigations.c.investigation_id)
+            .where(investigations.c.investigation_id == investigation_id)
+            .with_for_update()
+        )
+        latest = await self._connection.scalar(
+            select(func.max(audit_outbox.c.created_at)).where(
+                audit_outbox.c.investigation_id == investigation_id
+            )
+        )
         rows = []
         for event in events:
+            created_at = event.occurred_at
+            if latest is not None and created_at <= latest:
+                latest = latest + timedelta(microseconds=1)
+                created_at = latest
+            else:
+                latest = created_at
             digest = sha256(f"{event.event_type}:{event.event_id}".encode()).hexdigest()
             rows.append(
                 {
@@ -336,7 +371,7 @@ class PostgresAuditOutboxRepository:
                         ],
                         "metadata": event.metadata,
                     },
-                    "created_at": event.occurred_at,
+                    "created_at": created_at,
                 }
             )
         await self._connection.execute(insert(audit_outbox), rows)
