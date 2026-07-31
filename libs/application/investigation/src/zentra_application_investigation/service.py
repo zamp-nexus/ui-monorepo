@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from datetime import datetime
+from time import perf_counter
 from uuid import UUID
 
 from zentra_domain_agent_execution import (
@@ -50,8 +51,10 @@ from .dto import (
 from .ports import (
     AuditReader,
     AuditWriter,
+    ErasureObserver,
     InvestigationPipeline,
     InvestigationUnitOfWorkFactory,
+    PublicationObserver,
 )
 
 
@@ -65,6 +68,8 @@ class InvestigationService:
         audit_reader: AuditReader,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
+        publication_observer: PublicationObserver | None = None,
+        erasure_observer: ErasureObserver | None = None,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._pipeline = pipeline
@@ -72,6 +77,8 @@ class InvestigationService:
         self._audit_reader = audit_reader
         self._now = now
         self._new_id = new_id
+        self._publication_observer = publication_observer
+        self._erasure_observer = erasure_observer
 
     async def start(
         self,
@@ -119,6 +126,35 @@ class InvestigationService:
             delivered=delivered,
         )
 
+    def _observe_erasure(
+        self,
+        *,
+        erasure_id: str,
+        progress: str,
+        attempts: int,
+        started: float,
+        failure_category: str | None,
+    ) -> None:
+        """Report how far an erasure got, never what it erased."""
+        if self._erasure_observer is None:
+            return
+        self._erasure_observer(
+            erasure_id=erasure_id,
+            progress=progress,
+            attempts=attempts,
+            duration_ms=int((perf_counter() - started) * 1000),
+            failure_category=failure_category,
+        )
+
+    def _observe_publication(self, decision: PublicationDecision) -> None:
+        """Report the decision's shape, never the Finding it decided about."""
+        if self._publication_observer is None:
+            return
+        self._publication_observer(
+            decision="published" if decision.publishes else "gated",
+            failed_conditions=tuple(c.value for c in decision.failed),
+        )
+
     async def execute(self, actor: AuthenticatedActor, investigation_id: UUID) -> None:
         """Run the agent pipeline and apply what it established.
 
@@ -156,6 +192,7 @@ class InvestigationService:
         investigation.begin_evaluation(now)
         outcome = _bounded_outcome(result)
         decision = _publication_decision(result, outcome, threshold=threshold)
+        self._observe_publication(decision)
         # Publication authority lives in the policy, not in a score comparison
         # and not in any Agent. `directive` is now a translation of what the
         # policy already decided, kept because the aggregate's lifecycle speaks
@@ -290,8 +327,19 @@ class InvestigationService:
         the other.
         """
         if actor.role not in {Role.OWNER, Role.ADMIN}:
+            # Reported before the raise. A membership being refused repeatedly
+            # is exactly the pattern an operator needs to see, and it is
+            # invisible if only successful deletions are counted.
+            self._observe_erasure(
+                erasure_id="",
+                progress="denied",
+                attempts=0,
+                started=perf_counter(),
+                failure_category="role_not_permitted",
+            )
             raise PermissionDeniedError("This membership cannot delete evidence")
 
+        started = perf_counter()
         now = self._now()
         async with self._unit_of_work_factory(
             actor.tenant_id,
@@ -311,6 +359,13 @@ class InvestigationService:
                     now=now,
                 )
             except ErasureError as error:
+                self._observe_erasure(
+                    erasure_id="",
+                    progress="refused",
+                    attempts=0,
+                    started=started,
+                    failure_category="not_terminal",
+                )
                 # A live Investigation. Typed, because "not yet" is a different
                 # answer from "not allowed".
                 raise ConflictError(str(error)) from error
@@ -320,6 +375,7 @@ class InvestigationService:
             # at a new instant on a timeline where the content went once.
             if requested.progress is ErasureProgress.COMPLETED:
                 already_done = True
+                completed = requested
             else:
                 already_done = False
                 operation = await unit_of_work.erasures.erase(
@@ -328,12 +384,20 @@ class InvestigationService:
                     now=now,
                 )
                 if operation.progress is not ErasureProgress.COMPLETED:
+                    self._observe_erasure(
+                        erasure_id=str(operation.erasure_id),
+                        progress=operation.progress.value,
+                        attempts=operation.attempts,
+                        started=started,
+                        failure_category=operation.failure_code,
+                    )
                     # The erasure refused to claim success, which is the one
                     # thing it must never do falsely. Surface it rather than
                     # committing a partial deletion.
                     raise ScenarioUnavailableError(
                         "Evidence deletion did not complete"
                     )
+                completed = operation
 
             # Only after the erasure actually completed. Recording it first
             # would let a rolled-back deletion leave an event claiming content
@@ -347,6 +411,13 @@ class InvestigationService:
         await self._audit_writer.flush(
             tenant_id=actor.tenant_id,
             investigation_id=investigation_id,
+        )
+        self._observe_erasure(
+            erasure_id=str(completed.erasure_id),
+            progress=completed.progress.value,
+            attempts=completed.attempts,
+            started=started,
+            failure_category=None,
         )
         return await self.get(actor, investigation_id)
 

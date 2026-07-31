@@ -15,7 +15,10 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse
-from zentra_adapter_telemetry import record_citation_resolution
+from zentra_adapter_telemetry import (
+    correlate_investigation,
+    record_citation_resolution,
+)
 from zentra_application_investigation import (
     SCENARIOS,
     AuthenticatedActor,
@@ -209,6 +212,7 @@ async def resolve_citation(
     # from a fault, and seeding the denial value would report every database
     # failure as an authorization outcome.
     state = "failed"
+    failure_category: str | None = None
     try:
         citation = await request.app.state.dependencies.investigations.resolve_citation(
             resolved.actor,
@@ -217,10 +221,18 @@ async def resolve_citation(
         )
     except InvestigationNotFoundError as error:
         state = "inaccessible"
+        failure_category = "not_visible_to_tenant"
         # Same answer for another Tenant's, another Investigation's, and
         # nonexistent. A caller who could tell them apart could confirm that
         # somebody else's evidence exists.
         raise HTTPException(status_code=404, detail="Evidence was not found") from error
+    except Exception as error:
+        # The class, never the message. "Timed out" and "the column does not
+        # exist" are different operator problems and must not collapse into one
+        # `failed` bucket, but the message that tells them apart can quote the
+        # evidence.
+        failure_category = type(error).__name__
+        raise
     else:
         if isinstance(citation, Tombstone):
             state = "tombstoned"
@@ -235,6 +247,7 @@ async def resolve_citation(
         record_citation_resolution(
             state=state,
             duration_ms=int((perf_counter() - started) * 1000),
+            failure_category=failure_category,
         )
 
 
@@ -255,6 +268,7 @@ async def delete_evidence(
     trigger by replaying a URL, and a confirmation the client can default to
     would not be a confirmation.
     """
+    correlate_investigation(investigation_id)
     if payload.confirm_investigation_id != investigation_id:
         raise HTTPException(
             status_code=422,

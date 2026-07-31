@@ -39,6 +39,50 @@ SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
 
 
+#: Error types an operator is expected to see. Only these are named in the
+#: ledger; anything else reports as `unexpected`.
+#:
+#: An allowlist rather than a split on the first colon. The graph formats errors
+#: as `Type: message`, but that is a convention on the far side of a queue, not
+#: a guarantee, and one message with a colon in the wrong place would write
+#: whatever preceded it into an immutable table.
+_KNOWN_ERROR_CATEGORIES = frozenset(
+    {
+        "AbsentEvidenceError",
+        "ConflictError",
+        "ErasureError",
+        "MalformedAgentResponseError",
+        "NoEnabledAgentError",
+        "ScenarioUnavailableError",
+        "UncitableClaimError",
+        "UngroundedClaimError",
+        "UnsupportedCausalClaimError",
+    }
+)
+
+
+def error_categories(errors: tuple[str, ...]) -> tuple[str, ...]:
+    """Reduce error strings to types before they reach the ledger.
+
+    ADR 0006 makes the ledger metadata-only, and an error message is the one
+    place Agent prose can still get in: a refusal names the claim it refused and
+    the figure it could not ground. ClickHouse is immutable and outside the
+    erasure boundary, so a value that lands here outlives the deletion that was
+    meant to erase it.
+
+    The type is kept because Replay has to stay diagnosable — an operator must
+    be able to tell a grounding refusal from a provider outage, and a ledger
+    that recorded no reason at all would trade one failure for another.
+    """
+    return tuple(
+        category
+        if (category := error.split(":", maxsplit=1)[0].strip())
+        in _KNOWN_ERROR_CATEGORIES
+        else "unexpected"
+        for error in errors
+    )
+
+
 class AuditDeliveryCoordinator:
     """Moves tenant-scoped outbox events into the immutable audit ledger."""
 
@@ -248,7 +292,7 @@ class AuditDeliveryCoordinator:
             outcome_kind=metadata.get("outcome_kind"),
             confidence=metadata.get("confidence"),
             model=metadata.get("model"),
-            errors=tuple(metadata.get("errors", ())),
+            errors=error_categories(tuple(metadata.get("errors", ()))),
             status=str(payload["status"]),
             artifact_refs=tuple(payload.get("artifact_refs", ())),
             redacted_metadata=metadata,

@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: critical
@@ -17,6 +17,8 @@ repo_path: infra/clickhouse/init/001_audit_entries.sql
 code_refs:
   - infra/clickhouse/init/001_audit_entries.sql
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
+  - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/baselines.py
+  - apps/api/src/zentra_api/audit_delivery.py
 ---
 
 # ClickHouse Audit Ledger
@@ -99,3 +101,18 @@ each Investigation's timeline is strictly increasing regardless of how many
 requests wrote it.
 
 Parent: [[Data MOC]]
+
+## Errors are categories, not messages
+
+`errors` is the only free-string column on an Audit Entry, and the graph formats
+each one as `Type: message`. A refusal message names the claim it refused and
+the figure it could not ground, so delivering it verbatim would put Agent prose
+into an immutable table that sits outside the erasure boundary — where it would
+outlive the evidence deletion meant to erase it.
+
+`error_categories` in `apps/api/src/zentra_api/audit_delivery.py` reduces each
+string to its type against an allowlist before it reaches the ledger. Anything
+unrecognized becomes `unexpected` rather than the raw prefix, because the
+`Type: message` shape is a convention on the far side of a queue and not a
+guarantee. The type is kept so Replay stays diagnosable: an operator must be
+able to tell a grounding refusal from a provider outage.

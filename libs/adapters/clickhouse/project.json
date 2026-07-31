@@ -4,6 +4,14 @@
   "projectType": "library",
   "sourceRoot": "libs/adapters/clickhouse/src/zentra_adapter_clickhouse",
   "targets": {
+    "baselines": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run python -m zentra_adapter_clickhouse.baselines",
+        "cwd": "."
+      },
+      "cache": false
+    },
     "lock": {
       "executor": "@nxlv/python:lock",
       "options": {

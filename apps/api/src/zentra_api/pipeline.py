@@ -11,10 +11,12 @@ from zentra_adapter_langgraph import (
 )
 from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
+from zentra_adapter_telemetry import record_insight_execution
 from zentra_application_investigation import PipelineResult
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     AgentExecutionStart,
+    AgentRole,
     ConfidenceOutcome,
     ExecutionStatus,
     OutcomeSignal,
@@ -34,6 +36,53 @@ from zentra_domain_investigation import (
     MetricComparison,
     RootCauseState,
 )
+
+
+def _provider_of(model: str | None) -> str | None:
+    """The vendor, from the model id the router recorded.
+
+    `gemini/gemini-3.6-flash` names both; taking the first segment avoids a
+    second source of truth about which provider served a call.
+
+    An unprefixed id yields nothing rather than itself. Returning `"gpt-5"` as a
+    provider would invent a vendor that does not exist and, because provider is
+    a metric dimension, mint a permanent series named after a model.
+    """
+    if not model or "/" not in model:
+        return None
+    return model.split("/", maxsplit=1)[0]
+
+
+#: Error types an operator is expected to see, and the only ones named in
+#: telemetry. An allowlist rather than a split on the first colon: the graph
+#: happens to format errors as `Type: message`, but that is its convention, not
+#: a guarantee, and one message with a colon in the wrong place would publish
+#: whatever preceded it.
+_KNOWN_ERROR_CATEGORIES = frozenset(
+    {
+        "AbsentEvidenceError",
+        "MalformedAgentResponseError",
+        "NoEnabledAgentError",
+        "UncitableClaimError",
+        "UngroundedClaimError",
+        "UnsupportedCausalClaimError",
+    }
+)
+
+
+def _error_category(errors: tuple[str, ...]) -> str | None:
+    """The exception type, never its message.
+
+    A refusal message names a claim position and a governed metric; an
+    unexpected one could name anything. The type tells a provider outage from a
+    contract break, and cannot quote evidence. Anything unrecognized reports as
+    `unexpected` — which is itself the useful signal, because it means a class
+    of failure nobody has triaged.
+    """
+    if not errors:
+        return None
+    candidate = errors[0].split(":", maxsplit=1)[0].strip()
+    return candidate if candidate in _KNOWN_ERROR_CATEGORIES else "unexpected"
 
 
 class UncitableClaimError(RuntimeError):
@@ -82,6 +131,22 @@ class PostgresExecutionRecorder:
             await unit_of_work.commit()
 
     async def record(self, execution: AgentExecutionRecord) -> None:
+        if execution.role is AgentRole.INSIGHT:
+            # Here rather than in the graph: this is where the finished record
+            # already exists, so the telemetry cannot disagree with what was
+            # persisted about the same step.
+            record_insight_execution(
+                agent_id=execution.agent_id,
+                model=execution.usage.model,
+                provider=_provider_of(execution.usage.model),
+                fallback_count=len(execution.fallbacks),
+                input_tokens=execution.usage.input_tokens,
+                output_tokens=execution.usage.output_tokens,
+                cost_usd=str(execution.usage.cost_usd),
+                duration_ms=execution.latency_ms,
+                status=execution.status.value,
+                error_category=_error_category(execution.errors),
+            )
         # Before the transaction opens. The role travels into the audit
         # ledger's metadata, and Audit Entries are immutable — a legacy value
         # written there could never be corrected.

@@ -153,6 +153,44 @@ class InvestigationUnitOfWorkFactory(Protocol):
     ) -> AbstractAsyncContextManager[InvestigationUnitOfWork]: ...
 
 
+class PublicationObserver(Protocol):
+    """Somewhere to report a publication decision that is not the audit log.
+
+    A port rather than a direct call because the application may not import an
+    adapter, and because an operator's dashboard and the Tenant's Replay record
+    are different obligations: one may be dropped under load, the other may
+    not.
+    """
+
+    def __call__(
+        self,
+        *,
+        decision: str,
+        failed_conditions: tuple[str, ...],
+    ) -> None: ...
+
+
+class ErasureObserver(Protocol):
+    """Somewhere to report how an erasure went.
+
+    A port for the same reason as `PublicationObserver`, and reporting from
+    here rather than from the route because the route does not have these
+    facts. The erasure's own identity is minted inside the transaction, and
+    `attempts` is a real retry count on the operation — a caller outside can
+    only guess at both, and a guessed identifier is worse than none.
+    """
+
+    def __call__(
+        self,
+        *,
+        erasure_id: str,
+        progress: str,
+        attempts: int,
+        duration_ms: int,
+        failure_category: str | None,
+    ) -> None: ...
+
+
 class AuditWriter(Protocol):
     async def flush(self, *, tenant_id: UUID, investigation_id: UUID) -> bool: ...
 

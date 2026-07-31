@@ -25,6 +25,10 @@ from zentra_adapter_postgres import (
     Database,
     PostgresInvestigationUnitOfWorkFactory,
 )
+from zentra_adapter_telemetry import (
+    record_evidence_deletion,
+    record_publication_decision,
+)
 from zentra_application_investigation import InvestigationService
 from zentra_domain_agent_execution import AgentRole
 
@@ -99,6 +103,8 @@ class AppDependencies:
             audit_reader=audit_delivery,
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
+            publication_observer=record_publication_decision,
+            erasure_observer=record_evidence_deletion,
         )
         return cls(
             database=database,
