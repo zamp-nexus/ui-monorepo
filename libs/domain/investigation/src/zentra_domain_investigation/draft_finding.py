@@ -117,10 +117,16 @@ class DraftFinding:
         for claim in self.claims:
             if claim.kind is not ClaimKind.OBSERVED:
                 continue
-            if not (claim.metric and claim.value):
+            if not claim.metric or claim.value is None:
                 # An observed claim with no measurement is an interpretation
                 # wearing the wrong label, which is the one confusion this
                 # whole type exists to prevent.
+                #
+                # `is None`, not falsiness: erasure empties a value while
+                # leaving the field. Rejecting an empty string would make every
+                # Investigation whose evidence a Tenant deleted permanently
+                # unreadable — the draft would raise on load, so the deletion
+                # would destroy the process record it was supposed to preserve.
                 raise DraftFindingError(
                     f"Claim {claim.position} is observed but carries no "
                     f"measurement"

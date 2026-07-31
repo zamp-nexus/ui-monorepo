@@ -8,16 +8,20 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
 from zentra_domain_agent_execution import AgentExecutionRecord
 from zentra_domain_investigation import (
+    DeletionCategory,
     DomainEvent,
     DraftFinding,
+    ErasureOperation,
     EvidenceCitation,
     HumanApproval,
     Investigation,
+    Tombstone,
 )
 
 from .dto import PipelineResult, TimelineEntry
@@ -85,7 +89,27 @@ class EvidenceCitationRepository(Protocol):
         self,
         investigation_id: UUID,
         citation_id: UUID,
-    ) -> EvidenceCitation | None: ...
+    ) -> EvidenceCitation | Tombstone | None: ...
+
+
+class ErasureRepository(Protocol):
+    async def request(
+        self,
+        *,
+        erasure_id: UUID,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        category: DeletionCategory,
+        now: datetime,
+    ) -> ErasureOperation: ...
+
+    async def erase(
+        self,
+        *,
+        investigation_id: UUID,
+        category: DeletionCategory,
+        now: datetime,
+    ) -> ErasureOperation: ...
 
 
 class DraftFindingRepository(Protocol):
@@ -113,6 +137,7 @@ class InvestigationUnitOfWork(Protocol):
     agent_executions: AgentExecutionRepository
     draft_findings: DraftFindingRepository
     citations: EvidenceCitationRepository
+    erasures: ErasureRepository
     policies: TenantPolicyRepository
     outbox: AuditOutboxRepository
 

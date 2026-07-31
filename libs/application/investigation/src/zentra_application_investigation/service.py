@@ -10,11 +10,15 @@ from zentra_domain_agent_execution import (
     independence_of,
 )
 from zentra_domain_investigation import (
+    TERMINAL_STATUSES,
     ApprovalDecision,
     CitationState,
     ClaimKind,
+    DeletionCategory,
     DomainEvent,
     DraftFinding,
+    ErasureError,
+    ErasureProgress,
     EvaluationDirective,
     EvidenceCitation,
     FailureOutcome,
@@ -271,6 +275,81 @@ class InvestigationService:
             evidence_citations=citations,
         )
 
+    async def delete_evidence(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        investigation_id: UUID,
+        category: DeletionCategory = DeletionCategory.TENANT_REQUEST,
+    ) -> InvestigationDetail:
+        """Erase a terminal Investigation's evidence, at a Tenant's request.
+
+        Owner and admin only. The request, the erasure and the audit event are
+        one transaction: a deletion that recorded itself without erasing, or
+        erased without recording, would leave Replay lying in one direction or
+        the other.
+        """
+        if actor.role not in {Role.OWNER, Role.ADMIN}:
+            raise PermissionDeniedError("This membership cannot delete evidence")
+
+        now = self._now()
+        async with self._unit_of_work_factory(
+            actor.tenant_id,
+            actor.trace_id,
+            actor.span_id,
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(investigation_id)
+            if investigation is None:
+                raise InvestigationNotFoundError("Investigation was not found")
+
+            try:
+                requested = await unit_of_work.erasures.request(
+                    erasure_id=self._new_id(),
+                    tenant_id=actor.tenant_id,
+                    investigation_id=investigation_id,
+                    category=category,
+                    now=now,
+                )
+            except ErasureError as error:
+                # A live Investigation. Typed, because "not yet" is a different
+                # answer from "not allowed".
+                raise ConflictError(str(error)) from error
+
+            # Asking twice is not an error, and it is not a second deletion
+            # either. Re-recording would put a second `evidence_erased` event
+            # at a new instant on a timeline where the content went once.
+            if requested.progress is ErasureProgress.COMPLETED:
+                already_done = True
+            else:
+                already_done = False
+                operation = await unit_of_work.erasures.erase(
+                    investigation_id=investigation_id,
+                    category=category,
+                    now=now,
+                )
+                if operation.progress is not ErasureProgress.COMPLETED:
+                    # The erasure refused to claim success, which is the one
+                    # thing it must never do falsely. Surface it rather than
+                    # committing a partial deletion.
+                    raise ScenarioUnavailableError(
+                        "Evidence deletion did not complete"
+                    )
+
+            # Only after the erasure actually completed. Recording it first
+            # would let a rolled-back deletion leave an event claiming content
+            # was erased when it is still there.
+            if not already_done:
+                cursor = len(investigation.events)
+                investigation.record_evidence_erased(now, category=category.value)
+                await unit_of_work.outbox.enqueue(investigation.events[cursor:])
+            await unit_of_work.commit()
+
+        await self._audit_writer.flush(
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation_id,
+        )
+        return await self.get(actor, investigation_id)
+
     async def resolve_citation(
         self,
         actor: AuthenticatedActor,
@@ -445,6 +524,10 @@ class InvestigationService:
             pending_approval=pending_approval,
             timeline=merged_timeline,
             audit_delivery=delivery,
+            can_delete_evidence=(
+                actor.role in {Role.OWNER, Role.ADMIN}
+                and investigation.status in TERMINAL_STATUSES
+            ),
         )
 
     @staticmethod

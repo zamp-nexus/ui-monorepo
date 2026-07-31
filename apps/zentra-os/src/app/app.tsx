@@ -128,6 +128,9 @@ interface Investigation {
     readonly total_cost_usd: string | null;
   }[];
   readonly audit_delivery: 'complete' | 'pending';
+  // Server-decided. Asking our own role here would be a second
+  // authorisation rule that can disagree with the one that applies.
+  readonly can_delete_evidence: boolean;
 }
 
 type RejectionReason =
@@ -354,6 +357,8 @@ const Launcher = ({
 };
 
 const eventLabels: Record<string, string> = {
+  'investigation.evidence_erased': 'Evidence erased at the tenant’s request',
+  'human_approval.denied': 'A decision was attempted and refused',
   'investigation.created': 'Question registered',
   'investigation.started': 'Governed query started',
   'investigation.evaluation_started': 'Validation opened',
@@ -702,6 +707,53 @@ const ApprovalEvidence = ({
   );
 };
 
+/**
+ * Deleting evidence, with the confirmation the API also demands.
+ *
+ * Two steps, and the second names the Investigation. An irreversible action
+ * reachable by one click on a page a reader is scrolling is an action that
+ * will happen by accident.
+ */
+const EvidenceDeletion = ({
+  investigation,
+  canDelete,
+  onDelete,
+  pending,
+}: {
+  readonly investigation: Investigation;
+  readonly canDelete: boolean;
+  readonly onDelete: () => void;
+  readonly pending: boolean;
+}) => {
+  const [confirming, setConfirming] = useState(false);
+  // Terminality is the server's call too: it is the same rule the erasure
+  // operation enforces, and two copies of it would eventually disagree.
+  if (!canDelete) return null;
+
+  return (
+    <section className={styles.deletion} aria-labelledby="deletion-heading">
+      <h3 id="deletion-heading" className={styles.srOnly}>
+        Delete evidence
+      </h3>
+      {confirming ? (
+        <div role="alertdialog" aria-labelledby="deletion-confirm">
+          <p id="deletion-confirm" className={styles.deletionWarning}>
+            This erases every measurement, claim and narrative for
+            &ldquo;{investigation.canonical_question}&rdquo;. What happened
+            stays in Replay; what it found does not. This cannot be undone.
+          </p>
+          <Button loading={pending} onClick={onDelete}>
+            Erase this evidence
+          </Button>
+          <Button onClick={() => setConfirming(false)}>Keep it</Button>
+        </div>
+      ) : (
+        <Button onClick={() => setConfirming(true)}>Delete evidence</Button>
+      )}
+    </section>
+  );
+};
+
 const ApprovalInspector = ({
   investigation,
   onDecision,
@@ -852,6 +904,25 @@ const InvestigationWorkspace = ({
       return !settled || data.audit_delivery === 'pending' ? 1500 : false;
     },
   });
+  const deletion = useMutation({
+    mutationFn: () => {
+      if (!id) throw new Error('This investigation is no longer available.');
+      return requestJson<Investigation>(
+        `/v1/investigations/${id}/evidence-deletion`,
+        getToken,
+        {
+          method: 'POST',
+          // The API demands the Investigation be named as well as addressed.
+          // Sending it from here keeps the client honest about which one it
+          // means rather than trusting the URL it happens to be on.
+          body: JSON.stringify({ confirm_investigation_id: id }),
+        },
+      );
+    },
+    onSuccess: (investigation) =>
+      queryClient.setQueryData(['investigation', id], investigation),
+  });
+
   const decision = useMutation({
     mutationFn: ({
       choice,
@@ -968,6 +1039,12 @@ const InvestigationWorkspace = ({
           />
         </AnimatePresence>
       </div>
+      <EvidenceDeletion
+        investigation={investigation}
+        canDelete={investigation.can_delete_evidence}
+        pending={deletion.isPending}
+        onDelete={() => deletion.mutate()}
+      />
       {decision.error ? (
         <p className={styles.decisionError} role="alert">
           {decision.error.message}

@@ -232,6 +232,40 @@ This is a prefactor: no route reaches it. The shape and its guarantees land
 before the workflow that invokes them, so the first thing a Tenant can do is
 not the thing that has never run.
 
+### Deletion and Tombstones — current
+
+An owner or admin can erase a terminal Investigation's evidence. The request
+names the Investigation in its body as well as its path: an irreversible action
+should be impossible to trigger by replaying a URL, and a confirmation a client
+can default to would not be a confirmation. A live Investigation is a typed
+`409`, because "not yet" is a different answer from "not allowed" and a caller
+that conflated them would retry the wrong thing.
+
+The request, the erasure and the audit event are one transaction. A deletion
+that recorded itself without erasing, or erased without recording, would leave
+Replay lying in one direction or the other — and the event is written only
+after the erasure actually completed.
+
+**A Tombstone is its own type, not a blanked citation.** It carries the
+citation's identity, the deletion category and the instant, and nothing else —
+not the metric, not the period, not the grain, not the filters. Sharing
+`EvidenceCitation` would have made it one field-add away from leaking the thing
+it exists to hide, and a filter can carry customer values as readily as an
+aggregate can.
+
+The category and instant come from the erasure operation rather than the
+citation row, because *why* and *when* content went are facts about the request,
+not about the thing deleted.
+
+`unavailable` and `tombstoned` stay apart after a deletion as before one.
+Erasing one Investigation must not relabel another's missing evidence as
+deliberate.
+
+Whether a caller may delete is decided by the server and carried on the
+Investigation, exactly as `can_decide` is for an approval. A client consulting
+its own role would be a second authorisation rule that can disagree with the one
+that applies.
+
 Canonical language:
 [Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:
 [domain model](../../libs/domain/investigation/src/zentra_domain_investigation/model.py).

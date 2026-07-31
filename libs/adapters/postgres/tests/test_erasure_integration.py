@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_domain_investigation import (
@@ -392,6 +392,8 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
                         evidence_citations.c.aggregate_value,
                         evidence_citations.c.filters,
                         evidence_citations.c.metric,
+                        evidence_citations.c.period,
+                        evidence_citations.c.grain,
                     ).where(evidence_citations.c.citation_id == CITATION)
                 )
             ).one()
@@ -400,8 +402,12 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
         assert citation.aggregate_value == ""
         # Filters can carry customer values, so they go too.
         assert citation.filters == []
-        # The governed metric name is not customer data and explains the gap.
-        assert citation.metric == "refund_amount"
+        # The governed context goes with the value. A Tombstone carries
+        # identity, category and instant, so leaving the metric on the row
+        # would let the citation list serve what resolving it refuses.
+        assert citation.metric == ""
+        assert citation.period is None
+        assert citation.grain is None
     finally:
         await runtime.dispose()
         await cleanup()
@@ -766,5 +772,89 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
                     audit_outbox.c.investigation_id == INVESTIGATION
                 )
             )
+        await runtime.dispose()
+        await cleanup()
+
+
+@pytest.mark.asyncio
+async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
+    """Identity, category, timestamp. A blanked citation would still hand back
+    the metric, the period, the grain and the filters — and a filter can carry
+    customer values as readily as an aggregate can."""
+    from zentra_domain_investigation import Tombstone
+
+    from zentra_adapter_postgres.draft_finding import (
+        PostgresEvidenceCitationRepository,
+    )
+    from zentra_adapter_postgres.schema import evidence_citations
+
+    await seed()
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT)
+            repository = PostgresErasureRepository(connection)
+            await repository.request(
+                erasure_id=uuid4(),
+                tenant_id=TENANT,
+                investigation_id=INVESTIGATION,
+                category=DeletionCategory.TENANT_REQUEST,
+                now=NOW,
+            )
+            await repository.erase(
+                investigation_id=INVESTIGATION,
+                category=DeletionCategory.TENANT_REQUEST,
+                now=NOW,
+            )
+
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT)
+            resolved = await PostgresEvidenceCitationRepository(connection).resolve(
+                INVESTIGATION, CITATION
+            )
+            # The row is still there — a claim must resolve to something.
+            row_count = await connection.scalar(
+                select(func.count())
+                .select_from(evidence_citations)
+                .where(evidence_citations.c.citation_id == CITATION)
+            )
+
+        assert row_count == 1
+        assert isinstance(resolved, Tombstone)
+        assert resolved.citation_id == CITATION
+        assert resolved.category == "tenant_request"
+        assert resolved.erased_at is not None
+        # Nothing else is reachable through it.
+        for leaky in ("metric", "filters", "period", "grain", "aggregate_value"):
+            assert not hasattr(resolved, leaky)
+    finally:
+        await runtime.dispose()
+        await cleanup()
+
+
+@pytest.mark.asyncio
+async def test_unexpected_loss_is_still_unavailable_after_a_deletion_elsewhere(
+) -> None:
+    """A fault and a Tenant's request stay different facts. Erasing one
+    Investigation must not relabel another's missing evidence as deliberate."""
+    from zentra_domain_investigation import CitationState
+
+    from zentra_adapter_postgres.draft_finding import (
+        PostgresEvidenceCitationRepository,
+    )
+
+    await seed()
+    runtime = create_async_engine(RUNTIME_URL)
+    try:
+        async with runtime.begin() as connection:
+            await set_tenant_context(connection, TENANT)
+            # This citation names no producing execution, so its evidence is
+            # unreachable — a fault, not a deletion.
+            resolved = await PostgresEvidenceCitationRepository(connection).resolve(
+                INVESTIGATION, CITATION
+            )
+
+        assert getattr(resolved, "state", None) is CitationState.UNAVAILABLE
+    finally:
         await runtime.dispose()
         await cleanup()

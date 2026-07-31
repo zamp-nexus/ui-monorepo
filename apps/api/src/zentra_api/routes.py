@@ -26,6 +26,7 @@ from zentra_application_investigation import (
     ScenarioUnavailableError,
     UnsupportedScenarioError,
 )
+from zentra_domain_investigation import Tombstone
 
 from .request_context import RequestContext, authenticated_context
 from .schemas import (
@@ -33,10 +34,12 @@ from .schemas import (
     ContextResponse,
     DependencyStatus,
     EvidenceCitationResponse,
+    EvidenceDeletionRequest,
     InvestigationCreateRequest,
     InvestigationDetailResponse,
     ReadinessResponse,
     ScenarioResponse,
+    TombstoneResponse,
 )
 
 router = APIRouter()
@@ -184,14 +187,14 @@ async def get_investigation(
 
 @router.get(
     "/v1/investigations/{investigation_id}/citations/{citation_id}",
-    response_model=EvidenceCitationResponse,
+    response_model=EvidenceCitationResponse | TombstoneResponse,
 )
 async def resolve_citation(
     investigation_id: UUID,
     citation_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> EvidenceCitationResponse:
+) -> EvidenceCitationResponse | TombstoneResponse:
     """Follow one claim to the evidence behind it.
 
     Nested under the Investigation so the Investigation's own visibility is
@@ -219,6 +222,13 @@ async def resolve_citation(
         # somebody else's evidence exists.
         raise HTTPException(status_code=404, detail="Evidence was not found") from error
     else:
+        if isinstance(citation, Tombstone):
+            state = "tombstoned"
+            return TombstoneResponse(
+                citation_id=citation.citation_id,
+                category=citation.category,
+                erased_at=citation.erased_at,
+            )
         state = citation.state.value
         return EvidenceCitationResponse.from_domain(citation)
     finally:
@@ -226,6 +236,42 @@ async def resolve_citation(
             state=state,
             duration_ms=int((perf_counter() - started) * 1000),
         )
+
+
+@router.post(
+    "/v1/investigations/{investigation_id}/evidence-deletion",
+    response_model=InvestigationDetailResponse,
+)
+async def delete_evidence(
+    investigation_id: UUID,
+    payload: EvidenceDeletionRequest,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> InvestigationDetailResponse:
+    """Erase a terminal Investigation's evidence.
+
+    The body must name the Investigation the path already names. It is a
+    deliberate redundancy: an irreversible action should be impossible to
+    trigger by replaying a URL, and a confirmation the client can default to
+    would not be a confirmation.
+    """
+    if payload.confirm_investigation_id != investigation_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Confirm the investigation whose evidence is being deleted",
+        )
+    try:
+        detail = await request.app.state.dependencies.investigations.delete_evidence(
+            resolved.actor,
+            investigation_id=investigation_id,
+        )
+    except PermissionDeniedError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return InvestigationDetailResponse.from_detail(detail)
 
 
 @router.post(
