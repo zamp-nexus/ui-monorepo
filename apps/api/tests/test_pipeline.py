@@ -7,6 +7,7 @@ live run found it. These tests cost nothing and close that gap.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -60,6 +61,7 @@ def outcome(**overrides: object) -> PipelineOutcome:
         "analyst_sample_size": 8,
         "evaluator_sample_size": 8,
         "insight": None,
+        "evidence": (),
     }
     return PipelineOutcome(**(defaults | overrides))  # type: ignore[arg-type]
 
@@ -204,6 +206,47 @@ def test_the_audit_event_carries_the_canonical_role() -> None:
     assert event.metadata["role"] == "insight"
 
 
+EVIDENCE = None  # built lazily; see validated_evidence()
+
+
+def validated_evidence():
+    """What the Analyst measured. A claim can only be cited against this, so a
+    test that omits it is testing the refusal path whether it meant to or not.
+    """
+    from uuid import UUID as _UUID
+
+    from zentra_adapter_langgraph import ValidatedEvidence
+
+    return (
+        ValidatedEvidence(
+            metric="refund_amount",
+            previous_value="20.00",
+            current_value="260.00",
+            previous_period="June 2026",
+            current_period="July 2026",
+            filters=(
+                {
+                    "member": "Commerce.region",
+                    "operator": "equals",
+                    "values": ["EU"],
+                },
+            ),
+            grain="month",
+            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
+        ),
+        ValidatedEvidence(
+            metric="order_count",
+            previous_value="480",
+            current_value="486",
+            previous_period="June 2026",
+            current_period="July 2026",
+            filters=(),
+            grain="month",
+            producing_execution_id=_UUID("60000000-0000-0000-0000-000000000006"),
+        ),
+    )
+
+
 def insight_outcome(**overrides: object):
     from zentra_adapter_langgraph import InsightOutcome
 
@@ -217,12 +260,14 @@ def insight_outcome(**overrides: object):
                 "text": "EU refund amount rose to $260.00.",
                 "metric": "refund_amount",
                 "value": "260.00",
+                "period": "July 2026",
             },
             {
                 "kind": "interpretation",
                 "text": "Order volume barely moved.",
                 "metric": "order_count",
                 "value": None,
+                "period": None,
             },
         ],
         "contradictions": ("Recheck counted 8 rows, not 12.",),
@@ -241,7 +286,7 @@ async def test_the_draft_names_the_execution_that_produced_it() -> None:
     """Attribution is the point of running Insight separately. A draft that
     cannot say which Agent Execution wrote it is no better than the
     Orchestrator's unattributed narrative."""
-    result = await run(insight=insight_outcome())
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
 
     draft = result.draft_finding
     assert draft is not None
@@ -254,19 +299,21 @@ async def test_the_draft_names_the_execution_that_produced_it() -> None:
 
 @pytest.mark.asyncio
 async def test_claim_order_and_kind_survive_the_adapter() -> None:
-    result = await run(insight=insight_outcome())
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
 
     claims = result.draft_finding.claims
     assert [c.position for c in claims] == [0, 1]
     assert [c.kind.value for c in claims] == ["observed", "interpretation"]
     assert claims[0].text == "EU refund amount rose to $260.00."
-    # Citations arrive in a later slice; they must be empty, not invented.
-    assert claims[0].citation_ids == ()
+    # The observed claim cites its measurement; the interpretation cites none
+    # of its own, because it is a reading of someone else's.
+    assert len(claims[0].citation_ids) == 1
+    assert claims[1].citation_ids == ()
 
 
 @pytest.mark.asyncio
 async def test_contradictions_and_unresolved_root_cause_survive_the_adapter() -> None:
-    result = await run(insight=insight_outcome())
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
 
     draft = result.draft_finding
     assert draft.root_cause.value == "unresolved"
@@ -278,7 +325,7 @@ async def test_contradictions_and_unresolved_root_cause_survive_the_adapter() ->
 
 @pytest.mark.asyncio
 async def test_the_bounded_confidence_carries_its_calibration_reason() -> None:
-    result = await run(insight=insight_outcome())
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
 
     confidence = result.draft_finding.confidence
     assert confidence is not None
@@ -294,3 +341,121 @@ async def test_no_insight_execution_means_no_draft_rather_than_an_empty_one() ->
 
     assert result.draft_finding is None
     assert result.finding is not None
+
+
+@pytest.mark.asyncio
+async def test_a_citation_is_built_from_upstream_state_not_from_insight() -> None:
+    """The whole reason a Citation is evidence rather than a second account of
+    the claim. Every field here comes from what the Analyst actually ran."""
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+
+    citation = result.evidence_citations[0]
+    assert citation.metric == "refund_amount"
+    assert citation.grain == "month"
+    assert citation.filters[0].member == "Commerce.region"
+    assert citation.filters[0].values == ("EU",)
+    assert citation.producing_execution_id == UUID(
+        "60000000-0000-0000-0000-000000000006"
+    )
+    # Copied from the validated aggregate, not restated by the model. A
+    # citation whose figure could differ from the claim's would be worse than
+    # no citation: it would look like corroboration.
+    assert citation.aggregate_value == "260.00"
+    assert citation.evaluator_outcome is not None
+
+
+@pytest.mark.asyncio
+async def test_two_claims_about_the_same_measurement_share_one_citation() -> None:
+    """Duplicating it would let the two drift."""
+    twice = insight_outcome(
+        claims=[
+            {
+                "kind": "observed",
+                "text": "EU refunds reached $260.00.",
+                "metric": "refund_amount",
+                "value": "260.00",
+                "period": "July 2026",
+            },
+            {
+                "kind": "observed",
+                "text": "That is a $240 rise.",
+                "metric": "refund_amount",
+                "value": "260.00",
+                "period": "July 2026",
+            },
+        ]
+    )
+
+    result = await run(insight=twice, evidence=validated_evidence())
+
+    assert len(result.evidence_citations) == 1
+    first, second = result.draft_finding.claims
+    assert first.citation_ids == second.citation_ids
+
+
+@pytest.mark.asyncio
+async def test_the_two_sides_of_a_comparison_are_separate_citations() -> None:
+    """Different measurements, so different evidence — and each carries the
+    figure for its own period."""
+    both = insight_outcome(
+        claims=[
+            {
+                "kind": "observed",
+                "text": "EU refunds were $20.00 in June.",
+                "metric": "refund_amount",
+                "value": "20.00",
+                "period": "June 2026",
+            },
+            {
+                "kind": "observed",
+                "text": "EU refunds were $260.00 in July.",
+                "metric": "refund_amount",
+                "value": "260.00",
+                "period": "July 2026",
+            },
+        ]
+    )
+
+    result = await run(insight=both, evidence=validated_evidence())
+
+    by_period = {c.period: c.aggregate_value for c in result.evidence_citations}
+    assert by_period == {"June 2026": "20.00", "July 2026": "260.00"}
+
+
+@pytest.mark.asyncio
+async def test_a_claim_with_no_validated_evidence_cannot_be_cited() -> None:
+    """Upstream state and the draft disagreeing is not something to paper over
+    with an empty citation list."""
+    from zentra_api.pipeline import UncitableClaimError
+
+    with pytest.raises(UncitableClaimError):
+        await run(insight=insight_outcome(), evidence=())
+
+
+@pytest.mark.asyncio
+async def test_no_citation_carries_a_prohibited_payload() -> None:
+    """Rows, prompts, credentials and hidden reasoning must be absent from
+    citation metadata. This is the regression that stops a future field from
+    quietly widening what a citation exposes."""
+    import json
+
+    result = await run(insight=insight_outcome(), evidence=validated_evidence())
+
+    # The dataclass itself, not a hand-built projection of it: a projection
+    # cannot catch a field somebody widens the citation with later.
+    serialised = json.dumps(
+        [asdict(citation) for citation in result.evidence_citations],
+        default=str,
+    ).lower()
+
+    for prohibited in (
+        "rows",
+        "prompt",
+        "system",
+        "api_key",
+        "secret",
+        "credential",
+        "token",
+        "reasoning",
+    ):
+        assert prohibited not in serialised, f"{prohibited} reached a citation"

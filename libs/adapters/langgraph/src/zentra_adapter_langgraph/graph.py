@@ -50,6 +50,25 @@ class GraphState(TypedDict, total=False):
 
 
 @dataclass(slots=True)
+class ValidatedEvidence:
+    """One measurement the Analyst made and the Evaluator rechecked.
+
+    Assembled from what actually ran — the Analyst's governed query, its
+    result, and its execution id — so a Citation built from this cannot be a
+    second account of the same claim. Insight's output has no part in it.
+    """
+
+    metric: str
+    previous_value: str
+    current_value: str
+    previous_period: str | None
+    current_period: str | None
+    filters: tuple[dict[str, Any], ...]
+    grain: str | None
+    producing_execution_id: UUID
+
+
+@dataclass(slots=True)
 class InsightOutcome:
     """What the Insight Agent proposed, and who proposed it.
 
@@ -97,6 +116,9 @@ class PipelineOutcome:
     # Absent on the Phase 1 path, where the Orchestrator still writes the
     # narrative and no Insight Agent runs.
     insight: InsightOutcome | None = None
+    # What the Analyst measured, scoped how. Carried so Evidence Citations
+    # can be built from validated state rather than from Insight's prose.
+    evidence: tuple[ValidatedEvidence, ...] = ()
 
 
 class InvestigationGraph:
@@ -191,8 +213,16 @@ class InvestigationGraph:
         # is what makes this an optimizer loop rather than a plain repeat.
         if state.get("evaluator"):
             payload["previous_issues"] = state["evaluator"].get("issues", [])
-        output, step, _ = await self._run_agent(self._sql_analyst, state, payload)
-        return {"analyst": self._for_state(output), "step": step}
+        output, step, execution_id = await self._run_agent(
+            self._sql_analyst, state, payload
+        )
+        return {
+            "analyst": {
+                **self._for_state(output),
+                "execution_id": str(execution_id),
+            },
+            "step": step,
+        }
 
     async def _evaluate_node(self, state: GraphState) -> GraphState:
         output, step, _ = await self._run_agent(
@@ -409,7 +439,50 @@ class InvestigationGraph:
             analyst_sample_size=analyst.get("sample_size"),
             evaluator_sample_size=evaluator.get("sample_size"),
             insight=_insight_outcome(state.get("insight")),
+            evidence=_validated_evidence(analyst),
         )
+
+
+def _validated_evidence(analyst: dict[str, Any]) -> tuple[ValidatedEvidence, ...]:
+    """The Analyst's metrics, each scoped by the query that produced them.
+
+    One query produced every metric in the result, so the filters and grain are
+    shared across them. Splitting them per metric here keeps the Citation a
+    self-contained statement rather than a pointer back into a query object.
+    """
+    execution_id = analyst.get("execution_id")
+    if not execution_id:
+        return ()
+    query = _mapping(_mapping(analyst.get("fields")).get("query"))
+    time_dimensions = [_mapping(item) for item in query.get("time_dimensions", [])]
+    grain = next(
+        (
+            str(item["granularity"])
+            for item in time_dimensions
+            if item.get("granularity")
+        ),
+        None,
+    )
+    filters = tuple(_mapping(item) for item in query.get("filters", []))
+
+    return tuple(
+        ValidatedEvidence(
+            metric=str(metric.get("metric")),
+            previous_value=str(metric.get("previous_value")),
+            current_value=str(metric.get("current_value")),
+            previous_period=metric.get("previous_label"),
+            current_period=metric.get("current_label"),
+            filters=filters,
+            grain=grain,
+            producing_execution_id=UUID(str(execution_id)),
+        )
+        for metric in (_mapping(m) for m in analyst.get("metrics", []))
+        if metric.get("metric")
+    )
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _insight_outcome(state: dict[str, Any] | None) -> InsightOutcome | None:

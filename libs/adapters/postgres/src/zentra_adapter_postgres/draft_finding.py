@@ -11,21 +11,31 @@ have made both a parsing exercise.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_domain_agent_execution import ConfidenceOutcome
+from zentra_domain_agent_execution import OUTCOME_ADAPTER, ConfidenceOutcome
 from zentra_domain_investigation import (
+    CitationFilter,
+    CitationState,
     Claim,
     ClaimKind,
     Contradiction,
     DraftFinding,
+    EvidenceCitation,
     RootCauseState,
 )
 
-from .schema import draft_finding_claims, draft_findings
+from .schema import (
+    draft_finding_claim_citations,
+    draft_finding_claims,
+    draft_findings,
+    evidence_citations,
+)
 
 
 class PostgresDraftFindingRepository:
@@ -77,11 +87,24 @@ class PostgresDraftFindingRepository:
                     "claim_value": claim.value,
                     "period": claim.period,
                     "position": claim.position,
-                    "citation_ids": [str(cid) for cid in claim.citation_ids],
                 }
                 for claim in draft.claims
             ],
         )
+        links = [
+            {
+                "claim_id": claim.claim_id,
+                "citation_id": citation_id,
+                "tenant_id": draft.tenant_id,
+                "position": position,
+            }
+            for claim in draft.claims
+            for position, citation_id in enumerate(claim.citation_ids)
+        ]
+        if links:
+            await self._connection.execute(
+                insert(draft_finding_claim_citations), links
+            )
 
     async def latest_for_investigation(
         self,
@@ -115,6 +138,25 @@ class PostgresDraftFindingRepository:
             )
         ).all()
 
+        # Read from the join, not from the claim's own JSON copy: the join is
+        # what a citation is actually reachable through, so a divergence
+        # between the two must surface as a missing citation rather than a
+        # phantom one.
+        link_rows = (
+            await self._connection.execute(
+                select(draft_finding_claim_citations)
+                .where(
+                    draft_finding_claim_citations.c.claim_id.in_(
+                        [claim.claim_id for claim in claim_rows]
+                    )
+                )
+                .order_by(draft_finding_claim_citations.c.position)
+            )
+        ).all()
+        cited: dict[UUID, list[UUID]] = {}
+        for link in link_rows:
+            cited.setdefault(link.claim_id, []).append(link.citation_id)
+
         return DraftFinding(
             draft_finding_id=row.draft_finding_id,
             tenant_id=row.tenant_id,
@@ -133,9 +175,7 @@ class PostgresDraftFindingRepository:
                     metric=claim.metric,
                     value=claim.claim_value,
                     period=claim.period,
-                    citation_ids=tuple(
-                        UUID(cid) for cid in (claim.citation_ids or [])
-                    ),
+                    citation_ids=tuple(cited.get(claim.claim_id, ())),
                 )
                 for claim in claim_rows
             ),
@@ -156,3 +196,85 @@ class PostgresDraftFindingRepository:
                 else None
             ),
         )
+
+
+class PostgresEvidenceCitationRepository:
+    """Tenant-scoped like everything else here; RLS is what makes another
+    Tenant's citation not exist rather than merely be filtered out."""
+
+    def __init__(self, connection: AsyncConnection) -> None:
+        self._connection = connection
+
+    async def add(self, citations: Sequence[EvidenceCitation]) -> None:
+        if not citations:
+            return
+        await self._connection.execute(
+            insert(evidence_citations),
+            [
+                {
+                    "citation_id": citation.citation_id,
+                    "investigation_id": citation.investigation_id,
+                    "tenant_id": citation.tenant_id,
+                    "metric": citation.metric,
+                    "filters": [
+                        {
+                            "member": f.member,
+                            "operator": f.operator,
+                            "values": list(f.values),
+                        }
+                        for f in citation.filters
+                    ],
+                    "period": citation.period,
+                    "grain": citation.grain,
+                    "producing_execution_id": citation.producing_execution_id,
+                    "aggregate_value": citation.aggregate_value,
+                    "evaluator_outcome": (
+                        citation.evaluator_outcome.model_dump(mode="json")
+                        if citation.evaluator_outcome
+                        else None
+                    ),
+                    "state": citation.state.value,
+                }
+                for citation in citations
+            ],
+        )
+
+    async def for_investigation(
+        self,
+        investigation_id: UUID,
+    ) -> tuple[EvidenceCitation, ...]:
+        rows = (
+            await self._connection.execute(
+                select(evidence_citations).where(
+                    evidence_citations.c.investigation_id == investigation_id
+                )
+            )
+        ).all()
+        return tuple(_citation_from_row(row) for row in rows)
+
+
+def _citation_from_row(row: Any) -> EvidenceCitation:
+    return EvidenceCitation(
+        citation_id=row.citation_id,
+        tenant_id=row.tenant_id,
+        investigation_id=row.investigation_id,
+        metric=row.metric,
+        filters=tuple(
+            CitationFilter(
+                member=item["member"],
+                operator=item["operator"],
+                values=tuple(item.get("values", [])),
+            )
+            for item in (row.filters or [])
+        ),
+        period=row.period,
+        grain=row.grain,
+        producing_execution_id=row.producing_execution_id,
+        aggregate_value=row.aggregate_value,
+        evaluator_outcome=(
+            OUTCOME_ADAPTER.validate_python(row.evaluator_outcome)
+            if row.evaluator_outcome
+            else None
+        ),
+        state=CitationState(row.state),
+    )

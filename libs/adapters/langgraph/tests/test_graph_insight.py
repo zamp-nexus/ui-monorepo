@@ -432,3 +432,35 @@ async def test_a_refusal_never_carries_the_content_it_refused(payload: object) -
     assert "pricing change" not in message.lower()
     # An unrecognised metric name is model output too — it can carry prose.
     assert "invented_pricing_driver" not in message
+
+
+@pytest.mark.asyncio
+async def test_no_audit_event_carries_evidence_content() -> None:
+    """The third surface the contract names, and the one that is immutable.
+    An Audit Entry with a customer figure in it could never be corrected.
+    """
+    recorder = RecordingRecorder()
+    graph = phase_2_graph(recorder=recorder)
+
+    await graph.run(
+        investigation_id=INVESTIGATION_ID,
+        tenant_id=TENANT_ID,
+        question=QUESTION,
+    )
+
+    # What `PostgresExecutionRecorder` turns into metadata-only DomainEvents.
+    from zentra_api.pipeline import _audit_event, _started_event
+
+    for start in recorder.starts:
+        payload = json.dumps(_started_event(start).metadata).lower()
+        assert "260.00" not in payload
+        assert "refund" not in payload
+
+    for record in recorder.records:
+        metadata = json.dumps(_audit_event(record).metadata).lower()
+        # Process metadata only: identity, timings, usage, fallbacks.
+        assert "260.00" not in metadata
+        assert "claims" not in metadata
+        assert "headline" not in metadata
+        for prohibited in ("rows", "prompt", "reasoning", "credential", "secret"):
+            assert prohibited not in metadata

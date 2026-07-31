@@ -477,7 +477,7 @@ describe('App', () => {
         metric: 'refund_amount',
         value: '260.00',
         period: 'July 2026',
-        citation_ids: [],
+        citation_ids: ['cc000000-0000-0000-0000-000000000001'],
       },
       {
         claim_id: '80000000-0000-0000-0000-000000000002',
@@ -495,6 +495,20 @@ describe('App', () => {
     ],
     root_cause: 'unresolved',
     confidence: { score: 0.42, calibration_method: 'capped_sample_size' },
+    citations: [
+      {
+        citation_id: 'cc000000-0000-0000-0000-000000000001',
+        metric: 'refund_amount',
+        filters: [
+          { member: 'Commerce.region', operator: 'equals', values: ['EU'] },
+        ],
+        period: 'July 2026',
+        grain: 'month',
+        producing_execution_id: '60000000-0000-0000-0000-000000000006',
+        aggregate_value: '260.00',
+        state: 'active',
+      },
+    ],
   };
 
   const signedIn = () => {
@@ -585,8 +599,53 @@ describe('App', () => {
     renderApp('/investigations/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', { name: /evidence is coherent/i });
 
-    expect(screen.getByText('refund_amount')).toBeTruthy();
-    expect(screen.getByText('260.00')).toBeTruthy();
-    expect(screen.getByText('July 2026')).toBeTruthy();
+    // Twice each, and that is the point: once on the claim, once in the
+    // citation behind it. A citation whose figure could differ from the
+    // claim's would be worse than none — it would look like corroboration.
+    expect(screen.getAllByText('refund_amount')).toHaveLength(2);
+    expect(screen.getAllByText('260.00')).toHaveLength(2);
+    expect(screen.getAllByText('July 2026')).toHaveLength(2);
+  });
+
+  it('offers an evidence affordance on every substantive claim', async () => {
+    // A disclosure rather than a link: the reader is inspecting evidence, not
+    // navigating away, and `<details>` is keyboard-operable and announced
+    // without any scripting to get wrong.
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    const summaries = document.querySelectorAll('summary');
+    expect(summaries).toHaveLength(1);
+    // Named for the claim it belongs to, so a screen reader hearing several
+    // "Evidence" toggles can tell them apart.
+    expect(summaries[0].textContent).toContain('EU refund amount rose');
+  });
+
+  it('shows the governed context a citation carries', async () => {
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    expect(screen.getByText('month')).toBeTruthy();
+    expect(
+      screen.getByText(/Commerce\.region equals EU/),
+    ).toBeTruthy();
+  });
+
+  it('offers no evidence affordance on an interpretation', async () => {
+    mockApi({ ...investigation, draft_finding: structuredDraft });
+    signedIn();
+
+    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    await screen.findByRole('heading', { name: /evidence is coherent/i });
+
+    // One disclosure, for the one observed claim. The interpretation has no
+    // measurement of its own, so it has nothing to disclose.
+    expect(document.querySelectorAll('summary')).toHaveLength(1);
   });
 });

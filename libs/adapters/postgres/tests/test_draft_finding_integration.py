@@ -18,18 +18,24 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
+    CitationFilter,
     Claim,
     ClaimKind,
     Contradiction,
     DraftFinding,
+    EvidenceCitation,
     RootCauseState,
 )
 
 from zentra_adapter_postgres.database import set_tenant_context
-from zentra_adapter_postgres.draft_finding import PostgresDraftFindingRepository
+from zentra_adapter_postgres.draft_finding import (
+    PostgresDraftFindingRepository,
+    PostgresEvidenceCitationRepository,
+)
 from zentra_adapter_postgres.schema import (
     draft_finding_claims,
     draft_findings,
+    evidence_citations,
     investigations,
     tenants,
 )
@@ -46,6 +52,8 @@ TENANT_A = UUID("81000000-0000-0000-0000-000000000001")
 TENANT_B = UUID("81000000-0000-0000-0000-000000000002")
 INVESTIGATION_A = UUID("82000000-0000-0000-0000-000000000001")
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
+CITATION_ID = UUID("cc000000-0000-0000-0000-000000000001")
+CITATION_ID_2 = UUID("cc000000-0000-0000-0000-000000000002")
 
 
 async def seed(owner_url: str) -> None:
@@ -74,6 +82,34 @@ async def seed(owner_url: str) -> None:
     await owner.dispose()
 
 
+def citations() -> tuple[EvidenceCitation, ...]:
+    """The evidence the fixture's claims cite. Written first: a claim
+    referencing a citation that is not there yet is a dangling reference the
+    database will refuse, which is the point of the foreign key."""
+    return tuple(
+        EvidenceCitation(
+            citation_id=citation_id,
+            tenant_id=TENANT_A,
+            investigation_id=INVESTIGATION_A,
+            metric=metric,
+            filters=(
+                CitationFilter(
+                    member="Commerce.region", operator="equals", values=("EU",)
+                ),
+            ),
+            period="July 2026",
+            grain="month",
+            producing_execution_id=None,
+            aggregate_value=value,
+            evaluator_outcome=None,
+        )
+        for citation_id, metric, value in (
+            (CITATION_ID, "refund_amount", "260.00"),
+            (CITATION_ID_2, "refund_rate", "75"),
+        )
+    )
+
+
 def draft(version: int = 1) -> DraftFinding:
     return DraftFinding(
         draft_finding_id=uuid4(),
@@ -93,6 +129,7 @@ def draft(version: int = 1) -> DraftFinding:
                 metric="refund_amount",
                 value="260.00",
                 period="July 2026",
+                citation_ids=(CITATION_ID,),
             ),
             Claim(
                 claim_id=uuid4(),
@@ -108,6 +145,7 @@ def draft(version: int = 1) -> DraftFinding:
                 metric="refund_rate",
                 value="75",
                 period="July 2026",
+                citation_ids=(CITATION_ID_2,),
             ),
         ),
         contradictions=(Contradiction(detail="Recheck counted 8 rows, not 12."),),
@@ -127,6 +165,11 @@ async def cleanup(owner_url: str) -> None:
                 draft_findings.c.investigation_id == INVESTIGATION_A
             )
         )
+        await connection.execute(
+            evidence_citations.delete().where(
+                evidence_citations.c.investigation_id == INVESTIGATION_A
+            )
+        )
     await owner.dispose()
 
 
@@ -141,6 +184,7 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
         stored = draft()
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(stored)
 
         async with runtime.begin() as connection:
@@ -165,7 +209,10 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
         assert loaded.confidence is not None
         assert loaded.confidence.score == 0.42
         assert loaded.confidence.calibration_method == "capped_sample_size"
-        assert loaded.claims[0].citation_ids == ()
+        # The claim-to-citation link survives, read back through the join
+        # rather than the claim's own JSON copy.
+        assert loaded.claims[0].citation_ids == (CITATION_ID,)
+        assert loaded.claims[1].citation_ids == ()
     finally:
         await runtime.dispose()
         await cleanup(OWNER_URL)
@@ -184,6 +231,7 @@ async def test_a_refresh_returns_the_latest_stored_draft() -> None:
     try:
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(citations())
             repository = PostgresDraftFindingRepository(connection)
             await repository.add(draft(version=1))
             await repository.add(draft(version=2))
@@ -214,6 +262,7 @@ async def test_another_tenants_draft_is_invisible_rather_than_filtered() -> None
     try:
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(draft())
 
         async with runtime.begin() as connection:
@@ -301,6 +350,7 @@ async def test_a_claim_cannot_be_written_into_another_tenants_draft() -> None:
         stored = draft()
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT_A)
+            await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(stored)
 
         with pytest.raises(DBAPIError):
@@ -317,7 +367,6 @@ async def test_a_claim_cannot_be_written_into_another_tenants_draft() -> None:
                         claim_value="260.00",
                         period="July 2026",
                         position=99,
-                        citation_ids=[],
                     )
                 )
     finally:

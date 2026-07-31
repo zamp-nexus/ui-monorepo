@@ -136,6 +136,37 @@ class ContradictionResponse(BaseModel):
     resolved: bool
 
 
+class CitationFilterResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    member: str
+    operator: str
+    values: list[str]
+
+
+class EvidenceCitationResponse(BaseModel):
+    """One validated measurement, addressable on its own.
+
+    The user-facing contract ADR 0011 asks for, in place of an opaque
+    `artifact://` pointer: what was measured, scoped how, by which execution,
+    and what the independent recheck made of it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    citation_id: UUID
+    metric: str
+    filters: list[CitationFilterResponse]
+    period: str | None
+    grain: str | None
+    producing_execution_id: UUID | None
+    aggregate_value: str
+    # What the independent recheck made of the execution that produced it.
+    # ADR 0011 lists it, and a reader judging evidence needs it.
+    evaluator_outcome: OutcomeResponse | None
+    state: Literal["active", "unavailable", "tombstoned"]
+
+
 class ValidationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -157,6 +188,22 @@ OutcomeResponse = Annotated[
     ConfidenceResponse | ValidationResponse,
     Field(discriminator="kind"),
 ]
+
+
+def _outcome_response(outcome: object) -> OutcomeResponse | None:
+    """One mapping, shared by the Investigation's outcome and a citation's."""
+    if isinstance(outcome, ConfidenceOutcome):
+        return ConfidenceResponse(
+            score=outcome.score,
+            calibration_method=outcome.calibration_method,
+        )
+    if isinstance(outcome, ValidationOutcome):
+        return ValidationResponse(
+            passed=outcome.passed,
+            checks=list(outcome.checks),
+            issues=list(outcome.issues),
+        )
+    return None
 
 
 class DraftFindingResponse(BaseModel):
@@ -182,6 +229,9 @@ class DraftFindingResponse(BaseModel):
     # is accepted, so this is the only value Phase 2 can produce.
     root_cause: Literal["unresolved"]
     confidence: ConfidenceResponse | None
+    # Shared across claims, so they arrive once rather than once per
+    # citing claim. A claim's `citation_ids` index into these.
+    citations: list[EvidenceCitationResponse]
 
 
 class ApprovalResponse(BaseModel):
@@ -279,6 +329,29 @@ class InvestigationDetailResponse(BaseModel):
                     for contradiction in source.contradictions
                 ],
                 root_cause=source.root_cause.value,
+                citations=[
+                    EvidenceCitationResponse(
+                        citation_id=citation.citation_id,
+                        metric=citation.metric,
+                        filters=[
+                            CitationFilterResponse(
+                                member=f.member,
+                                operator=f.operator,
+                                values=list(f.values),
+                            )
+                            for f in citation.filters
+                        ],
+                        period=citation.period,
+                        grain=citation.grain,
+                        producing_execution_id=citation.producing_execution_id,
+                        aggregate_value=citation.aggregate_value,
+                        evaluator_outcome=_outcome_response(
+                            citation.evaluator_outcome
+                        ),
+                        state=citation.state.value,
+                    )
+                    for citation in detail.evidence_citations
+                ],
                 confidence=(
                     ConfidenceResponse(
                         score=source.confidence.score,
@@ -288,18 +361,7 @@ class InvestigationDetailResponse(BaseModel):
                     else None
                 ),
             )
-        outcome: OutcomeResponse | None = None
-        if isinstance(detail.outcome, ConfidenceOutcome):
-            outcome = ConfidenceResponse(
-                score=detail.outcome.score,
-                calibration_method=detail.outcome.calibration_method,
-            )
-        elif isinstance(detail.outcome, ValidationOutcome):
-            outcome = ValidationResponse(
-                passed=detail.outcome.passed,
-                checks=list(detail.outcome.checks),
-                issues=list(detail.outcome.issues),
-            )
+        outcome = _outcome_response(detail.outcome)
         approval = None
         if detail.pending_approval is not None:
             approval = ApprovalResponse(

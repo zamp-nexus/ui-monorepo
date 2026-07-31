@@ -107,16 +107,40 @@ The paired value-and-period check matters more than it looks: reporting July's
 figure under June's label is the one way to be precisely wrong while every
 individual token in the claim is real.
 
-Filters and grain appear in ADR 0011's list of things Insight must not invent
-and are **not** yet checked. They are reachable — the SQL Analyst's `query`
-travels in upstream state, carrying `filters[]` and the time dimension's
-`granularity` — so the gap is a missing check, not missing evidence.
+### Evidence Citation — current
 
-They are deliberately not added to the claim shape. ADR 0011 puts filters,
-periods and grain on the **Evidence Citation**, so validating them against a
-claim field now would build a competing structure days before the citation
-contract defines the real one. A filter or grain asserted in a claim's free
-text is unchecked until then.
+An `artifact://execution/{id}` pointer says *where* evidence lives and nothing
+about what it is. The Citation is the user-facing contract instead, and carries
+ADR 0011's list in full: the governed Semantic Metric, the filters, period and
+grain that scoped it, the producing Agent Execution, the validated aggregate,
+and the Evaluator's outcome.
+
+Three properties do the work:
+
+- **Built from upstream state, never from Insight.** A Citation assembled from
+  the Agent's own output would be a second account of the claim rather than
+  evidence for it. Every field comes from the query the SQL Analyst actually
+  ran and the result the Evaluator rechecked.
+- **The aggregate value is copied, not restated.** A citation whose figure
+  could differ from its claim's would be worse than no citation — it would look
+  like corroboration.
+- **Shared, not owned.** Two claims about July's refunds rest on one
+  measurement, stored once. Order belongs to the claim, through an ordered
+  join, because a claim comparing two periods says something by which it names
+  first.
+
+An observed claim with no citation invalidates the whole Draft Finding: a
+substantive claim a reader cannot follow is what Phase 2 exists to stop
+shipping. An interpretation cites nothing of its own, being a reading of
+someone else's measurement.
+
+`CitationState` keeps `unavailable` and `tombstoned` apart. One is a fault, the
+other a Tenant's deliberate erasure; collapsing them would either alarm a
+reader about a deletion they asked for or quietly reassure them about data
+loss. Only `active` is reachable today — resolution is a later slice.
+
+Filters and grain are now carried on the Citation, which is where ADR 0011 puts
+them. A filter or grain asserted in a claim's *free text* remains unchecked.
 
 The Phase 1 narrative `Finding` is untouched and still lives in
 `investigations.state`. An Investigation that ran before Insight has a

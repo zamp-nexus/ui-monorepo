@@ -193,3 +193,35 @@ def test_row_level_security_is_installed_and_forced_on_both_tables(
         "draft_findings_tenant_isolation",
         "draft_finding_claims_tenant_isolation",
     }
+
+
+def test_the_citation_tables_survive_a_downgrade_and_re_upgrade(owner_engine) -> None:
+    """0009 is run for real, both ways. The claim-to-citation link is the only
+    path a citation is reachable through, so a migration that half-applies it
+    would leave substantive claims that cannot be followed."""
+    config = alembic_config()
+    try:
+        command.downgrade(config, "0008_claim_measurement")
+        after_down = set(inspect(owner_engine).get_table_names())
+        assert "evidence_citations" not in after_down
+        assert "draft_finding_claim_citations" not in after_down
+        # The column 0009 drops comes back, so an older deployment is intact.
+        assert "citation_ids" in {
+            column["name"]
+            for column in inspect(owner_engine).get_columns("draft_finding_claims")
+        }
+
+        command.upgrade(config, "head")
+        after_up = set(inspect(owner_engine).get_table_names())
+        assert "evidence_citations" in after_up
+        assert "draft_finding_claim_citations" in after_up
+        assert "citation_ids" not in {
+            column["name"]
+            for column in inspect(owner_engine).get_columns("draft_finding_claims")
+        }
+
+        # Rerunning is a no-op rather than an error.
+        command.upgrade(config, "head")
+        assert "evidence_citations" in set(inspect(owner_engine).get_table_names())
+    finally:
+        command.upgrade(config, "head")

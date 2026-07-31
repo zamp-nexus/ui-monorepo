@@ -27,6 +27,7 @@ from zentra_domain_investigation import (
 NOW = datetime(2026, 7, 30, 10, 0, tzinfo=UTC)
 TENANT_ID = UUID("aa000000-0000-0000-0000-000000000001")
 INVESTIGATION_ID = UUID("bb000000-0000-0000-0000-000000000001")
+CITATION_ID = UUID("cc000000-0000-0000-0000-000000000001")
 
 
 def claim(position: int, kind: ClaimKind = ClaimKind.OBSERVED, **overrides) -> Claim:
@@ -39,7 +40,7 @@ def claim(position: int, kind: ClaimKind = ClaimKind.OBSERVED, **overrides) -> C
         "metric": "refund_amount" if measured else None,
         "value": "260.00" if measured else None,
         "period": "July 2026" if measured else None,
-        "citation_ids": (),
+        "citation_ids": (CITATION_ID,) if measured else (),
     }
     return Claim(**(defaults | overrides))
 
@@ -167,3 +168,39 @@ def test_an_observed_claim_carries_the_period_its_value_covers() -> None:
     assert measured.metric == "refund_amount"
     assert measured.value == "260.00"
     assert measured.period == "July 2026"
+
+
+def test_an_observed_claim_must_cite_its_evidence() -> None:
+    """A substantive claim a reader cannot follow is the thing Phase 2 exists
+    to stop shipping."""
+    with pytest.raises(DraftFindingError, match="cites no evidence"):
+        draft(claims=(claim(0, citation_ids=()),))
+
+
+def test_an_interpretation_needs_no_citation_of_its_own() -> None:
+    reading = draft(claims=(claim(0, ClaimKind.INTERPRETATION),))
+
+    assert reading.claims[0].citation_ids == ()
+
+
+def test_two_claims_can_rest_on_the_same_evidence() -> None:
+    """Sharing is the point. Two claims about July's refunds rest on one
+    measurement, and duplicating it would let the two drift."""
+    shared = draft(
+        claims=(
+            claim(0, citation_ids=(CITATION_ID,)),
+            claim(1, citation_ids=(CITATION_ID,)),
+        )
+    )
+
+    assert shared.claims[0].citation_ids == shared.claims[1].citation_ids
+
+
+def test_one_claim_can_cite_several_records_in_order() -> None:
+    """A claim comparing two periods rests on two measurements, and which came
+    first is part of what it says."""
+    second = UUID("cc000000-0000-0000-0000-000000000002")
+
+    cited = draft(claims=(claim(0, citation_ids=(CITATION_ID, second)),))
+
+    assert cited.claims[0].citation_ids == (CITATION_ID, second)
