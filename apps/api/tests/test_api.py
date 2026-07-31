@@ -8,6 +8,7 @@ from zentra_adapter_postgres import IdentityContext, IdentityNotBoundError
 from zentra_application_investigation import (
     AuditDelivery,
     InvestigationDetail,
+    PermissionDeniedError,
 )
 from zentra_domain_agent_execution import ConfidenceOutcome
 from zentra_domain_investigation import (
@@ -433,3 +434,39 @@ def test_a_trailing_slash_on_the_issuer_does_not_change_it() -> None:
     verifier = ClerkJwtVerifier("https://example.clerk.accounts.dev/", None)
 
     assert verifier._issuer == "https://example.clerk.accounts.dev"
+
+
+def test_a_member_cannot_decide_and_is_told_so(monkeypatch) -> None:
+    """403, and the body says which membership rule applied without naming the
+    Investigation's contents."""
+
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="member@example.com",
+            tenant_name="Acme Europe",
+            role="member",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+    service = InvestigationServiceStub()
+
+    async def deny(*args: object, **kwargs: object):
+        raise PermissionDeniedError("This membership cannot decide Human Approvals")
+
+    service.decide = deny  # type: ignore[method-assign]
+    with client(investigations=service) as test_client:
+        response = test_client.post(
+            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/approvals/40000000-0000-0000-0000-000000000004/decision",
+            headers={"Authorization": "Bearer valid"},
+            json={"decision": "approve"},
+        )
+
+    assert response.status_code == 403
+    body = response.text.lower()
+    assert "membership" in body
+    # Not the Finding's contents, and not another Tenant's anything.
+    assert "refund" not in body
+    assert "260.00" not in body
