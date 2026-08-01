@@ -14,7 +14,11 @@ from sqlalchemy import inspect
 from zentra_adapter_postgres.schema import data_sources
 
 revision = "0014_data_sources"
-down_revision = "0013_outbox_investigation_index"
+# Re-pointed at the workspace/threads chain rather than at 0013 directly. Both
+# branched from 0013 and Alembic will not resolve two heads; this one moved
+# because it had not been pushed. The number is left alone — renaming a
+# revision would break any database already stamped with it.
+down_revision = "0015_draft_investigation_threads"
 branch_labels = None
 depends_on = None
 

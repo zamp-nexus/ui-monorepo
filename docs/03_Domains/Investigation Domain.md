@@ -19,6 +19,7 @@ code_refs:
   - libs/domain/investigation/src/zentra_domain_investigation/draft_finding.py
   - libs/domain/investigation/CONTEXT.md
   - libs/domain/investigation/src/zentra_domain_investigation/model.py
+  - libs/domain/investigation/src/zentra_domain_investigation/workspace.py
 ---
 
 # Investigation Domain
@@ -27,6 +28,31 @@ An Investigation is one traceable attempt to answer a governed business
 question. The context owns lifecycle, Finding, Evaluation Attempt, Validation
 Result, terminal outcomes, Evidence References, and Human Approval transition
 rules.
+
+## Workspace organization
+
+Groups and Projects provide Tenant-visible organization for the Investigation
+Thread surface. They do not own analytical truth and do not introduce nested
+authorization. Owners and admins organize them; members and viewers read them.
+
+Names retain a display form and a normalized uniqueness key. Groups are unique
+within a Tenant and Projects within a Group. Archive is reversible and changes
+write availability only: it never deletes or rewrites descendants. A Project's
+latest activity advances separately from metadata changes so future Thread and
+Investigation activity can determine recent-work ordering.
+
+## Investigation Threads
+
+An Investigation Thread belongs to one Project and presents a linear
+conversation without weakening Investigation boundaries. Its first user message
+is created atomically with the Thread, and every message is append-only. Thread
+state is `draft`, `active`, or `archived`.
+
+Draft Threads contain no Investigation until deterministic routing resolves
+exactly one governed scenario. Ambiguous or unsupported input receives a stored
+router clarification with the supported canonical questions. Routing and title
+generation make no model call. Once analytical work exists, the Thread cannot
+be hard-deleted; archive and restore preserve its evidence lineage.
 
 ## Lifecycle
 

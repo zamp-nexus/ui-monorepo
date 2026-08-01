@@ -19,6 +19,8 @@
 ## Relationships
 
 - **Tenancy & Identity → every context**: every tenant-owned fact resolves to one internal Tenant.
+- **Workspace Organization → Investigation**: Tenant-visible Groups contain Projects that organize Investigation Threads; they do not change authorization or analytical truth.
+- **Investigation Thread → Investigation**: a Project-owned linear conversation preserves immutable messages while each resolved governed question remains a separate traceable Investigation.
 - **Investigation → Agent Execution**: an Investigation delegates bounded work as Agent Executions.
 - **Agent Execution → Investigation**: the Insight Agent proposes a Draft Finding from validated evidence; Investigation publication policy decides whether it becomes a Finding.
 - **Agent Execution → Trust & Verification**: completed work supplies typed outcomes and evidence references for gating.
