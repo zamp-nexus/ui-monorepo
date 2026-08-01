@@ -1,91 +1,51 @@
-from __future__ import annotations
+"""Turning a Thread's messages into the question an Investigation will answer.
 
-import re
+This was a keyword table matching two governed scenarios; anything else was
+refused before an agent ran (ADR-0023). A tenant's questions are its own, so
+there is nothing here to match against: the question a user asked is the
+question the pipeline gets.
+
+Kept as a seam rather than inlined into `thread_service`. Whether a question is
+answerable is a judgement the Cube Analyst makes against the tenant's live
+catalog, and when that check moves ahead of the pipeline it belongs here.
+"""
+
+from __future__ import annotations
 
 from zentra_domain_investigation import ThreadMessage, ThreadMessageKind
 
-from .dto import SCENARIOS, Scenario
 from .thread_dto import RoutingDisposition, RoutingResult
 
-_EU_REQUIREMENTS = (
-    frozenset({"refund", "refunds"}),
-    frozenset({"eu", "europe", "european"}),
-    frozenset({"june"}),
-    frozenset({"july"}),
-)
-_NA_REQUIREMENTS = (
-    frozenset({"channel", "channels"}),
-    frozenset({"north america", "na"}),
-    frozenset({"revenue", "sales"}),
-    frozenset({"october", "oct"}),
-    frozenset({"november", "nov"}),
+_USER_AUTHORED = frozenset(
+    {ThreadMessageKind.USER_QUESTION, ThreadMessageKind.USER_CLARIFICATION}
 )
 
 
-def _routing_tokens(value: str) -> set[str]:
-    normalized = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
-    tokens = set(normalized.split())
-    if "north america" in normalized:
-        tokens.add("north america")
-    return tokens
-
-
-def _matches(tokens: set[str], requirements: tuple[frozenset[str], ...]) -> bool:
-    return all(tokens & requirement for requirement in requirements)
-
-
-def _route_tokens(tokens: set[str]) -> RoutingResult:
-    matches: list[Scenario] = []
-    if _matches(tokens, _EU_REQUIREMENTS):
-        matches.append(SCENARIOS["eu_refund_spike"])
-    if _matches(tokens, _NA_REQUIREMENTS):
-        matches.append(SCENARIOS["na_channel_growth"])
-    suggestions = tuple(scenario.question for scenario in SCENARIOS.values())
-    if len(matches) == 1:
-        scenario = matches[0]
-        return RoutingResult(
-            disposition=RoutingDisposition.RESOLVED,
-            scenario_key=scenario.key,
-            canonical_question=scenario.question,
-            clarification=None,
-            suggestions=(),
-        )
-    if len(matches) > 1:
-        return RoutingResult(
-            disposition=RoutingDisposition.AMBIGUOUS,
-            scenario_key=None,
-            canonical_question=None,
-            clarification=(
-                "I can answer one governed question at a time. "
-                "Please choose one supported question."
-            ),
-            suggestions=suggestions,
-        )
+def _resolved(question: str) -> RoutingResult:
     return RoutingResult(
-        disposition=RoutingDisposition.UNSUPPORTED,
+        disposition=RoutingDisposition.RESOLVED,
         scenario_key=None,
-        canonical_question=None,
-        clarification=(
-            "I could not map that message to a governed question. "
-            "Please choose or rephrase one supported question."
-        ),
-        suggestions=suggestions,
+        canonical_question=question,
+        clarification=None,
+        suggestions=(),
     )
 
 
 def route_governed_question(value: str) -> RoutingResult:
-    return _route_tokens(_routing_tokens(value))
+    return _resolved(value)
 
 
 def route_draft_messages(messages: tuple[ThreadMessage, ...]) -> RoutingResult:
-    tokens: set[str] = set()
-    for message in messages:
-        if message.kind in {
-            ThreadMessageKind.USER_QUESTION,
-            ThreadMessageKind.USER_CLARIFICATION,
-        }:
-            tokens.update(_routing_tokens(message.content))
-    return _route_tokens(tokens)
+    """The question a Draft Thread is asking, read from its own messages.
+
+    A Draft Thread only exists on the read path now — nothing routes into one —
+    but one created before ADR-0023 can still receive a clarification, and its
+    question is the latest thing its author actually said.
+    """
+    authored = [
+        message.content for message in messages if message.kind in _USER_AUTHORED
+    ]
+    return _resolved(authored[-1] if authored else "")
 
 
 def deterministic_thread_title(value: str) -> str:

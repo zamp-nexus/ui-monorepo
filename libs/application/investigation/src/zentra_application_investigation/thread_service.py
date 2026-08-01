@@ -9,7 +9,6 @@ from zentra_domain_investigation import (
     ExecutionJob,
     Investigation,
     InvestigationEventPayload,
-    InvestigationStatus,
     InvestigationThread,
     MessageEventPayload,
     RoutingEventPayload,
@@ -64,7 +63,12 @@ class ThreadService:
         self._new_id = new_id
 
     async def create(
-        self, actor: AuthenticatedActor, *, project_id: UUID, content: str
+        self,
+        actor: AuthenticatedActor,
+        *,
+        project_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -105,7 +109,13 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             investigation_id, router_messages = await self._apply_routing(
-                unit_of_work, actor, thread, message, routing, now
+                unit_of_work,
+                actor,
+                thread,
+                message,
+                routing,
+                now,
+                data_connection_id=data_connection_id,
             )
             await unit_of_work.organization.record_project_activity(
                 project_id, occurred_at=now
@@ -120,7 +130,12 @@ class ThreadService:
         )
 
     async def append(
-        self, actor: AuthenticatedActor, *, thread_id: UUID, content: str
+        self,
+        actor: AuthenticatedActor,
+        *,
+        thread_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -162,7 +177,13 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             investigation_id, _ = await self._apply_routing(
-                unit_of_work, actor, thread, message, routing, now
+                unit_of_work,
+                actor,
+                thread,
+                message,
+                routing,
+                now,
+                data_connection_id=data_connection_id,
             )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.organization.record_project_activity(
@@ -198,24 +219,13 @@ class ThreadService:
             content=content,
             now=now,
         )
+        # A "run that again" keyword list used to sit here, reusing the previous
+        # question whenever routing had otherwise failed. It was safe only
+        # because it fired on the refusal path: now that every question routes,
+        # the same list would hijack "why did refunds rise again in July?" and
+        # silently answer a different question. Re-running is what the retry
+        # endpoint is for, so the follow-up is simply the question asked.
         routing = route_governed_question(message.content)
-        normalized = message.content.casefold()
-        published_reference = any(
-            token in normalized
-            for token in ("again", "latest", "re-run", "rerun", "same")
-        )
-        if (
-            routing.disposition is not RoutingDisposition.RESOLVED
-            and published_reference
-            and latest.status is InvestigationStatus.COMPLETED
-        ):
-            routing = RoutingResult(
-                disposition=RoutingDisposition.RESOLVED,
-                scenario_key=latest.scenario_key,
-                canonical_question=latest.question,
-                clarification=None,
-                suggestions=(),
-            )
         thread.record_message(now)
         await unit_of_work.threads.add_message(message)
         await unit_of_work.work_feed.append(
@@ -231,13 +241,11 @@ class ThreadService:
         )
         investigation_id = latest.investigation_id
         if routing.disposition is RoutingDisposition.RESOLVED:
-            assert routing.scenario_key is not None
             assert routing.canonical_question is not None
             follow_up = Investigation.create(
                 investigation_id=self._new_id(),
                 tenant_id=actor.tenant_id,
                 question=routing.canonical_question,
-                scenario_key=routing.scenario_key,
                 now=now,
                 data_connection_id=latest.data_connection_id,
                 thread_id=thread.thread_id,
@@ -407,9 +415,7 @@ class ThreadService:
         limit = validate_page_size(limit, MAX_PAGE_SIZE)
         after = ThreadCursor.decode(cursor) if cursor else None
         async with self._uow(actor) as unit_of_work:
-            require_project(
-                await unit_of_work.organization.get_project(project_id)
-            )
+            require_project(await unit_of_work.organization.get_project(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
                 include_archived=include_archived,
@@ -476,6 +482,7 @@ class ThreadService:
         message: ThreadMessage,
         routing: RoutingResult,
         now: datetime,
+        data_connection_id: UUID | None = None,
     ) -> tuple[UUID | None, tuple[ThreadMessage, ...]]:
         if routing.disposition is not RoutingDisposition.RESOLVED:
             router_messages = self._router_messages(thread, routing, now)
@@ -492,14 +499,16 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             return None, router_messages
-        assert routing.scenario_key is not None
         assert routing.canonical_question is not None
         investigation = Investigation.create(
             investigation_id=self._new_id(),
             tenant_id=actor.tenant_id,
             question=routing.canonical_question,
-            scenario_key=routing.scenario_key,
             now=now,
+            # Which data the question is asked against. Absent means the demo
+            # warehouse, which is right only for a tenant that has connected
+            # nothing — see `active_connection.py`.
+            data_connection_id=data_connection_id,
             thread_id=thread.thread_id,
             thread_sequence=1,
             initiating_message_id=message.message_id,
@@ -521,10 +530,7 @@ class ThreadService:
             tenant_id=actor.tenant_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.ROUTING_RESOLVED,
-            payload=RoutingEventPayload(
-                disposition=routing.disposition.value,
-                scenario_key=routing.scenario_key,
-            ),
+            payload=RoutingEventPayload(disposition=routing.disposition.value),
             occurred_at=now,
             event_id=self._new_id(),
         )

@@ -1,6 +1,6 @@
 {
-  "name": "rejects_malformed_model_output",
-  "agent": "sql_analyst",
+  "name": "rejects_an_answer_missing_a_required_field",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -48,18 +48,18 @@
   },
   "model_responses": [
     {
-      "reasoning": "no query key"
+      "reasoning": "Compare governed EU refunds month over month.",
+      "query": {
+        "measures": [
+          "Commerce.refundAmount"
+        ],
+        "dimensions": [],
+        "time_dimensions": [],
+        "filters": []
+      }
     },
     {
-      "result_summary": "EU refunds rose from $20 to $260.",
-      "metrics": [
-        {
-          "metric": "refund_amount",
-          "previous_value": "20.00",
-          "current_value": "260.00",
-          "unit": "USD"
-        }
-      ],
+      "metrics": [],
       "confidence": 0.8,
       "sample_size": 240
     }

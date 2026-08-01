@@ -16,8 +16,8 @@ const event = (sequence: number, eventId: string): ThreadEvent => ({
   payload: {
     type: 'agent',
     execution_id: '90000000-0000-0000-0000-00000000000a',
-    agent_id: 'sql_analyst_v1',
-    role: 'sql_analyst',
+    agent_id: 'cube_analyst_v1',
+    role: 'cube_analyst',
     capability_id: null,
     from_agent_id: null,
     to_agent_id: null,

@@ -20,12 +20,12 @@ from zentra_domain_agent_execution import (
 )
 
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     InvestigationGraph,
     NoEnabledAgentError,
     OrchestratorAgent,
-    SqlAnalystAgent,
 )
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 
@@ -42,7 +42,7 @@ from .test_graph import (
     build_graph,
 )
 
-PHASE_2_ROLES = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT)
+PHASE_2_ROLES = (AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT)
 
 
 class RefusingInsight:
@@ -87,7 +87,7 @@ def phase_2_graph(
             registry=StubRegistry(advertised),
             required_roles=PHASE_2_ROLES,
         ),
-        sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
+        cube_analyst=CubeAnalystAgent(model=model, semantic_layer=layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
         insight=insight if insight is not None else InsightAgent(model=model),
         recorder=recorder,
@@ -108,7 +108,7 @@ async def test_insight_runs_after_the_evaluator_and_only_once() -> None:
 
     assert [record.role for record in recorder.records] == [
         AgentRole.ORCHESTRATOR,
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]
@@ -268,7 +268,7 @@ async def test_the_phase_2_route_refuses_when_insight_is_not_promoted() -> None:
     # Registry advertises only the Phase 1 roles: Insight is not promoted.
     graph = phase_2_graph(
         recorder=recorder,
-        advertised=(AgentRole.SQL_ANALYST, AgentRole.EVALUATOR),
+        advertised=(AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR),
     )
 
     with pytest.raises(NoEnabledAgentError, match="insight"):

@@ -27,9 +27,17 @@ A versioned public declaration of one bounded behavior an evaluated Agent may
 perform.
 _Avoid_: Tool permission, implementation detail
 
-**SQL Analyst Agent**:
-A registered Agent that proposes a Governed Query Plan from a question and approved Semantic Model without executable raw-SQL authority.
-_Avoid_: Query Planner Agent, SQL generator
+**Cube Analyst Agent**:
+A registered Agent that answers a question by exploring the governed catalog and running Governed Query Plans through the semantic layer, without executable raw-SQL authority. Named for what it queries: Cube compiles its plan and delegates to the warehouse (ADR-0025).
+_Avoid_: SQL Analyst, Query Planner Agent, SQL generator
+
+**Tool**:
+One capability an Agent may be granted, declared on its Agent Descriptor and refused if named without permission. Every registered Tool reaches data through the semantic layer; there is no Tool for raw tables because there is no port for one (ADR-0024).
+_Avoid_: Function, plugin, action
+
+**Skill**:
+A named instruction pack appended to an Agent role's system prompt. Stable per role, so it stays inside the cached prefix.
+_Avoid_: Prompt fragment, persona
 
 **Governed Query Plan**:
 A typed analytical intent over approved members, relationships, filters, calculations, ordering, and limits that is authoritative in Normal Mode.

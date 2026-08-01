@@ -61,7 +61,7 @@ async def test_a_legacy_role_row_is_never_advertised() -> None:
     registry = PostgresAgentRegistry(
         Database(  # type: ignore[arg-type]
             [
-                row("sql_analyst_v1", "sql_analyst"),
+                row("cube_analyst_v1", "cube_analyst"),
                 row("insight_v0", "insight_root_cause"),
                 row("evaluator_v1", "evaluator"),
             ]
@@ -71,7 +71,7 @@ async def test_a_legacy_role_row_is_never_advertised() -> None:
     agents = await registry.enabled_agents()
 
     assert [agent.role for agent in agents] == [
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
     ]
 

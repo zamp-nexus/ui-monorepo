@@ -13,19 +13,15 @@ from zentra_domain_agent_execution import (
     SemanticLayerPort,
     ToolAccess,
     ToolScope,
-    merged_fallbacks,
     validate_agent_output,
 )
 
-from ..constants import DISCREPANCY_TOLERANCE, EVALUATOR_MODEL, MAX_TOKENS
-from ..prompts import EVALUATOR_PLAN, EVALUATOR_RECHECK
-from ..schemas import (
-    QUERY_PLAN_SCHEMA,
-    RECHECK_SCHEMA,
-    parse_json_object,
-    render_catalog,
-    semantic_query_from_json,
-)
+from ..constants import DISCREPANCY_TOLERANCE, MAX_TOKENS
+from ..prompts import EVALUATOR_SYSTEM
+from ..runtime import AgentRuntime
+from ..schemas import RECHECK_SCHEMA
+from ..skills import SkillRegistry
+from ..tools import SemanticCatalogSearchTool, SemanticQueryTool, ToolRegistry
 
 AGENT_ID = "evaluator_v1"
 
@@ -33,7 +29,8 @@ DESCRIPTOR = AgentDescriptor(
     agent_id=AGENT_ID,
     role=AgentRole.EVALUATOR,
     tool_permissions=(
-        ToolScope(tool_name="semantic_layer_query", access=ToolAccess.READ),
+        ToolScope(tool_name="semantic_catalog_search", access=ToolAccess.READ),
+        ToolScope(tool_name="semantic_query", access=ToolAccess.READ),
     ),
     context_budget_tokens=MAX_TOKENS,
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
@@ -48,8 +45,16 @@ DESCRIPTOR = AgentDescriptor(
 class EvaluatorAgent:
     """Re-derives the number independently before anyone is shown it.
 
-    Runs on a different model from the SQL Analyst so the recheck does not
+    Runs on a different model from the Cube Analyst so the recheck does not
     inherit the same blind spots (final architecture §3.9).
+
+    On the same tool loop as the Analyst, and for the same reason: it builds
+    its own query, so it can pick a member wrong in exactly the same ways.
+    One malformed query used to end the whole investigation — observed live,
+    where an Evaluator failed with `MalformedAgentResponseError` after the
+    Analyst had already succeeded. A recheck that cannot correct its own
+    query is a recheck that fails closed on the checker's mistake rather than
+    the analyst's.
     """
 
     def __init__(
@@ -57,9 +62,13 @@ class EvaluatorAgent:
         *,
         model: ModelPort,
         semantic_layer: SemanticLayerPort,
+        skills: SkillRegistry | None = None,
+        max_steps: int | None = None,
     ) -> None:
         self._model = model
         self._semantic_layer = semantic_layer
+        self._skills = skills or SkillRegistry.from_directory()
+        self._max_steps = max_steps
 
     @property
     def descriptor(self) -> AgentDescriptor:
@@ -70,52 +79,57 @@ class EvaluatorAgent:
         execution_id = str(agent_input.state["execution_id"])
         analyst = agent_input.state["analyst"]
         assert isinstance(analyst, dict)
-        catalog = await self._semantic_layer.catalog()
 
-        # Deliberately built from the question alone — the analyst's query is
-        # withheld so agreement means two independent routes to one number.
-        plan_response = await self._model.complete(
-            model=EVALUATOR_MODEL,
-            system=EVALUATOR_PLAN,
-            messages=[
-                ModelMessage(
-                    role="user",
-                    content=(
-                        f"Question: {question}\n\n"
-                        f"Governed catalog:\n{render_catalog(catalog)}"
-                    ),
-                )
-            ],
-            max_tokens=MAX_TOKENS,
-            response_schema=QUERY_PLAN_SCHEMA,
+        # Per invocation, so a retry's recheck cites its own query. Same
+        # reasoning as the Analyst's.
+        query_tool = SemanticQueryTool(self._semantic_layer)
+        registry = ToolRegistry(
+            (SemanticCatalogSearchTool(self._semantic_layer), query_tool)
         )
-        query = semantic_query_from_json(parse_json_object(plan_response.text)["query"])
-        result = await self._semantic_layer.query(query)
+        runtime = AgentRuntime(
+            model=self._model,
+            tools=registry,
+            skills=self._skills,
+            **({"max_steps": self._max_steps} if self._max_steps else {}),
+        )
 
-        recheck_response = await self._model.complete(
-            model=EVALUATOR_MODEL,
-            system=EVALUATOR_RECHECK,
+        def _recheck_rests_on_a_query(_: dict[str, object]) -> str | None:
+            """Only demand a query when there is a figure to recheck.
+
+            An Analyst answering a question about the catalog reports no
+            metrics; asking the Evaluator to independently re-derive nothing
+            would send it looking for a number that was never claimed.
+            """
+            if not analyst.get("metrics"):
+                return None
+            if query_tool.last_query is None:
+                return (
+                    "You have not run semantic_query yet, so you have checked "
+                    "nothing. Build your own query, run it, and compare your "
+                    "figures against the analyst's."
+                )
+            return None
+
+        # The analyst's *query* is deliberately withheld — only its reported
+        # figures are shown — so agreement means two independent routes to one
+        # number rather than one route walked twice.
+        result = await runtime.run(
+            descriptor=DESCRIPTOR,
+            system=EVALUATOR_SYSTEM,
             messages=[
                 ModelMessage(
                     role="user",
                     content=(
                         f"Question: {question}\n\n"
                         f"Analyst reported: {json.dumps(analyst.get('metrics', []))}\n"
-                        f"Analyst summary: {analyst.get('result_summary', '')}\n\n"
-                        f"Your independent rows: {json.dumps(list(result.rows))}"
+                        f"Analyst summary: {analyst.get('result_summary', '')}"
                     ),
                 )
             ],
-            max_tokens=MAX_TOKENS,
             response_schema=RECHECK_SCHEMA,
+            accept=_recheck_rests_on_a_query,
         )
-        recheck = parse_json_object(recheck_response.text)
-        # The recheck is the judgement. If the chain served it from a
-        # different provider than the planning call, that provider is the
-        # one that actually checked the analyst.
-        usage = (plan_response.usage + recheck_response.usage).model_copy(
-            update={"model": recheck_response.usage.model}
-        )
+        recheck = result.output
 
         discrepancy = abs(float(recheck["discrepancy_pct"]))
         passed = (
@@ -132,12 +146,16 @@ class EvaluatorAgent:
             self,
             AgentOutput(
                 fields={
-                    "query": query.model_dump(mode="json"),
+                    "query": (
+                        query_tool.last_query.model_dump(mode="json")
+                        if query_tool.last_query is not None
+                        else {}
+                    ),
                     "recheck_passed": passed,
                     "discrepancy_pct": discrepancy,
                     "issues": recheck.get("issues", []),
                     "sample_size": int(recheck["sample_size"]),
-                    "rows": list(result.rows),
+                    "rows": list(query_tool.last_rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
                 outcome=ConfidenceOutcome(
@@ -146,8 +164,9 @@ class EvaluatorAgent:
                 ),
                 # The model the provider actually served, not the role we
                 # asked for — the ledger must record what really ran.
-                usage=usage,
-                fallbacks=merged_fallbacks(plan_response, recheck_response),
+                usage=result.usage,
+                fallbacks=result.fallbacks,
+                tool_calls=result.tool_calls,
             ),
         )
 

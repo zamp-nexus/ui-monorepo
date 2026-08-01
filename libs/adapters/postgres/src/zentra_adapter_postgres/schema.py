@@ -321,6 +321,9 @@ agent_executions = Table(
     Column("input_tokens", Integer, nullable=False, server_default="0"),
     Column("output_tokens", Integer, nullable=False, server_default="0"),
     Column("fallbacks", JSON, nullable=False, server_default="[]"),
+    # Which tools the Agent ran, in order: name, latency, ok. Never arguments
+    # or results — those carry rows, and this table is read by Replay.
+    Column("tool_calls", JSON, nullable=False, server_default="[]"),
     Column(
         "started_at",
         TIMESTAMP(timezone=True),

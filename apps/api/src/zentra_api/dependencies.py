@@ -18,12 +18,13 @@ from zentra_adapter_clickhouse import (
 )
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     InvestigationGraph,
     OrchestratorAgent,
     PostgresCheckpointStore,
-    SqlAnalystAgent,
+    SkillRegistry,
 )
 from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
 from zentra_adapter_model_providers import (
@@ -90,6 +91,11 @@ class AppDependencies:
     database: Database
     audit: AuditRepository
     cube: CubeClient
+    #: Per (tenant, Data Connection) governed catalogs. Held here as well as
+    #: inside the pipeline because the catalog is now read on the request path
+    #: too — a client that must offer a question needs to know what this tenant
+    #: can actually be asked about.
+    semantic_layers: ScopedCubeSemanticLayers
     models: ProviderClients
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
@@ -250,6 +256,7 @@ class AppDependencies:
             database=database,
             audit=audit,
             cube=cube,
+            semantic_layers=semantic_layers,
             models=models,
             jwt_verifier=ClerkJwtVerifier(
                 settings.clerk_issuer,
@@ -314,6 +321,11 @@ def _build_graph_factory(
         clients=models.as_dict(),
         breaker=breaker,
     )
+    # Read from disk once per tier rather than per Agent Execution. Skills are
+    # stable per role, and they are appended to the cached system prefix — a
+    # registry rebuilt per investigation would still be correct but would do
+    # the file I/O on the request path for no reason.
+    skills = SkillRegistry.from_directory()
 
     def build(semantic_layer: CubeSemanticLayer) -> InvestigationGraph:
         # Insight is required, not optional. Nothing else writes a Finding, so
@@ -325,8 +337,16 @@ def _build_graph_factory(
                 registry=registry,
                 required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
             ),
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            cube_analyst=CubeAnalystAgent(
+                model=model,
+                semantic_layer=semantic_layer,
+                skills=skills,
+            ),
+            evaluator=EvaluatorAgent(
+                model=model,
+                semantic_layer=semantic_layer,
+                skills=skills,
+            ),
             insight=InsightAgent(model=model),
             recorder=recorder,
             checkpointer=checkpointer,

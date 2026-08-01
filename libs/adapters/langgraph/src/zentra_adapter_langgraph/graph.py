@@ -20,10 +20,10 @@ from zentra_domain_agent_execution import (
     OutcomeSignal,
 )
 
+from .agents.cube_analyst import CubeAnalystAgent
 from .agents.evaluator import EvaluatorAgent
 from .agents.insight import InsightAgent
 from .agents.orchestrator import OrchestratorAgent
-from .agents.sql_analyst import SqlAnalystAgent
 from .constants import MAX_EVALUATION_ATTEMPTS
 
 # Result rows are the one field that must not travel between agents in the
@@ -126,14 +126,14 @@ class PipelineOutcome:
 
 
 class InvestigationGraph:
-    """Orchestrator -> SQL Analyst -> Evaluator, with the Evaluator-Optimizer
+    """Orchestrator -> Cube Analyst -> Evaluator, with the Evaluator-Optimizer
     loop capped at three attempts and a hard exit when it does not converge."""
 
     def __init__(
         self,
         *,
         orchestrator: OrchestratorAgent,
-        sql_analyst: SqlAnalystAgent,
+        cube_analyst: CubeAnalystAgent,
         evaluator: EvaluatorAgent,
         recorder: AgentExecutionRecorder,
         # Required. The Orchestrator no longer synthesises, so an
@@ -149,7 +149,7 @@ class InvestigationGraph:
         ),
     ) -> None:
         self._orchestrator = orchestrator
-        self._sql_analyst = sql_analyst
+        self._cube_analyst = cube_analyst
         self._evaluator = evaluator
         self._insight = insight
         self._recorder = recorder
@@ -227,7 +227,7 @@ class InvestigationGraph:
         if state.get("evaluator"):
             payload["previous_issues"] = state["evaluator"].get("issues", [])
         output, step, execution_id = await self._run_agent(
-            self._sql_analyst, state, payload
+            self._cube_analyst, state, payload
         )
         return {
             "analyst": {
@@ -383,6 +383,7 @@ class InvestigationGraph:
                 usage=output.usage if output is not None else ExecutionUsage(),
                 evidence_refs=output.evidence_refs if output else (),
                 fallbacks=output.fallbacks if output else (),
+                tool_calls=output.tool_calls if output else (),
                 errors=errors,
                 started_at=started_at,
                 completed_at=completed_at,

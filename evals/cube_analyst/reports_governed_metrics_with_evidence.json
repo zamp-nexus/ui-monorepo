@@ -1,6 +1,6 @@
 {
-  "name": "refuses_members_outside_the_catalog",
-  "agent": "evaluator",
+  "name": "reports_governed_metrics_with_evidence",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -44,8 +44,39 @@
     }
   ],
   "state": {
-    "question": "Why did EU refunds increase from June to July 2026?",
-    "analyst": {
+    "question": "Why did EU refunds increase from June to July 2026?"
+  },
+  "model_responses": [
+    {
+      "reasoning": "Compare governed EU refunds month over month.",
+      "query": {
+        "measures": [
+          "Commerce.refundAmount"
+        ],
+        "dimensions": [],
+        "time_dimensions": [
+          {
+            "dimension": "Commerce.orderedAt",
+            "granularity": "month",
+            "date_range": [
+              "2026-06-01",
+              "2026-07-31"
+            ]
+          }
+        ],
+        "filters": [
+          {
+            "member": "Commerce.region",
+            "operator": "equals",
+            "values": [
+              "EU"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "result_summary": "EU refunds rose from $20 to $260.",
       "metrics": [
         {
           "metric": "refund_amount",
@@ -54,35 +85,20 @@
           "unit": "USD"
         }
       ],
-      "result_summary": "EU refunds rose from $20 to $260.",
-      "outcome": {
-        "kind": "confidence",
-        "score": 0.88,
-        "calibration_method": "sql_analyst_self_reported"
-      }
-    }
-  },
-  "model_responses": [
-    {
-      "reasoning": "Compare governed EU refunds month over month.",
-      "query": {
-        "measures": [
-          "commerce_facts.margin"
-        ],
-        "dimensions": [],
-        "time_dimensions": [],
-        "filters": []
-      }
-    },
-    {
-      "recheck_passed": true,
-      "discrepancy_pct": 0.0,
-      "confidence": 0.9,
-      "issues": [],
+      "confidence": 0.88,
       "sample_size": 240
     }
   ],
   "expect": {
-    "raises": "UnknownSemanticMemberError"
+    "outcome_kind": "confidence",
+    "min_score": 0.88,
+    "max_score": 0.88,
+    "evidence_refs": 1,
+    "field_present": [
+      "query",
+      "result_summary",
+      "metrics",
+      "rows"
+    ]
   }
 }

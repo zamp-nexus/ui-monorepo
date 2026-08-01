@@ -22,12 +22,27 @@ from zentra_application_investigation import (
 )
 from zentra_domain_investigation import ThreadMessageError, ThreadTransitionError
 
+from .active_connection import (
+    AmbiguousDataConnectionError,
+    active_data_connection_id,
+)
 from .request_context import RequestContext, authenticated_context
 from .thread_schemas import ThreadMessageRequest, ThreadPageResponse, ThreadResponse
 
 router = APIRouter(prefix="/v1")
 AuthenticatedRequest = Annotated[RequestContext, Depends(authenticated_context)]
 PageSize = Annotated[int, Query(ge=1, le=100)]
+
+
+async def _active_connection(dependencies: object, actor: object) -> UUID | None:
+    """The Data Connection this Thread's Investigations query."""
+    try:
+        return await active_data_connection_id(
+            dependencies.connector,  # type: ignore[attr-defined]
+            actor,  # type: ignore[arg-type]
+        )
+    except AmbiguousDataConnectionError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 def _thread_error(error: Exception) -> NoReturn:
@@ -58,9 +73,13 @@ async def create_thread(
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
+    dependencies = request.app.state.dependencies
     try:
-        detail = await request.app.state.dependencies.threads.create(
-            resolved.actor, project_id=project_id, content=body.message
+        detail = await dependencies.threads.create(
+            resolved.actor,
+            project_id=project_id,
+            content=body.message,
+            data_connection_id=await _active_connection(dependencies, resolved.actor),
         )
     except (
         PermissionDeniedError,
@@ -169,9 +188,13 @@ async def append_thread_message(
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
+    dependencies = request.app.state.dependencies
     try:
-        detail = await request.app.state.dependencies.threads.append(
-            resolved.actor, thread_id=thread_id, content=body.message
+        detail = await dependencies.threads.append(
+            resolved.actor,
+            thread_id=thread_id,
+            content=body.message,
+            data_connection_id=await _active_connection(dependencies, resolved.actor),
         )
     except (
         PermissionDeniedError,

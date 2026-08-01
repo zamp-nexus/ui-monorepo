@@ -8,7 +8,7 @@ scoped it, the Agent Execution that produced it, the validated aggregate, and
 the Evaluator's verdict on it.
 
 A Citation is never built from Insight's output. It is assembled from the state
-the SQL Analyst and Evaluator already validated, which is what makes it
+the Cube Analyst and Evaluator already validated, which is what makes it
 evidence rather than a second account of the same claim.
 
 Citations are shared, not owned. Two claims about July's refunds rest on the

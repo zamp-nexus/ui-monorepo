@@ -8,12 +8,12 @@
     },
     "agents_queued": {
       "investigation_status": "running",
-      "agents": ["orchestrator", "sql_analyst", "statistician", "insight", "visualization"],
+      "agents": ["orchestrator", "cube_analyst", "statistician", "insight", "visualization"],
       "active_agent": null
     },
     "agents_running": {
       "investigation_status": "running",
-      "active_agent": "sql_analyst",
+      "active_agent": "cube_analyst",
       "public_update": "The governed metric query is running."
     },
     "approval": {

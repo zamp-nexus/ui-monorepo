@@ -27,7 +27,7 @@ def test_no_premium_chain_touches_a_provider_that_trains_on_input() -> None:
 
 
 def test_free_evaluator_starts_on_a_different_family_from_the_analyst() -> None:
-    analyst = ROUTING[ModelTier.FREE][AgentRole.SQL_ANALYST][0]
+    analyst = ROUTING[ModelTier.FREE][AgentRole.CUBE_ANALYST][0]
     evaluator = ROUTING[ModelTier.FREE][AgentRole.EVALUATOR][0]
 
     assert model_family(analyst.model) != model_family(evaluator.model)
@@ -46,7 +46,7 @@ def test_every_free_chain_leads_with_a_schema_verified_provider() -> None:
 
 
 def test_premium_evaluator_starts_on_a_stronger_model_than_the_analyst() -> None:
-    analyst = ROUTING[ModelTier.PREMIUM][AgentRole.SQL_ANALYST][0]
+    analyst = ROUTING[ModelTier.PREMIUM][AgentRole.CUBE_ANALYST][0]
     evaluator = ROUTING[ModelTier.PREMIUM][AgentRole.EVALUATOR][0]
 
     assert analyst.model == "claude-sonnet-5"

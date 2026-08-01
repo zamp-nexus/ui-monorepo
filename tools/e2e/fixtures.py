@@ -138,7 +138,6 @@ def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
         investigation_id=PUBLISHED,
         tenant_id=tenant_id(),
         question="Why did EU refunds increase from June to July 2026?",
-        scenario_key="eu_refund_spike",
         now=_NOW,
     )
     investigation.start(_NOW + timedelta(seconds=1))
@@ -211,7 +210,6 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
             "Which sales channel accounted for the increase in North America "
             "revenue from October to November 2026?"
         ),
-        scenario_key="na_channel_growth",
         now=_NOW,
     )
     investigation.start(_NOW + timedelta(seconds=1))
@@ -264,7 +262,6 @@ def _contradicted() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]
         investigation_id=CONTRADICTED,
         tenant_id=tenant_id(),
         question="Why did EU refunds increase from June to July 2026?",
-        scenario_key="eu_refund_spike",
         now=_NOW,
     )
     investigation.start(_NOW + timedelta(seconds=1))

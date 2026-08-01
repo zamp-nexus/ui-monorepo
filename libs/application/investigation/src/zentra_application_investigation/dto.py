@@ -23,42 +23,6 @@ from zentra_domain_investigation import (
 )
 
 
-@dataclass(frozen=True, slots=True)
-class Scenario:
-    """One governed question the product will answer, and how to describe it.
-
-    `facts` are neutral descriptors for the launcher — region, window, scale.
-    Never a predicted outcome: a demo that promises "this one publishes" is
-    asserting the answer before the evidence, which is the habit this whole
-    system exists to break.
-    """
-
-    key: str
-    question: str
-    facts: tuple[str, ...]
-
-
-# The two scenarios differ in what the evidence can actually support, which is
-# the point. The refund question asks *why*, and aggregate data can only show
-# association — eight orders of it. The channel question asks *which*, which is
-# an accounting claim the data settles outright over three hundred orders.
-SCENARIOS: dict[str, Scenario] = {
-    "eu_refund_spike": Scenario(
-        key="eu_refund_spike",
-        question="Why did EU refunds increase from June to July 2026?",
-        facts=("EU commerce", "June → July 2026", "8 orders"),
-    ),
-    "na_channel_growth": Scenario(
-        key="na_channel_growth",
-        question=(
-            "Which sales channel accounted for the increase in North America "
-            "revenue from October to November 2026?"
-        ),
-        facts=("NA commerce", "October → November 2026", "300 orders"),
-    ),
-}
-
-
 class Role(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
@@ -77,10 +41,6 @@ class UsageSummary:
     output_tokens: int = 0
     cost_usd: Decimal = Decimal("0")
     latency_ms: int = 0
-
-
-class UnsupportedScenarioError(ValueError):
-    pass
 
 
 class PermissionDeniedError(PermissionError):
@@ -211,7 +171,10 @@ class PendingApproval:
 class InvestigationDetail:
     investigation_id: UUID
     question: str
-    scenario_key: str
+    # Read-compatibility only. Investigations created before free-text
+    # questions carry the governed scenario they were started from; nothing
+    # writes one now. See ADR-0023.
+    scenario_key: str | None
     status: InvestigationStatus
     version: int
     evaluation_attempts: int

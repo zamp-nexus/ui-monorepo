@@ -29,7 +29,7 @@ AGENT_ID = "orchestrator_v1"
 # Injectable because the Phase 2 route needs Insight to be required too, and a
 # route that needs an Agent must refuse when the registry has not promoted one
 # rather than quietly running without it.
-REQUIRED_ROLES = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR)
+REQUIRED_ROLES = (AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR)
 
 DESCRIPTOR = AgentDescriptor(
     agent_id=AGENT_ID,
