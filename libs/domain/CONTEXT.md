@@ -33,6 +33,17 @@ _Avoid_: Folder ACL, Investigation
 One attempt to answer a specific business question using governed metrics and traceable evidence.
 _Avoid_: Chat, query, run
 
+**Investigation Thread**:
+A Tenant-scoped, Project-owned linear conversation containing immutable
+messages and zero or more linked Investigations. A Draft Thread may exist while
+governed routing awaits clarification.
+_Avoid_: Investigation, mutable chat session, Agent transcript
+
+**Thread Message**:
+An immutable user, router clarification, or safe system contribution to one
+Investigation Thread. Agent progress belongs to the Work Feed, not messages.
+_Avoid_: Prompt log, editable chat bubble, reasoning event
+
 **Investigation Replay**:
 The ordered record that explains how an Investigation moved from its question to each claim and decision.
 _Avoid_: Logs, reasoning dump
