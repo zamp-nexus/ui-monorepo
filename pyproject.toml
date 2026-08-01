@@ -8,6 +8,7 @@ dependencies = [
   "zentra-adapter-langgraph",
   "zentra-adapter-model-providers",
   "zentra-adapter-postgres",
+  "zentra-adapter-sequence-execution",
   "zentra-adapter-telemetry",
   "zentra-adapter-thesys",
   "zentra-api",
@@ -27,6 +28,7 @@ members = [
   "libs/adapters/langgraph",
   "libs/adapters/model-providers",
   "libs/adapters/postgres",
+  "libs/adapters/sequence-execution",
   "libs/adapters/telemetry",
   "libs/adapters/thesys",
   "libs/application/connector",
@@ -50,6 +52,9 @@ workspace = true
 workspace = true
 
 [tool.uv.sources.zentra-adapter-postgres]
+workspace = true
+
+[tool.uv.sources.zentra-adapter-sequence-execution]
 workspace = true
 
 [tool.uv.sources.zentra-adapter-telemetry]

@@ -11,6 +11,7 @@ root_packages =
     zentra_adapter_cube
     zentra_adapter_langgraph
     zentra_adapter_model_providers
+    zentra_adapter_sequence_execution
     zentra_adapter_telemetry
     zentra_api
 include_external_packages = True
