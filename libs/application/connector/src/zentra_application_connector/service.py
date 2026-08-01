@@ -11,7 +11,6 @@ one applies without following indirection.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Sequence
 from uuid import UUID, uuid4
 
 from zentra_domain_connector import (
@@ -27,12 +26,9 @@ from zentra_domain_connector import (
     RelationState,
     SourceHealth,
     SourceKind,
-    UploadFormat,
-    diff_catalogs,
     infer_cardinality,
     score_candidate,
 )
-from zentra_domain_connector.constants import MAX_UPLOAD_BYTES
 from zentra_domain_connector.inference import CandidatePair
 from zentra_domain_connector.naming import name_affinity
 from zentra_domain_connector.types import (
@@ -41,11 +37,11 @@ from zentra_domain_connector.types import (
     RelationTransitionError,
 )
 
+from .catalog_reads import CatalogOperations
 from .dto import (
     HARVEST_ROLES,
     WRITE_ROLES,
     AuthenticatedActor,
-    CatalogVersionNotFoundError,
     ConflictError,
     ConnectionFailedError,
     DataSourceNotFoundError,
@@ -53,13 +49,10 @@ from .dto import (
     HarvestStatus,
     JoinGraphView,
     PermissionDeniedError,
-    ReharvestReport,
     RelationNotFoundError,
     RelationView,
     SourceCredentials,
     SourceSummary,
-    UploadPreview,
-    UploadRejectedError,
 )
 from .harvesting import HarvestDependencies, execute_harvest
 from .ports import (
@@ -72,10 +65,11 @@ from .ports import (
     RelationRepository,
     SourceConnector,
 )
+from .uploads import UploadOperations
 from .views import to_relation_view, to_status, to_summary
 
 
-class ConnectorService:
+class ConnectorService(CatalogOperations, UploadOperations):
     def __init__(
         self,
         *,
@@ -96,7 +90,7 @@ class ConnectorService:
         self._cipher = cipher
         self._landing = landing_zone
         self._clock = clock
-        self._pending_uploads: dict[UUID, tuple[UploadPreview, bytes]] = {}
+        self._pending_uploads = {}
 
     # ---------------------------------------------------------------- sources
 
@@ -308,62 +302,6 @@ class ConnectorService:
         )
         return tuple(to_status(r) for r in runs)
 
-    # ---------------------------------------------------------------- catalog
-
-    async def latest_catalog(
-        self, actor: AuthenticatedActor, data_source_id: UUID
-    ) -> CatalogVersion:
-        await self._load_source(actor, data_source_id)
-        version = await self._catalogs.latest_version(
-            data_source_id, tenant_id=actor.tenant_id
-        )
-        if version is None:
-            raise CatalogVersionNotFoundError(str(data_source_id))
-        return version
-
-    async def get_catalog(
-        self, actor: AuthenticatedActor, catalog_version_id: UUID
-    ) -> CatalogVersion:
-        version = await self._catalogs.get_version(
-            catalog_version_id, tenant_id=actor.tenant_id
-        )
-        if version is None:
-            raise CatalogVersionNotFoundError(str(catalog_version_id))
-        return version
-
-    async def search_catalog(
-        self, actor: AuthenticatedActor, catalog_version_id: UUID, term: str
-    ) -> tuple[str, ...]:
-        version = await self.get_catalog(actor, catalog_version_id)
-        return tuple(
-            table.name if source_field is None else f"{table.name}.{source_field.name}"
-            for table, source_field in version.search(term)
-        )
-
-    async def diff_catalog(
-        self,
-        actor: AuthenticatedActor,
-        *,
-        previous_id: UUID,
-        current_id: UUID,
-    ) -> ReharvestReport:
-        previous = await self.get_catalog(actor, previous_id)
-        current = await self.get_catalog(actor, current_id)
-        diff = diff_catalogs(previous, current)
-        relations = await self._relations.list_for_version(
-            current_id, tenant_id=actor.tenant_id
-        )
-        return ReharvestReport(
-            catalog_version_id=current_id,
-            carried_forward=sum(
-                1 for r in relations if r.state is RelationState.CONFIRMED
-            ),
-            staled=sum(1 for r in relations if r.state is RelationState.STALE),
-            added_fields=len(diff.added),
-            removed_fields=len(diff.removed),
-            type_changed_fields=len(diff.type_changed),
-        )
-
     # -------------------------------------------------------------- relations
 
     async def list_relations(
@@ -551,94 +489,6 @@ class ConnectorService:
         graph = JoinGraph.build(catalog_version_id, tuple(relations))
         return graph.permits(left_field_id, right_field_id)
 
-    # ---------------------------------------------------------------- uploads
-
-    async def preview_upload(
-        self,
-        actor: AuthenticatedActor,
-        *,
-        filename: str,
-        upload_format: UploadFormat,
-        stream: AsyncIterator[bytes],
-        preview_rows: int = 20,
-    ) -> UploadPreview:
-        """Parse a file and show what it looks like, without committing to it.
-
-        Preview before commit exists because a mis-parsed column discovered
-        afterwards has already poisoned every profile and every Relation
-        downstream of it.
-        """
-        self._require(actor, HARVEST_ROLES)
-        buffered = bytearray()
-        async for chunk in stream:
-            buffered.extend(chunk)
-            if len(buffered) > MAX_UPLOAD_BYTES:
-                raise UploadRejectedError(
-                    f"Upload exceeds the {MAX_UPLOAD_BYTES} byte limit"
-                )
-
-        columns, rows, total = await self._landing.inspect(
-            _replay(bytes(buffered)),
-            upload_format=upload_format,
-            preview_rows=preview_rows,
-        )
-        preview = UploadPreview(
-            upload_id=uuid4(),
-            filename=filename,
-            upload_format=upload_format,
-            columns=tuple(columns),
-            rows=tuple(tuple(r) for r in rows),
-            total_bytes=len(buffered),
-            truncated=total > preview_rows,
-        )
-        self._pending_uploads[preview.upload_id] = (preview, bytes(buffered))
-        return preview
-
-    async def commit_upload(
-        self,
-        actor: AuthenticatedActor,
-        upload_id: UUID,
-        *,
-        name: str,
-        columns: Sequence[object] | None = None,
-    ) -> SourceSummary:
-        """Land a previewed file and turn it into a Data Source.
-
-        The result is an ordinary Data Source of kind ``uploaded``, not a
-        parallel concept — which is what lets it be harvested, profiled and
-        relation-inferred by exactly the same code as a connected warehouse, and
-        what makes a join between it and that warehouse discoverable at all.
-        """
-        self._require(actor, HARVEST_ROLES)
-        pending = self._pending_uploads.pop(upload_id, None)
-        if pending is None:
-            raise UploadRejectedError("No pending upload with that id")
-
-        preview, payload = pending
-        chosen = tuple(columns) if columns else preview.columns
-        landed = await self._landing.land(
-            _replay(payload),
-            tenant_id=actor.tenant_id,
-            upload_id=upload_id,
-            upload_format=preview.upload_format,
-            columns=chosen,  # type: ignore[arg-type]
-        )
-        now = self._clock.now()
-        source = DataSource(
-            data_source_id=uuid4(),
-            tenant_id=actor.tenant_id,
-            name=name,
-            kind=SourceKind.UPLOADED,
-            description=f"Uploaded from {preview.filename}",
-            health=SourceHealth.REACHABLE,
-            last_verified_at=now,
-            created_at=now,
-            landed_table=landed.qualified_name,
-            metadata={"rows": str(landed.row_count), "filename": preview.filename},
-        )
-        await self._sources.add(source)
-        return to_summary(source)
-
     # ---------------------------------------------------------------- helpers
 
     def _require(self, actor: AuthenticatedActor, allowed: frozenset) -> None:
@@ -699,6 +549,3 @@ class ConnectorService:
             peers.append((other.data_source_id, version, self._open(other)))
         return tuple(peers)
 
-
-async def _replay(payload: bytes) -> AsyncIterator[bytes]:
-    yield payload

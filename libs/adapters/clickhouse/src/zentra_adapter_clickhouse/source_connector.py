@@ -32,6 +32,8 @@ from zentra_domain_connector import (
     OverlapMeasurement,
 )
 
+from .sql import qualify, quote_identifier
+
 #: Databases that belong to the engine rather than to the customer. Harvesting
 #: them would fill a reviewer's catalog with introspection tables they never
 #: asked about and cannot join to anything meaningful.
@@ -42,17 +44,6 @@ SYSTEM_DATABASES: frozenset[str] = frozenset(
 #: Per-query wall-clock ceiling. A pathological table must not be able to hang
 #: a harvest, and the source is someone else's production system.
 QUERY_TIMEOUT_SECONDS = 30
-
-
-def _quote_identifier(name: str) -> str:
-    """Quote an identifier for interpolation into a query.
-
-    Table and column names cannot be passed as query parameters — they are
-    identifiers, not values — so they have to be interpolated, which makes this
-    the one place in the adapter where injection is possible. Backtick-quoting
-    with internal backticks doubled is ClickHouse's own escaping rule.
-    """
-    return "`" + name.replace("`", "``") + "`"
 
 
 def _classify_failure(exc: Exception) -> ConnectionFailure:
@@ -207,8 +198,8 @@ class ClickHouseSourceConnector:
         sample size travels with the result so no statistic is ever presented
         without the size of its evidence.
         """
-        column = _quote_identifier(field_name)
-        qualified = f"{_quote_identifier(database)}.{_quote_identifier(table)}"
+        column = quote_identifier(field_name)
+        qualified = qualify(database, table)
         values_expr = (
             f"arraySlice(groupUniqArray(toString({column})), 1, 5)"
             if include_sample_values
@@ -317,7 +308,12 @@ class ClickHouseSourceConnector:
             left_distinct=int(left_distinct),
             right_distinct=int(right_distinct),
             matched_distinct=int(matched),
-            sampled_rows=max(int(left_rows), int(right_rows)),
+            # The *smaller* side, because the sample-size ceiling exists to
+            # bound confidence by the weakest evidence supporting it. A 50-row
+            # lookup joined against 20,000 fact rows rests on 50 rows, and
+            # reporting the larger number would lift the ceiling to 1.0 on
+            # evidence that does not support it.
+            sampled_rows=min(int(left_rows), int(right_rows)),
             left_is_unique=int(left_distinct) == int(left_rows) and int(left_rows) > 0,
             right_is_unique=(
                 int(right_distinct) == int(right_rows) and int(right_rows) > 0
@@ -352,7 +348,7 @@ class ClickHouseSourceConnector:
             left_distinct=left_stats[0],
             right_distinct=right_stats[0],
             matched_distinct=matched,
-            sampled_rows=max(left_stats[1], right_stats[1]),
+            sampled_rows=min(left_stats[1], right_stats[1]),
             left_is_unique=left_stats[0] == left_stats[1] and left_stats[1] > 0,
             right_is_unique=right_stats[0] == right_stats[1] and right_stats[1] > 0,
         )
@@ -360,9 +356,9 @@ class ClickHouseSourceConnector:
     def _distinct_subquery(self, side: tuple[str, str, str]) -> str:
         database, table, column = side
         return (
-            f"SELECT {_quote_identifier(column)} AS v "
-            f"FROM {_quote_identifier(database)}.{_quote_identifier(table)} "
-            f"WHERE {_quote_identifier(column)} IS NOT NULL "
+            f"SELECT {quote_identifier(column)} AS v "
+            f"FROM {qualify(database, table)} "
+            f"WHERE {quote_identifier(column)} IS NOT NULL "
             f"LIMIT %(limit)s"
         )
 

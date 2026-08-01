@@ -29,6 +29,8 @@ from zentra_application_connector import (
 )
 from zentra_domain_connector import UploadFormat
 
+from .sql import qualify, quote_identifier
+
 #: The database uploads land in. Never the audit ledger's database.
 UPLOAD_DATABASE = "zentra_uploads"
 
@@ -267,20 +269,22 @@ class ClickHouseLandingZone:
         upload_format: UploadFormat,
     ) -> None:
         column_ddl = ", ".join(
-            f"`{c.name}` {c.declared_type}"
+            f"{quote_identifier(c.name)} {c.declared_type}"
             for c in sorted(columns, key=lambda c: c.position)
         )
         client = self._client()
         try:
-            client.command(f"CREATE DATABASE IF NOT EXISTS `{self._database}`")
+            client.command(
+                f"CREATE DATABASE IF NOT EXISTS {quote_identifier(self._database)}"
+            )
             # ORDER BY tuple() because an uploaded file has no key we know of.
             # Inventing one from the first column would impose an ordering the
             # data does not have and would change query behaviour silently.
             client.command(
-                f"CREATE TABLE IF NOT EXISTS `{self._database}`.`{table}` "
+                f"CREATE TABLE IF NOT EXISTS {qualify(self._database, table)} "
                 f"({column_ddl}) ENGINE = MergeTree ORDER BY tuple()"
             )
-            target = f"`{self._database}`.`{table}`"
+            target = qualify(self._database, table)
             if upload_format is UploadFormat.CSV:
                 client.raw_insert(
                     table=target, insert_block=payload, fmt="CSVWithNames"
@@ -296,7 +300,7 @@ class ClickHouseLandingZone:
         client = self._client()
         try:
             result = client.query(
-                f"SELECT count() FROM `{self._database}`.`{table}`"
+                f"SELECT count() FROM {qualify(self._database, table)}"
             )
             return int(result.result_rows[0][0]) if result.result_rows else 0
         finally:
@@ -312,7 +316,7 @@ class ClickHouseLandingZone:
         def run() -> None:
             client = self._client()
             try:
-                client.command(f"DROP TABLE IF EXISTS `{database}`.`{table}`")
+                client.command(f"DROP TABLE IF EXISTS {qualify(database, table)}")
             finally:
                 client.close()
 

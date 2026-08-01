@@ -107,7 +107,7 @@ outstanding. See `ch-nexus/ui-monorepo#2` and its child tickets.
 Phase 1 targeted suites, the agent eval suites, and local integrations pass
 against scripted model responses.
 
-The Connector's 135 tests (91 at the ConnectorService seam, 37 adapter, 7
+The Connector's 138 tests (91 at the ConnectorService seam, 40 adapter, 7
 contract) run entirely against in-memory fakes. **No connector
 code has been executed against a live ClickHouse instance**, so real dialect
 behaviour and `system.*` semantics are unverified; a manual pass is required

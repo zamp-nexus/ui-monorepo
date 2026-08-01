@@ -37,8 +37,8 @@ from zentra_adapter_clickhouse.landing_zone import (
 from zentra_adapter_clickhouse.source_connector import (
     ClickHouseSourceConnector,
     _classify_failure,
-    _quote_identifier,
 )
+from zentra_adapter_clickhouse.sql import qualify, quote_identifier
 
 CREDENTIALS = SourceCredentials(
     host="warehouse.example",
@@ -93,14 +93,19 @@ def test_cipher_conforms_to_its_port() -> None:
 )
 def test_identifiers_are_quoted_and_escaped(raw: str, expected: str) -> None:
     """Identifiers cannot be parameterised, so this is the injection boundary."""
-    assert _quote_identifier(raw) == expected
+    assert quote_identifier(raw) == expected
 
 
 def test_a_backtick_injection_attempt_stays_inside_the_quotes() -> None:
     hostile = "x` FROM system.users --"
-    quoted = _quote_identifier(hostile)
+    quoted = quote_identifier(hostile)
     assert quoted.startswith("`") and quoted.endswith("`")
     assert "``" in quoted
+
+
+def test_qualified_names_escape_both_halves() -> None:
+    """The landing zone once inlined raw backticks here; both halves must escape."""
+    assert qualify("db`x", "t`y") == "`db``x`.`t``y`"
 
 
 # --------------------------------------------------------------- failures
@@ -243,3 +248,51 @@ def test_a_key_is_read_from_the_environment(monkeypatch) -> None:
     cipher = AesGcmCredentialCipher.from_env()
 
     assert cipher.open(cipher.seal(CREDENTIALS)) == CREDENTIALS
+
+
+# ------------------------------------------------------- overlap measurement
+
+
+class _StubClient:
+    """A client that returns one prepared row, so SQL is not under test here."""
+
+    def __init__(self, row: tuple) -> None:
+        self.row = row
+
+    def query(self, sql: str, parameters: dict | None = None):
+        return type("Result", (), {"result_rows": [self.row]})()
+
+
+def test_sample_size_reflects_the_smaller_side(monkeypatch) -> None:
+    """The ceiling must bound confidence by the *weakest* evidence.
+
+    Regression: this reported the larger side, so a 50-row lookup joined against
+    20,000 fact rows claimed a 20,000-row sample and lifted the sample-size
+    ceiling to 1.0 on evidence that did not support it.
+    """
+    connector = ClickHouseSourceConnector()
+    # left_distinct, right_distinct, matched, left_rows, right_rows
+    monkeypatch.setattr(
+        connector, "_connect", lambda creds: _StubClient((50, 900, 50, 50, 20_000))
+    )
+
+    overlap = connector._overlap_single_instance(
+        CREDENTIALS, ("db", "lookup", "id"), ("db", "facts", "lookup_id"), 10_000
+    )
+
+    assert overlap.sampled_rows == 50
+
+
+def test_uniqueness_is_derived_per_side(monkeypatch) -> None:
+    """Direction depends on which side is unique, so each is judged separately."""
+    connector = ClickHouseSourceConnector()
+    monkeypatch.setattr(
+        connector, "_connect", lambda creds: _StubClient((50, 900, 50, 50, 20_000))
+    )
+
+    overlap = connector._overlap_single_instance(
+        CREDENTIALS, ("db", "lookup", "id"), ("db", "facts", "lookup_id"), 10_000
+    )
+
+    assert overlap.left_is_unique is True
+    assert overlap.right_is_unique is False
