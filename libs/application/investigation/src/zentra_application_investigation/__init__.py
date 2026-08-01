@@ -33,6 +33,23 @@ from .ports import (
     TenantPolicyRepository,
 )
 from .service import InvestigationService
+from .workspace_dto import (
+    GroupDetail,
+    OrganizationConflictError,
+    OrganizationCursor,
+    OrganizationCursorError,
+    OrganizationNameConflictError,
+    OrganizationNotFoundError,
+    OrganizationPage,
+    OrganizationSlice,
+    ProjectDetail,
+)
+from .workspace_ports import (
+    OrganizationRepository,
+    OrganizationUnitOfWork,
+    OrganizationUnitOfWorkFactory,
+)
+from .workspace_service import OrganizationService
 
 __all__ = [
     "SCENARIOS",
@@ -64,4 +81,17 @@ __all__ = [
     "TenantPolicyRepository",
     "TimelineEntry",
     "UnsupportedScenarioError",
+    "GroupDetail",
+    "ProjectDetail",
+    "OrganizationConflictError",
+    "OrganizationCursor",
+    "OrganizationCursorError",
+    "OrganizationNameConflictError",
+    "OrganizationNotFoundError",
+    "OrganizationPage",
+    "OrganizationSlice",
+    "OrganizationRepository",
+    "OrganizationService",
+    "OrganizationUnitOfWork",
+    "OrganizationUnitOfWorkFactory",
 ]
