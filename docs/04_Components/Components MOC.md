@@ -19,6 +19,7 @@ repo_path: apps
 
 - [[FastAPI Service]]
 - [[Forensic Observatory]]
+- [[Chat Surface]]
 - [[Investigation Core]]
 - [[Postgres Adapter]]
 - [[ClickHouse Adapter]]

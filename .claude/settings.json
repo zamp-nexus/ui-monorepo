@@ -42,7 +42,23 @@
       "Bash(curl -s -o /dev/null -w \"ready:%{http_code}  \" http://localhost:8000/health/ready)",
       "Bash(git merge *)",
       "Bash(TEST_DATABASE_OWNER_URL=\"postgresql+psycopg://zentra_owner:zentra_owner@localhost:5432/zentra_control\" TEST_DATABASE_RUNTIME_URL=\"postgresql+psycopg://zentra_app:zentra_app@localhost:5432/zentra_control\" uv run pytest /private/tmp/claude-501/-Users-satyam-Documents-clickhouse-ui-monorepo/d5b90cff-2695-49b4-a40d-50aa446db7e5/scratchpad/mainwt/libs/adapters/postgres/tests/test_draft_finding_migration.py -q)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(git check-ignore *)",
+      "Bash(node -e \"const p=require\\('./apps/zentra-os/package.json'\\);console.log\\(JSON.stringify\\(p.dependencies,null,1\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/@thesysai/genui-sdk/package.json'\\);console.log\\(p.version, JSON.stringify\\(p.exports\\)\\)\")",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>{const p=JSON.parse\\(s\\);console.log\\(p.version\\);console.log\\(JSON.stringify\\(p.exports||p.main,null,1\\)\\)}\\)\")",
+      "Bash(node -e \"const p=require\\('/Users/satyam/Documents/clickhouse/ui-monorepo/apps/zentra-os/node_modules/@thesysai/genui-sdk/package.json'\\);console.log\\(p.version\\);console.log\\(JSON.stringify\\(p.exports,null,1\\)\\)\")",
+      "Bash(node -e \"const p=require\\('/Users/satyam/Documents/clickhouse/ui-monorepo/apps/zentra-os/node_modules/@crayonai/react-ui/package.json'\\);console.log\\(JSON.stringify\\(Object.keys\\(p.exports\\),null,1\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>{try{const o=JSON.parse\\(s\\);const p=Object.keys\\(o.paths\\).sort\\(\\);console.log\\('ROUTES:',p.length\\);p.forEach\\(x=>console.log\\(' ',x\\)\\)}catch\\(e\\){console.log\\('no json:',s.slice\\(0,200\\)\\)}}\\)\")",
+      "Bash(kill 13505 13506)",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>{try{const p=Object.keys\\(JSON.parse\\(s\\).paths\\);console.log\\('ROUTES:',p.length\\);console.log\\(p.filter\\(x=>/agents|groups|projects|threads|visualiz/.test\\(x\\)\\).join\\('\\\\n'\\)\\)}catch\\(e\\){console.log\\('not up yet'\\)}}\\)\")",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>console.log\\(JSON.stringify\\(JSON.parse\\(s\\),null,1\\)\\)\\)\")",
+      "Bash(grep -A 25 \"carries the whole answer when the renderer produced nothing$\")",
+      "Bash(grep -vE \"^$\")",
+      "Bash(node -e \"console.log\\(Buffer.from\\('ZGVzaXJlZC1qYWNrYWwtNjUuY2xlcmsuYWNjb3VudHMuZGV2JA','base64'\\).toString\\(\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8000/v1/context)",
+      "Bash(npx prettier *)"
     ]
   },
   "enabledPlugins": {
