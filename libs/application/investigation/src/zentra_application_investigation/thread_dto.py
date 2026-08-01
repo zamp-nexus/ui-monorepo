@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -49,8 +49,11 @@ class ThreadCursor:
         try:
             padded = value + "=" * (-len(value) % 4)
             payload = json.loads(base64.urlsafe_b64decode(padded).decode())
+            activity_at = datetime.fromisoformat(payload["activity_at"])
+            if activity_at.tzinfo is None or activity_at.utcoffset() is None:
+                raise ValueError("Cursor timestamps must include a UTC offset")
             return cls(
-                activity_at=datetime.fromisoformat(payload["activity_at"]),
+                activity_at=activity_at.astimezone(UTC),
                 thread_id=UUID(payload["thread_id"]),
             )
         except (

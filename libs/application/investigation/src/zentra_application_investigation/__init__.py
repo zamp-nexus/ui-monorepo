@@ -47,11 +47,8 @@ from .thread_dto import (
     ThreadSummary,
 )
 from .thread_ports import ThreadRepository, ThreadUnitOfWork, ThreadUnitOfWorkFactory
-from .thread_service import (
-    ThreadService,
-    deterministic_thread_title,
-    route_governed_question,
-)
+from .thread_routing import deterministic_thread_title, route_governed_question
+from .thread_service import ThreadService
 from .workspace_dto import (
     GroupDetail,
     OrganizationConflictError,

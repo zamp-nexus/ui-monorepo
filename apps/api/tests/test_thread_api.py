@@ -15,6 +15,8 @@ from zentra_application_investigation import (
 )
 from zentra_domain_investigation import ThreadMessageKind, ThreadStatus
 
+from zentra_api.thread_schemas import ThreadResponse
+
 from .test_api import client
 
 AUTH = {"Authorization": "Bearer valid"}
@@ -187,7 +189,8 @@ def test_thread_conflicts_have_stable_codes(monkeypatch) -> None:
 
 def test_openapi_exposes_thread_operations() -> None:
     with client(threads=ThreadStub()) as test_client:
-        paths = test_client.get("/openapi.json").json()["paths"]
+        openapi = test_client.get("/openapi.json").json()
+        paths = openapi["paths"]
 
     assert {
         "/v1/projects/{project_id}/threads",
@@ -197,3 +200,7 @@ def test_openapi_exposes_thread_operations() -> None:
         "/v1/threads/{thread_id}/restore",
     } <= set(paths)
     assert "delete" in paths["/v1/threads/{thread_id}"]
+    example = openapi["components"]["schemas"]["ThreadResponse"]["examples"][0]
+    assert ThreadResponse.model_validate(example).messages[1].kind == (
+        ThreadMessageKind.ROUTER_CLARIFICATION.value
+    )

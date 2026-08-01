@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
@@ -15,7 +14,7 @@ from zentra_domain_investigation import (
     ThreadTransitionError,
 )
 
-from .dto import SCENARIOS, AuthenticatedActor, PermissionDeniedError, Role, Scenario
+from .dto import AuthenticatedActor, PermissionDeniedError, Role
 from .thread_dto import (
     RoutingDisposition,
     RoutingResult,
@@ -27,81 +26,15 @@ from .thread_dto import (
     ThreadPage,
 )
 from .thread_ports import ThreadUnitOfWork, ThreadUnitOfWorkFactory
+from .thread_routing import (
+    deterministic_thread_title,
+    route_draft_messages,
+    route_governed_question,
+)
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
 THREAD_MUTATOR_ROLES = frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER})
-
-_EU_REQUIREMENTS = (
-    frozenset({"refund", "refunds"}),
-    frozenset({"eu", "europe", "european"}),
-    frozenset({"june"}),
-    frozenset({"july"}),
-)
-_NA_REQUIREMENTS = (
-    frozenset({"channel", "channels"}),
-    frozenset({"north america", "na"}),
-    frozenset({"revenue", "sales"}),
-    frozenset({"october", "oct"}),
-    frozenset({"november", "nov"}),
-)
-
-
-def _routing_tokens(value: str) -> set[str]:
-    normalized = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
-    tokens = set(normalized.split())
-    if "north america" in normalized:
-        tokens.add("north america")
-    return tokens
-
-
-def _matches(tokens: set[str], requirements: tuple[frozenset[str], ...]) -> bool:
-    return all(tokens & requirement for requirement in requirements)
-
-
-def route_governed_question(value: str) -> RoutingResult:
-    tokens = _routing_tokens(value)
-    matches: list[Scenario] = []
-    if _matches(tokens, _EU_REQUIREMENTS):
-        matches.append(SCENARIOS["eu_refund_spike"])
-    if _matches(tokens, _NA_REQUIREMENTS):
-        matches.append(SCENARIOS["na_channel_growth"])
-    suggestions = tuple(scenario.question for scenario in SCENARIOS.values())
-    if len(matches) == 1:
-        scenario = matches[0]
-        return RoutingResult(
-            disposition=RoutingDisposition.RESOLVED,
-            scenario_key=scenario.key,
-            canonical_question=scenario.question,
-            clarification=None,
-            suggestions=(),
-        )
-    if len(matches) > 1:
-        return RoutingResult(
-            disposition=RoutingDisposition.AMBIGUOUS,
-            scenario_key=None,
-            canonical_question=None,
-            clarification=(
-                "I can answer one governed question at a time. "
-                "Please choose one supported question."
-            ),
-            suggestions=suggestions,
-        )
-    return RoutingResult(
-        disposition=RoutingDisposition.UNSUPPORTED,
-        scenario_key=None,
-        canonical_question=None,
-        clarification=(
-            "I could not map that message to a governed question. "
-            "Please choose or rephrase one supported question."
-        ),
-        suggestions=suggestions,
-    )
-
-
-def deterministic_thread_title(value: str) -> str:
-    title = " ".join(value.split())
-    return title if len(title) <= 80 else f"{title[:79].rstrip()}…"
 
 
 class ThreadService:
@@ -184,7 +117,10 @@ class ThreadService:
                 content=content,
                 now=now,
             )
-            routing = route_governed_question(message.content)
+            existing_messages = await unit_of_work.threads.messages_for_thread(
+                thread_id
+            )
+            routing = route_draft_messages(existing_messages + (message,))
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
             investigation_id, _ = await self._apply_routing(
