@@ -1944,6 +1944,7 @@ version = "1.0.0"
 source = { editable = "libs/adapters/sequence-execution" }
 dependencies = [
     { name = "chdb" },
+    { name = "clickhouse-connect" },
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "zentra-adapter-postgres" },
@@ -1954,6 +1955,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "chdb", specifier = ">=3.0,<4" },
+    { name = "clickhouse-connect", specifier = ">=0.8,<1" },
     { name = "pyarrow", specifier = ">=18,<22" },
     { name = "pydantic", specifier = ">=2.12,<3" },
     { name = "zentra-adapter-postgres", editable = "libs/adapters/postgres" },
