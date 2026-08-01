@@ -59,6 +59,7 @@ from zentra_adapter_postgres.schema import (
     users,
 )
 from zentra_api.audit_delivery import AuditDeliveryCoordinator
+from zentra_api.cube_auth import mint_cube_token
 from zentra_api.pipeline import (
     LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
@@ -182,7 +183,12 @@ def _assemble(
     model: ModelPort,
 ) -> tuple[InvestigationService, AuditRepository]:
     """Everything below the model seam, identical whichever client is above it."""
-    cube = CubeClient(settings.cube_url, settings.cube_api_secret)
+    cube_token = (
+        mint_cube_token(None, None, None, secret=settings.cube_api_secret)
+        if settings.cube_api_secret
+        else None
+    )
+    cube = CubeClient(settings.cube_url, cube_token)
     semantic_layer = CubeSemanticLayer(cube)
     uow = PostgresInvestigationUnitOfWorkFactory(database)
     graph = InvestigationGraph(

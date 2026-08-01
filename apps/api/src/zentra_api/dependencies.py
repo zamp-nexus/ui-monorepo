@@ -35,6 +35,7 @@ from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
+from .cube_auth import mint_cube_token
 from .pipeline import (
     LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
@@ -69,7 +70,18 @@ class AppDependencies:
             database=settings.clickhouse_database,
             secure=settings.clickhouse_secure,
         )
-        cube = CubeClient(settings.cube_url, settings.cube_api_secret)
+        # Cube's checkAuth verifies a signed JWT, not the raw secret — the
+        # secret is the signing key, never the token itself. No tenant/Data
+        # Connection context yet: this shared instance still serves only the
+        # demo warehouse, so every claim is absent and Cube's contextToAppId
+        # falls back to its single "system" appId. Phase 2 replaces this
+        # boot-time singleton with a per-investigation, per-tenant instance.
+        cube_token = (
+            mint_cube_token(None, None, None, secret=settings.cube_api_secret)
+            if settings.cube_api_secret
+            else None
+        )
+        cube = CubeClient(settings.cube_url, cube_token)
         semantic_layer = CubeSemanticLayer(cube)
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
