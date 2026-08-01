@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(uv run *)",
+      "Bash(git rebase *)",
+      "Bash(git stash *)"
+    ]
+  },
   "enabledPlugins": {
     "nx@nx-claude-plugins": true
   },
@@ -9,10 +16,5 @@
         "repo": "nrwl/nx-ai-agents-config"
       }
     }
-  },
-  "permissions": {
-    "allow": [
-      "Bash(uv run *)"
-    ]
   }
 }
