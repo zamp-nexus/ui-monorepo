@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 from uuid import UUID
 
@@ -19,12 +19,19 @@ from zentra_domain_investigation import (
     DraftFinding,
     ErasureOperation,
     EvidenceCitation,
+    ExecutionJob,
     HumanApproval,
     Investigation,
+    ThreadEvent,
     Tombstone,
+    VisualizationActionMapping,
+    VisualizationArtifact,
+    VisualizationBriefV1,
+    WorkFeedEventKind,
+    WorkFeedPayload,
 )
 
-from .dto import PipelineResult, TimelineEntry
+from .dto import PipelineResult, TimelineEntry, UsageSummary
 
 
 class InvestigationPipeline(Protocol):
@@ -56,6 +63,15 @@ class InvestigationRepository(Protocol):
         expected_version: int,
     ) -> None: ...
 
+    async def latest_for_thread(
+        self,
+        thread_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> Investigation | None: ...
+
+    async def all_for_thread(self, thread_id: UUID) -> tuple[Investigation, ...]: ...
+
 
 class HumanApprovalRepository(Protocol):
     async def add(self, approval: HumanApproval) -> None: ...
@@ -73,6 +89,36 @@ class HumanApprovalRepository(Protocol):
 
 class AgentExecutionRepository(Protocol):
     async def add(self, execution: AgentExecutionRecord) -> None: ...
+
+    async def usage_for_investigation(self, investigation_id: UUID) -> UsageSummary: ...
+
+
+class ExecutionJobRepository(Protocol):
+    async def add_job(self, job: ExecutionJob) -> None: ...
+
+    async def claim_next(
+        self,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_for: timedelta,
+    ) -> ExecutionJob | None: ...
+
+    async def get_job(
+        self,
+        job_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ExecutionJob | None: ...
+
+    async def get_for_investigation(
+        self,
+        investigation_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ExecutionJob | None: ...
+
+    async def save_job(self, job: ExecutionJob) -> None: ...
 
 
 class EvidenceCitationRepository(Protocol):
@@ -113,6 +159,46 @@ class ErasureRepository(Protocol):
     ) -> ErasureOperation: ...
 
 
+class VisualizationRepository(Protocol):
+    async def create(
+        self,
+        *,
+        brief_id: UUID,
+        brief: VisualizationBriefV1,
+        renderer_configuration: str,
+        artifact: VisualizationArtifact,
+        actions: Sequence[VisualizationActionMapping],
+    ) -> None: ...
+
+    async def add_retry(
+        self, artifact: VisualizationArtifact, *, retry_ordinal: int
+    ) -> None: ...
+
+    async def brief(self, brief_id: UUID) -> VisualizationBriefV1 | None: ...
+
+    async def get(
+        self, visualization_id: UUID, *, for_update: bool = False
+    ) -> VisualizationArtifact | None: ...
+
+    async def latest_for_investigation(
+        self, investigation_id: UUID
+    ) -> VisualizationArtifact | None: ...
+
+    async def next_retry_ordinal(self, brief_id: UUID) -> int: ...
+
+    async def save(self, artifact: VisualizationArtifact) -> None: ...
+
+    async def action(
+        self, visualization_id: UUID, action_id: UUID, *, for_update: bool = False
+    ) -> VisualizationActionMapping | None: ...
+
+    async def save_action(self, action: VisualizationActionMapping) -> None: ...
+
+    async def erase(
+        self, investigation_id: UUID, *, category: str, now: datetime
+    ) -> None: ...
+
+
 class DraftFindingRepository(Protocol):
     async def add(self, draft: DraftFinding) -> None: ...
 
@@ -132,20 +218,55 @@ class AuditOutboxRepository(Protocol):
     async def enqueue(self, events: Sequence[DomainEvent]) -> None: ...
 
 
+class WorkFeedRepository(Protocol):
+    async def append(
+        self,
+        *,
+        tenant_id: UUID,
+        thread_id: UUID,
+        kind: WorkFeedEventKind,
+        payload: WorkFeedPayload,
+        occurred_at: datetime,
+        event_id: UUID | None = None,
+    ) -> ThreadEvent: ...
+
+    async def append_for_investigation(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        kind: WorkFeedEventKind,
+        payload: WorkFeedPayload,
+        occurred_at: datetime,
+        event_id: UUID | None = None,
+    ) -> ThreadEvent | None: ...
+
+    async def events_after(
+        self, thread_id: UUID, *, after: int, limit: int = 500
+    ) -> tuple[ThreadEvent, ...]: ...
+
+    async def latest_sequence(self, thread_id: UUID) -> int: ...
+
+
 class InvestigationUnitOfWork(Protocol):
     investigations: InvestigationRepository
     approvals: HumanApprovalRepository
     agent_executions: AgentExecutionRepository
+    jobs: ExecutionJobRepository
     draft_findings: DraftFindingRepository
     citations: EvidenceCitationRepository
     erasures: ErasureRepository
     policies: TenantPolicyRepository
     outbox: AuditOutboxRepository
+    work_feed: WorkFeedRepository
+    visualizations: VisualizationRepository
 
     async def commit(self) -> None: ...
 
 
 class InvestigationUnitOfWorkFactory(Protocol):
+    async def bound_tenant_ids(self) -> tuple[UUID, ...]: ...
+
     def __call__(
         self,
         tenant_id: UUID,

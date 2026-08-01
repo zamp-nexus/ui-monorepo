@@ -124,9 +124,7 @@ class ErasureOperation:
         if completed and self.completed_at is None:
             raise ErasureError("A completed erasure must record when it completed")
         if not completed and self.completed_at is not None:
-            raise ErasureError(
-                "Only a completed erasure may record a completion time"
-            )
+            raise ErasureError("Only a completed erasure may record a completion time")
         if self.progress is ErasureProgress.FAILED and self.failure_code is None:
             raise ErasureError("A failed erasure must record why")
 

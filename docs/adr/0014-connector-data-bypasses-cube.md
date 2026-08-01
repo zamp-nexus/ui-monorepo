@@ -2,14 +2,14 @@
 id: adr-0014
 title: Connector-sourced data bypasses Cube
 type: adr
-status: superseded
+status: deprecated
 owner: unassigned
 source: repository
 created: 2026-08-01
 updated: 2026-08-01
 reviewed: 2026-08-01
 confidence: verified
-implementation: superseded
+implementation: unknown
 priority: high
 tags: [adr, connector, semantic-model, cube]
 related: ["[[Semantic Modeling]]", "[[Cube Semantic Model]]", "[[Connector Domain]]", "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"]

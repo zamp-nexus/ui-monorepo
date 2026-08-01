@@ -37,8 +37,9 @@ gate; neither is an Agent.
 
 ## Current boundary
 
-Three of the fourteen roles are implemented — Orchestrator, SQL Analyst, and
-Evaluator — and participate in every Investigation. Each is a registry row that
+Five public roles are exposed — Orchestrator, SQL Analyst, Evaluator, Insight,
+and Data Visualization. The first four participate in governed analytical work;
+the fifth is presentation-only after publication. Each is a registry row that
 the Orchestrator resolves at investigation start; a role with no enabled,
 eval-passing Agent causes the Investigation to refuse rather than proceed.
 
@@ -59,6 +60,13 @@ dimensions, not only member names. Without them an agent filtering
 The Semantic Layer Port is the only capability in the tree that reaches data.
 No raw-SQL port exists for an Agent to be granted, which is what makes the SQL
 Analyst's inability to see raw tables structural rather than instructed.
+
+The Data Visualization Agent is registered with a versioned presentation
+capability and receives only `VisualizationBriefV1`. It has no semantic-layer,
+repository, audit-reader, file, shell, MCP, approval, or arbitrary-tool access.
+Its served model, API version, tokens, cost, latency, and safe failure category
+are recorded separately from analytical usage. See
+[[adr/0020-thesys-terminal-presentation]].
 
 ## Phase 2 boundary
 

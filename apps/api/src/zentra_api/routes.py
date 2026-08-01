@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 from time import perf_counter
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     Request,
@@ -21,14 +19,13 @@ from zentra_adapter_telemetry import (
 )
 from zentra_application_investigation import (
     SCENARIOS,
-    AuthenticatedActor,
     ConflictError,
     InvestigationNotFoundError,
-    InvestigationService,
     PermissionDeniedError,
     ScenarioUnavailableError,
     UnsupportedScenarioError,
 )
+from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_investigation import Tombstone
 
 from .request_context import RequestContext, authenticated_context
@@ -43,6 +40,9 @@ from .schemas import (
     ReadinessResponse,
     ScenarioResponse,
     TombstoneResponse,
+    VisualizationActionRequest,
+    VisualizationActionResponse,
+    VisualizationResponse,
 )
 
 router = APIRouter()
@@ -67,13 +67,18 @@ async def ready(request: Request) -> JSONResponse:
         name: DependencyStatus(status="ready" if healthy else "unavailable")
         for name, healthy in zip(names, checks, strict=True)
     }
-    is_ready = all(checks)
+    thesys_configured = bool(request.app.state.settings.thesys_api_key)
+    statuses["thesys"] = DependencyStatus(
+        status="ready" if thesys_configured else "unavailable"
+    )
+    is_ready = all(checks) and thesys_configured
     response = ReadinessResponse(
         status="ready" if is_ready else "degraded",
         dependencies=statuses,
         configuration={
             "clerk": bool(request.app.state.settings.clerk_issuer),
             "e2b": bool(request.app.state.settings.e2b_api_key),
+            "thesys": bool(request.app.state.settings.thesys_api_key),
             "telemetry_export": bool(
                 request.app.state.settings.otel_exporter_otlp_endpoint
             ),
@@ -123,6 +128,11 @@ async def scenarios(
     ]
 
 
+@router.get("/v1/agents", response_model=list[PublicAgent])
+async def agents(request: Request, _: AuthenticatedRequest) -> list[PublicAgent]:
+    return list(await request.app.state.dependencies.registry.public_agents())
+
+
 @router.post(
     "/v1/investigations",
     response_model=InvestigationDetailResponse,
@@ -131,7 +141,6 @@ async def scenarios(
 async def create_investigation(
     body: InvestigationCreateRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> InvestigationDetailResponse:
     investigations = request.app.state.dependencies.investigations
@@ -147,26 +156,7 @@ async def create_investigation(
     except ScenarioUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
-    # The agents run after the response is sent; the client polls GET for the
-    # timeline as each step lands.
-    background.add_task(
-        _run_pipeline,
-        investigations,
-        resolved.actor,
-        detail.investigation_id,
-    )
     return InvestigationDetailResponse.from_detail(detail)
-
-
-async def _run_pipeline(
-    investigations: InvestigationService,
-    actor: AuthenticatedActor,
-    investigation_id: UUID,
-) -> None:
-    with suppress(Exception):
-        # Failures are already recorded against the Investigation itself, so a
-        # background crash must not take the worker down with it.
-        await investigations.execute(actor, investigation_id)
 
 
 @router.get(
@@ -186,6 +176,140 @@ async def get_investigation(
     except InvestigationNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return InvestigationDetailResponse.from_detail(detail)
+
+
+@router.post(
+    "/v1/investigations/{investigation_id}/cancel",
+    response_model=InvestigationDetailResponse,
+)
+async def cancel_investigation(
+    investigation_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> InvestigationDetailResponse:
+    try:
+        detail = await request.app.state.dependencies.investigations.cancel(
+            resolved.actor, investigation_id
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except PermissionDeniedError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return InvestigationDetailResponse.from_detail(detail)
+
+
+@router.post(
+    "/v1/investigations/{investigation_id}/retry",
+    response_model=InvestigationDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def retry_investigation(
+    investigation_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> InvestigationDetailResponse:
+    try:
+        detail = await request.app.state.dependencies.investigations.retry(
+            resolved.actor, investigation_id
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except PermissionDeniedError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return InvestigationDetailResponse.from_detail(detail)
+
+
+@router.get(
+    "/v1/investigations/{investigation_id}/visualization",
+    response_model=VisualizationResponse,
+)
+async def investigation_visualization(
+    investigation_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> VisualizationResponse:
+    try:
+        detail = await request.app.state.dependencies.visualizations.for_investigation(
+            resolved.actor, investigation_id
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return VisualizationResponse.from_detail(detail)
+
+
+@router.get(
+    "/v1/visualizations/{visualization_id}",
+    response_model=VisualizationResponse,
+)
+async def get_visualization(
+    visualization_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> VisualizationResponse:
+    try:
+        detail = await request.app.state.dependencies.visualizations.get(
+            resolved.actor, visualization_id
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return VisualizationResponse.from_detail(detail)
+
+
+@router.post(
+    "/v1/visualizations/{visualization_id}/retry",
+    response_model=VisualizationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def retry_visualization(
+    visualization_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> VisualizationResponse:
+    try:
+        detail = await request.app.state.dependencies.visualizations.retry(
+            resolved.actor, visualization_id
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return VisualizationResponse.from_detail(detail)
+
+
+@router.post(
+    "/v1/visualizations/{visualization_id}/actions/{action_id}/execute",
+    response_model=VisualizationActionResponse,
+)
+async def execute_visualization_action(
+    visualization_id: UUID,
+    action_id: UUID,
+    body: VisualizationActionRequest,
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> VisualizationActionResponse:
+    # C1-generated parameters are intentionally ignored. The opaque action ID
+    # resolves to the server-stored mapping after tenant reauthorization.
+    del body
+    try:
+        result = await request.app.state.dependencies.visualizations.execute_action(
+            resolved.actor,
+            visualization_id=visualization_id,
+            action_id=action_id,
+        )
+    except InvestigationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return VisualizationActionResponse(
+        kind=result.kind,
+        citation_id=result.citation_id,
+        thread_id=result.thread_id,
+        investigation_id=result.investigation_id,
+    )
 
 
 @router.get(

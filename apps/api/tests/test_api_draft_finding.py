@@ -39,9 +39,7 @@ def structured_citation() -> EvidenceCitation:
         investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
         metric="refund_amount",
         filters=(
-            CitationFilter(
-                member="Commerce.region", operator="equals", values=("EU",)
-            ),
+            CitationFilter(member="Commerce.region", operator="equals", values=("EU",)),
         ),
         period="July 2026",
         grain="month",
@@ -85,8 +83,7 @@ def structured_draft() -> DraftFinding:
         contradictions=(Contradiction(detail="Recheck counted 8 rows, not 12."),),
         root_cause=RootCauseState.UNRESOLVED,
         confidence=ConfidenceOutcome(
-            score=0.42,
-            calibration_method="capped_sample_size"
+            score=0.42, calibration_method="capped_sample_size"
         ),
     )
 
@@ -124,9 +121,7 @@ def test_a_legacy_investigation_is_not_dressed_up_as_a_structured_draft(
     assert body["draft_finding"] is None
     # And the legacy shape is untouched — this is an additive change.
     assert body["finding"]["headline"] == "EU refunds rose $240 in July"
-    assert body["finding"]["evidence_references"] == [
-        "artifact://semantic/eu-refunds"
-    ]
+    assert body["finding"]["evidence_references"] == ["artifact://semantic/eu-refunds"]
 
 
 def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
@@ -136,9 +131,9 @@ def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
     service.detail = investigation_detail(
-            draft_finding=structured_draft(),
-            evidence_citations=(structured_citation(),),
-        )
+        draft_finding=structured_draft(),
+        evidence_citations=(structured_citation(),),
+    )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -173,9 +168,9 @@ def test_the_legacy_finding_is_still_served_beside_a_structured_draft(
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
     service.detail = investigation_detail(
-            draft_finding=structured_draft(),
-            evidence_citations=(structured_citation(),),
-        )
+        draft_finding=structured_draft(),
+        evidence_citations=(structured_citation(),),
+    )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -194,9 +189,9 @@ def test_the_api_distinguishes_measurement_from_interpretation(monkeypatch) -> N
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
     service.detail = investigation_detail(
-            draft_finding=structured_draft(),
-            evidence_citations=(structured_citation(),),
-        )
+        draft_finding=structured_draft(),
+        evidence_citations=(structured_citation(),),
+    )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -230,9 +225,9 @@ def test_root_cause_unresolved_is_reported_even_on_a_confident_draft(
     authenticated(monkeypatch)
     service = InvestigationServiceStub()
     service.detail = investigation_detail(
-            draft_finding=structured_draft(),
-            evidence_citations=(structured_citation(),),
-        )
+        draft_finding=structured_draft(),
+        evidence_citations=(structured_citation(),),
+    )
     with client(investigations=service) as test_client:
         response = test_client.get(
             "/v1/investigations/30000000-0000-0000-0000-000000000003",
@@ -513,7 +508,7 @@ def test_a_member_cannot_delete_evidence(monkeypatch) -> None:
 def test_deleting_a_live_investigation_is_a_conflict_not_a_refusal(
     monkeypatch,
 ) -> None:
-    """"Not yet" is a different answer from "not allowed", and a caller that
+    """ "Not yet" is a different answer from "not allowed", and a caller that
     conflated them would retry the wrong thing."""
     from zentra_application_investigation import ConflictError
 

@@ -9,6 +9,7 @@ from .agents.insight import (
 )
 from .agents.orchestrator import NoEnabledAgentError, OrchestratorAgent
 from .agents.sql_analyst import SqlAnalystAgent
+from .checkpoints import PostgresCheckpointStore
 from .graph import (
     InsightOutcome,
     InvestigationGraph,
@@ -27,6 +28,7 @@ __all__ = [
     "NoEnabledAgentError",
     "OrchestratorAgent",
     "PipelineOutcome",
+    "PostgresCheckpointStore",
     "SqlAnalystAgent",
     "UngroundedClaimError",
     "UnsupportedCausalClaimError",

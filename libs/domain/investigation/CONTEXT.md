@@ -13,6 +13,10 @@ user and router clarification messages without fabricating analytical work.
 Deterministic routing activates a Thread only when exactly one governed scenario
 matches.
 
+Follow-ups and retries create new immutable Investigations with linear parent,
+retry-of, and Thread-sequence lineage. Published Findings may create a strict
+Visualization Brief and independently retriable presentation artifact.
+
 ## Language
 
 **Investigation Status**:
@@ -54,3 +58,8 @@ _Avoid_: Evaluator run, confidence check
 **Validation Result**:
 Deterministic evidence stating which declared checks passed and which issues remain; it never invents confidence.
 _Avoid_: Fake confidence, quality score
+
+**Visualization Artifact**:
+One independently metered terminal presentation of a Visualization Brief,
+including renderer status, retry lineage, and erasure state.
+_Avoid_: Finding, analytical result, dashboard

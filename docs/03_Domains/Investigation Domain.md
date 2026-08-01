@@ -54,6 +54,20 @@ router clarification with the supported canonical questions. Routing and title
 generation make no model call. Once analytical work exists, the Thread cannot
 be hard-deleted; archive and restore preserve its evidence lineage.
 
+Each follow-up and retry is a new immutable Investigation. Linear parent,
+retry-of, and Thread-sequence fields preserve intent without rewriting a
+terminal attempt. A Thread may retain an unresolved follow-up clarification
+while remaining active. See [[adr/0017-linked-investigation-threads]].
+
+## Visualization Brief and artifact
+
+`VisualizationBriefV1` is the factual boundary between a published Finding and
+terminal presentation. It includes bounded measurements, claims, citations,
+caveats, outcome, confidence, view recommendation, and opaque allowlisted
+actions; raw rows and SQL are not fields. C1 artifacts have independent status,
+usage, retry lineage, and erasure state. See
+[[adr/0021-visualization-brief-factual-separation]].
+
 ## Lifecycle
 
 ```text

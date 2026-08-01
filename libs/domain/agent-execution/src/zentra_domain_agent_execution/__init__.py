@@ -1,5 +1,6 @@
 """ZentraOS agent execution domain contract"""
 
+from .catalogue import AgentCapability, PublicAgent
 from .contracts import (
     CANONICAL_ROLES,
     LEGACY_ROLES,
@@ -45,6 +46,7 @@ from .ports import (
 )
 
 __all__ = [
+    "AgentCapability",
     "AgentDescriptor",
     "AgentInput",
     "AgentOutput",
@@ -67,6 +69,7 @@ __all__ = [
     "merged_fallbacks",
     "OUTCOME_ADAPTER",
     "OutcomeSignal",
+    "PublicAgent",
     "RegisteredAgent",
     "SemanticCatalog",
     "SemanticDimension",

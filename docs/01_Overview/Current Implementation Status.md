@@ -46,6 +46,12 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Recorded cassettes of live runs under `evals/cassettes/`, replayed by
   `nx run evals:replay` to re-verify calibration offline at no cost.
 - OpenTelemetry trace correlation and configurable OTLP export.
+- Durable Postgres-leased analytical and visualization jobs with checkpoint
+  resume, cooperative cancellation, linked retry, and a resumable public Work
+  Feed.
+- Linear Investigation follow-ups, a five-Agent public roster, strict factual
+  Visualization Briefs, independently retriable Thesys C1 artifacts, safe
+  server-mapped actions, and visualization-aware evidence erasure.
 - The Connector context: Data Sources (connected and uploaded), immutable Catalog
   Versions, Field Profiles bounded by explicit query budgets, and Relations
   inferred from name affinity, type compatibility, and value overlap measured at

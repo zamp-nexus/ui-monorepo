@@ -7,6 +7,7 @@ from .connector_catalog import (
     PostgresRelationRepository,
 )
 from .database import Database
+from .execution_job import PostgresExecutionJobRepository
 from .identity import (
     IdentityContext,
     IdentityNotBoundError,
@@ -24,6 +25,8 @@ from .thread import (
     PostgresThreadUnitOfWork,
     PostgresThreadUnitOfWorkFactory,
 )
+from .visualization import PostgresVisualizationRepository
+from .work_feed import PostgresWorkFeedRepository
 from .workspace import (
     PostgresOrganizationRepository,
     PostgresOrganizationUnitOfWork,
@@ -39,6 +42,7 @@ __all__ = [
     "PostgresCatalogRepository",
     "PostgresDataSourceRepository",
     "PostgresHarvestRunRepository",
+    "PostgresExecutionJobRepository",
     "PostgresInvestigationUnitOfWork",
     "PostgresInvestigationUnitOfWorkFactory",
     "PostgresOrganizationRepository",
@@ -48,6 +52,8 @@ __all__ = [
     "PostgresThreadRepository",
     "PostgresThreadUnitOfWork",
     "PostgresThreadUnitOfWorkFactory",
+    "PostgresWorkFeedRepository",
+    "PostgresVisualizationRepository",
     "metadata",
     "resolve_identity_context",
 ]
