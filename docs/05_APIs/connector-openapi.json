@@ -1,6 +1,61 @@
 {
   "components": {
     "schemas": {
+      "AgentAccessResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_visible": {
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
+          "data_source_id": {
+            "format": "uuid",
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "decided_by": {
+            "format": "uuid",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "field_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Name"
+          },
+          "override_id": {
+            "format": "uuid",
+            "title": "Override Id",
+            "type": "string"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "override_id",
+          "data_source_id",
+          "table_name",
+          "field_name",
+          "agent_visible",
+          "decided_by",
+          "decided_at"
+        ],
+        "title": "AgentAccessResponse",
+        "type": "object"
+      },
       "AgentCapability": {
         "additionalProperties": false,
         "properties": {
@@ -1303,6 +1358,11 @@
       "FieldResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent_visible": {
+            "default": true,
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
           "declared_type": {
             "title": "Declared Type",
             "type": "string"
@@ -2391,6 +2451,20 @@
         "title": "ScenarioResponse",
         "type": "object"
       },
+      "SetAgentAccessRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_visible": {
+            "title": "Agent Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent_visible"
+        ],
+        "title": "SetAgentAccessRequest",
+        "type": "object"
+      },
       "SourceCredentialsRequest": {
         "additionalProperties": false,
         "description": "Credentials on the way in. Write-only: nothing returns this shape.",
@@ -2596,6 +2670,11 @@
       "TableResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent_visible": {
+            "default": true,
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
           "database": {
             "title": "Database",
             "type": "string"
@@ -5191,6 +5270,171 @@
           }
         },
         "summary": "Start Harvest",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/agent-access": {
+      "patch": {
+        "operationId": "set_table_agent_access_v1_connector_sources__data_source_id__tables__table_name__agent_access_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Table Agent Access",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/fields/{field_name}/agent-access": {
+      "patch": {
+        "operationId": "set_field_agent_access_v1_connector_sources__data_source_id__tables__table_name__fields__field_name__agent_access_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "field_name",
+            "required": true,
+            "schema": {
+              "title": "Field Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Field Agent Access",
         "tags": [
           "connector"
         ]

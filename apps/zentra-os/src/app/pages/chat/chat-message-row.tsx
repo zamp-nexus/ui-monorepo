@@ -1,16 +1,30 @@
 import { Icon } from '@open-zentra/foundation-icons';
-import { Link } from 'react-router-dom';
 
 import { Markdown } from '../../components/markdown';
 import type { ChatMessage } from '../../types';
 
 /**
- * One turn of the conversation.
+ * One message in the conversation.
  *
- * The question is shown as written — plain text in a bubble. The answer is
- * markdown from an agent, so it is parsed and laid out as a document.
+ * The question is shown as written — plain text in a bubble. A published answer
+ * is *not* a message and is not rendered here; it lives on the Investigation
+ * and is rendered by `AnswerRow`.
+ *
+ * That leaves the `router_clarification`: the server saying it could not map
+ * the question to governed work. It is rendered with the supported questions as
+ * chips, because telling someone "no" without telling them what "yes" looks
+ * like is a dead end.
  */
-export const ChatMessageRow = ({ message }: { readonly message: ChatMessage }) => {
+export const ChatMessageRow = ({
+  message,
+  suggestions,
+  onChoose,
+}: {
+  readonly message: ChatMessage;
+  /** Supported canonical questions, present only on a clarification. */
+  readonly suggestions: readonly string[];
+  readonly onChoose: (prompt: string) => void;
+}) => {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -21,27 +35,34 @@ export const ChatMessageRow = ({ message }: { readonly message: ChatMessage }) =
     );
   }
 
+  const clarification = message.kind === 'router_clarification';
+
   return (
     <div className="flex gap-4">
       <span
         className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-accent text-accent-foreground"
         aria-hidden="true"
       >
-        <Icon name="sparkles" size="sm" />
+        <Icon name={clarification ? 'help_circle' : 'sparkles'} size="sm" />
       </span>
 
       <div className="min-w-0 flex-1">
         <Markdown>{message.content}</Markdown>
 
-        {/* Where the answer came from, not just what it said. */}
-        {message.investigation_id ? (
-          <Link
-            className="mt-4 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-primary no-underline hover:underline"
-            to={`/investigations/${message.investigation_id}`}
-          >
-            <Icon name="search" size="sm" />
-            Open the evidence trace
-          </Link>
+        {clarification && suggestions.length > 0 ? (
+          <ul className="mt-4 flex list-none flex-wrap gap-2 p-0">
+            {suggestions.map((prompt) => (
+              <li key={prompt}>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border border-border bg-background px-3 py-1.5 text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
+                  onClick={() => onChoose(prompt)}
+                >
+                  {prompt}
+                </button>
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
     </div>

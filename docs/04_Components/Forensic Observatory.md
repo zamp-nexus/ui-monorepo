@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [component, frontend, react]
 aliases: [zentra-os, frontend]
-related: ["[[Components MOC]]", "[[User Workflows]]", "[[Investigation API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
+related: ["[[Components MOC]]", "[[Chat Surface]]", "[[User Workflows]]", "[[Investigation API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
 depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]", "[[Design Token Pipeline]]"]
 repo_path: apps/zentra-os
 code_refs:

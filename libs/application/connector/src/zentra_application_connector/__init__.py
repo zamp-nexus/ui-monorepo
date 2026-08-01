@@ -3,6 +3,7 @@
 from .dto import (
     HARVEST_ROLES,
     WRITE_ROLES,
+    AgentAccessView,
     AuthenticatedActor,
     CatalogVersionNotFoundError,
     ConflictError,
@@ -27,6 +28,7 @@ from .dto import (
 )
 from .harvesting import HarvestDependencies, execute_harvest
 from .ports import (
+    AgentAccessRepository,
     CatalogRepository,
     Clock,
     CredentialCipher,
@@ -37,11 +39,13 @@ from .ports import (
     SourceConnector,
 )
 from .service import ConnectorService
-from .views import to_relation_view, to_status, to_summary
+from .views import to_access_view, to_relation_view, to_status, to_summary
 
 __all__ = [
     "HARVEST_ROLES",
     "WRITE_ROLES",
+    "AgentAccessRepository",
+    "AgentAccessView",
     "AuthenticatedActor",
     "CatalogRepository",
     "CatalogVersionNotFoundError",
@@ -74,6 +78,7 @@ __all__ = [
     "UploadPreview",
     "UploadRejectedError",
     "execute_harvest",
+    "to_access_view",
     "to_relation_view",
     "to_status",
     "to_summary",

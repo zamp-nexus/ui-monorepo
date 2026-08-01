@@ -16,6 +16,14 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /**
+     * The stable error code, where the endpoint publishes one — the Thread and
+     * Workspace routes answer `{code, message}` rather than FastAPI's
+     * `{detail}`. A caller that only reads the status cannot tell
+     * `thread_conflict` (ask again once the Investigation finishes) from a
+     * conflict it should give up on, and those are different things to say.
+     */
+    readonly code: string | null = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -24,7 +32,7 @@ export class ApiError extends Error {
 
 export type TokenSource = () => Promise<string | null>;
 
-export const requestJson = async <T,>(
+export const requestJson = async <T>(
   url: string,
   getToken: TokenSource,
   options?: RequestInit,
@@ -41,11 +49,16 @@ export const requestJson = async <T,>(
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as {
       detail?: string;
+      code?: string;
+      message?: string;
     } | null;
     throw new ApiError(
-      error?.detail ?? 'ZentraOS could not complete this request.',
+      error?.detail ?? error?.message ?? 'ZentraOS could not complete this request.',
       response.status,
+      error?.code ?? null,
     );
   }
+  // 204 carries no body, and asking `json()` for one throws.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 };

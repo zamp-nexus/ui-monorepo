@@ -62,6 +62,10 @@ the Thread back to Draft or creating analytical work. Snapshot reads include the
 ordered Investigation collection while retaining singular `investigation_id` as
 the latest-attempt compatibility field. See [[adr/0017-linked-investigation-threads]].
 
+The consuming surface is [[Chat Surface]], which creates work only through
+Thread messages — never through `POST /v1/investigations`, the older standalone
+flow.
+
 Lists use stable activity-descending keyset pagination with opaque cursors,
 default size 50, and maximum size 100. Thread snapshots return server-decided
 action flags; clients do not derive permissions or lifecycle transitions. For

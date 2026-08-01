@@ -27,6 +27,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "catalog_versions",
         "relations",
         "harvest_runs",
+        "catalog_agent_access",
         "workspace_groups",
         "projects",
         "investigation_threads",

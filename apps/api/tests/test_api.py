@@ -107,7 +107,14 @@ def client(
         threads=threads,
     )
     app = create_app(
-        Settings(clerk_issuer="https://example.clerk.accounts.dev"),
+        Settings(
+            clerk_issuer="https://example.clerk.accounts.dev",
+            # `Settings` reads the repository `.env`, so a developer holding a
+            # real renderer key would otherwise change what readiness reports
+            # here. The harness states the renderer's absence rather than
+            # inheriting whatever the machine happens to be configured for.
+            thesys_api_key=None,
+        ),
         dependencies=dependencies,  # type: ignore[arg-type]
     )
     return TestClient(app)

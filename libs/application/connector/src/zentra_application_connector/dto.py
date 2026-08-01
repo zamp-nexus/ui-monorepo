@@ -247,6 +247,19 @@ class RelationView:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentAccessView:
+    """A table/field agent-visibility decision as an API caller sees it."""
+
+    override_id: UUID
+    data_source_id: UUID
+    table_name: str
+    field_name: str | None
+    agent_visible: bool
+    decided_by: UUID
+    decided_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class JoinGraphView:
     """The confirmed Relations of a Catalog Version, plus what is unreachable."""
 

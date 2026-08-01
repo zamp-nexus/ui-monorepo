@@ -51,7 +51,17 @@ def create_app(
         allow_origins=[resolved_settings.frontend_origin],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "Traceparent", "Tracestate"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Traceparent",
+            "Tracestate",
+            # The Work Feed documents `Last-Event-ID` as a resume cursor, and it
+            # is not a CORS-safelisted request header. Without it here the
+            # preflight for `/threads/{id}/events` fails and a browser can never
+            # reach the stream at all.
+            "Last-Event-ID",
+        ],
     )
     api.include_router(router)
     api.include_router(connector_router)

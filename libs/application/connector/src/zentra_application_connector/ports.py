@@ -14,6 +14,7 @@ from typing import Protocol
 from uuid import UUID
 
 from zentra_domain_connector import (
+    CatalogAccessOverride,
     CatalogVersion,
     ConnectionCheck,
     DataSource,
@@ -193,6 +194,20 @@ class HarvestRunRepository(Protocol):
     async def active_for_source(
         self, data_source_id: UUID, *, tenant_id: UUID
     ) -> HarvestRun | None: ...
+
+
+class AgentAccessRepository(Protocol):
+    """Per-table/per-field agent visibility overrides.
+
+    Every override is a full replacement of the row it targets — there is no
+    partial update — so `upsert` is the only write this port offers.
+    """
+
+    async def upsert(self, override: CatalogAccessOverride) -> None: ...
+
+    async def list_for_source(
+        self, data_source_id: UUID, *, tenant_id: UUID
+    ) -> Sequence[CatalogAccessOverride]: ...
 
 
 class Clock(Protocol):
