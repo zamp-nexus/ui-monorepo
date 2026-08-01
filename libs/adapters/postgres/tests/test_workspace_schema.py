@@ -28,3 +28,13 @@ def test_projects_carry_the_tenant_in_the_group_foreign_key() -> None:
     }
 
     assert ("workspace_groups.group_id", "workspace_groups.tenant_id") in parent_columns
+
+
+def test_project_activity_has_a_dedicated_ordering_column_and_index() -> None:
+    assert "latest_activity_at" in projects.c
+    activity_index = next(
+        index
+        for index in projects.indexes
+        if index.name == "ix_projects_group_activity"
+    )
+    assert "latest_activity_at DESC" in str(activity_index.expressions[2])

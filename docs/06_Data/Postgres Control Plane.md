@@ -49,7 +49,9 @@ Groups and Projects are organizational rather than authorization boundaries.
 The `projects (group_id, tenant_id)` composite foreign key can reference only a
 same-Tenant Group. Normalized Group names are unique within a Tenant and
 normalized Project names are unique within their Group. Archiving records a
-timestamp and never deletes or rewrites descendants.
+timestamp and never deletes or rewrites descendants. `projects.latest_activity_at`
+is distinct from metadata `updated_at`, enabling stable recent-work ordering
+without rewriting Project metadata.
 
 Only one pending Human Approval may exist per Investigation. Investigation
 versions support optimistic concurrency. The outbox records safe payload,
