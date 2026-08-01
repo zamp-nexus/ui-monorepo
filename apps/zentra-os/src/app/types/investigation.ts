@@ -36,7 +36,8 @@ export interface MetricComparison {
 export interface Investigation {
   readonly investigation_id: string;
   readonly canonical_question: string;
-  readonly scenario_key: string;
+  /** Present only on Investigations started before free-text questions. */
+  readonly scenario_key: string | null;
   readonly status:
     | 'pending'
     | 'running'
@@ -111,8 +112,16 @@ export type RejectionReason =
   | 'policy_mismatch'
   | 'needs_more_analysis';
 
-export interface Scenario {
-  readonly key: string;
-  readonly question: string;
-  readonly facts: readonly string[];
+/** One governed measure or dimension this tenant may be asked about. */
+export interface CatalogMember {
+  readonly name: string;
+  readonly type: string;
+  readonly description: string | null;
+  /** Dimensions only, and only where few enough to enumerate. */
+  readonly values: readonly string[];
+}
+
+export interface CatalogSummary {
+  readonly measures: readonly CatalogMember[];
+  readonly dimensions: readonly CatalogMember[];
 }

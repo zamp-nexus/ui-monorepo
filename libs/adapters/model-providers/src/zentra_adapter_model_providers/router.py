@@ -10,6 +10,7 @@ from zentra_domain_agent_execution import (
     ModelMessage,
     ModelPort,
     ModelResponse,
+    ToolDefinition,
 )
 
 from .breaker import ProviderCircuitBreaker
@@ -30,7 +31,7 @@ class SchemaViolationError(ProviderError):
 class RoutedModelClient:
     """ModelPort that resolves an agent role to a provider chain.
 
-    Agents ask for a role — `"sql_analyst"` — not a model. The chain for that
+    Agents ask for a role — `"cube_analyst"` — not a model. The chain for that
     role in this client's tier decides what actually runs, so swapping
     providers never touches agent code.
     """
@@ -58,6 +59,7 @@ class RoutedModelClient:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
+        tools: Sequence[ToolDefinition] = (),
     ) -> ModelResponse:
         role = AgentRole(model)
         attempts: list[str] = []
@@ -68,6 +70,13 @@ class RoutedModelClient:
                 # No key configured. Skipping rather than failing is what lets
                 # the system run on ANTHROPIC_API_KEY alone.
                 attempts.append(f"{choice}: no API key configured")
+                continue
+            if tools and not choice.supports_tools:
+                # Recorded rather than silently skipped, for the same reason
+                # every other skip is: a rung that cannot serve tools would
+                # otherwise answer in prose, and the caller would read a
+                # refusal to use tools as the model choosing not to.
+                attempts.append(f"{choice}: no tool support")
                 continue
             if not self._breaker.allow(choice.provider):
                 attempts.append(f"{choice}: circuit open")
@@ -80,6 +89,7 @@ class RoutedModelClient:
                     system=system,
                     messages=messages,
                     response_schema=response_schema,
+                    tools=tools,
                 )
             except ProviderAuthError:
                 # Never falls through: a bad key is a configuration mistake, and
@@ -105,6 +115,7 @@ class RoutedModelClient:
         system: str,
         messages: Sequence[ModelMessage],
         response_schema: dict[str, JsonValue] | None,
+        tools: Sequence[ToolDefinition] = (),
     ) -> ModelResponse:
         """One rung, with a single same-provider retry on a schema violation.
 
@@ -122,8 +133,14 @@ class RoutedModelClient:
                 # token budgets are far tighter than Anthropic's.
                 max_tokens=choice.max_tokens,
                 response_schema=response_schema,
+                tools=tools,
             )
             if response_schema is None:
+                return response
+            # A turn that asked for tools has not answered yet, so there is no
+            # final object to validate. Validating the empty text here would
+            # fail every tool round and burn the whole chain.
+            if response.tool_calls:
                 return response
             try:
                 _validate(response.text, response_schema)

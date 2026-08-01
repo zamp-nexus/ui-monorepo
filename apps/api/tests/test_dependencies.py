@@ -65,7 +65,7 @@ def test_insight_is_a_required_role() -> None:
     required = build()._orchestrator._required_roles
 
     assert AgentRole.INSIGHT in required
-    assert AgentRole.SQL_ANALYST in required
+    assert AgentRole.CUBE_ANALYST in required
     assert AgentRole.EVALUATOR in required
 
 

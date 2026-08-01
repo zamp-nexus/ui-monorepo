@@ -1,6 +1,6 @@
 {
-  "name": "refuses_ungoverned_filter_member",
-  "agent": "sql_analyst",
+  "name": "clamps_confidence_above_one",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -54,13 +54,22 @@
           "Commerce.refundAmount"
         ],
         "dimensions": [],
-        "time_dimensions": [],
+        "time_dimensions": [
+          {
+            "dimension": "Commerce.orderedAt",
+            "granularity": "month",
+            "date_range": [
+              "2026-06-01",
+              "2026-07-31"
+            ]
+          }
+        ],
         "filters": [
           {
-            "member": "commerce_facts.internal_flag",
+            "member": "Commerce.region",
             "operator": "equals",
             "values": [
-              "1"
+              "EU"
             ]
           }
         ]
@@ -76,11 +85,13 @@
           "unit": "USD"
         }
       ],
-      "confidence": 0.9,
+      "confidence": 1.7,
       "sample_size": 240
     }
   ],
   "expect": {
-    "raises": "UnknownSemanticMemberError"
+    "outcome_kind": "confidence",
+    "max_score": 1.0,
+    "min_score": 1.0
   }
 }

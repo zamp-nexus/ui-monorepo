@@ -17,8 +17,8 @@ def test_public_agent_event_rejects_reasoning_sql_and_raw_rows() -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         AgentEventPayload(
             execution_id=uuid4(),
-            agent_id="sql_analyst_v1",
-            role="sql_analyst",
+            agent_id="cube_analyst_v1",
+            role="cube_analyst",
             reasoning="hidden",
             sql="select 1",
             raw_rows=[[1]],

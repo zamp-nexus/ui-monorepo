@@ -8,10 +8,11 @@ ACL boundaries. Archived containers remain readable and make descendants
 read-only without deleting Investigation history.
 
 An Investigation Thread is the linear conversational boundary around immutable
-messages and separately governed Investigations. Draft Threads hold unresolved
-user and router clarification messages without fabricating analytical work.
-Deterministic routing activates a Thread only when exactly one governed scenario
-matches.
+messages and separately governed Investigations. A question is free text and a
+Thread activates on its first message (ADR-0023); whether the evidence can
+answer it is the Cube Analyst's judgement against the tenant's live catalog,
+not a router's against a fixed list. Draft Threads — which held unresolved
+router clarifications — remain readable but are no longer created.
 
 Follow-ups and retries create new immutable Investigations with linear parent,
 retry-of, and Thread-sequence lineage. Published Findings may create a strict

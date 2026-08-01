@@ -28,8 +28,8 @@ from zentra_domain_agent_execution import (
 
 class StubAgent:
     descriptor = AgentDescriptor(
-        agent_id="sql_analyst_v1",
-        role=AgentRole.SQL_ANALYST,
+        agent_id="cube_analyst_v1",
+        role=AgentRole.CUBE_ANALYST,
         tool_permissions=(
             ToolScope(tool_name="semantic_layer_query", access=ToolAccess.READ),
         ),
@@ -37,7 +37,7 @@ class StubAgent:
         input_schema=AgentInput.model_json_schema(),
         output_schema=AgentOutput.model_json_schema(),
         output_fields=frozenset({"sql", "result_summary"}),
-        eval_suite_ref="evals/sql_analyst_v1.yaml",
+        eval_suite_ref="evals/cube_analyst_v1.yaml",
     )
 
     async def invoke(self, agent_input: AgentInput) -> AgentOutput:
@@ -159,6 +159,31 @@ def test_the_legacy_insight_role_stays_readable() -> None:
     assert AgentRole("insight_root_cause") is AgentRole.INSIGHT_ROOT_CAUSE
     assert AgentRole.INSIGHT_ROOT_CAUSE in LEGACY_ROLES
     assert AgentRole.INSIGHT not in LEGACY_ROLES
+
+
+def test_the_legacy_sql_analyst_role_stays_readable() -> None:
+    """Agent Executions that ran before ADR-0025 named the role `sql_analyst`.
+
+    Replay must keep rendering them, so the value stays deserialisable and is
+    refused at the write seams instead.
+    """
+    assert AgentRole("sql_analyst") is AgentRole.SQL_ANALYST
+    assert AgentRole.SQL_ANALYST in LEGACY_ROLES
+    assert AgentRole.CUBE_ANALYST not in LEGACY_ROLES
+    assert AgentRole.CUBE_ANALYST in CANONICAL_ROLES
+
+
+def test_each_legacy_role_names_its_own_replacement() -> None:
+    """One shared message pointed every legacy role at `insight`, which was
+    right while there was one of them and misleading the moment there were
+    two."""
+    for legacy, replacement in (
+        (AgentRole.INSIGHT_ROOT_CAUSE, AgentRole.INSIGHT),
+        (AgentRole.SQL_ANALYST, AgentRole.CUBE_ANALYST),
+    ):
+        with pytest.raises(LegacyRoleWriteError) as raised:
+            reject_legacy_role(legacy)
+        assert replacement.value in str(raised.value)
 
 
 def test_a_phase_1_execution_record_still_deserialises() -> None:

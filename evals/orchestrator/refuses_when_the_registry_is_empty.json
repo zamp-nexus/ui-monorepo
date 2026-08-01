@@ -9,7 +9,7 @@
     {
       "tasks": [
         {
-          "role": "sql_analyst",
+          "role": "cube_analyst",
           "objective": "Quantify the movement."
         },
         {

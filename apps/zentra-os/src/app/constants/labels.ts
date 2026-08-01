@@ -26,7 +26,11 @@ export const eventLabels: Record<string, string> = {
 
 export const agentLabels: Record<string, string> = {
   orchestrator: 'Orchestrator',
-  sql_analyst: 'SQL Analyst',
+  cube_analyst: 'Cube Analyst',
+  // Read-compatibility (ADR-0025). Agent Executions that ran before the rename
+  // still carry this role, and Replay renders them — a step labelled by its
+  // raw role string would be the one place the old name leaks to a reader.
+  sql_analyst: 'Cube Analyst',
   evaluator: 'Evaluator',
 };
 

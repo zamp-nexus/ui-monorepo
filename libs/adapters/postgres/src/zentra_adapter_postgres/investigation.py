@@ -151,7 +151,7 @@ def _investigation_from_row(row: Any) -> Investigation:
         investigation_id=row.investigation_id,
         tenant_id=row.tenant_id,
         question=row.question,
-        scenario_key=row.scenario_key or "",
+        scenario_key=row.scenario_key,
         status=InvestigationStatus(row.status),
         version=row.version,
         evaluation_attempts=row.evaluation_attempts,
@@ -536,6 +536,9 @@ class PostgresAgentExecutionRepository:
                 input_tokens=execution.usage.input_tokens,
                 output_tokens=execution.usage.output_tokens,
                 fallbacks=list(execution.fallbacks),
+                tool_calls=[
+                    call.model_dump(mode="json") for call in execution.tool_calls
+                ],
                 started_at=execution.started_at,
                 completed_at=execution.completed_at,
             )

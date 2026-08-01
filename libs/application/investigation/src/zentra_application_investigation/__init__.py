@@ -1,7 +1,6 @@
 """Investigation application services and ports."""
 
 from .dto import (
-    SCENARIOS,
     AuditDelivery,
     AuditReplay,
     AuthenticatedActor,
@@ -12,10 +11,8 @@ from .dto import (
     PermissionDeniedError,
     PipelineResult,
     Role,
-    Scenario,
     ScenarioUnavailableError,
     TimelineEntry,
-    UnsupportedScenarioError,
     UsageSummary,
 )
 from .execution_worker import (
@@ -84,7 +81,6 @@ from .workspace_ports import (
 from .workspace_service import OrganizationService
 
 __all__ = [
-    "SCENARIOS",
     "AgentExecutionRepository",
     "AuditDelivery",
     "AuditOutboxRepository",
@@ -115,7 +111,6 @@ __all__ = [
     "Role",
     "RoutingDisposition",
     "RoutingResult",
-    "Scenario",
     "ScenarioUnavailableError",
     "TenantPolicyRepository",
     "TimelineEntry",
@@ -133,7 +128,6 @@ __all__ = [
     "ThreadSummary",
     "ThreadUnitOfWork",
     "ThreadUnitOfWorkFactory",
-    "UnsupportedScenarioError",
     "UsageSummary",
     "VisualizationDetail",
     "VisualizationActionResult",

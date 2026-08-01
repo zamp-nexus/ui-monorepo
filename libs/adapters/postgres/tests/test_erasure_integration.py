@@ -119,7 +119,7 @@ async def seed(status: str = "completed") -> None:
                 execution_id=EXECUTION,
                 investigation_id=INVESTIGATION,
                 tenant_id=TENANT,
-                agent_id="sql_analyst_v1",
+                agent_id="cube_analyst_v1",
                 step=1,
                 input={"question": MARKERS[EvidenceSurface.AGENT_EXECUTION_INPUT]},
                 output={"rows": [MARKERS[EvidenceSurface.AGENT_EXECUTION_OUTPUT]]},
@@ -345,7 +345,7 @@ async def test_process_survives_what_content_does_not() -> None:
         assert row.state.get("completion") == {"human_approved": False}
         assert "finding" not in row.state
         # Non-sensitive execution metadata survives entirely.
-        assert execution.agent_id == "sql_analyst_v1"
+        assert execution.agent_id == "cube_analyst_v1"
         assert execution.model == "cerebras/zai-glm-4.7"
         assert execution.latency_ms == 1200
         assert execution.status == "success"
@@ -625,7 +625,7 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
                     payload={
                         "event_type": "investigation.completed",
                         "status": "completed",
-                        "metadata": {"agent_id": "sql_analyst_v1", "step": 1},
+                        "metadata": {"agent_id": "cube_analyst_v1", "step": 1},
                     },
                 )
             )

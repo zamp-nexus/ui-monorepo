@@ -35,6 +35,10 @@ class ThreadCursorError(ValueError):
 
 class RoutingDisposition(StrEnum):
     RESOLVED = "resolved"
+    # Read-compatibility only (ADR-0023). Routing matched free text against two
+    # governed scenarios and refused everything else; a tenant's questions are
+    # its own now, so nothing produces these. Threads and Work Feed events
+    # written before that carry them and must stay readable.
     AMBIGUOUS = "ambiguous"
     UNSUPPORTED = "unsupported"
 
@@ -115,7 +119,8 @@ class ThreadInvestigationSummary:
     created_at: datetime
     updated_at: datetime
     question: str = ""
-    scenario_key: str = ""
+    # See InvestigationDetail.scenario_key — read-compatibility only.
+    scenario_key: str | None = None
     version: int = 0
     evaluation_attempts: int = 0
     finished_at: datetime | None = None

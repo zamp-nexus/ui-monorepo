@@ -23,22 +23,22 @@ from zentra_domain_agent_execution import (
     SemanticMeasure,
     SemanticQuery,
     SemanticResult,
+    ToolCall,
 )
 
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     InvestigationGraph,
     NoEnabledAgentError,
     OrchestratorAgent,
-    SqlAnalystAgent,
 )
 from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 from zentra_adapter_langgraph.schemas import (
     ANALYSIS_SCHEMA,
     DRAFT_FINDING_SCHEMA,
-    QUERY_PLAN_SCHEMA,
     RECHECK_SCHEMA,
     TASK_LEDGER_SCHEMA,
 )
@@ -115,7 +115,7 @@ class StubRegistry:
 # asserting on real model identities rather than on role keys.
 ROLE_MODELS = {
     "orchestrator": "gemini/gemini-3-flash",
-    "sql_analyst": "cerebras/zai-glm-4.7",
+    "cube_analyst": "cerebras/zai-glm-4.7",
     "evaluator": "groq/openai/gpt-oss-120b",
     # Deliberately distinct from every other role, so a test asserting Insight's
     # attribution cannot pass by picking up another agent's model.
@@ -139,6 +139,7 @@ class ScriptedModel:
         self._fail_once_schema = fail_once_schema
         self.calls = 0
 
+
     async def complete(
         self,
         *,
@@ -147,11 +148,62 @@ class ScriptedModel:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, Any] | None = None,
+        tools: Sequence[Any] = (),
     ) -> ModelResponse:
         self.calls += 1
-        if response_schema == self._fail_once_schema:
+        # `is not None` matters: a tool-loop turn carries no schema, and
+        # `None == None` would fire the simulated interruption on every one.
+        if (
+            self._fail_once_schema is not None
+            and response_schema == self._fail_once_schema
+        ):
             self._fail_once_schema = None
             raise TimeoutError("simulated provider interruption")
+
+        # The Cube Analyst reaches data by calling a tool now, so a fake that
+        # only ever answers in prose would exercise a path the real agent no
+        # longer has — and would leave `query`/`rows` empty, which is what
+        # Evidence Citations are built from. One tool round, then the answer.
+        # One tool round per invocation, detected from the conversation rather
+        # than from a counter: the Evaluator loop invokes the Analyst afresh on
+        # every attempt, each with its own tool instance, so a retry has to
+        # query again exactly as a real model would.
+        if tools and not any(message.tool_results for message in messages):
+            return ModelResponse(
+                text="",
+                tool_calls=(
+                    ToolCall(
+                        call_id=f"call_{self.calls}",
+                        name="semantic_query",
+                        arguments=QUERY_PLAN["query"],
+                    ),
+                ),
+                stop_reason="tool_use",
+                usage=ExecutionUsage(
+                    input_tokens=50,
+                    output_tokens=10,
+                    cost_usd=Decimal("0.0005"),
+                    model=ROLE_MODELS[model],
+                ),
+                fallbacks=self._fallbacks,
+            )
+
+        # A tool-loop turn carries no schema: the Agent has finished calling
+        # tools and its prose is the answer, which the runtime then asks it to
+        # restate as the declared object on a closing schema-bearing call.
+        if response_schema is None:
+            return ModelResponse(
+                text="The governed result is ready to report.",
+                stop_reason="stop",
+                usage=ExecutionUsage(
+                    input_tokens=50,
+                    output_tokens=10,
+                    cost_usd=Decimal("0.0005"),
+                    model=ROLE_MODELS[model],
+                ),
+                fallbacks=self._fallbacks,
+            )
+
         payload = self._payload(response_schema)
         return ModelResponse(
             text=json.dumps(payload),
@@ -168,12 +220,10 @@ class ScriptedModel:
         if schema == TASK_LEDGER_SCHEMA:
             return {
                 "tasks": [
-                    {"role": "sql_analyst", "objective": "Quantify the movement."},
+                    {"role": "cube_analyst", "objective": "Quantify the movement."},
                     {"role": "evaluator", "objective": "Recheck the movement."},
                 ]
             }
-        if schema == QUERY_PLAN_SCHEMA:
-            return QUERY_PLAN
         if schema == ANALYSIS_SCHEMA:
             return {
                 "result_summary": "EU refunds rose from $20 to $260.",
@@ -264,7 +314,7 @@ def build_graph(
             # Insight is required now: nothing else can write a Finding.
             required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
         ),
-        sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
+        cube_analyst=CubeAnalystAgent(model=model, semantic_layer=layer),
         evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
         insight=InsightAgent(model=model),
         recorder=recorder,
@@ -308,7 +358,9 @@ async def test_cancellation_is_checked_before_and_after_every_agent_call() -> No
 async def test_checkpoint_recovery_resumes_at_first_incomplete_agent_step() -> None:
     graph, recorder, _ = build_graph(
         recheck_passed=True,
-        fail_once_schema=QUERY_PLAN_SCHEMA,
+        # The Analyst's closing call — the only schema-bearing turn it makes
+        # now that the query itself goes through a tool.
+        fail_once_schema=ANALYSIS_SCHEMA,
         checkpointer=MemorySaver(),
     )
 
@@ -376,7 +428,7 @@ async def test_converged_run_produces_a_confidence_capped_by_the_recheck() -> No
     # because planning is all it does now.
     assert [record.role for record in recorder.records] == [
         AgentRole.ORCHESTRATOR,
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]
@@ -430,7 +482,7 @@ async def test_result_rows_never_leave_the_execution_record() -> None:
         question=QUESTION,
     )
 
-    analyst = next(r for r in recorder.records if r.role is AgentRole.SQL_ANALYST)
+    analyst = next(r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST)
     assert analyst.output is not None
     assert analyst.output["rows"] == [{"Commerce.refundAmount": "260.00"}]
     # The insighting Orchestrator is handed the state object; rows are absent.
@@ -443,7 +495,7 @@ async def test_missing_required_role_refuses_rather_than_proceeding() -> None:
 
     graph, recorder, _ = build_graph(
         recheck_passed=True,
-        roles=(AgentRole.SQL_ANALYST,),
+        roles=(AgentRole.CUBE_ANALYST,),
     )
 
     with pytest.raises(NoEnabledAgentError, match="evaluator"):
@@ -468,7 +520,15 @@ async def test_executions_carry_token_and_cost_attribution() -> None:
         question=QUESTION,
     )
 
-    analyst = next(r for r in recorder.records if r.role is AgentRole.SQL_ANALYST)
+    analyst = next(r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST)
+    # Every turn of the tool loop, not only the one that answered: the round
+    # that called `semantic_query` cost real tokens, and a ledger that counted
+    # the final turn alone would under-report an Agent that searched four times
+    # before querying.
+    # Three turns: the one that called a tool, the one that stopped calling
+    # them, and the closing turn that restated the answer as the declared
+    # object. A ledger counting only the last would under-report an Agent that
+    # searched four times before querying.
     assert analyst.usage.input_tokens == 200
     assert analyst.usage.output_tokens == 40
     assert analyst.usage.cost_usd > 0

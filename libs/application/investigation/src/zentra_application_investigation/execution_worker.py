@@ -55,6 +55,7 @@ class DurableVisualizationExecutor(Protocol):
         failure_category: str,
     ) -> None: ...
 
+
 @dataclass(frozen=True, slots=True)
 class ExecutionFailure:
     category: str

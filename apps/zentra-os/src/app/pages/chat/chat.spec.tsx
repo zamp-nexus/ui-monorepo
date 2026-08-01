@@ -126,14 +126,20 @@ const baseRoutes = {
     body: { items: [PROJECT], next_cursor: null },
   },
   '/v1/agents': { body: [] },
-  '/v1/scenarios': {
-    body: [
-      {
-        key: 'eu-refunds',
-        question: 'Why did EU refunds increase from June to July 2026?',
-        facts: ['EU refunds'],
-      },
-    ],
+  '/v1/catalog': {
+    body: {
+      measures: [
+        {
+          name: 'Commerce.refundAmount',
+          type: 'number',
+          description: 'Value refunded to customers',
+          values: [],
+        },
+      ],
+      dimensions: [
+        { name: 'Commerce.orderedAt', type: 'time', description: null, values: [] },
+      ],
+    },
   },
   [`GET /v1/projects/${PROJECT.project_id}/threads`]: {
     body: { items: [], next_cursor: null },
@@ -168,11 +174,16 @@ beforeEach(() => {
 });
 
 describe('Chat', () => {
-  it('offers the governed scenarios on an empty thread', async () => {
+  it('builds empty-thread suggestions from this tenant\'s own catalog', async () => {
     route(baseRoutes);
     renderPage();
 
-    expect(await screen.findByText('EU refunds')).toBeTruthy();
+    // The measure's description labels the card, and the prompt names the
+    // measure — neither is copy written into the bundle.
+    expect(
+      await screen.findByText('Value refunded to customers'),
+    ).toBeTruthy();
+    expect(screen.getByText(/refund amount/i)).toBeTruthy();
   });
 
   it('creates a thread from the first message and renders the snapshot', async () => {

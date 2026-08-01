@@ -2,7 +2,7 @@
   "name": "drops_tasks_for_unregistered_roles",
   "agent": "orchestrator",
   "enabled_roles": [
-    "sql_analyst",
+    "cube_analyst",
     "evaluator"
   ],
   "state": {
@@ -12,7 +12,7 @@
     {
       "tasks": [
         {
-          "role": "sql_analyst",
+          "role": "cube_analyst",
           "objective": "Quantify the movement."
         },
         {
@@ -30,7 +30,7 @@
     "fields": {
       "tasks": [
         {
-          "role": "sql_analyst",
+          "role": "cube_analyst",
           "objective": "Quantify the movement."
         },
         {
