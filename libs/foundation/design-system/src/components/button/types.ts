@@ -129,7 +129,11 @@ export const buttonDefaultTheme: ComponentThemeConfigStructure = {
   },
   slots: {
     start: {
-      base: 'shrink-0',
+      // Centred, not just sized. The slot is a fixed box per button size while
+      // the content placed in it is whatever the caller passes — an `Icon` at
+      // `size="sm"` is smaller than the box, and without centring it sits in
+      // the top-left corner, which reads as a mis-aligned button.
+      base: 'flex shrink-0 items-center justify-center',
       variants: {
         size: {
           sm: 'w-4 h-4',
@@ -140,7 +144,7 @@ export const buttonDefaultTheme: ComponentThemeConfigStructure = {
       modifiers: {},
     },
     end: {
-      base: 'shrink-0',
+      base: 'flex shrink-0 items-center justify-center',
       variants: {
         size: {
           sm: 'w-4 h-4',
