@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 
-import { Alert, Badge, Button, Card, Progress, Skeleton } from '@open-zentra/foundation-design-system';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Progress,
+  Skeleton,
+  Switch,
+} from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -8,9 +16,9 @@ import { ApiError, type TokenSource } from '../../api';
 import { ConnectorLogo } from '../connections/connector-logos';
 import type { SourceResponse } from '../connections/types';
 
-import { getHarvest, latestCatalog, startHarvest } from './api';
+import { getHarvest, latestCatalog, setTableAgentAccess, startHarvest } from './api';
 import { HARVEST_FAILURE_HELP, PHASE_LABEL, formatBytes, formatRows } from './format';
-import type { CatalogTable, HarvestResponse } from './types';
+import type { CatalogResponse, CatalogTable, HarvestResponse } from './types';
 import { isTerminal } from './types';
 
 interface SourceCatalogProps {
@@ -22,30 +30,46 @@ interface SourceCatalogProps {
 
 const TableCard = ({
   table,
+  canWrite,
   onOpen,
+  onToggleAgentAccess,
 }: {
   readonly table: CatalogTable;
+  readonly canWrite: boolean;
   readonly onOpen: () => void;
+  readonly onToggleAgentAccess: (visible: boolean) => void;
 }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className="group flex flex-col items-start rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-  >
-    <span className="flex w-full items-start justify-between gap-3">
+  <div className="group flex flex-col items-start rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-primary">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-start justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
       <span className="truncate font-mono text-sm">{table.name}</span>
       <Icon
         name="chevron_right"
         size="sm"
         className="shrink-0 text-foreground-muted transition-transform group-hover:translate-x-0.5"
       />
-    </span>
+    </button>
     <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
       <span className="tabular-nums">{formatRows(table.estimated_rows)} rows</span>
       <span className="tabular-nums">{(table.fields ?? []).length} cols</span>
       <span className="tabular-nums">{formatBytes(table.size_bytes)}</span>
     </span>
-  </button>
+    <label
+      className="mt-3 flex w-full items-center justify-between gap-3 border-t border-border/50 pt-3 text-xs"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span className="text-foreground-muted">Agent access</span>
+      <Switch
+        size="sm"
+        checked={table.agent_visible}
+        disabled={!canWrite}
+        onCheckedChange={onToggleAgentAccess}
+      />
+    </label>
+  </div>
 );
 
 const HarvestProgress = ({ run }: { readonly run: HarvestResponse }) => (
@@ -100,6 +124,38 @@ export const SourceCatalog = ({
   const begin = useMutation({
     mutationFn: () => startHarvest(getToken, source.data_source_id),
     onSuccess: (started) => setWatching(started.harvest_run_id),
+  });
+
+  const catalogQueryKey = ['catalog', source.data_source_id];
+
+  const toggleTableAccess = useMutation({
+    mutationFn: (input: { tableName: string; visible: boolean }) =>
+      setTableAgentAccess(getToken, source.data_source_id, input.tableName, input.visible),
+    // Optimistic: a switch that waits for a round trip before moving reads as
+    // broken, and this write cannot fail for a reason the reader could fix.
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: catalogQueryKey });
+      const previous = queryClient.getQueryData<CatalogResponse>(catalogQueryKey);
+      queryClient.setQueryData<CatalogResponse>(catalogQueryKey, (current) =>
+        current
+          ? {
+              ...current,
+              tables: current.tables?.map((table) =>
+                table.name === input.tableName
+                  ? { ...table, agent_visible: input.visible }
+                  : table,
+              ),
+            }
+          : current,
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(catalogQueryKey, context.previous);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogQueryKey });
+    },
   });
 
   // A finished run is what makes the catalog worth asking for again. The poll
@@ -215,7 +271,11 @@ export const SourceCatalog = ({
               <TableCard
                 key={table.table_id}
                 table={table}
+                canWrite={canWrite}
                 onOpen={() => onOpenTable(table)}
+                onToggleAgentAccess={(visible) =>
+                  toggleTableAccess.mutate({ tableName: table.name, visible })
+                }
               />
             ))}
           </div>

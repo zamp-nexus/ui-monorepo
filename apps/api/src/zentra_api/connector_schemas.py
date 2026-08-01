@@ -14,6 +14,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 from zentra_application_connector import (
+    AgentAccessView,
     HarvestStatus,
     JoinGraphView,
     RelationView,
@@ -21,6 +22,7 @@ from zentra_application_connector import (
     UploadPreview,
 )
 from zentra_domain_connector import (
+    AccessOverrides,
     BindingCeiling,
     Cardinality,
     CatalogVersion,
@@ -182,6 +184,9 @@ class FieldResponse(BaseModel):
     nullable: bool
     position: int
     profile: FieldProfileResponse | None = None
+    #: Whether the agent system may see this field. Defaults to visible; a
+    #: Tenant departs from that default one field at a time.
+    agent_visible: bool = True
 
 
 class TableResponse(BaseModel):
@@ -196,6 +201,7 @@ class TableResponse(BaseModel):
     estimated_rows: int | None = None
     size_bytes: int | None = None
     fields: list[FieldResponse] = Field(default_factory=list)
+    agent_visible: bool = True
 
 
 class CatalogResponse(BaseModel):
@@ -209,7 +215,18 @@ class CatalogResponse(BaseModel):
     unreadable: list[UnreadableTableResponse] = Field(default_factory=list)
 
     @classmethod
-    def from_version(cls, version: CatalogVersion) -> CatalogResponse:
+    def from_version(
+        cls,
+        version: CatalogVersion,
+        *,
+        overrides: AccessOverrides | None = None,
+    ) -> CatalogResponse:
+        """Build the response, folding in agent-access overrides at the seam.
+
+        ``overrides`` stays optional so every existing caller keeps compiling;
+        omitting it means every table and field reports the default (visible).
+        """
+        access = overrides or AccessOverrides.build(version.data_source_id, ())
         return cls(
             catalog_version_id=version.catalog_version_id,
             data_source_id=version.data_source_id,
@@ -223,6 +240,7 @@ class CatalogResponse(BaseModel):
                     engine=table.engine,
                     estimated_rows=table.estimated_rows,
                     size_bytes=table.size_bytes,
+                    agent_visible=access.is_table_visible(table.name),
                     fields=[
                         FieldResponse(
                             field_id=f.field_id,
@@ -231,6 +249,7 @@ class CatalogResponse(BaseModel):
                             family=f.family.value,
                             nullable=f.nullable,
                             position=f.position,
+                            agent_visible=access.is_field_visible(table.name, f.name),
                             profile=(
                                 FieldProfileResponse(
                                     sampled_rows=f.profile.sampled_rows,
@@ -314,6 +333,36 @@ class RelationDecisionRequest(BaseModel):
 
     decision: str = Field(pattern="^(confirm|reject)$")
     reason: RejectionReason | None = None
+
+
+class SetAgentAccessRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agent_visible: bool
+
+
+class AgentAccessResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    override_id: UUID
+    data_source_id: UUID
+    table_name: str
+    field_name: str | None
+    agent_visible: bool
+    decided_by: UUID
+    decided_at: datetime
+
+    @classmethod
+    def from_view(cls, view: AgentAccessView) -> AgentAccessResponse:
+        return cls(
+            override_id=view.override_id,
+            data_source_id=view.data_source_id,
+            table_name=view.table_name,
+            field_name=view.field_name,
+            agent_visible=view.agent_visible,
+            decided_by=view.decided_by,
+            decided_at=view.decided_at,
+        )
 
 
 class DeclareRelationRequest(BaseModel):
