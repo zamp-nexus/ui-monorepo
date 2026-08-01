@@ -13,6 +13,7 @@ from zentra_domain_agent_execution import (
 from zentra_domain_investigation import (
     TERMINAL_STATUSES,
     ApprovalDecision,
+    ApprovalEventPayload,
     CitationState,
     ClaimKind,
     DeletionCategory,
@@ -22,13 +23,19 @@ from zentra_domain_investigation import (
     ErasureProgress,
     EvaluationDirective,
     EvidenceCitation,
+    ExecutionJob,
+    ExecutionJobStatus,
     FailureOutcome,
+    FindingEventPayload,
     HumanApproval,
     HumanApprovalStatus,
     Investigation,
+    InvestigationEventPayload,
+    InvestigationStatus,
     InvestigationTransitionError,
     PublicationDecision,
     RejectionReason,
+    WorkFeedEventKind,
     confidence_ceiling,
     evaluate_publication,
 )
@@ -47,6 +54,7 @@ from .dto import (
     ScenarioUnavailableError,
     TimelineEntry,
     UnsupportedScenarioError,
+    UsageSummary,
 )
 from .ports import (
     AuditReader,
@@ -56,6 +64,7 @@ from .ports import (
     InvestigationUnitOfWorkFactory,
     PublicationObserver,
 )
+from .visualization import prepare_published_visualization
 
 
 class InvestigationService:
@@ -110,6 +119,12 @@ class InvestigationService:
             data_connection_id=data_connection_id,
         )
         investigation.start(now)
+        job = ExecutionJob.create(
+            job_id=self._new_id(),
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation.investigation_id,
+            now=now,
+        )
 
         async with self._unit_of_work_factory(
             actor.tenant_id,
@@ -117,6 +132,7 @@ class InvestigationService:
             actor.span_id,
         ) as unit_of_work:
             await unit_of_work.investigations.add(investigation)
+            await unit_of_work.jobs.add_job(job)
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
 
@@ -162,6 +178,225 @@ class InvestigationService:
         )
 
     async def execute(self, actor: AuthenticatedActor, investigation_id: UUID) -> None:
+        await self._execute(actor, investigation_id, record_failure=True)
+
+    async def execute_job(self, *, tenant_id: UUID, investigation_id: UUID) -> None:
+        await self._execute(
+            AuthenticatedActor(
+                user_id=UUID(int=0),
+                tenant_id=tenant_id,
+                role=Role.MEMBER,
+                trace_id=UUID(int=0),
+                span_id=UUID(int=0),
+            ),
+            investigation_id,
+            record_failure=False,
+        )
+
+    async def fail_job(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        failure_category: str,
+    ) -> None:
+        actor = AuthenticatedActor(
+            user_id=UUID(int=0),
+            tenant_id=tenant_id,
+            role=Role.MEMBER,
+            trace_id=UUID(int=0),
+            span_id=UUID(int=0),
+        )
+        async with self._unit_of_work_factory(
+            tenant_id, actor.trace_id, actor.span_id
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(investigation_id)
+        if investigation is not None:
+            await self._fail(actor, investigation, failure_category)
+
+    async def cancel_job(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+    ) -> None:
+        """Apply a cancellation observed by the durable worker.
+
+        A provider call already in flight is allowed to return. The worker
+        invokes this checkpoint before and after execution, and this method
+        never rewrites an Investigation that already reached a terminal state.
+        """
+        now = self._now()
+        async with self._unit_of_work_factory(
+            tenant_id, UUID(int=0), UUID(int=0)
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(
+                investigation_id, for_update=True
+            )
+            if investigation is None or investigation.status in TERMINAL_STATUSES:
+                return
+            expected_version = investigation.version
+            investigation.cancel(now)
+            await unit_of_work.investigations.save(
+                investigation, expected_version=expected_version
+            )
+            await unit_of_work.outbox.enqueue(investigation.events)
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=tenant_id,
+                event_id=self._new_id(),
+                investigation_id=investigation_id,
+                kind=WorkFeedEventKind.INVESTIGATION_CANCELLED,
+                payload=InvestigationEventPayload(
+                    investigation_id=investigation_id,
+                    status=InvestigationStatus.CANCELLED,
+                ),
+                occurred_at=now,
+            )
+            await unit_of_work.commit()
+
+    async def cancel(
+        self,
+        actor: AuthenticatedActor,
+        investigation_id: UUID,
+    ) -> InvestigationDetail:
+        self._require_create_role(actor)
+        now = self._now()
+        async with self._unit_of_work_factory(
+            actor.tenant_id, actor.trace_id, actor.span_id
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(
+                investigation_id, for_update=True
+            )
+            if investigation is None:
+                raise InvestigationNotFoundError("Investigation was not found")
+            if investigation.status in TERMINAL_STATUSES:
+                raise ConflictError("A terminal Investigation cannot be cancelled")
+            job = await unit_of_work.jobs.get_for_investigation(
+                investigation_id, for_update=True
+            )
+            if job is None:
+                raise ConflictError("Investigation execution is unavailable")
+            job.request_cancel(actor_id=actor.user_id, now=now)
+            await unit_of_work.jobs.save_job(job)
+            if job.status is ExecutionJobStatus.CANCELLED:
+                expected_version = investigation.version
+                investigation.cancel(now)
+                await unit_of_work.investigations.save(
+                    investigation, expected_version=expected_version
+                )
+                await unit_of_work.outbox.enqueue(investigation.events)
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=actor.tenant_id,
+                event_id=self._new_id(),
+                investigation_id=investigation_id,
+                kind=(
+                    WorkFeedEventKind.INVESTIGATION_CANCELLED
+                    if job.status is ExecutionJobStatus.CANCELLED
+                    else WorkFeedEventKind.INVESTIGATION_CANCEL_REQUESTED
+                ),
+                payload=InvestigationEventPayload(
+                    investigation_id=investigation_id,
+                    status=(
+                        InvestigationStatus.CANCELLED
+                        if job.status is ExecutionJobStatus.CANCELLED
+                        else investigation.status
+                    ),
+                ),
+                occurred_at=now,
+            )
+            await unit_of_work.commit()
+        return await self.get(actor, investigation_id)
+
+    async def retry(
+        self,
+        actor: AuthenticatedActor,
+        investigation_id: UUID,
+    ) -> InvestigationDetail:
+        """Create a new immutable attempt linked to a failed/cancelled one."""
+        self._require_create_role(actor)
+        now = self._now()
+        async with self._unit_of_work_factory(
+            actor.tenant_id, actor.trace_id, actor.span_id
+        ) as unit_of_work:
+            original = await unit_of_work.investigations.get(
+                investigation_id, for_update=True
+            )
+            if original is None:
+                raise InvestigationNotFoundError("Investigation was not found")
+            if original.status not in {
+                InvestigationStatus.FAILED,
+                InvestigationStatus.CANCELLED,
+            }:
+                raise ConflictError(
+                    "Only a failed or cancelled Investigation can be retried"
+                )
+            sequence = None
+            if original.thread_id is not None:
+                latest = await unit_of_work.investigations.latest_for_thread(
+                    original.thread_id, for_update=True
+                )
+                if latest is None or latest.investigation_id != investigation_id:
+                    raise ConflictError(
+                        "Only the latest Thread Investigation can be retried"
+                    )
+                sequence = (latest.thread_sequence or 0) + 1
+            retried = Investigation.create(
+                investigation_id=self._new_id(),
+                tenant_id=actor.tenant_id,
+                question=original.question,
+                scenario_key=original.scenario_key,
+                now=now,
+                data_connection_id=original.data_connection_id,
+                thread_id=original.thread_id,
+                thread_sequence=sequence,
+                initiating_message_id=original.initiating_message_id,
+                parent_investigation_id=original.parent_investigation_id,
+                retry_of_investigation_id=original.investigation_id,
+            )
+            retried.start(now)
+            job = ExecutionJob.create(
+                job_id=self._new_id(),
+                tenant_id=actor.tenant_id,
+                investigation_id=retried.investigation_id,
+                now=now,
+            )
+            await unit_of_work.investigations.add(retried)
+            await unit_of_work.jobs.add_job(job)
+            await unit_of_work.outbox.enqueue(retried.events)
+            if retried.thread_id is not None and hasattr(unit_of_work, "work_feed"):
+                await unit_of_work.work_feed.append_for_investigation(
+                    tenant_id=actor.tenant_id,
+                    event_id=self._new_id(),
+                    investigation_id=retried.investigation_id,
+                    kind=WorkFeedEventKind.INVESTIGATION_RETRY_CREATED,
+                    payload=InvestigationEventPayload(
+                        investigation_id=retried.investigation_id,
+                        status=retried.status,
+                        parent_investigation_id=retried.parent_investigation_id,
+                        retry_of_investigation_id=original.investigation_id,
+                    ),
+                    occurred_at=now,
+                )
+            await unit_of_work.commit()
+        delivered = await self._audit_writer.flush(
+            tenant_id=actor.tenant_id,
+            investigation_id=retried.investigation_id,
+        )
+        return await self._detail(
+            actor,
+            retried,
+            None,
+            fallback_events=retried.events,
+            delivered=delivered,
+        )
+
+    async def _execute(
+        self,
+        actor: AuthenticatedActor,
+        investigation_id: UUID,
+        *,
+        record_failure: bool,
+    ) -> None:
         """Run the agent pipeline and apply what it established.
 
         Individual agent executions are persisted by the pipeline as they
@@ -189,7 +424,9 @@ class InvestigationService:
                 data_connection_id=investigation.data_connection_id,
             )
         except Exception as error:
-            await self._fail(actor, investigation, error)
+            if not record_failure:
+                raise
+            await self._fail(actor, investigation, "unexpected")
             raise ScenarioUnavailableError(
                 "The investigation pipeline could not complete"
             ) from error
@@ -252,6 +489,41 @@ class InvestigationService:
                 # is open.
                 await unit_of_work.citations.add(result.evidence_citations)
                 await unit_of_work.draft_findings.add(result.draft_finding)
+            if approval is None:
+                await prepare_published_visualization(
+                    unit_of_work=unit_of_work,
+                    investigation=investigation,
+                    draft=result.draft_finding,
+                    citations=result.evidence_citations,
+                    now=now,
+                )
+                if hasattr(unit_of_work, "work_feed"):
+                    await unit_of_work.work_feed.append_for_investigation(
+                        tenant_id=actor.tenant_id,
+                        investigation_id=investigation_id,
+                        kind=WorkFeedEventKind.FINDING_PUBLISHED,
+                        payload=FindingEventPayload(
+                            investigation_id=investigation_id,
+                            citation_count=len(result.evidence_citations),
+                        ),
+                        occurred_at=now,
+                        event_id=self._new_id(),
+                    )
+            elif hasattr(unit_of_work, "work_feed"):
+                await unit_of_work.work_feed.append_for_investigation(
+                    tenant_id=actor.tenant_id,
+                    investigation_id=investigation_id,
+                    kind=WorkFeedEventKind.APPROVAL_REQUESTED,
+                    payload=ApprovalEventPayload(
+                        approval_id=approval.approval_id,
+                        status=approval.status.value,
+                        failed_conditions=tuple(
+                            value.value for value in approval.failed_conditions
+                        ),
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
 
@@ -264,11 +536,14 @@ class InvestigationService:
         self,
         actor: AuthenticatedActor,
         investigation: Investigation,
-        error: Exception,
+        failure_category: str,
     ) -> None:
         expected_version = investigation.version
         investigation.fail(
-            FailureOutcome(code="pipeline_failed", message=str(error)),
+            FailureOutcome(
+                code="pipeline_failed",
+                message=f"Pipeline failed: {failure_category}",
+            ),
             self._now(),
         )
         async with self._unit_of_work_factory(
@@ -308,8 +583,13 @@ class InvestigationService:
             draft = await unit_of_work.draft_findings.latest_for_investigation(
                 investigation_id
             )
-            citations = await unit_of_work.citations.for_investigation(
-                investigation_id
+            citations = await unit_of_work.citations.for_investigation(investigation_id)
+            usage = (
+                await unit_of_work.agent_executions.usage_for_investigation(
+                    investigation_id
+                )
+                if hasattr(unit_of_work.agent_executions, "usage_for_investigation")
+                else UsageSummary()
             )
         return await self._detail(
             actor,
@@ -317,6 +597,7 @@ class InvestigationService:
             approval,
             draft_finding=draft,
             evidence_citations=citations,
+            usage=usage,
         )
 
     async def delete_evidence(
@@ -401,10 +682,14 @@ class InvestigationService:
                     # The erasure refused to claim success, which is the one
                     # thing it must never do falsely. Surface it rather than
                     # committing a partial deletion.
-                    raise ScenarioUnavailableError(
-                        "Evidence deletion did not complete"
-                    )
+                    raise ScenarioUnavailableError("Evidence deletion did not complete")
                 completed = operation
+                if hasattr(unit_of_work, "visualizations"):
+                    await unit_of_work.visualizations.erase(
+                        investigation_id,
+                        category=category.value,
+                        now=now,
+                    )
 
             # Only after the erasure actually completed. Recording it first
             # would let a rolled-back deletion leave an event claiming content
@@ -476,9 +761,7 @@ class InvestigationService:
     ) -> InvestigationDetail:
         if actor.role not in {Role.OWNER, Role.ADMIN}:
             await self._record_denial(actor, investigation_id, approval_id)
-            raise PermissionDeniedError(
-                "This membership cannot decide Human Approvals"
-            )
+            raise PermissionDeniedError("This membership cannot decide Human Approvals")
         changed = False
         new_events: Sequence[DomainEvent] = ()
         async with self._unit_of_work_factory(
@@ -520,10 +803,52 @@ class InvestigationService:
                     )
                     await unit_of_work.approvals.save(approval)
                     await unit_of_work.outbox.enqueue(new_events)
+                    if hasattr(unit_of_work, "work_feed"):
+                        await unit_of_work.work_feed.append_for_investigation(
+                            tenant_id=actor.tenant_id,
+                            investigation_id=investigation_id,
+                            kind=WorkFeedEventKind.APPROVAL_DECIDED,
+                            payload=ApprovalEventPayload(
+                                approval_id=approval.approval_id,
+                                status=approval.status.value,
+                                failed_conditions=tuple(
+                                    value.value for value in approval.failed_conditions
+                                ),
+                            ),
+                            occurred_at=self._now(),
+                            event_id=self._new_id(),
+                        )
+                    draft = await unit_of_work.draft_findings.latest_for_investigation(
+                        investigation_id
+                    )
+                    if decision is ApprovalDecision.APPROVE:
+                        citations = await unit_of_work.citations.for_investigation(
+                            investigation_id
+                        )
+                        await prepare_published_visualization(
+                            unit_of_work=unit_of_work,
+                            investigation=investigation,
+                            draft=draft,
+                            citations=citations,
+                            now=self._now(),
+                        )
+                        if hasattr(unit_of_work, "work_feed"):
+                            await unit_of_work.work_feed.append_for_investigation(
+                                tenant_id=actor.tenant_id,
+                                investigation_id=investigation_id,
+                                kind=WorkFeedEventKind.FINDING_PUBLISHED,
+                                payload=FindingEventPayload(
+                                    investigation_id=investigation_id,
+                                    citation_count=len(citations),
+                                ),
+                                occurred_at=self._now(),
+                                event_id=self._new_id(),
+                            )
                     await unit_of_work.commit()
-                draft = await unit_of_work.draft_findings.latest_for_investigation(
-                    investigation_id
-                )
+                else:
+                    draft = await unit_of_work.draft_findings.latest_for_investigation(
+                        investigation_id
+                    )
             except InvestigationTransitionError as error:
                 raise ConflictError(str(error)) from error
 
@@ -552,6 +877,7 @@ class InvestigationService:
         evidence_citations: tuple[EvidenceCitation, ...] = (),
         fallback_events: Sequence[DomainEvent] = (),
         delivered: bool = True,
+        usage: UsageSummary | None = None,
     ) -> InvestigationDetail:
         timeline = tuple(
             await self._audit_reader.list_timeline(
@@ -606,6 +932,7 @@ class InvestigationService:
                 actor.role in {Role.OWNER, Role.ADMIN}
                 and investigation.status in TERMINAL_STATUSES
             ),
+            usage=usage or UsageSummary(),
         )
 
     @staticmethod
@@ -705,15 +1032,11 @@ def _publication_decision(
             if claim.citation_ids
             and all(cid in resolvable_ids for cid in claim.citation_ids)
         )
-        contradictions = sum(
-            1 for c in draft.contradictions if not c.resolved
-        )
+        contradictions = sum(1 for c in draft.contradictions if not c.resolved)
 
     return evaluate_publication(
         converged=result.converged and not _sample_sizes_diverge(result),
-        confidence=(
-            outcome.score if isinstance(outcome, ConfidenceOutcome) else None
-        ),
+        confidence=(outcome.score if isinstance(outcome, ConfidenceOutcome) else None),
         confidence_threshold=threshold,
         substantive_claims=substantive,
         resolvable_claims=resolvable,

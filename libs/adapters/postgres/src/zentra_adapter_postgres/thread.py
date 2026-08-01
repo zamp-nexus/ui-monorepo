@@ -20,11 +20,19 @@ from zentra_domain_investigation import (
 )
 
 from .database import Database, set_tenant_context
+from .draft_finding import (
+    PostgresDraftFindingRepository,
+    PostgresEvidenceCitationRepository,
+)
+from .execution_job import PostgresExecutionJobRepository
 from .investigation import (
+    PostgresAgentExecutionRepository,
     PostgresAuditOutboxRepository,
+    PostgresHumanApprovalRepository,
     PostgresInvestigationRepository,
 )
 from .schema import investigation_threads, investigations, thread_messages
+from .work_feed import PostgresWorkFeedRepository
 from .workspace import PostgresOrganizationRepository
 
 
@@ -219,9 +227,15 @@ class PostgresThreadUnitOfWork:
         self.threads = PostgresThreadRepository(connection)
         self.organization = PostgresOrganizationRepository(connection)
         self.investigations = PostgresInvestigationRepository(connection)
+        self.jobs = PostgresExecutionJobRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection, trace_id=trace_id, span_id=span_id
         )
+        self.work_feed = PostgresWorkFeedRepository(connection)
+        self.approvals = PostgresHumanApprovalRepository(connection)
+        self.agent_executions = PostgresAgentExecutionRepository(connection)
+        self.draft_findings = PostgresDraftFindingRepository(connection)
+        self.citations = PostgresEvidenceCitationRepository(connection)
         self.should_commit = False
 
     async def commit(self) -> None:
@@ -240,6 +254,7 @@ class PostgresThreadUnitOfWorkFactory:
         span_id: UUID,
     ) -> AsyncIterator[PostgresThreadUnitOfWork]:
         async with self._database.engine.connect() as connection:
+            await connection.execution_options(isolation_level="REPEATABLE READ")
             transaction = await connection.begin()
             await set_tenant_context(connection, tenant_id)
             unit_of_work = PostgresThreadUnitOfWork(

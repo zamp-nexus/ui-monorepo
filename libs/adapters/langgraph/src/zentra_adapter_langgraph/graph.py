@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Any, TypedDict
@@ -30,6 +30,10 @@ from .constants import MAX_EVALUATION_ATTEMPTS
 # state object. They live in agent_executions.output and are reachable only
 # through the artifact:// pointer (§3.4 external memory store).
 _EXCLUDED_FROM_STATE = frozenset({"rows"})
+
+
+async def _no_cancellation(_: UUID, __: UUID) -> None:
+    return None
 
 
 def _last(_current: Any, incoming: Any) -> Any:
@@ -140,6 +144,9 @@ class InvestigationGraph:
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
         checkpointer: Any | None = None,
+        cancellation_checkpoint: Callable[[UUID, UUID], Awaitable[None]] = (
+            _no_cancellation
+        ),
     ) -> None:
         self._orchestrator = orchestrator
         self._sql_analyst = sql_analyst
@@ -148,6 +155,8 @@ class InvestigationGraph:
         self._recorder = recorder
         self._now = now
         self._new_id = new_id
+        self._checkpointed = checkpointer is not None
+        self._cancellation_checkpoint = cancellation_checkpoint
         self._graph = self._build(checkpointer)
 
     def _build(self, checkpointer: Any | None) -> Any:
@@ -180,14 +189,23 @@ class InvestigationGraph:
         thread_id: str | None = None,
     ) -> PipelineOutcome:
         config = {"configurable": {"thread_id": thread_id or str(investigation_id)}}
+        initial_state: GraphState | None = {
+            "question": question,
+            "investigation_id": str(investigation_id),
+            "tenant_id": str(tenant_id),
+            "step": 0,
+            "attempts": 0,
+        }
+        if self._checkpointed:
+            snapshot = await self._graph.aget_state(config)
+            if snapshot.values:
+                # A recovered lease continues the same logical graph run. Passing
+                # a fresh input here would create another run and repeat already
+                # checkpointed Agent steps; None resumes the persisted state (or
+                # returns its terminal result when the graph had already ended).
+                initial_state = None
         final: GraphState = await self._graph.ainvoke(
-            {
-                "question": question,
-                "investigation_id": str(investigation_id),
-                "tenant_id": str(tenant_id),
-                "step": 0,
-                "attempts": 0,
-            },
+            initial_state,
             config=config,
         )
         return self._outcome(final)
@@ -277,6 +295,8 @@ class InvestigationGraph:
         started_at = self._now()
         agent_state = {**payload, "execution_id": str(execution_id)}
 
+        await self._cancellation_checkpoint(tenant_id, investigation_id)
+
         # Before the call, not after. A step that hangs or is killed mid-flight
         # writes no completion at all, and Replay showing nothing there is
         # indistinguishable from the step never having been attempted.
@@ -326,6 +346,7 @@ class InvestigationGraph:
             status=ExecutionStatus.SUCCESS,
             started_at=started_at,
         )
+        await self._cancellation_checkpoint(tenant_id, investigation_id)
         return output, step, execution_id
 
     async def _record(

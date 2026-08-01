@@ -25,6 +25,11 @@ Every provider an Investigation may reach, and what each does with what it
 receives. The SQL Analyst sends governed query **result rows** to the model, so
 this list is the set of parties that can see tenant data.
 
+Thesys is a terminal presentation sub-processor, not an analytical provider. It
+receives only the strict `VisualizationBriefV1` after publication and no raw
+rows, SQL, credentials, prompts, or reasoning. The adapter uses the pinned C1
+model/version documented in [[adr/0020-thesys-terminal-presentation]].
+
 ## Premium tier
 
 None of these train on inference data. This is the guarantee premium tenants

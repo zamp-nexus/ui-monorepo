@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from contextlib import suppress
+import asyncio
+from collections.abc import AsyncIterator
 from typing import Annotated, NoReturn
 from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     Query,
     Request,
     status,
 )
+from fastapi.responses import StreamingResponse
 from zentra_application_investigation import (
-    AuthenticatedActor,
-    InvestigationService,
     PermissionDeniedError,
     ThreadConflictError,
     ThreadCursorError,
@@ -48,15 +47,6 @@ def _thread_error(error: Exception) -> NoReturn:
     ) from error
 
 
-async def _run_pipeline(
-    investigations: InvestigationService,
-    actor: AuthenticatedActor,
-    investigation_id: UUID,
-) -> None:
-    with suppress(Exception):
-        await investigations.execute(actor, investigation_id)
-
-
 @router.post(
     "/projects/{project_id}/threads",
     response_model=ThreadResponse,
@@ -66,7 +56,6 @@ async def create_thread(
     project_id: UUID,
     body: ThreadMessageRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
     try:
@@ -80,13 +69,6 @@ async def create_thread(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    if detail.investigation_id is not None:
-        background.add_task(
-            _run_pipeline,
-            request.app.state.dependencies.investigations,
-            resolved.actor,
-            detail.investigation_id,
-        )
     return ThreadResponse.from_detail(detail)
 
 
@@ -125,12 +107,66 @@ async def get_thread(
     return ThreadResponse.from_detail(detail)
 
 
+@router.get(
+    "/threads/{thread_id}/events",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+async def stream_thread_events(
+    thread_id: UUID,
+    request: Request,
+    resolved: AuthenticatedRequest,
+    after: int | None = Query(default=None, ge=0),
+) -> StreamingResponse:
+    header_cursor = request.headers.get("last-event-id")
+    try:
+        cursor = after if after is not None else int(header_cursor or "0")
+        await request.app.state.dependencies.threads.event_cursor(
+            resolved.actor, thread_id
+        )
+    except (ThreadNotFoundError, ValueError) as error:
+        _thread_error(error)
+
+    async def event_stream() -> AsyncIterator[str]:
+        nonlocal cursor
+        heartbeat_elapsed = 0
+        while not await request.is_disconnected():
+            events = await request.app.state.dependencies.threads.events(
+                resolved.actor,
+                thread_id=thread_id,
+                after=cursor,
+            )
+            if events:
+                for event in events:
+                    cursor = event.sequence
+                    yield (
+                        f"id: {event.sequence}\n"
+                        f"event: {event.kind.value}\n"
+                        f"data: {event.model_dump_json()}\n\n"
+                    )
+                heartbeat_elapsed = 0
+            else:
+                await asyncio.sleep(1)
+                heartbeat_elapsed += 1
+                if heartbeat_elapsed >= 15:
+                    yield ": heartbeat\n\n"
+                    heartbeat_elapsed = 0
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/threads/{thread_id}/messages", response_model=ThreadResponse)
 async def append_thread_message(
     thread_id: UUID,
     body: ThreadMessageRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
     try:
@@ -144,13 +180,6 @@ async def append_thread_message(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    if detail.investigation_id is not None:
-        background.add_task(
-            _run_pipeline,
-            request.app.state.dependencies.investigations,
-            resolved.actor,
-            detail.investigation_id,
-        )
     return ThreadResponse.from_detail(detail)
 
 

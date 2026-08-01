@@ -11,6 +11,7 @@ members = [
     "zentra-adapter-model-providers",
     "zentra-adapter-postgres",
     "zentra-adapter-telemetry",
+    "zentra-adapter-thesys",
     "zentra-api",
     "zentra-application-connector",
     "zentra-application-investigation",
@@ -757,6 +758,7 @@ dependencies = [
     { name = "zentra-adapter-model-providers" },
     { name = "zentra-adapter-postgres" },
     { name = "zentra-adapter-telemetry" },
+    { name = "zentra-adapter-thesys" },
     { name = "zentra-api" },
     { name = "zentra-application-connector" },
     { name = "zentra-application-investigation" },
@@ -785,6 +787,7 @@ requires-dist = [
     { name = "zentra-adapter-model-providers", editable = "libs/adapters/model-providers" },
     { name = "zentra-adapter-postgres", editable = "libs/adapters/postgres" },
     { name = "zentra-adapter-telemetry", editable = "libs/adapters/telemetry" },
+    { name = "zentra-adapter-thesys", editable = "libs/adapters/thesys" },
     { name = "zentra-api", editable = "apps/api" },
     { name = "zentra-application-connector", editable = "libs/application/connector" },
     { name = "zentra-application-investigation", editable = "libs/application/investigation" },
@@ -1866,6 +1869,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "zentra-adapter-thesys"
+version = "1.0.0"
+source = { editable = "libs/adapters/thesys" }
+dependencies = [
+    { name = "openai" },
+    { name = "zentra-domain-investigation" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "openai", specifier = ">=2.50.0" },
+    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
+]
+
+[[package]]
 name = "zentra-api"
 version = "1.0.0"
 source = { editable = "apps/api" }
@@ -1882,6 +1900,7 @@ dependencies = [
     { name = "zentra-adapter-model-providers" },
     { name = "zentra-adapter-postgres" },
     { name = "zentra-adapter-telemetry" },
+    { name = "zentra-adapter-thesys" },
     { name = "zentra-application-connector" },
     { name = "zentra-application-investigation" },
     { name = "zentra-domain-agent-execution" },
@@ -1902,6 +1921,7 @@ requires-dist = [
     { name = "zentra-adapter-model-providers", editable = "libs/adapters/model-providers" },
     { name = "zentra-adapter-postgres", editable = "libs/adapters/postgres" },
     { name = "zentra-adapter-telemetry", editable = "libs/adapters/telemetry" },
+    { name = "zentra-adapter-thesys", editable = "libs/adapters/thesys" },
     { name = "zentra-application-connector", editable = "libs/application/connector" },
     { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },

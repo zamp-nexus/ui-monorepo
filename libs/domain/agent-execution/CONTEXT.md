@@ -16,6 +16,17 @@ _Avoid_: Agent run, task process
 A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish. Its canonical role value is `insight`; `insight_root_cause` is a read-only compatibility value that Phase 1 wrote and nothing writes again.
 _Avoid_: Root-Cause Agent, Finding writer, synthesis step
 
+**Data Visualization Agent**:
+A presentation-only Agent that turns a published Visualization Brief into C1
+content without analytical, repository, audit-reader, file, shell, MCP,
+approval, or arbitrary-tool access.
+_Avoid_: Dashboard Agent, analyst, chart query agent
+
+**Agent Capability**:
+A versioned public declaration of one bounded behavior an evaluated Agent may
+perform.
+_Avoid_: Tool permission, implementation detail
+
 **SQL Analyst Agent**:
 A registered Agent that proposes a Governed Query Plan from a question and approved Semantic Model without executable raw-SQL authority.
 _Avoid_: Query Planner Agent, SQL generator

@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    Integer,
     String,
     Table,
     Text,
@@ -34,6 +35,7 @@ investigation_threads = Table(
     Column("initiating_message_id", UUID(as_uuid=True), nullable=False),
     Column("title", Text, nullable=False),
     Column("status", String(16), nullable=False, server_default="draft"),
+    Column("next_event_sequence", Integer, nullable=False, server_default="1"),
     Column("archived_from_status", String(16)),
     Column(
         "created_at",
@@ -74,6 +76,10 @@ investigation_threads = Table(
     CheckConstraint(
         "char_length(title) BETWEEN 1 AND 80",
         name="ck_investigation_threads_title_length",
+    ),
+    CheckConstraint(
+        "next_event_sequence >= 1",
+        name="ck_investigation_threads_event_sequence",
     ),
 )
 Index(

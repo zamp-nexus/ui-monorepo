@@ -18,6 +18,7 @@ from zentra_domain_investigation import (
     DraftFindingError,
     EvidenceCitation,
     EvidenceReference,
+    ExecutionJob,
     Finding,
     HumanApproval,
     Investigation,
@@ -43,6 +44,7 @@ TENANT_ID = UUID("51000000-0000-0000-0000-000000000001")
 USER_ID = UUID("52000000-0000-0000-0000-000000000002")
 INVESTIGATION_ID = UUID("53000000-0000-0000-0000-000000000003")
 APPROVAL_ID = UUID("54000000-0000-0000-0000-000000000004")
+JOB_ID = UUID("54000000-0000-0000-0000-000000000005")
 CITATION_ID = UUID("cc000000-0000-0000-0000-000000000001")
 NOW = datetime(2026, 7, 29, 9, 0, tzinfo=UTC)
 
@@ -171,6 +173,14 @@ class AgentExecutions:
         self.rows.append(execution)
 
 
+class Jobs:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, ExecutionJob] = {}
+
+    async def add_job(self, job: ExecutionJob) -> None:
+        self.rows[job.job_id] = job
+
+
 class Citations:
     def __init__(self) -> None:
         self.rows: dict[UUID, tuple[object, ...]] = {}
@@ -212,6 +222,7 @@ class UnitOfWork:
         self.investigations = Investigations()
         self.approvals = Approvals()
         self.agent_executions = AgentExecutions()
+        self.jobs = Jobs()
         self.draft_findings = DraftFindings()
         self.citations = Citations()
         self.erasures = Erasures()
@@ -264,9 +275,7 @@ def service(
 ) -> InvestigationService:
     # Investigation, approval, then erasure ids. A fixed sequence keeps the
     # assertions readable; running out of it is what the cycle prevents.
-    ids = iter(
-        (INVESTIGATION_ID, APPROVAL_ID, *(uuid4() for _ in range(8)))
-    )
+    ids = iter((INVESTIGATION_ID, JOB_ID, APPROVAL_ID, *(uuid4() for _ in range(8))))
     return InvestigationService(
         unit_of_work_factory=UnitOfWorkFactory(unit_of_work),
         pipeline=pipeline or Pipeline(),
@@ -291,6 +300,8 @@ async def test_start_returns_running_before_the_agents_have_run() -> None:
     assert detail.pending_approval is None
     assert detail.audit_delivery is AuditDelivery.COMPLETE
     assert unit_of_work.commits == 1
+    assert list(unit_of_work.jobs.rows) == [JOB_ID]
+    assert unit_of_work.jobs.rows[JOB_ID].investigation_id == INVESTIGATION_ID
     assert [event.event_type for event in unit_of_work.outbox.events] == [
         "investigation.created",
         "investigation.started",
@@ -543,8 +554,7 @@ def structured_draft() -> DraftFinding:
 
 
 @pytest.mark.asyncio
-async def test_a_drafted_investigation_stores_the_draft_with_its_state_change(
-) -> None:
+async def test_a_drafted_investigation_stores_the_draft_with_its_state_change() -> None:
     """Committed alongside the Investigation's own change. A reader must never
     see a completed evaluation whose draft is missing."""
     unit_of_work = UnitOfWork()
@@ -558,8 +568,7 @@ async def test_a_drafted_investigation_stores_the_draft_with_its_state_change(
 
 
 @pytest.mark.asyncio
-async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight(
-) -> None:
+async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight() -> None:
     """Insight is a paid model call, and regenerating narrative per read would
     let two readers of the same Investigation see different conclusions."""
     unit_of_work = UnitOfWork()

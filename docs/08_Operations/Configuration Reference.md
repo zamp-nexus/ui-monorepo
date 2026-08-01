@@ -35,6 +35,8 @@ Never record values or tokens in this vault.
 | Cube | `CUBE_URL`, `CUBE_API_SECRET` |
 | Clerk | `CLERK_ISSUER`, `CLERK_AUDIENCE` |
 | Model providers | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` |
+| Thesys terminal presentation | `THESYS_API_KEY`, pinned `THESYS_MODEL`, input/output per-million prices |
+| Durable worker | `EXECUTION_WORKER_ENABLED`, optional stable `EXECUTION_WORKER_ID` |
 | Telemetry | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` |
 | Validation only | `E2B_API_KEY` |
 
@@ -44,6 +46,10 @@ handling.
 A provider with no key is skipped in its chain rather than failing, so the
 system runs on `ANTHROPIC_API_KEY` alone. Only the premium chains are guaranteed
 to reach a provider that does not train on input.
+
+An absent `THESYS_API_KEY` reports presentation readiness as degraded while
+ordinary Finding retrieval remains healthy. Unversioned Thesys model aliases
+are rejected at startup so renderer behavior cannot drift silently.
 
 `CLERK_AUDIENCE` must stay **empty** unless a Clerk JWT template is configured
 to mint a matching `aud` claim. The app requests a default session token, which

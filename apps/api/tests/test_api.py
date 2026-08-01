@@ -76,6 +76,18 @@ class Dependencies:
         return None
 
 
+@dataclass
+class LifecycleDependencies(Dependencies):
+    started: bool = False
+    stopped: bool = False
+
+    async def start(self) -> None:
+        self.started = True
+
+    async def stop(self) -> None:
+        self.stopped = True
+
+
 def client(
     *,
     postgres: bool = True,
@@ -109,6 +121,25 @@ def test_liveness_never_contacts_dependencies() -> None:
     assert response.json() == {"status": "live"}
 
 
+def test_app_lifespan_starts_and_stops_durable_services() -> None:
+    dependencies = LifecycleDependencies(
+        database=DatabaseProbe(True),
+        audit=Probe(True),
+        cube=Probe(True),
+        jwt_verifier=Verifier(),
+    )
+    app = create_app(
+        Settings(clerk_issuer="https://example.clerk.accounts.dev"),
+        dependencies=dependencies,  # type: ignore[arg-type]
+    )
+
+    with TestClient(app):
+        assert dependencies.started is True
+        assert dependencies.stopped is False
+
+    assert dependencies.stopped is True
+
+
 def test_readiness_reports_sanitized_dependency_state() -> None:
     with client(clickhouse=False) as test_client:
         response = test_client.get("/health/ready")
@@ -118,6 +149,7 @@ def test_readiness_reports_sanitized_dependency_state() -> None:
         "postgres": {"status": "ready"},
         "clickhouse": {"status": "unavailable"},
         "cube": {"status": "ready"},
+        "thesys": {"status": "unavailable"},
     }
     assert "password" not in response.text
 
@@ -247,12 +279,16 @@ class InvestigationServiceStub:
     def __init__(self) -> None:
         self.detail = investigation_detail()
         self.last_decision: ApprovalDecision | None = None
+        self.execute_calls = 0
 
     async def start(self, *args: object, **kwargs: object) -> InvestigationDetail:
         return self.detail
 
     async def get(self, *args: object, **kwargs: object) -> InvestigationDetail:
         return self.detail
+
+    async def execute(self, *args: object, **kwargs: object) -> None:
+        self.execute_calls += 1
 
     async def decide(
         self,
@@ -284,6 +320,7 @@ def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
         )
 
     assert response.status_code == 201
+    assert service.execute_calls == 0
     assert response.json()["status"] == "awaiting_approval"
     assert response.json()["outcome"] == {
         "kind": "confidence",

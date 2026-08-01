@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import os
+import socket
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -17,6 +22,7 @@ from zentra_adapter_langgraph import (
     InsightAgent,
     InvestigationGraph,
     OrchestratorAgent,
+    PostgresCheckpointStore,
     SqlAnalystAgent,
 )
 from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
@@ -40,11 +46,14 @@ from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
+from zentra_adapter_thesys import ThesysC1Client
 from zentra_application_connector import ConnectorService
 from zentra_application_investigation import (
+    ExecutionJobWorker,
     InvestigationService,
     OrganizationService,
     ThreadService,
+    VisualizationService,
 )
 from zentra_domain_agent_execution import AgentRole
 
@@ -86,6 +95,11 @@ class AppDependencies:
     audit_delivery: AuditDeliveryCoordinator
     organization: OrganizationService
     threads: ThreadService
+    checkpoints: PostgresCheckpointStore
+    execution_worker: ExecutionJobWorker
+    execution_worker_enabled: bool
+    registry: PostgresAgentRegistry
+    visualizations: VisualizationService | None = None
     #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
     #: service with no key: the Connector routes then fail with a message
     #: naming the missing configuration, instead of accepting a password they
@@ -93,6 +107,7 @@ class AppDependencies:
     #: The internal Cube model endpoint and connector_model.py's functions
     #: fail the same way — a clear, typed error rather than an
     #: AttributeError — whenever this is unset.
+    worker_task: asyncio.Task[None] | None = None
     connector: ConnectorService | None = None
 
     @classmethod
@@ -112,6 +127,7 @@ class AppDependencies:
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
         recorder = PostgresExecutionRecorder(unit_of_work_factory)
+        checkpoints = PostgresCheckpointStore(settings.database_url)
 
         # A provider with no key is simply absent from the chain, so the whole
         # system still runs on ANTHROPIC_API_KEY alone.
@@ -144,6 +160,7 @@ class AppDependencies:
                 breaker=breaker,
                 registry=registry,
                 recorder=recorder,
+                checkpointer=checkpoints.saver,
             )
             for tier in ModelTier
         }
@@ -172,6 +189,26 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
+        visualizations = VisualizationService(
+            unit_of_work_factory=unit_of_work_factory,
+            renderer=(
+                ThesysC1Client(
+                    api_key=settings.thesys_api_key,
+                    model=settings.thesys_model,
+                    input_price_per_million=Decimal(
+                        str(settings.thesys_input_price_per_million)
+                    ),
+                    output_price_per_million=Decimal(
+                        str(settings.thesys_output_price_per_million)
+                    ),
+                )
+                if settings.thesys_api_key
+                else None
+            ),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+            continuation=threads,
+        )
         connector = (
             ConnectorService(
                 sources=PostgresDataSourceRepository(database),
@@ -197,6 +234,16 @@ class AppDependencies:
             if settings.connector_credential_key
             else None
         )
+        worker_id = settings.execution_worker_id or (
+            f"{socket.gethostname()}:{os.getpid()}"
+        )
+        execution_worker = ExecutionJobWorker(
+            unit_of_work_factory=unit_of_work_factory,
+            executor=investigations,
+            visualization_executor=visualizations,
+            worker_id=worker_id,
+            now=lambda: datetime.now(UTC),
+        )
         return cls(
             database=database,
             audit=audit,
@@ -210,8 +257,32 @@ class AppDependencies:
             audit_delivery=audit_delivery,
             organization=organization,
             threads=threads,
+            checkpoints=checkpoints,
+            execution_worker=execution_worker,
+            execution_worker_enabled=settings.execution_worker_enabled,
+            registry=registry,
+            visualizations=visualizations,
             connector=connector,
         )
+
+    async def start(self) -> None:
+        await self.checkpoints.open()
+        self.audit_delivery.start()
+        if self.execution_worker_enabled and self.worker_task is None:
+            self.worker_task = asyncio.create_task(
+                self.execution_worker.run_forever(),
+                name="investigation-execution-worker",
+            )
+
+    async def stop(self) -> None:
+        self.execution_worker.stop()
+        if self.worker_task is not None:
+            self.worker_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self.worker_task
+            self.worker_task = None
+        await self.audit_delivery.stop()
+        await self.checkpoints.close()
 
     async def close(self) -> None:
         await self.database.close()
@@ -226,6 +297,7 @@ def _build_graph_factory(
     breaker: ProviderCircuitBreaker,
     registry: PostgresAgentRegistry,
     recorder: PostgresExecutionRecorder,
+    checkpointer: object | None = None,
 ):
     """A graph builder per tier, parameterized by the semantic layer.
 
@@ -255,6 +327,8 @@ def _build_graph_factory(
             evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
             insight=InsightAgent(model=model),
             recorder=recorder,
+            checkpointer=checkpointer,
+            cancellation_checkpoint=recorder.cancellation_checkpoint,
         )
 
     return build

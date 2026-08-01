@@ -30,8 +30,9 @@ It never accepts an empty Thread create and exposes no message update endpoint.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST/GET | `/v1/projects/{project_id}/threads` | Create with first message or list Threads |
-| GET | `/v1/threads/{thread_id}` | Retrieve a full message snapshot |
-| POST | `/v1/threads/{thread_id}/messages` | Append a Draft routing clarification |
+| GET | `/v1/threads/{thread_id}` | Retrieve the consistent message/Investigation snapshot and event cursor |
+| POST | `/v1/threads/{thread_id}/messages` | Append a Draft clarification or terminal-Investigation follow-up |
+| GET | `/v1/threads/{thread_id}/events` | Resume the ordered public Work Feed over SSE |
 | POST | `/v1/threads/{thread_id}/archive` | Archive without deleting analytical history |
 | POST | `/v1/threads/{thread_id}/restore` | Restore the pre-archive state |
 | DELETE | `/v1/threads/{thread_id}` | Delete only a Draft Thread with no Investigation |
@@ -54,8 +55,16 @@ clarification can resolve the same Draft Thread. Exactly one resolved scenario
 creates one linked Investigation and activates the Thread. Title generation is
 deterministic, bounded to 80 characters, and consumes no model call.
 
+An active Thread accepts a follow-up only after its latest Investigation is
+terminal. The child receives the next Thread sequence and an immutable parent
+link. Conservative ambiguity persists a router clarification without changing
+the Thread back to Draft or creating analytical work. Snapshot reads include the
+ordered Investigation collection while retaining singular `investigation_id` as
+the latest-attempt compatibility field. See [[adr/0017-linked-investigation-threads]].
+
 Lists use stable activity-descending keyset pagination with opaque cursors,
 default size 50, and maximum size 100. Thread snapshots return server-decided
-action flags; clients do not derive permissions or lifecycle transitions.
+action flags; clients do not derive permissions or lifecycle transitions. For
+reconnect semantics, see [[Visualization and Work Feed API]].
 
 Parent: [[APIs MOC]]

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str | None = None
     anthropic_api_key: str | None = Field(default=None, repr=False)
     openai_api_key: str | None = Field(default=None, repr=False)
+    thesys_api_key: str | None = Field(default=None, repr=False)
+    thesys_model: str = "c1/anthropic/claude-sonnet-4/v-20251230"
+    thesys_input_price_per_million: float = Field(default=3.0, ge=0)
+    thesys_output_price_per_million: float = Field(default=15.0, ge=0)
     gemini_api_key: str | None = Field(default=None, repr=False)
     nvidia_api_key: str | None = Field(default=None, repr=False)
     groq_api_key: str | None = Field(default=None, repr=False)
@@ -47,6 +51,8 @@ class Settings(BaseSettings):
     #: would work until restart, then leave every stored credential unopenable.
     connector_credential_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"
+    execution_worker_enabled: bool = True
+    execution_worker_id: str | None = None
 
     @model_validator(mode="before")
     @classmethod
