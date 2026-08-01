@@ -8,6 +8,16 @@ import type { IdentityContext, Thread, VisualizationBrief } from '../../types';
 import { ChatPage } from './chat-page';
 import { toTimeline } from './to-chat-message';
 
+// The Thesys renderer is a third-party generative-UI SDK; the wiring under
+// test is which branch VisualizationAnswer takes and what it hands the
+// renderer, not Thesys's own rendering, so the module is replaced with a
+// stand-in that surfaces its props for assertions.
+vi.mock('./c1-answer', () => ({
+  default: ({ c1Response }: { c1Response: string }) => (
+    <div data-testid="c1-answer">{c1Response}</div>
+  ),
+}));
+
 const getToken = async () => 'test-token';
 
 const identity: IdentityContext = {
@@ -404,6 +414,8 @@ describe('the brief a reader falls back to', () => {
     expect(screen.getByText('10 %')).toBeTruthy();
     expect(screen.getAllByText('12 %')).toHaveLength(2);
     expect(screen.getByRole('img', { name: 'June: 10 %, July: 12 %' })).toBeTruthy();
+    // A failed render is the one state a reader can act on.
+    expect(await screen.findByRole('button', { name: 'Render again' })).toBeTruthy();
   });
 
   it('says why it is showing the brief while a render is still pending', async () => {
@@ -413,5 +425,39 @@ describe('the brief a reader falls back to', () => {
     await ask('Why did EU refunds increase?');
 
     expect(await screen.findByText(/Preparing the rendered view/, { exact: false })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Render again' })).toBeFalsy();
+  });
+
+  it('says why it is showing the brief while the renderer is still generating', async () => {
+    withVisualization({ status: 'generating' });
+    renderPage();
+
+    await ask('Why did EU refunds increase?');
+
+    expect(await screen.findByText(/Preparing the rendered view/, { exact: false })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Render again' })).toBeFalsy();
+  });
+
+  it('says the rendered view was erased when the visualization is tombstoned', async () => {
+    withVisualization({ status: 'tombstoned' });
+    renderPage();
+
+    await ask('Why did EU refunds increase?');
+
+    expect(await screen.findByText(/rendered view was erased/, { exact: false })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Render again' })).toBeFalsy();
+  });
+
+  it('renders what Thesys produced once a render is ready, not the brief fallback', async () => {
+    withVisualization({ status: 'ready', c1_response: 'RENDERED_EU_REFUND_VIEW' });
+    renderPage();
+
+    await ask('Why did EU refunds increase?');
+
+    expect((await screen.findByTestId('c1-answer')).textContent).toBe('RENDERED_EU_REFUND_VIEW');
+    // The renderer's own output stands alone; the verified brief underneath
+    // it is not also shown once a render exists.
+    expect(screen.queryByText('10 %')).toBeFalsy();
+    expect(screen.queryByRole('button', { name: 'Render again' })).toBeFalsy();
   });
 });
