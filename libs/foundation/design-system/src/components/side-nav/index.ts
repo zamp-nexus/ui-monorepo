@@ -5,6 +5,8 @@
 
 export { SideNav } from './side-nav';
 export { SideNavItem } from './side-nav-item';
+export { SideNavContext, useSideNavContext } from './side-nav.context';
+export type { SideNavContextValue } from './side-nav.context';
 export type {
   SideNavProps,
   SideNavComponent,

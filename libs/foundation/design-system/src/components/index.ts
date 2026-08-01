@@ -328,8 +328,9 @@ export type {
 export { CardVariants, CardModifiers, CardSlots, cardDefaultTheme } from './card';
 
 // SideNav
-export { SideNav, SideNavItem } from './side-nav';
+export { SideNav, SideNavItem, SideNavContext, useSideNavContext } from './side-nav';
 export type {
+  SideNavContextValue,
   SideNavProps,
   SideNavComponent,
   SideNavOwnProps,

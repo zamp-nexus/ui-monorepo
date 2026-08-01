@@ -7,3 +7,5 @@ export type {
   RejectionReason,
   Scenario,
 } from './investigation';
+
+export type { ChatMessage, ChatRole, ChatSuggestion, ChatThread } from './chat';

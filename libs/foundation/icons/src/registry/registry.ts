@@ -126,6 +126,7 @@ export const ICON_NAMES = {
   // Data
   DATABASE: 'database',
   NETWORK: 'network',
+  SPARKLES: 'sparkles',
 } as const;
 
 /**

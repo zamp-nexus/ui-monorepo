@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { apiUrl, requestJson, type TokenSource } from './api';
+import { ChatPage } from './pages/chat/chat-page';
 import { ComingSoon } from './pages/coming-soon';
 import {
   MembershipUnavailable,
@@ -90,16 +91,7 @@ const AuthenticatedWorkspace = () => {
             />
           }
         />
-        <Route
-          path="/chat"
-          element={
-            <ComingSoon
-              title="Chat"
-              icon="message_square"
-              description="Ask a governed question in conversation and follow the evidence trace it produces."
-            />
-          }
-        />
+        <Route path="/chat" element={<ChatPage identity={identity.data} />} />
         <Route
           path="/connections"
           element={
