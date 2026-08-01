@@ -179,6 +179,25 @@ async def assert_port_satisfies_contract(
     assert isinstance(result, SequenceStepExecutionFailure)
     assert result.reason is SequenceExecutionFailureReason.DATA_INCOMPATIBLE
 
+    # cast_type to a target_type the catalog's own validation doesn't
+    # constrain (target_type is an open string) but no adapter actually
+    # supports: still a typed failure, never an unhandled exception.
+    table = seed_raw_table(
+        rows=[{"email": "a@example.com", "amount": 10}],
+        columns=("email", "amount"),
+    )
+    result = await apply_operation(
+        _request(
+            tenant_id=tenant_id,
+            sequence_id=sequence_id,
+            input_table=table,
+            operation_kind="cast_type",
+            operation_parameters={"column": "amount", "target_type": "datetime"},
+        )
+    )
+    assert isinstance(result, SequenceStepExecutionFailure)
+    assert result.reason is SequenceExecutionFailureReason.DATA_INCOMPATIBLE
+
     # An operation name outside the closed catalog is a typed failure.
     table = seed_raw_table(
         rows=[{"email": "a@example.com", "amount": 10}],

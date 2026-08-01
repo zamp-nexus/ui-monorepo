@@ -61,6 +61,10 @@ forbidden_modules =
 [importlinter:contract:adapters-do-not-depend-on-each-other]
 name = Adapters do not depend on sibling adapters
 type = independence
+# zentra_adapter_sequence_execution is deliberately excluded: it depends on
+# zentra_adapter_postgres to persist Sequence Step results, the first
+# intentional adapter-to-adapter dependency in this codebase. See
+# docs/adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution.md.
 modules =
     zentra_adapter_postgres
     zentra_adapter_clickhouse

@@ -87,6 +87,11 @@ Cloud's audit service already runs `cloud_provider = "aws"`).
   AWS account, a scoped CI OIDC role, this Terraform's own state backend)
   is a separate, deliberately un-bundled step from writing the resource
   definitions themselves.
+- `zentra_adapter_sequence_execution` depends on `zentra_adapter_postgres`
+  directly (to persist Sequence Step results) — the first intentional
+  adapter-to-adapter dependency in this codebase, and deliberately excluded
+  from `.importlinter`'s `adapters-do-not-depend-on-each-other` contract
+  rather than silently passing it.
 - If Phase 3's query execution is ever built out to also use chDB (since
   chDB can serve as a DuckDB-shaped query engine too), that would be its own
   decision revisiting ADR-0012 directly — this ADR does not pre-empt it, and

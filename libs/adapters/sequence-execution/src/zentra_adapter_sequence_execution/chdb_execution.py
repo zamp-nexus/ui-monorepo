@@ -187,7 +187,6 @@ class ChdbSequenceExecutionPort:
                 detail=f"No table {request.input_table.reference_id} for this Tenant",
             )
 
-        select_sql = _select_sql(operation, from_sql)
         output_id = uuid4()
         output_path = self._prepared_table_path(
             tenant_id=request.tenant_id, prepared_table_id=output_id
@@ -195,6 +194,11 @@ class ChdbSequenceExecutionPort:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
+            # _select_sql itself can fail — e.g. a catalog-valid but
+            # chdb-unsupported cast target_type — and that is exactly as
+            # much a data-incompatible operation as a chDB query failing,
+            # so it shares this try block rather than raising uncaught.
+            select_sql = _select_sql(operation, from_sql)
             chdb.query(
                 f"INSERT INTO FUNCTION file('{output_path}', 'Parquet') {select_sql}"
             )
