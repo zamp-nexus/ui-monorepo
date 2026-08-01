@@ -35,6 +35,7 @@ from .draft_finding import (
     PostgresEvidenceCitationRepository,
 )
 from .erasure import PostgresErasureRepository
+from .execution_job import PostgresExecutionJobRepository
 from .schema import (
     agent_executions,
     audit_outbox,
@@ -534,6 +535,7 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
         self.investigations = PostgresInvestigationRepository(connection)
         self.approvals = PostgresHumanApprovalRepository(connection)
         self.agent_executions = PostgresAgentExecutionRepository(connection)
+        self.jobs = PostgresExecutionJobRepository(connection)
         self.draft_findings = PostgresDraftFindingRepository(connection)
         self.citations = PostgresEvidenceCitationRepository(connection)
         self.erasures = PostgresErasureRepository(connection)

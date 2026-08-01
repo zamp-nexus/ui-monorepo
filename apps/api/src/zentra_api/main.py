@@ -29,10 +29,14 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.settings = resolved_settings
         app.state.dependencies = resolved_dependencies
-        if hasattr(resolved_dependencies, "audit_delivery"):
+        if hasattr(resolved_dependencies, "start"):
+            await resolved_dependencies.start()
+        elif hasattr(resolved_dependencies, "audit_delivery"):
             resolved_dependencies.audit_delivery.start()
         yield
-        if hasattr(resolved_dependencies, "audit_delivery"):
+        if hasattr(resolved_dependencies, "stop"):
+            await resolved_dependencies.stop()
+        elif hasattr(resolved_dependencies, "audit_delivery"):
             await resolved_dependencies.audit_delivery.stop()
         if dependencies is None:
             await resolved_dependencies.close()

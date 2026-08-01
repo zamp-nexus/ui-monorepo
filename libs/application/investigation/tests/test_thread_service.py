@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from zentra_domain_investigation import (
+    ExecutionJob,
     Group,
     Investigation,
     InvestigationThread,
@@ -49,6 +50,7 @@ class Repository:
         self.threads: dict[UUID, InvestigationThread] = {}
         self.messages: dict[UUID, list[ThreadMessage]] = {}
         self.investigations: dict[UUID, Investigation] = {}
+        self.jobs: dict[UUID, ExecutionJob] = {}
         self.enqueued_events = 0
         self.commits = 0
 
@@ -136,6 +138,9 @@ class Repository:
     ) -> None:
         self.investigations[investigation.investigation_id] = investigation
 
+    async def add_job(self, job: ExecutionJob) -> None:
+        self.jobs[job.job_id] = job
+
     async def enqueue(self, events: list[object]) -> None:
         self.enqueued_events += len(events)
 
@@ -160,6 +165,7 @@ class UnitOfWork:
         self.threads = repository
         self.organization = repository
         self.investigations = repository
+        self.jobs = repository
         self.outbox = repository
         self.repository = repository
 
@@ -321,6 +327,9 @@ async def test_later_clarification_resolves_without_losing_prior_messages() -> N
     assert investigation.thread_id == draft.thread_id
     assert investigation.initiating_message_id == resolved.messages[-1].message_id
     assert value.enqueued_events == 2
+    assert len(value.jobs) == 1
+    job = next(iter(value.jobs.values()))
+    assert job.investigation_id == investigation.investigation_id
 
 
 @pytest.mark.asyncio

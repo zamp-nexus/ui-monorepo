@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     #: would work until restart, then leave every stored credential unopenable.
     connector_credential_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"
+    execution_worker_enabled: bool = True
+    execution_worker_id: str | None = None
 
     @model_validator(mode="before")
     @classmethod

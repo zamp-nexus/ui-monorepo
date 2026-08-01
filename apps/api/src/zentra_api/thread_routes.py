@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from typing import Annotated, NoReturn
 from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     Query,
@@ -14,8 +12,6 @@ from fastapi import (
     status,
 )
 from zentra_application_investigation import (
-    AuthenticatedActor,
-    InvestigationService,
     PermissionDeniedError,
     ThreadConflictError,
     ThreadCursorError,
@@ -48,15 +44,6 @@ def _thread_error(error: Exception) -> NoReturn:
     ) from error
 
 
-async def _run_pipeline(
-    investigations: InvestigationService,
-    actor: AuthenticatedActor,
-    investigation_id: UUID,
-) -> None:
-    with suppress(Exception):
-        await investigations.execute(actor, investigation_id)
-
-
 @router.post(
     "/projects/{project_id}/threads",
     response_model=ThreadResponse,
@@ -66,7 +53,6 @@ async def create_thread(
     project_id: UUID,
     body: ThreadMessageRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
     try:
@@ -80,13 +66,6 @@ async def create_thread(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    if detail.investigation_id is not None:
-        background.add_task(
-            _run_pipeline,
-            request.app.state.dependencies.investigations,
-            resolved.actor,
-            detail.investigation_id,
-        )
     return ThreadResponse.from_detail(detail)
 
 
@@ -130,7 +109,6 @@ async def append_thread_message(
     thread_id: UUID,
     body: ThreadMessageRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> ThreadResponse:
     try:
@@ -144,13 +122,6 @@ async def append_thread_message(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    if detail.investigation_id is not None:
-        background.add_task(
-            _run_pipeline,
-            request.app.state.dependencies.investigations,
-            resolved.actor,
-            detail.investigation_id,
-        )
     return ThreadResponse.from_detail(detail)
 
 

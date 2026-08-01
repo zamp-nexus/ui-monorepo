@@ -370,8 +370,8 @@ async def test_reading_an_investigation_twice_returns_the_same_state(
             "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
-        # Creation legitimately runs the pipeline through a background task,
-        # so the baseline is taken after it rather than assumed to be zero.
+        # Creation queues durable execution, so reads must not take ownership
+        # of the worker's pipeline either.
         after_create = harness.pipeline.runs
         first = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
         second = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()

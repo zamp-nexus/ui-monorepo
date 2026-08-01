@@ -17,6 +17,12 @@ from .dto import (
     TimelineEntry,
     UnsupportedScenarioError,
 )
+from .execution_worker import (
+    DurableInvestigationExecutor,
+    ExecutionFailure,
+    ExecutionJobWorker,
+    classify_execution_failure,
+)
 from .ports import (
     AgentExecutionRepository,
     AuditOutboxRepository,
@@ -25,6 +31,7 @@ from .ports import (
     DraftFindingRepository,
     ErasureRepository,
     EvidenceCitationRepository,
+    ExecutionJobRepository,
     HumanApprovalRepository,
     InvestigationPipeline,
     InvestigationRepository,
@@ -80,6 +87,10 @@ __all__ = [
     "DraftFindingRepository",
     "ErasureRepository",
     "EvidenceCitationRepository",
+    "DurableInvestigationExecutor",
+    "ExecutionFailure",
+    "ExecutionJobRepository",
+    "ExecutionJobWorker",
     "HumanApprovalRepository",
     "InvestigationDetail",
     "InvestigationNotFoundError",
@@ -114,6 +125,7 @@ __all__ = [
     "UnsupportedScenarioError",
     "deterministic_thread_title",
     "route_governed_question",
+    "classify_execution_failure",
     "GroupDetail",
     "ProjectDetail",
     "OrganizationConflictError",

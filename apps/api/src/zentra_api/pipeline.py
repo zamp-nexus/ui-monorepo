@@ -271,6 +271,7 @@ class LangGraphInvestigationPipeline:
             investigation_id=investigation_id,
             tenant_id=tenant_id,
             question=question,
+            thread_id=f"{tenant_id}:{investigation_id}",
         )
         draft, citations = _draft_with_citations(
             outcome.insight,
@@ -452,4 +453,3 @@ def _citation(
         aggregate_value=value,
         evaluator_outcome=evaluator_outcome,
     )
-

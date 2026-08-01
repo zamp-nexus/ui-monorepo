@@ -23,6 +23,12 @@ from .erasure import (
     EvidenceSurface,
     require_erasable,
 )
+from .execution_job import (
+    TERMINAL_JOB_STATUSES,
+    ExecutionJob,
+    ExecutionJobStatus,
+    ExecutionJobTransitionError,
+)
 from .model import (
     TERMINAL_STATUSES,
     ApprovalDecision,
@@ -87,6 +93,9 @@ __all__ = [
     "EvidenceSurface",
     "EvidenceCitation",
     "EvidenceReference",
+    "ExecutionJob",
+    "ExecutionJobStatus",
+    "ExecutionJobTransitionError",
     "FailureOutcome",
     "Finding",
     "HumanApproval",
@@ -106,6 +115,7 @@ __all__ = [
     "RejectionReason",
     "RootCauseState",
     "TERMINAL_STATUSES",
+    "TERMINAL_JOB_STATUSES",
     "ThreadMessage",
     "ThreadMessageError",
     "ThreadMessageKind",

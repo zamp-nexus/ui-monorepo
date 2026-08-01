@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from langgraph.checkpoint.memory import MemorySaver
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     AgentExecutionStart,
@@ -131,9 +132,11 @@ class ScriptedModel:
         *,
         recheck_passed: bool,
         fallbacks: tuple[str, ...] = (),
+        fail_once_schema: dict[str, Any] | None = None,
     ) -> None:
         self._recheck_passed = recheck_passed
         self._fallbacks = fallbacks
+        self._fail_once_schema = fail_once_schema
         self.calls = 0
 
     async def complete(
@@ -146,6 +149,9 @@ class ScriptedModel:
         response_schema: dict[str, Any] | None = None,
     ) -> ModelResponse:
         self.calls += 1
+        if response_schema == self._fail_once_schema:
+            self._fail_once_schema = None
+            raise TimeoutError("simulated provider interruption")
         payload = self._payload(response_schema)
         return ModelResponse(
             text=json.dumps(payload),
@@ -234,8 +240,14 @@ def build_graph(
     recheck_passed: bool,
     roles: Sequence[AgentRole] | None = None,
     fallbacks: tuple[str, ...] = (),
+    fail_once_schema: dict[str, Any] | None = None,
+    checkpointer: Any | None = None,
 ) -> tuple[InvestigationGraph, RecordingRecorder, StubSemanticLayer]:
-    model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
+    model = ScriptedModel(
+        recheck_passed=recheck_passed,
+        fallbacks=fallbacks,
+        fail_once_schema=fail_once_schema,
+    )
     if roles is None:
         roles = (*REQUIRED_ROLES, AgentRole.INSIGHT)
     layer = StubSemanticLayer()
@@ -256,8 +268,60 @@ def build_graph(
         insight=InsightAgent(model=model),
         recorder=recorder,
         now=lambda: next(clock),
+        checkpointer=checkpointer,
     )
     return graph, recorder, layer
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_recovery_resumes_at_first_incomplete_agent_step() -> None:
+    graph, recorder, _ = build_graph(
+        recheck_passed=True,
+        fail_once_schema=QUERY_PLAN_SCHEMA,
+        checkpointer=MemorySaver(),
+    )
+
+    with pytest.raises(TimeoutError, match="simulated provider interruption"):
+        await graph.run(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            question=QUESTION,
+            thread_id=f"{TENANT_ID}:{INVESTIGATION_ID}",
+        )
+
+    outcome = await graph.run(
+        investigation_id=INVESTIGATION_ID,
+        tenant_id=TENANT_ID,
+        question=QUESTION,
+        thread_id=f"{TENANT_ID}:{INVESTIGATION_ID}",
+    )
+
+    assert outcome.converged is True
+    assert sum(
+        record.role is AgentRole.ORCHESTRATOR
+        for record in recorder.records
+    ) == 1
+
+
+@pytest.mark.asyncio
+async def test_checkpointed_terminal_run_is_idempotent_after_lease_recovery() -> None:
+    graph, recorder, _ = build_graph(
+        recheck_passed=True,
+        checkpointer=MemorySaver(),
+    )
+    arguments = {
+        "investigation_id": INVESTIGATION_ID,
+        "tenant_id": TENANT_ID,
+        "question": QUESTION,
+        "thread_id": f"{TENANT_ID}:{INVESTIGATION_ID}",
+    }
+
+    first = await graph.run(**arguments)
+    recorded_count = len(recorder.records)
+    second = await graph.run(**arguments)
+
+    assert second == first
+    assert len(recorder.records) == recorded_count
 
 
 @pytest.mark.asyncio

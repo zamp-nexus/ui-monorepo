@@ -252,6 +252,11 @@ investigations = Table(
     UniqueConstraint(
         "thread_id", "thread_sequence", name="uq_investigations_thread_sequence"
     ),
+    UniqueConstraint(
+        "investigation_id",
+        "tenant_id",
+        name="uq_investigations_tenant_identity",
+    ),
 )
 Index(
     "ix_investigations_tenant_created",
@@ -492,6 +497,10 @@ agent_registry = Table(
     ),
 )
 
+# Imported after `investigations` is registered because the job table carries
+# a composite Tenant-safe foreign key to it.
+from .schema_jobs import execution_jobs as execution_jobs  # noqa: E402
+
 __all__ = [
     "agent_executions",
     "agent_registry",
@@ -503,6 +512,7 @@ __all__ = [
     "draft_findings",
     "erasure_operations",
     "evidence_citations",
+    "execution_jobs",
     "harvest_runs",
     "human_approvals",
     "identity_subjects",

@@ -5,6 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from zentra_domain_investigation import (
+    ExecutionJob,
     Investigation,
     InvestigationThread,
     Project,
@@ -244,9 +245,16 @@ class ThreadService:
             initiating_message_id=message.message_id,
         )
         investigation.start(now)
+        job = ExecutionJob.create(
+            job_id=self._new_id(),
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation.investigation_id,
+            now=now,
+        )
         thread.title = deterministic_thread_title(routing.canonical_question)
         thread.activate(now)
         await unit_of_work.investigations.add(investigation)
+        await unit_of_work.jobs.add_job(job)
         await unit_of_work.outbox.enqueue(investigation.events)
         await unit_of_work.threads.save_thread(thread)
         return investigation.investigation_id, ()

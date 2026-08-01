@@ -148,6 +148,7 @@ class InvestigationGraph:
         self._recorder = recorder
         self._now = now
         self._new_id = new_id
+        self._checkpointed = checkpointer is not None
         self._graph = self._build(checkpointer)
 
     def _build(self, checkpointer: Any | None) -> Any:
@@ -180,14 +181,23 @@ class InvestigationGraph:
         thread_id: str | None = None,
     ) -> PipelineOutcome:
         config = {"configurable": {"thread_id": thread_id or str(investigation_id)}}
+        initial_state: GraphState | None = {
+            "question": question,
+            "investigation_id": str(investigation_id),
+            "tenant_id": str(tenant_id),
+            "step": 0,
+            "attempts": 0,
+        }
+        if self._checkpointed:
+            snapshot = await self._graph.aget_state(config)
+            if snapshot.values:
+                # A recovered lease continues the same logical graph run. Passing
+                # a fresh input here would create another run and repeat already
+                # checkpointed Agent steps; None resumes the persisted state (or
+                # returns its terminal result when the graph had already ended).
+                initial_state = None
         final: GraphState = await self._graph.ainvoke(
-            {
-                "question": question,
-                "investigation_id": str(investigation_id),
-                "tenant_id": str(tenant_id),
-                "step": 0,
-                "attempts": 0,
-            },
+            initial_state,
             config=config,
         )
         return self._outcome(final)

@@ -6,7 +6,11 @@ from uuid import UUID
 
 from zentra_domain_investigation import InvestigationThread, ThreadMessage
 
-from .ports import AuditOutboxRepository, InvestigationRepository
+from .ports import (
+    AuditOutboxRepository,
+    ExecutionJobRepository,
+    InvestigationRepository,
+)
 from .thread_dto import ThreadCursor, ThreadSlice
 from .workspace_ports import OrganizationRepository
 
@@ -44,6 +48,7 @@ class ThreadUnitOfWork(Protocol):
     threads: ThreadRepository
     organization: OrganizationRepository
     investigations: InvestigationRepository
+    jobs: ExecutionJobRepository
     outbox: AuditOutboxRepository
 
     async def commit(self) -> None: ...

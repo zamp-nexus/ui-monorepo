@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 from time import perf_counter
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     Request,
@@ -21,10 +19,8 @@ from zentra_adapter_telemetry import (
 )
 from zentra_application_investigation import (
     SCENARIOS,
-    AuthenticatedActor,
     ConflictError,
     InvestigationNotFoundError,
-    InvestigationService,
     PermissionDeniedError,
     ScenarioUnavailableError,
     UnsupportedScenarioError,
@@ -131,7 +127,6 @@ async def scenarios(
 async def create_investigation(
     body: InvestigationCreateRequest,
     request: Request,
-    background: BackgroundTasks,
     resolved: AuthenticatedRequest,
 ) -> InvestigationDetailResponse:
     investigations = request.app.state.dependencies.investigations
@@ -147,26 +142,7 @@ async def create_investigation(
     except ScenarioUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
-    # The agents run after the response is sent; the client polls GET for the
-    # timeline as each step lands.
-    background.add_task(
-        _run_pipeline,
-        investigations,
-        resolved.actor,
-        detail.investigation_id,
-    )
     return InvestigationDetailResponse.from_detail(detail)
-
-
-async def _run_pipeline(
-    investigations: InvestigationService,
-    actor: AuthenticatedActor,
-    investigation_id: UUID,
-) -> None:
-    with suppress(Exception):
-        # Failures are already recorded against the Investigation itself, so a
-        # background crash must not take the worker down with it.
-        await investigations.execute(actor, investigation_id)
 
 
 @router.get(

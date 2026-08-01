@@ -22,6 +22,7 @@ from zentra_domain_investigation import (
     ErasureProgress,
     EvaluationDirective,
     EvidenceCitation,
+    ExecutionJob,
     FailureOutcome,
     HumanApproval,
     HumanApprovalStatus,
@@ -110,6 +111,12 @@ class InvestigationService:
             data_connection_id=data_connection_id,
         )
         investigation.start(now)
+        job = ExecutionJob.create(
+            job_id=self._new_id(),
+            tenant_id=actor.tenant_id,
+            investigation_id=investigation.investigation_id,
+            now=now,
+        )
 
         async with self._unit_of_work_factory(
             actor.tenant_id,
@@ -117,6 +124,7 @@ class InvestigationService:
             actor.span_id,
         ) as unit_of_work:
             await unit_of_work.investigations.add(investigation)
+            await unit_of_work.jobs.add_job(job)
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
 
@@ -162,6 +170,51 @@ class InvestigationService:
         )
 
     async def execute(self, actor: AuthenticatedActor, investigation_id: UUID) -> None:
+        await self._execute(actor, investigation_id, record_failure=True)
+
+    async def execute_job(
+        self, *, tenant_id: UUID, investigation_id: UUID
+    ) -> None:
+        await self._execute(
+            AuthenticatedActor(
+                user_id=UUID(int=0),
+                tenant_id=tenant_id,
+                role=Role.MEMBER,
+                trace_id=UUID(int=0),
+                span_id=UUID(int=0),
+            ),
+            investigation_id,
+            record_failure=False,
+        )
+
+    async def fail_job(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        failure_category: str,
+    ) -> None:
+        actor = AuthenticatedActor(
+            user_id=UUID(int=0),
+            tenant_id=tenant_id,
+            role=Role.MEMBER,
+            trace_id=UUID(int=0),
+            span_id=UUID(int=0),
+        )
+        async with self._unit_of_work_factory(
+            tenant_id, actor.trace_id, actor.span_id
+        ) as unit_of_work:
+            investigation = await unit_of_work.investigations.get(investigation_id)
+        if investigation is not None:
+            await self._fail(actor, investigation, failure_category)
+
+    async def _execute(
+        self,
+        actor: AuthenticatedActor,
+        investigation_id: UUID,
+        *,
+        record_failure: bool,
+    ) -> None:
         """Run the agent pipeline and apply what it established.
 
         Individual agent executions are persisted by the pipeline as they
@@ -189,7 +242,9 @@ class InvestigationService:
                 data_connection_id=investigation.data_connection_id,
             )
         except Exception as error:
-            await self._fail(actor, investigation, error)
+            if not record_failure:
+                raise
+            await self._fail(actor, investigation, "unexpected")
             raise ScenarioUnavailableError(
                 "The investigation pipeline could not complete"
             ) from error
@@ -264,11 +319,14 @@ class InvestigationService:
         self,
         actor: AuthenticatedActor,
         investigation: Investigation,
-        error: Exception,
+        failure_category: str,
     ) -> None:
         expected_version = investigation.version
         investigation.fail(
-            FailureOutcome(code="pipeline_failed", message=str(error)),
+            FailureOutcome(
+                code="pipeline_failed",
+                message=f"Pipeline failed: {failure_category}",
+            ),
             self._now(),
         )
         async with self._unit_of_work_factory(

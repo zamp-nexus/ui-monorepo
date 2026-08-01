@@ -7,6 +7,7 @@ from .connector_catalog import (
     PostgresRelationRepository,
 )
 from .database import Database
+from .execution_job import PostgresExecutionJobRepository
 from .identity import (
     IdentityContext,
     IdentityNotBoundError,
@@ -39,6 +40,7 @@ __all__ = [
     "PostgresCatalogRepository",
     "PostgresDataSourceRepository",
     "PostgresHarvestRunRepository",
+    "PostgresExecutionJobRepository",
     "PostgresInvestigationUnitOfWork",
     "PostgresInvestigationUnitOfWorkFactory",
     "PostgresOrganizationRepository",

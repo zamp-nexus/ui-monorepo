@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 from uuid import UUID
 
@@ -19,6 +19,7 @@ from zentra_domain_investigation import (
     DraftFinding,
     ErasureOperation,
     EvidenceCitation,
+    ExecutionJob,
     HumanApproval,
     Investigation,
     Tombstone,
@@ -73,6 +74,27 @@ class HumanApprovalRepository(Protocol):
 
 class AgentExecutionRepository(Protocol):
     async def add(self, execution: AgentExecutionRecord) -> None: ...
+
+
+class ExecutionJobRepository(Protocol):
+    async def add_job(self, job: ExecutionJob) -> None: ...
+
+    async def claim_next(
+        self,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_for: timedelta,
+    ) -> ExecutionJob | None: ...
+
+    async def get_job(
+        self,
+        job_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ExecutionJob | None: ...
+
+    async def save_job(self, job: ExecutionJob) -> None: ...
 
 
 class EvidenceCitationRepository(Protocol):
@@ -136,6 +158,7 @@ class InvestigationUnitOfWork(Protocol):
     investigations: InvestigationRepository
     approvals: HumanApprovalRepository
     agent_executions: AgentExecutionRepository
+    jobs: ExecutionJobRepository
     draft_findings: DraftFindingRepository
     citations: EvidenceCitationRepository
     erasures: ErasureRepository
@@ -146,6 +169,8 @@ class InvestigationUnitOfWork(Protocol):
 
 
 class InvestigationUnitOfWorkFactory(Protocol):
+    async def bound_tenant_ids(self) -> tuple[UUID, ...]: ...
+
     def __call__(
         self,
         tenant_id: UUID,

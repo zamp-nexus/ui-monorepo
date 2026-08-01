@@ -20,6 +20,7 @@ from zentra_domain_investigation import (
 )
 
 from .database import Database, set_tenant_context
+from .execution_job import PostgresExecutionJobRepository
 from .investigation import (
     PostgresAuditOutboxRepository,
     PostgresInvestigationRepository,
@@ -219,6 +220,7 @@ class PostgresThreadUnitOfWork:
         self.threads = PostgresThreadRepository(connection)
         self.organization = PostgresOrganizationRepository(connection)
         self.investigations = PostgresInvestigationRepository(connection)
+        self.jobs = PostgresExecutionJobRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection, trace_id=trace_id, span_id=span_id
         )
