@@ -10,6 +10,7 @@ from zentra_adapter_telemetry import TelemetrySettings, configure_telemetry
 from .dependencies import AppDependencies
 from .routes import router
 from .settings import Settings
+from .workspace_routes import router as workspace_router
 
 
 def create_app(
@@ -42,10 +43,11 @@ def create_app(
         CORSMiddleware,
         allow_origins=[resolved_settings.frontend_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "Traceparent", "Tracestate"],
     )
     api.include_router(router)
+    api.include_router(workspace_router)
     configure_telemetry(
         api,
         TelemetrySettings(

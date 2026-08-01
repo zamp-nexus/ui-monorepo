@@ -34,6 +34,8 @@ from .schema_phase_2 import (
     erasure_operations,
     evidence_citations,
 )
+from .schema_workspace import projects as projects
+from .schema_workspace import workspace_groups as workspace_groups
 
 
 def _role_check() -> str:
@@ -44,6 +46,7 @@ def _role_check() -> str:
     """
     values = ", ".join(f"'{role.value}'" for role in sorted(CANONICAL_ROLES))
     return f"role IN ({values})"
+
 
 tenants = Table(
     "tenants",
@@ -464,9 +467,11 @@ __all__ = [
     "identity_subjects",
     "investigations",
     "metadata",
+    "projects",
     "semantic_metrics",
     "tenant_identity_bindings",
     "tenant_memberships",
     "tenants",
     "users",
+    "workspace_groups",
 ]

@@ -16,6 +16,17 @@ _Avoid_: Tenant user, account
 The relationship granting a User one role—owner, admin, member, or viewer—inside a Tenant.
 _Avoid_: User role, guest membership
 
+**Group**:
+A Tenant-visible organizational container for related Projects. A Group does
+not create a separate authorization boundary.
+_Avoid_: Team, workspace ACL
+
+**Project**:
+A Tenant-visible organizational container inside one Group for related
+Investigation Threads. A Project does not create a separate authorization
+boundary.
+_Avoid_: Folder ACL, Investigation
+
 ## Investigation
 
 **Investigation**:
