@@ -49,11 +49,11 @@ from .publication import (
     evaluate_publication,
 )
 from .workspace import (
-    MAX_WORKSPACE_NAME_LENGTH,
+    MAX_ORGANIZATION_NAME_LENGTH,
+    Group,
+    OrganizationNameError,
     Project,
-    WorkspaceGroup,
-    WorkspaceNameError,
-    normalize_workspace_name,
+    normalize_organization_name,
 )
 
 __all__ = [
@@ -85,7 +85,7 @@ __all__ = [
     "InvestigationTransitionError",
     "PRESERVED",
     "MetricComparison",
-    "MAX_WORKSPACE_NAME_LENGTH",
+    "MAX_ORGANIZATION_NAME_LENGTH",
     "Project",
     "PublicationCondition",
     "PublicationDecision",
@@ -93,11 +93,11 @@ __all__ = [
     "RootCauseState",
     "TERMINAL_STATUSES",
     "Tombstone",
-    "WorkspaceGroup",
-    "WorkspaceNameError",
+    "Group",
+    "OrganizationNameError",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",
-    "normalize_workspace_name",
+    "normalize_organization_name",
     "require_erasable",
 ]

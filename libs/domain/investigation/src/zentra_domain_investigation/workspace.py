@@ -5,30 +5,33 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-MAX_WORKSPACE_NAME_LENGTH = 100
+MAX_ORGANIZATION_NAME_LENGTH = 100
 
 
-class WorkspaceNameError(ValueError):
+class OrganizationNameError(ValueError):
     """A Group or Project name cannot be stored safely."""
 
 
-def normalize_workspace_name(value: str) -> tuple[str, str]:
+def normalize_organization_name(value: str) -> tuple[str, str]:
     """Return the display name and its parent-scoped uniqueness key."""
     normalized = unicodedata.normalize("NFKC", value)
     if any(unicodedata.category(character).startswith("C") for character in normalized):
-        raise WorkspaceNameError("Workspace names cannot contain control characters")
+        raise OrganizationNameError(
+            "Group and Project names cannot contain control characters"
+        )
     display_name = " ".join(normalized.split())
     if not display_name:
-        raise WorkspaceNameError("Workspace names cannot be empty")
-    if len(display_name) > MAX_WORKSPACE_NAME_LENGTH:
-        raise WorkspaceNameError(
-            f"Workspace names cannot exceed {MAX_WORKSPACE_NAME_LENGTH} characters"
+        raise OrganizationNameError("Group and Project names cannot be empty")
+    if len(display_name) > MAX_ORGANIZATION_NAME_LENGTH:
+        raise OrganizationNameError(
+            "Group and Project names cannot exceed "
+            f"{MAX_ORGANIZATION_NAME_LENGTH} characters"
         )
     return display_name, display_name.casefold()
 
 
 @dataclass(slots=True)
-class WorkspaceGroup:
+class Group:
     group_id: UUID
     tenant_id: UUID
     name: str
@@ -45,8 +48,8 @@ class WorkspaceGroup:
         tenant_id: UUID,
         name: str,
         now: datetime,
-    ) -> WorkspaceGroup:
-        display_name, normalized_name = normalize_workspace_name(name)
+    ) -> Group:
+        display_name, normalized_name = normalize_organization_name(name)
         return cls(
             group_id=group_id,
             tenant_id=tenant_id,
@@ -57,7 +60,7 @@ class WorkspaceGroup:
         )
 
     def rename(self, name: str, now: datetime) -> None:
-        self.name, self.normalized_name = normalize_workspace_name(name)
+        self.name, self.normalized_name = normalize_organization_name(name)
         self.updated_at = now
 
     def archive(self, now: datetime) -> None:
@@ -80,6 +83,7 @@ class Project:
     normalized_name: str
     created_at: datetime
     updated_at: datetime
+    latest_activity_at: datetime
     archived_at: datetime | None = None
 
     @classmethod
@@ -92,7 +96,7 @@ class Project:
         name: str,
         now: datetime,
     ) -> Project:
-        display_name, normalized_name = normalize_workspace_name(name)
+        display_name, normalized_name = normalize_organization_name(name)
         return cls(
             project_id=project_id,
             tenant_id=tenant_id,
@@ -101,10 +105,11 @@ class Project:
             normalized_name=normalized_name,
             created_at=now,
             updated_at=now,
+            latest_activity_at=now,
         )
 
     def rename(self, name: str, now: datetime) -> None:
-        self.name, self.normalized_name = normalize_workspace_name(name)
+        self.name, self.normalized_name = normalize_organization_name(name)
         self.updated_at = now
 
     def archive(self, now: datetime) -> None:
@@ -116,3 +121,7 @@ class Project:
         if self.archived_at is not None:
             self.archived_at = None
             self.updated_at = now
+
+    def record_activity(self, now: datetime) -> None:
+        if now > self.latest_activity_at:
+            self.latest_activity_at = now

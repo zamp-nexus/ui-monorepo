@@ -5,15 +5,17 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from zentra_domain_investigation import Project, WorkspaceGroup
+from zentra_domain_investigation import Group, Project
 
 from zentra_application_investigation import (
     AuthenticatedActor,
+    OrganizationConflictError,
+    OrganizationCursor,
+    OrganizationNotFoundError,
+    OrganizationService,
+    OrganizationSlice,
     PermissionDeniedError,
     Role,
-    WorkspaceConflictError,
-    WorkspaceNotFoundError,
-    WorkspaceService,
 )
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
@@ -21,24 +23,28 @@ NOW = datetime(2026, 8, 1, tzinfo=UTC)
 
 class Repository:
     def __init__(self) -> None:
-        self.groups: dict[UUID, WorkspaceGroup] = {}
+        self.groups: dict[UUID, Group] = {}
         self.projects: dict[UUID, Project] = {}
 
-    async def add_group(self, group: WorkspaceGroup) -> None:
+    async def add_group(self, group: Group) -> None:
         self.groups[group.group_id] = group
 
     async def get_group(
         self, group_id: UUID, *, for_update: bool = False
-    ) -> WorkspaceGroup | None:
+    ) -> Group | None:
         return self.groups.get(group_id)
 
-    async def save_group(self, group: WorkspaceGroup) -> None:
+    async def save_group(self, group: Group) -> None:
         self.groups[group.group_id] = group
 
     async def list_groups(
-        self, *, include_archived: bool
-    ) -> tuple[WorkspaceGroup, ...]:
-        return tuple(
+        self,
+        *,
+        include_archived: bool,
+        limit: int,
+        after: OrganizationCursor | None,
+    ) -> OrganizationSlice[Group]:
+        values = tuple(
             sorted(
                 (
                     group
@@ -48,6 +54,20 @@ class Repository:
                 key=lambda group: (group.updated_at, group.group_id),
                 reverse=True,
             )
+        )
+        if after:
+            values = tuple(
+                group
+                for group in values
+                if (group.updated_at, group.group_id)
+                < (after.sort_at, after.resource_id)
+            )
+        page = values[: limit + 1]
+        if len(page) <= limit:
+            return OrganizationSlice(page, None)
+        last = page[limit - 1]
+        return OrganizationSlice(
+            page[:limit], OrganizationCursor(last.updated_at, last.group_id)
         )
 
     async def add_project(self, project: Project) -> None:
@@ -62,9 +82,14 @@ class Repository:
         self.projects[project.project_id] = project
 
     async def list_projects(
-        self, *, group_id: UUID, include_archived: bool
-    ) -> tuple[Project, ...]:
-        return tuple(
+        self,
+        *,
+        group_id: UUID,
+        include_archived: bool,
+        limit: int,
+        after: OrganizationCursor | None,
+    ) -> OrganizationSlice[Project]:
+        values = tuple(
             sorted(
                 (
                     project
@@ -72,15 +97,38 @@ class Repository:
                     if project.group_id == group_id
                     and (include_archived or project.archived_at is None)
                 ),
-                key=lambda project: (project.updated_at, project.project_id),
+                key=lambda project: (
+                    project.latest_activity_at,
+                    project.project_id,
+                ),
                 reverse=True,
             )
         )
+        if after:
+            values = tuple(
+                project
+                for project in values
+                if (project.latest_activity_at, project.project_id)
+                < (after.sort_at, after.resource_id)
+            )
+        page = values[: limit + 1]
+        if len(page) <= limit:
+            return OrganizationSlice(page, None)
+        last = page[limit - 1]
+        return OrganizationSlice(
+            page[:limit],
+            OrganizationCursor(last.latest_activity_at, last.project_id),
+        )
+
+    async def record_project_activity(
+        self, project_id: UUID, *, occurred_at: datetime
+    ) -> None:
+        self.projects[project_id].record_activity(occurred_at)
 
 
 class UnitOfWork:
     def __init__(self, repository: Repository) -> None:
-        self.workspaces = repository
+        self.organization = repository
         self.committed = False
 
     async def __aenter__(self) -> UnitOfWork:
@@ -113,8 +161,8 @@ def actor(role: Role) -> AuthenticatedActor:
     )
 
 
-def service(repository: Repository | None = None) -> WorkspaceService:
-    return WorkspaceService(
+def service(repository: Repository | None = None) -> OrganizationService:
+    return OrganizationService(
         unit_of_work_factory=UnitOfWorkFactory(repository or Repository()),
         now=lambda: NOW,
         new_id=uuid4,
@@ -154,7 +202,7 @@ async def test_owner_and_admin_can_organize_groups(role: Role) -> None:
 async def test_member_and_viewer_receive_read_only_permissions(role: Role) -> None:
     repository = Repository()
     reader = actor(role)
-    repository.groups[UUID(int=1)] = WorkspaceGroup.create(
+    repository.groups[UUID(int=1)] = Group.create(
         group_id=UUID(int=1),
         tenant_id=reader.tenant_id,
         name="Finance",
@@ -174,8 +222,61 @@ async def test_archived_group_refuses_descendant_creation() -> None:
     group = await workspace.create_group(owner, name="Finance")
     await workspace.archive_group(owner, group.group_id)
 
-    with pytest.raises(WorkspaceConflictError):
+    with pytest.raises(OrganizationConflictError):
         await workspace.create_project(owner, group_id=group.group_id, name="Forecast")
+
+
+@pytest.mark.asyncio
+async def test_archive_preserves_readable_descendants_and_lifecycle_permissions() -> (
+    None
+):
+    repository = Repository()
+    workspace = service(repository)
+    owner = actor(Role.OWNER)
+    group = await workspace.create_group(owner, name="Finance")
+    project = await workspace.create_project(
+        owner, group_id=group.group_id, name="Forecast"
+    )
+
+    await workspace.archive_group(owner, group.group_id)
+
+    archived_group = await workspace.get_group(owner, group.group_id)
+    preserved_project = await workspace.get_project(owner, project.project_id)
+    assert archived_group.archived_at == NOW
+    assert preserved_project.project_id == project.project_id
+    assert preserved_project.can_manage is False
+    assert len(repository.projects) == 1
+
+    await workspace.restore_group(owner, group.group_id)
+    restored_project = await workspace.get_project(owner, project.project_id)
+    assert restored_project.can_manage is True
+    assert len(repository.projects) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [Role.MEMBER, Role.VIEWER])
+async def test_read_only_roles_cannot_manage_groups_or_projects(role: Role) -> None:
+    repository = Repository()
+    owner = actor(Role.OWNER)
+    workspace = service(repository)
+    group = await workspace.create_group(owner, name="Finance")
+    project = await workspace.create_project(
+        owner, group_id=group.group_id, name="Forecast"
+    )
+    reader = actor(role)
+
+    operations = (
+        workspace.rename_group(reader, group.group_id, name="Other"),
+        workspace.archive_group(reader, group.group_id),
+        workspace.restore_group(reader, group.group_id),
+        workspace.create_project(reader, group_id=group.group_id, name="Other"),
+        workspace.rename_project(reader, project.project_id, name="Other"),
+        workspace.archive_project(reader, project.project_id),
+        workspace.restore_project(reader, project.project_id),
+    )
+    for operation in operations:
+        with pytest.raises(PermissionDeniedError):
+            await operation
 
 
 @pytest.mark.asyncio
@@ -187,7 +288,7 @@ async def test_project_listing_is_stable_and_cursor_ready() -> None:
     first = await workspace.create_project(
         owner, group_id=group.group_id, name="Weekly"
     )
-    repository.projects[first.project_id].updated_at = NOW - timedelta(days=1)
+    repository.projects[first.project_id].latest_activity_at = NOW - timedelta(days=1)
     second = await workspace.create_project(
         owner, group_id=group.group_id, name="Monthly"
     )
@@ -200,7 +301,7 @@ async def test_project_listing_is_stable_and_cursor_ready() -> None:
 
 @pytest.mark.asyncio
 async def test_inaccessible_parent_is_not_found() -> None:
-    with pytest.raises(WorkspaceNotFoundError):
+    with pytest.raises(OrganizationNotFoundError):
         await service().create_project(
             actor(Role.OWNER), group_id=uuid4(), name="Forecast"
         )
