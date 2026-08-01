@@ -7,6 +7,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { apiUrl, requestJson, type TokenSource } from './api';
 import { ChatPage } from './pages/chat/chat-page';
 import { ComingSoon } from './pages/coming-soon';
+import { ConnectionsPage } from './pages/connections/connections-page';
+import { ConnectorConfig } from './pages/connections/connector-config';
+import { ConnectorPicker } from './pages/connections/connector-picker';
 import {
   MembershipUnavailable,
   OrganizationRequired,
@@ -94,13 +97,12 @@ const AuthenticatedWorkspace = () => {
         <Route path="/chat" element={<ChatPage identity={identity.data} />} />
         <Route
           path="/connections"
-          element={
-            <ComingSoon
-              title="Connections"
-              icon="network"
-              description="Upstream analytical sources — warehouses, lakes and transactional databases — and the policy each one carries."
-            />
-          }
+          element={<ConnectionsPage getToken={getToken} identity={identity.data} />}
+        />
+        <Route path="/connections/new" element={<ConnectorPicker />} />
+        <Route
+          path="/connections/new/:connectorId"
+          element={<ConnectorConfig getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/settings"

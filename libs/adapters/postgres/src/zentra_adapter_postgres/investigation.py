@@ -154,6 +154,9 @@ def _investigation_from_row(row: Any) -> Investigation:
         evaluation_attempts=row.evaluation_attempts,
         created_at=row.created_at,
         updated_at=row.updated_at,
+        thread_id=row.thread_id,
+        thread_sequence=row.thread_sequence,
+        initiating_message_id=row.initiating_message_id,
         finished_at=row.finished_at,
         finding=finding,
         outcome=outcome,
@@ -179,6 +182,9 @@ class PostgresInvestigationRepository:
                 status=investigation.status.value,
                 state=_state_to_json(investigation),
                 scenario_key=investigation.scenario_key,
+                thread_id=investigation.thread_id,
+                thread_sequence=investigation.thread_sequence,
+                initiating_message_id=investigation.initiating_message_id,
                 version=investigation.version,
                 evaluation_attempts=investigation.evaluation_attempts,
                 created_at=investigation.created_at,
@@ -511,9 +517,7 @@ class PostgresTenantPolicyRepository:
         return str(
             (
                 await self._connection.execute(
-                    select(tenants.c.model_tier).where(
-                        tenants.c.tenant_id == tenant_id
-                    )
+                    select(tenants.c.model_tier).where(tenants.c.tenant_id == tenant_id)
                 )
             ).scalar_one()
         )

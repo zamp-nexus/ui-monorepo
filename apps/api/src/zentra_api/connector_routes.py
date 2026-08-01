@@ -114,7 +114,20 @@ def _handle():
 
 
 def _service(request: Request) -> ConnectorService:
-    return request.app.state.dependencies.connector
+    """The Connector Service, or a 503 saying why there isn't one.
+
+    Absent when `CONNECTOR_CREDENTIAL_KEY` is unset, since without it no
+    credential can be sealed. Answering 503 with the missing setting named beats
+    the `AttributeError` this used to raise: a 500 with no body reads as a bug in
+    the service rather than as configuration nobody supplied.
+    """
+    service = getattr(request.app.state.dependencies, "connector", None)
+    if service is None:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Connector is not configured: CONNECTOR_CREDENTIAL_KEY is not set",
+        )
+    return service
 
 
 def _actor(context: RequestContext) -> AuthenticatedActor:

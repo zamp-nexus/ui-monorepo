@@ -5,7 +5,12 @@ from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from zentra_adapter_clickhouse import AuditRepository
+from zentra_adapter_clickhouse import (
+    AesGcmCredentialCipher,
+    AuditRepository,
+    ClickHouseLandingZone,
+    ClickHouseSourceConnector,
+)
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
@@ -23,15 +28,24 @@ from zentra_adapter_model_providers import (
 )
 from zentra_adapter_postgres import (
     Database,
+    PostgresCatalogRepository,
+    PostgresDataSourceRepository,
+    PostgresHarvestRunRepository,
     PostgresInvestigationUnitOfWorkFactory,
     PostgresOrganizationUnitOfWorkFactory,
+    PostgresRelationRepository,
+    PostgresThreadUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
 from zentra_application_connector import ConnectorService
-from zentra_application_investigation import InvestigationService, OrganizationService
+from zentra_application_investigation import (
+    InvestigationService,
+    OrganizationService,
+    ThreadService,
+)
 from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
@@ -50,6 +64,17 @@ class HealthProbe(Protocol):
     async def health(self) -> bool: ...
 
 
+class _UtcClock:
+    """The Connector's `Clock` port.
+
+    A class rather than the `now=lambda` the Investigation service takes,
+    because that port asks for an object with a `now()` method.
+    """
+
+    def now(self) -> datetime:
+        return datetime.now(UTC)
+
+
 @dataclass(slots=True)
 class AppDependencies:
     database: Database
@@ -60,12 +85,14 @@ class AppDependencies:
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
     organization: OrganizationService
-    # None until the Connector's own repository ports (DataSource, Catalog,
-    # Relation, HarvestRun) have a Postgres adapter — discovered as a
-    # pre-existing gap while wiring Cube to connector data, out of scope
-    # here. `connector_routes.py` and the internal Cube model endpoint both
-    # fail with a clear, typed error rather than an AttributeError while
-    # this is unset.
+    threads: ThreadService
+    #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
+    #: service with no key: the Connector routes then fail with a message
+    #: naming the missing configuration, instead of accepting a password they
+    #: cannot seal. Last because a defaulted field must follow the required ones.
+    #: The internal Cube model endpoint and connector_model.py's functions
+    #: fail the same way — a clear, typed error rather than an
+    #: AttributeError — whenever this is unset.
     connector: ConnectorService | None = None
 
     @classmethod
@@ -140,6 +167,36 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
+        threads = ThreadService(
+            unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
+        connector = (
+            ConnectorService(
+                sources=PostgresDataSourceRepository(database),
+                catalogs=PostgresCatalogRepository(database),
+                relations=PostgresRelationRepository(database),
+                runs=PostgresHarvestRunRepository(database),
+                connector=ClickHouseSourceConnector(),
+                # The key comes from Settings rather than `from_env` so it is
+                # read the same way as every other secret, and one .env file
+                # remains the single place configuration lives.
+                cipher=AesGcmCredentialCipher(
+                    bytes.fromhex(settings.connector_credential_key)
+                ),
+                landing_zone=ClickHouseLandingZone(
+                    host=settings.clickhouse_host,
+                    port=settings.clickhouse_port,
+                    username=settings.clickhouse_username,
+                    password=settings.clickhouse_password,
+                    secure=settings.clickhouse_secure,
+                ),
+                clock=_UtcClock(),
+            )
+            if settings.connector_credential_key
+            else None
+        )
         return cls(
             database=database,
             audit=audit,
@@ -152,6 +209,7 @@ class AppDependencies:
             investigations=investigations,
             audit_delivery=audit_delivery,
             organization=organization,
+            threads=threads,
             connector=connector,
         )
 

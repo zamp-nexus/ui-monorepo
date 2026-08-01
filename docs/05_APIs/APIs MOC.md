@@ -21,9 +21,11 @@ repo_path: apps/api/src/zentra_api/routes.py
 - [[Investigation API]]
 - [[Connector API]]
 - [[Workspace Organization API]]
+- [[Investigation Thread API]]
 
 The route declarations and Pydantic response models are authoritative. There is
-no investigation list, arbitrary-question, streaming, agent-management, or
-replay API in the current phase.
+There is no streaming, agent-management, or general replay API in the current
+phase. Thread routing accepts natural-language messages only within the governed
+scenario catalogue.
 
 Parent: [[ZentraOS Knowledge Base]]

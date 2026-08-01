@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -27,6 +28,12 @@ from ._metadata import metadata
 # module is what registers *every* table on the shared `MetaData`. Importing
 # `._metadata` alone yields an empty one, and `create_all` would silently do
 # nothing.
+from .schema_connector import (
+    catalog_versions,
+    data_sources,
+    harvest_runs,
+    relations,
+)
 from .schema_phase_2 import (
     draft_finding_claim_citations,
     draft_finding_claims,
@@ -34,6 +41,8 @@ from .schema_phase_2 import (
     erasure_operations,
     evidence_citations,
 )
+from .schema_threads import investigation_threads as investigation_threads
+from .schema_threads import thread_messages as thread_messages
 from .schema_workspace import projects as projects
 from .schema_workspace import workspace_groups as workspace_groups
 
@@ -187,6 +196,9 @@ investigations = Table(
     Column("status", String(32), nullable=False, server_default="pending"),
     Column("state", JSON, nullable=False, server_default=text("'{}'::jsonb")),
     Column("scenario_key", String(64)),
+    Column("thread_id", UUID(as_uuid=True)),
+    Column("thread_sequence", Integer),
+    Column("initiating_message_id", UUID(as_uuid=True)),
     Column("version", Integer, nullable=False, server_default="1"),
     Column("evaluation_attempts", Integer, nullable=False, server_default="0"),
     Column("cost_so_far_usd", Numeric(12, 4), nullable=False, server_default="0"),
@@ -213,6 +225,32 @@ investigations = Table(
     CheckConstraint(
         "evaluation_attempts >= 0 AND evaluation_attempts <= 3",
         name="ck_investigations_evaluation_attempts",
+    ),
+    CheckConstraint(
+        "(thread_id IS NULL AND thread_sequence IS NULL AND "
+        "initiating_message_id IS NULL) OR "
+        "(thread_id IS NOT NULL AND thread_sequence >= 1 AND "
+        "initiating_message_id IS NOT NULL)",
+        name="ck_investigations_thread_link",
+    ),
+    ForeignKeyConstraint(
+        ("thread_id", "tenant_id"),
+        ("investigation_threads.thread_id", "investigation_threads.tenant_id"),
+        name="fk_investigations_thread_tenant",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ("initiating_message_id", "thread_id", "tenant_id"),
+        (
+            "thread_messages.message_id",
+            "thread_messages.thread_id",
+            "thread_messages.tenant_id",
+        ),
+        name="fk_investigations_initiating_message",
+        ondelete="RESTRICT",
+    ),
+    UniqueConstraint(
+        "thread_id", "thread_sequence", name="uq_investigations_thread_sequence"
     ),
 )
 Index(
@@ -458,16 +496,20 @@ __all__ = [
     "agent_executions",
     "agent_registry",
     "audit_outbox",
+    "catalog_versions",
+    "data_sources",
     "draft_finding_claim_citations",
     "draft_finding_claims",
     "draft_findings",
     "erasure_operations",
     "evidence_citations",
+    "harvest_runs",
     "human_approvals",
     "identity_subjects",
     "investigations",
     "metadata",
     "projects",
+    "relations",
     "semantic_metrics",
     "tenant_identity_bindings",
     "tenant_memberships",

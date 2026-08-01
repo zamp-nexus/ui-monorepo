@@ -21,7 +21,15 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "evidence_citations",
         "draft_finding_claim_citations",
         "erasure_operations",
+        # Phase 3 connector: a registered Data Source and its sealed
+        # credential, plus what a harvest learned and what a reviewer decided.
+        "data_sources",
+        "catalog_versions",
+        "relations",
+        "harvest_runs",
         "workspace_groups",
         "projects",
+        "investigation_threads",
+        "thread_messages",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"

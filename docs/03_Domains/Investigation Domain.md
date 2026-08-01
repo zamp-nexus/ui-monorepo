@@ -41,6 +41,19 @@ write availability only: it never deletes or rewrites descendants. A Project's
 latest activity advances separately from metadata changes so future Thread and
 Investigation activity can determine recent-work ordering.
 
+## Investigation Threads
+
+An Investigation Thread belongs to one Project and presents a linear
+conversation without weakening Investigation boundaries. Its first user message
+is created atomically with the Thread, and every message is append-only. Thread
+state is `draft`, `active`, or `archived`.
+
+Draft Threads contain no Investigation until deterministic routing resolves
+exactly one governed scenario. Ambiguous or unsupported input receives a stored
+router clarification with the supported canonical questions. Routing and title
+generation make no model call. Once analytical work exists, the Thread cannot
+be hard-deleted; archive and restore preserve its evidence lineage.
+
 ## Lifecycle
 
 ```text

@@ -64,6 +64,32 @@ def new_investigation() -> Investigation:
     )
 
 
+@pytest.mark.parametrize(
+    ("thread_id", "thread_sequence", "initiating_message_id"),
+    [
+        (INVESTIGATION_ID, None, None),
+        (INVESTIGATION_ID, 0, TENANT_ID),
+        (None, 1, TENANT_ID),
+    ],
+)
+def test_thread_link_must_be_complete_with_a_positive_sequence(
+    thread_id: UUID | None,
+    thread_sequence: int | None,
+    initiating_message_id: UUID | None,
+) -> None:
+    with pytest.raises(InvestigationTransitionError):
+        Investigation.create(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            question="Why did EU refunds increase?",
+            scenario_key="eu_refund_spike",
+            now=NOW,
+            thread_id=thread_id,
+            thread_sequence=thread_sequence,
+            initiating_message_id=initiating_message_id,
+        )
+
+
 def test_canonical_investigation_requires_human_approval() -> None:
     investigation = new_investigation()
 
