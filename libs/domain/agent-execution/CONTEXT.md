@@ -16,6 +16,26 @@ _Avoid_: Agent run, task process
 A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish. Its canonical role value is `insight`; `insight_root_cause` is a read-only compatibility value that Phase 1 wrote and nothing writes again.
 _Avoid_: Root-Cause Agent, Finding writer, synthesis step
 
+**SQL Analyst Agent**:
+A registered Agent that proposes a Governed Query Plan from a question and approved Semantic Model without executable raw-SQL authority.
+_Avoid_: Query Planner Agent, SQL generator
+
+**Governed Query Plan**:
+A typed analytical intent over approved members, relationships, filters, calculations, ordering, and limits that is authoritative in Normal Mode.
+_Avoid_: SQL, query JSON, execution request
+
+**Normal Mode**:
+The query interaction in which the Governed Query Plan is authoritative and editable through structured controls.
+_Avoid_: Basic mode, visual SQL
+
+**Query Version**:
+One immutable, attributable version of a Governed Query Plan or Advanced SQL Override and its validation outcome.
+_Avoid_: Query edit, saved SQL
+
+**Advanced SQL Override**:
+A User-authored read-only DuckDB statement that replaces the plan as authority for one Query Version and cannot be silently reverse-converted.
+_Avoid_: Custom query, generated SQL edit
+
 **Outcome Signal**:
 Role-appropriate evidence about an Agent Execution: either calibrated confidence or an explicit validation result.
 _Avoid_: Universal confidence score, quality score

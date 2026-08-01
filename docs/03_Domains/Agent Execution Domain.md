@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: context-map
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: high
@@ -68,6 +68,16 @@ upstream evidence, and never guarantees a Root Cause Claim. The Orchestrator
 continues to delegate and arbitrate but stops synthesizing Findings. The
 Statistician remains deferred. See
 [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
+
+## Phase 3 target boundary
+
+Phase 3 extends SQL Analyst instead of adding a Query Planner Agent. It proposes
+a Governed Query Plan from a question and approved Semantic Model. Deterministic
+policy authorizes, versions, compiles, and executes it against one Data Source
+Binding. The Agent receives no raw SQL execution, file access, credentials, or
+raw rows. Advanced SQL is a User-owned Query Version. Evaluator validates,
+Insight writes the Draft Finding, and Orchestrator delegates/arbitrates. See
+[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]].
 
 ### Write vocabulary and read compatibility
 

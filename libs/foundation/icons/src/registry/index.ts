@@ -35,6 +35,7 @@ import {
   Compass,
   Copy,
   CreditCard,
+  Database,
   Download,
   Edit,
   Edit2,
@@ -73,6 +74,7 @@ import {
   MoreVertical,
   Navigation,
   Navigation2,
+  Network,
   Package,
   PanelLeft,
   Phone,
@@ -95,6 +97,7 @@ import {
   Sidebar,
   SortAsc,
   SortDesc,
+  Sparkles,
   Star,
   Tag,
   Tags,
@@ -235,5 +238,10 @@ function initializeIcons(): void {
   registerIcon({ name: ICON_NAMES.BOX, component: Box });
   registerIcon({ name: ICON_NAMES.ARCHIVE, component: Archive });
   registerIcon({ name: ICON_NAMES.INBOX, component: Inbox });
+
+  // Data
+  registerIcon({ name: ICON_NAMES.DATABASE, component: Database });
+  registerIcon({ name: ICON_NAMES.NETWORK, component: Network });
+  registerIcon({ name: ICON_NAMES.SPARKLES, component: Sparkles });
 }
 initializeIcons();

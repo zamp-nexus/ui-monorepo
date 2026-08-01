@@ -7,7 +7,7 @@ owner: unassigned
 source: repository
 created: 2026-07-29
 updated: 2026-08-01
-reviewed: 2026-07-30
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: high
@@ -78,6 +78,12 @@ would not be uncoached. Certification is gated on it. See
 [[Phase 2 - Insight Auditor and Replay]] and
 [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
 
+Phase 3 — Governed Bring Your Own Data — is **accepted and unimplemented**. It
+adds self-service related CSV/Parquet analysis and one assisted PostgreSQL Data
+Connection without replacing Phase 2's Finding, citation, publication, Replay,
+or deletion contracts. See [[Phase 3 - Governed Bring Your Own Data]] and
+[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]].
+
 ## Configured but not operationally signed off
 
 Clerk, Neon, ClickHouse Cloud, Langfuse, E2B, and every model provider
@@ -101,6 +107,11 @@ Catalog Versions, Relations, and Harvest Runs is not implemented**, so the API
 routes exist but have no store behind them. Agent Join Graph enforcement,
 connector Audit Entries and tracing, and the TPC-H accuracy harness are also
 outstanding. See `ch-nexus/ui-monorepo#2` and its child tickets.
+
+Phase 3's Data Source design — Dataset Workspaces, Relation Versions, Workspace
+Snapshots, DuckDB execution, and the PostgreSQL Connector Type — remains
+**planned and unimplemented**. It overlaps the shipped Connector context and the
+two have not been reconciled; see the note in `CONTEXT-MAP.md`.
 
 ## Verification caveat
 

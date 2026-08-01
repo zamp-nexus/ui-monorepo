@@ -6,20 +6,23 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: critical
 tags: [component, frontend, react]
 aliases: [zentra-os, frontend]
-related: ["[[Components MOC]]", "[[User Workflows]]", "[[Investigation API]]"]
-depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]"]
+related: ["[[Components MOC]]", "[[User Workflows]]", "[[Investigation API]]", "[[Design Token Pipeline]]"]
+depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]", "[[Design Token Pipeline]]"]
 repo_path: apps/zentra-os
 code_refs:
   - apps/zentra-os/src/app/app.tsx
-  - apps/zentra-os/src/app/app.module.scss
+  - apps/zentra-os/src/app/shell/app-shell.tsx
+  - apps/zentra-os/src/app/pages
+  - apps/zentra-os/src/app/pages/chat
   - apps/zentra-os/src/app/providers.tsx
+  - apps/zentra-os/src/styles.css
 ---
 
 # Forensic Observatory
@@ -27,6 +30,31 @@ code_refs:
 The React/Vite application is the authenticated product UI. It uses Clerk,
 foundation authentication/authorization, the internal design system, React
 Query, React Router, and Motion.
+
+It presents itself as **Oddessy**. The Nx project, package and module names stay
+`zentra`; the displayed name is decided in one place,
+`src/app/constants/product.ts`.
+
+## Shell
+
+`AppShell` composes the design system `SideNav` with the routed page and draws
+nothing above it. The rail carries the wordmark, the workspace lockup (tenant,
+role, and whether dependencies answered), the destinations, and the account
+control. A header bar was built across every route first and removed: repeated
+chrome earns its space only if it does something, and its tabs pointed at
+sections that do not exist yet.
+
+The rail collapses to a column of 44px tiles. Collapsed, each label is only
+hidden visually — never `display: none` — so the link keeps its accessible
+name, and a tooltip carries the label for sighted users. The state that drives
+it reaches the items twice over: as a `data-collapsed` attribute the CSS reads
+through the root's `group`, and as React context the item reads to decide
+whether to wrap itself in a tooltip.
+
+Destinations are listed in `shell/nav-items.ts`. Investigations is the launcher
+at `/`; Dashboard, Datasets, Chat, Connections and Settings are Phase 2 pages
+that currently answer with an explicit placeholder rather than a dead link or a
+mock that looks finished.
 
 The launcher renders whatever `GET /v1/scenarios` returns — currently the
 eight-order EU refund spike and the three-hundred-order NA channel growth — so
@@ -55,6 +83,32 @@ Status changes use live regions and the approval heading receives focus.
 The app explicitly handles missing Clerk configuration, signed-out, missing
 organization, unbound membership, degraded dependencies, read-only approval,
 completed, and rejected states.
+
+## Chat
+
+`pages/chat` is a working surface over a fixture. Threads, answers and the
+canned reply all come from `mock-chat-data.ts`, which is the only file that has
+to be deleted when the conversation endpoints exist — every component reads
+`types/chat.ts`, written as the contract the API will be held to rather than as
+a description of the mock.
+
+Assistant turns are markdown, parsed by `components/markdown.tsx`
+(`react-markdown` with GFM). There is no raw-HTML plugin and no
+`dangerouslySetInnerHTML`: model output is untrusted input, and the one thing it
+must never be able to do is inject markup. The design system carries no
+typography plugin, so element styles are supplied per node from the same tokens
+as the rest of the product.
+
+The page says on screen that it is a fixture. A chat that answers convincingly
+and knows nothing is the one thing a governed product cannot ship by accident.
+
+## Styling
+
+Pages are written in design system components and Tailwind utilities resolved
+through [[Design Token Pipeline]]. The 1000-line `app.module.scss` of literal
+hex values it replaced existed because Tailwind had never actually compiled in
+this app. `draft-finding-panel.module.scss` is the one CSS module left and is
+still to migrate.
 
 ## Phase 2 gap
 

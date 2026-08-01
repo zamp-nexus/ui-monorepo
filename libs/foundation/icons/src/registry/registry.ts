@@ -122,6 +122,11 @@ export const ICON_NAMES = {
   BOX: 'box',
   ARCHIVE: 'archive',
   INBOX: 'inbox',
+
+  // Data
+  DATABASE: 'database',
+  NETWORK: 'network',
+  SPARKLES: 'sparkles',
 } as const;
 
 /**
