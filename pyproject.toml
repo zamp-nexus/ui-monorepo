@@ -8,6 +8,7 @@ dependencies = [
   "zentra-adapter-langgraph",
   "zentra-adapter-model-providers",
   "zentra-adapter-postgres",
+  "zentra-adapter-sequence-execution",
   "zentra-adapter-telemetry",
   "zentra-adapter-thesys",
   "zentra-api",
@@ -15,7 +16,8 @@ dependencies = [
   "zentra-application-investigation",
   "zentra-domain-agent-execution",
   "zentra-domain-connector",
-  "zentra-domain-investigation"
+  "zentra-domain-investigation",
+  "zentra-domain-sequence"
 ]
 
 [tool.uv.workspace]
@@ -26,13 +28,15 @@ members = [
   "libs/adapters/langgraph",
   "libs/adapters/model-providers",
   "libs/adapters/postgres",
+  "libs/adapters/sequence-execution",
   "libs/adapters/telemetry",
   "libs/adapters/thesys",
   "libs/application/connector",
   "libs/application/investigation",
   "libs/domain/agent-execution",
   "libs/domain/connector",
-  "libs/domain/investigation"
+  "libs/domain/investigation",
+  "libs/domain/sequence"
 ]
 
 [tool.uv.sources.zentra-adapter-clickhouse]
@@ -48,6 +52,9 @@ workspace = true
 workspace = true
 
 [tool.uv.sources.zentra-adapter-postgres]
+workspace = true
+
+[tool.uv.sources.zentra-adapter-sequence-execution]
 workspace = true
 
 [tool.uv.sources.zentra-adapter-telemetry]
@@ -72,6 +79,9 @@ workspace = true
 workspace = true
 
 [tool.uv.sources.zentra-domain-investigation]
+workspace = true
+
+[tool.uv.sources.zentra-domain-sequence]
 workspace = true
 
 [tool.pytest.ini_options]

@@ -7,26 +7,25 @@ exclude_lines = ['if TYPE_CHECKING:']
 show_missing = true
 
 [tool.pytest.ini_options]
+# The root pyproject declares this, but a lib directory is its own config
+# root, so it must be restated here for the async fake-adapter tests to run.
+asyncio_mode = "auto"
 addopts = """
  --cov
+ --cov-report html:'../../../coverage/libs/domain/sequence/html'
+ --cov-report xml:'../../../coverage/libs/domain/sequence/coverage.xml'
+ --html='../../../reports/libs/domain/sequence/unittests/html/index.html'
+ --junitxml='../../../reports/libs/domain/sequence/unittests/junit.xml'
 """
 
 [project]
-name = "zentra-adapter-postgres"
+name = "zentra-domain-sequence"
 version = "1.0.0"
-description = "ZentraOS Postgres control-plane adapter"
+description = "ZentraOS Sequence domain: typed, versioned data-cleaning pipelines"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
-    "alembic>=1.17,<2",
-    "greenlet>=3.2,<4",
-    "psycopg[binary,pool]>=3.2,<4",
-    "sqlalchemy>=2.0,<3",
-    "zentra-application-investigation",
-    "zentra-domain-agent-execution",
-    "zentra-domain-connector",
-    "zentra-domain-investigation",
-    "zentra-domain-sequence",
+  "zentra-domain-agent-execution",
 ]
 
 
@@ -68,7 +67,3 @@ unfixable = []
 
 [tool.uv.sources]
 zentra-domain-agent-execution = { workspace = true }
-zentra-application-investigation = { workspace = true }
-zentra-domain-connector = { workspace = true }
-zentra-domain-investigation = { workspace = true }
-zentra-domain-sequence = { workspace = true }

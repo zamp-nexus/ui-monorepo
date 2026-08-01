@@ -21,6 +21,11 @@ from .investigation import (
     PostgresInvestigationUnitOfWorkFactory,
 )
 from .schema import metadata
+from .sequence import (
+    PostgresSequenceRepository,
+    PostgresSequenceUnitOfWork,
+    PostgresSequenceUnitOfWorkFactory,
+)
 from .thread import (
     PostgresThreadRepository,
     PostgresThreadUnitOfWork,
@@ -51,6 +56,9 @@ __all__ = [
     "PostgresOrganizationUnitOfWork",
     "PostgresOrganizationUnitOfWorkFactory",
     "PostgresRelationRepository",
+    "PostgresSequenceRepository",
+    "PostgresSequenceUnitOfWork",
+    "PostgresSequenceUnitOfWorkFactory",
     "PostgresThreadRepository",
     "PostgresThreadUnitOfWork",
     "PostgresThreadUnitOfWorkFactory",

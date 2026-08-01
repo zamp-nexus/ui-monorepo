@@ -14,7 +14,7 @@ from zentra_adapter_postgres.schema import (
 )
 
 revision = "0017_chat_work_feed_visualization"
-down_revision = "0016_durable_execution_jobs"
+down_revision = "0016c_widen_alembic_version_num"
 branch_labels = None
 depends_on = None
 
