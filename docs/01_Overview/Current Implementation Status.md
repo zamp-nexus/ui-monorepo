@@ -102,11 +102,22 @@ cross-vendor Evaluator for the premium tier, recovery for a pipeline interrupted
 mid-run, generalized scheduling, production application deployment, and a release
 process.
 
-Within the Connector specifically: **Postgres persistence of Data Sources,
-Catalog Versions, Relations, and Harvest Runs is not implemented**, so the API
-routes exist but have no store behind them. Agent Join Graph enforcement,
-connector Audit Entries and tracing, and the TPC-H accuracy harness are also
-outstanding. See `ch-nexus/ui-monorepo#2` and its child tickets.
+Within the Connector specifically: Agent Join Graph enforcement, connector Audit
+Entries and tracing, and the TPC-H accuracy harness are outstanding. See
+`ch-nexus/ui-monorepo#2` and its child tickets.
+
+Postgres persistence **is** now implemented (`ch-nexus/ui-monorepo#33`).
+Migrations `0014_data_sources` and `0015_connector_catalog` create tenant-scoped
+tables for Data Sources, Catalog Versions, Relations and Harvest Runs under the
+same row-level security as the Investigation tables, and `AppDependencies`
+constructs a `ConnectorService` over them. Credentials are sealed with AES-GCM
+under `CONNECTOR_CREDENTIAL_KEY`; with that variable unset the service is not
+constructed and the routes answer `503` naming it, rather than accepting a
+password they cannot seal.
+
+The harvest *runner* is a separate matter from harvest persistence: the tables
+and repositories exist, and what still has to be proven is the discovery work
+that fills them against a live warehouse — see the verification caveat below.
 
 Phase 3's Data Source design — Dataset Workspaces, Relation Versions, Workspace
 Snapshots, DuckDB execution, and the PostgreSQL Connector Type — remains
@@ -118,12 +129,17 @@ two have not been reconciled; see the note in `CONTEXT-MAP.md`.
 Phase 1 targeted suites, the agent eval suites, and local integrations pass
 against scripted model responses.
 
-The Connector's 138 tests (91 at the ConnectorService seam, 40 adapter, 7
-contract) run entirely against in-memory fakes. **No connector
-code has been executed against a live ClickHouse instance**, so real dialect
-behaviour and `system.*` semantics are unverified; a manual pass is required
-before any demo. The connector API routes are covered by a contract test but not
-by request-level tests, because they have no persistence behind them yet. Agent behaviour against a live model is
+Most of the Connector's tests run at the ConnectorService seam against in-memory
+fakes. Two suites no longer do: nine integration tests exercise the four
+repositories against a real Postgres — including a real AES-GCM-sealed password
+that cannot be read out of the row storing it, a confirmed Relation surviving a
+new connection pool, and a second Tenant reading nothing — and eleven
+request-level tests drive the source routes through the router, where the
+contract test only ever compared documents.
+
+**No connector code has been executed against a live ClickHouse instance**, so
+real dialect behaviour and `system.*` semantics are still unverified; a manual
+pass is required before any demo. Agent behaviour against a live model is
 unverified here. Existing shared foundation-package test debt is tracked
 separately and must not be misreported as Phase 1 behavior.
 

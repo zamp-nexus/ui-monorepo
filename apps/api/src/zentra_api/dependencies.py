@@ -5,7 +5,12 @@ from datetime import UTC, datetime
 from typing import Protocol
 from uuid import uuid4
 
-from zentra_adapter_clickhouse import AuditRepository
+from zentra_adapter_clickhouse import (
+    AesGcmCredentialCipher,
+    AuditRepository,
+    ClickHouseLandingZone,
+    ClickHouseSourceConnector,
+)
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
@@ -23,12 +28,17 @@ from zentra_adapter_model_providers import (
 )
 from zentra_adapter_postgres import (
     Database,
+    PostgresCatalogRepository,
+    PostgresDataSourceRepository,
+    PostgresHarvestRunRepository,
     PostgresInvestigationUnitOfWorkFactory,
+    PostgresRelationRepository,
 )
 from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
+from zentra_application_connector import ConnectorService
 from zentra_application_investigation import InvestigationService
 from zentra_domain_agent_execution import AgentRole
 
@@ -46,6 +56,17 @@ class HealthProbe(Protocol):
     async def health(self) -> bool: ...
 
 
+class _UtcClock:
+    """The Connector's `Clock` port.
+
+    A class rather than the `now=lambda` the Investigation service takes,
+    because that port asks for an object with a `now()` method.
+    """
+
+    def now(self) -> datetime:
+        return datetime.now(UTC)
+
+
 @dataclass(slots=True)
 class AppDependencies:
     database: Database
@@ -55,6 +76,11 @@ class AppDependencies:
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
+    #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
+    #: service with no key: the Connector routes then fail with a message
+    #: naming the missing configuration, instead of accepting a password they
+    #: cannot seal.
+    connector: ConnectorService | None = None
 
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
@@ -106,6 +132,31 @@ class AppDependencies:
             publication_observer=record_publication_decision,
             erasure_observer=record_evidence_deletion,
         )
+        connector = (
+            ConnectorService(
+                sources=PostgresDataSourceRepository(database),
+                catalogs=PostgresCatalogRepository(database),
+                relations=PostgresRelationRepository(database),
+                runs=PostgresHarvestRunRepository(database),
+                connector=ClickHouseSourceConnector(),
+                # The key comes from Settings rather than `from_env` so it is
+                # read the same way as every other secret, and one .env file
+                # remains the single place configuration lives.
+                cipher=AesGcmCredentialCipher(
+                    bytes.fromhex(settings.connector_credential_key)
+                ),
+                landing_zone=ClickHouseLandingZone(
+                    host=settings.clickhouse_host,
+                    port=settings.clickhouse_port,
+                    username=settings.clickhouse_username,
+                    password=settings.clickhouse_password,
+                    secure=settings.clickhouse_secure,
+                ),
+                clock=_UtcClock(),
+            )
+            if settings.connector_credential_key
+            else None
+        )
         return cls(
             database=database,
             audit=audit,
@@ -117,6 +168,7 @@ class AppDependencies:
             ),
             investigations=investigations,
             audit_delivery=audit_delivery,
+            connector=connector,
         )
 
     async def close(self) -> None:

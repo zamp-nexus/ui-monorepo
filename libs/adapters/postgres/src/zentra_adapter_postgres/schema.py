@@ -27,6 +27,12 @@ from ._metadata import metadata
 # module is what registers *every* table on the shared `MetaData`. Importing
 # `._metadata` alone yields an empty one, and `create_all` would silently do
 # nothing.
+from .schema_connector import (
+    catalog_versions,
+    data_sources,
+    harvest_runs,
+    relations,
+)
 from .schema_phase_2 import (
     draft_finding_claim_citations,
     draft_finding_claims,
@@ -455,15 +461,19 @@ __all__ = [
     "agent_executions",
     "agent_registry",
     "audit_outbox",
+    "catalog_versions",
+    "data_sources",
     "draft_finding_claim_citations",
     "draft_finding_claims",
     "draft_findings",
     "erasure_operations",
     "evidence_citations",
+    "harvest_runs",
     "human_approvals",
     "identity_subjects",
     "investigations",
     "metadata",
+    "relations",
     "semantic_metrics",
     "tenant_identity_bindings",
     "tenant_memberships",

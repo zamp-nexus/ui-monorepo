@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     cerebras_api_key: str | None = Field(default=None, repr=False)
     openrouter_api_key: str | None = Field(default=None, repr=False)
     e2b_api_key: str | None = Field(default=None, repr=False)
+    #: Hex-encoded AES key (16, 24 or 32 bytes) sealing Connector source
+    #: credentials. Absent means the Connector is simply not available — see
+    #: `AppDependencies.from_settings`. It is never defaulted: a generated key
+    #: would work until restart, then leave every stored credential unopenable.
+    connector_credential_key: str | None = Field(default=None, repr=False)
     frontend_origin: str = "http://localhost:4200"
 
     @model_validator(mode="before")
