@@ -12,7 +12,7 @@ confidence: verified
 implementation: planned
 priority: critical
 tags: [adr, phase-3, data-source, duckdb, cube, query-plan]
-related: ["[[Decisions MOC]]", "[[Phase 3 - Governed Bring Your Own Data]]", "[[Data Source Domain]]", "[[Phase 3 Data Execution]]"]
+related: ["[[Decisions MOC]]", "[[Phase 3 - Governed Bring Your Own Data]]", "[[Data Source Domain]]", "[[Phase 3 Data Execution]]", "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"]
 depends_on: ["[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]", "[[Semantic Modeling]]", "[[Investigation Domain]]"]
 repo_path: docs/adr/0012-complete-phase-3-as-governed-bring-your-own-data.md
 code_refs:
@@ -213,6 +213,14 @@ Tenant, Data Connection, and Semantic Model version. Cube chooses the source
 only from verified context. Unknown, suspended, revoked, drifted, or cross-
 Tenant bindings fail before querying. Caches are isolated by Tenant, connection,
 and model version; persistent pre-aggregations are deferred.
+
+> **Amended by [[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]].**
+> This paragraph's signed-internal-context mechanism is now implemented —
+> `checkAuth`/`contextToAppId` in `infra/cube/cube.js` — and applies
+> uniformly to the demo warehouse and live Connector Data Connections, not
+> only to a future PostgreSQL connector. This section's intent is unchanged;
+> 0016 records how it was built. The DuckDB-for-uploads decision elsewhere
+> in this document is untouched.
 
 ### Connection state is explicit
 

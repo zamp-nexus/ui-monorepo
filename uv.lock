@@ -1769,11 +1769,19 @@ dependencies = [
     { name = "zentra-domain-agent-execution" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pyjwt", extra = ["crypto"] },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" }]
 
 [[package]]
 name = "zentra-adapter-langgraph"

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime, timedelta
 
+import httpx
+import jwt
 import pytest
 
 from zentra_adapter_cube import CubeClient
 
 CUBE_URL = os.getenv("TEST_CUBE_URL")
+CUBE_SECRET = "local-cube-secret"
 
 pytestmark = pytest.mark.skipif(
     not CUBE_URL,
@@ -14,10 +18,36 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _mint_token(secret: str = CUBE_SECRET) -> str:
+    """Duplicated rather than imported from apps/api: this adapter must not
+    depend on the composition root, and the claims are three lines."""
+    now = datetime.now(UTC)
+    claims = {
+        "tenantId": None,
+        "dataConnectionId": None,
+        "relationFingerprint": None,
+        "iat": now,
+        "exp": now + timedelta(minutes=5),
+    }
+    return jwt.encode(claims, secret, algorithm="HS256")
+
+
+@pytest.mark.asyncio
+async def test_request_with_invalid_token_is_rejected() -> None:
+    """The auth-layer mirror of reject_ungoverned: a bad token never reaches
+    data. Cube Core returns 500 for any checkAuth rejection (403 is Cube
+    Cloud-only) — confirmed against a live instance, not assumed."""
+    assert CUBE_URL is not None
+    client = CubeClient(CUBE_URL, "not-a-jwt")
+    with pytest.raises(httpx.HTTPStatusError) as excinfo:
+        await client.load({"dimensions": ["Commerce.region"]})
+    assert excinfo.value.response.status_code == 500
+
+
 @pytest.mark.asyncio
 async def test_all_governed_metrics_and_eu_refund_spike() -> None:
     assert CUBE_URL is not None
-    client = CubeClient(CUBE_URL, "local-cube-secret")
+    client = CubeClient(CUBE_URL, _mint_token())
     result = await client.load(
         {
             "measures": [
@@ -66,7 +96,7 @@ async def test_na_channel_growth_is_unambiguous_in_the_governed_layer() -> None:
     exercise a path where nothing gates.
     """
     assert CUBE_URL is not None
-    client = CubeClient(CUBE_URL, "local-cube-secret")
+    client = CubeClient(CUBE_URL, _mint_token())
     result = await client.load(
         {
             "measures": ["Commerce.orderCount", "Commerce.grossRevenue"],

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4, uuid5
 
+from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
     InsightOutcome,
     InvestigationGraph,
@@ -36,6 +37,12 @@ from zentra_domain_investigation import (
     MetricComparison,
     RootCauseState,
 )
+
+from .cube_scope import ScopedCubeSemanticLayers
+
+#: Builds a graph for a runtime-scoped semantic layer rather than closing
+#: over one at factory-construction time — see LangGraphInvestigationPipeline.
+GraphFactory = Callable[[CubeSemanticLayer], InvestigationGraph]
 
 
 def _provider_of(model: str | None) -> str | None:
@@ -230,12 +237,21 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
 class LangGraphInvestigationPipeline:
     """Adapts the agent graph's outcome to what the application expects.
 
-    Holds one compiled graph per tier — two at most — so the tenant's tier
-    never has to travel through `ModelPort.complete()`.
+    Holds one graph *factory* per tier — two at most — rather than a
+    pre-built graph, because the semantic layer a graph's SqlAnalyst/
+    Evaluator hold must be scoped to one (tenant, Data Connection) pair, not
+    shared across every investigation the process ever runs. Building the
+    graph fresh per `run()` call is cheap: its constructors just hold
+    references, and `ScopedCubeSemanticLayers` is what actually caches.
     """
 
-    def __init__(self, graphs: Mapping[ModelTier, InvestigationGraph]) -> None:
-        self._graphs = dict(graphs)
+    def __init__(
+        self,
+        graph_factories: Mapping[ModelTier, GraphFactory],
+        semantic_layers: ScopedCubeSemanticLayers,
+    ) -> None:
+        self._graph_factories = dict(graph_factories)
+        self._semantic_layers = semantic_layers
 
     async def run(
         self,
@@ -244,8 +260,13 @@ class LangGraphInvestigationPipeline:
         tenant_id: UUID,
         question: str,
         model_tier: str = ModelTier.FREE.value,
+        data_connection_id: UUID | None = None,
     ) -> PipelineResult:
-        graph = self._graphs[ModelTier(model_tier)]
+        semantic_layer = await self._semantic_layers.resolve(
+            tenant_id=tenant_id,
+            data_connection_id=data_connection_id,
+        )
+        graph = self._graph_factories[ModelTier(model_tier)](semantic_layer)
         outcome = await graph.run(
             investigation_id=investigation_id,
             tenant_id=tenant_id,

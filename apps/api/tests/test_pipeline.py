@@ -22,6 +22,7 @@ from zentra_domain_agent_execution import (
     LegacyRoleWriteError,
 )
 
+from zentra_api.cube_scope import ScopedCubeSemanticLayers
 from zentra_api.pipeline import (
     LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
@@ -143,9 +144,22 @@ def outcome(**overrides: object) -> PipelineOutcome:
     return PipelineOutcome(**(defaults | overrides))  # type: ignore[arg-type]
 
 
+async def _unreachable_fingerprint(
+    tenant_id: object, data_connection_id: object
+) -> str:
+    raise AssertionError("no test here targets a Data Connection")
+
+
 async def run(**overrides: object):
     graph = StubGraph(outcome(**overrides))
-    pipeline = LangGraphInvestigationPipeline({ModelTier.FREE: graph})
+    semantic_layers = ScopedCubeSemanticLayers(
+        cube_url="http://unused",
+        cube_api_secret=None,
+        resolve_relation_fingerprint=_unreachable_fingerprint,
+    )
+    pipeline = LangGraphInvestigationPipeline(
+        {ModelTier.FREE: lambda _semantic_layer: graph}, semantic_layers
+    )
     return await pipeline.run(
         investigation_id=INVESTIGATION_ID,
         tenant_id=TENANT_ID,

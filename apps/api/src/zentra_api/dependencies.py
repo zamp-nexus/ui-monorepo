@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from zentra_adapter_clickhouse import (
     AesGcmCredentialCipher,
@@ -50,6 +50,8 @@ from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
+from .connector_model import relation_fingerprint
+from .cube_scope import ScopedCubeSemanticLayers
 from .pipeline import (
     LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
@@ -88,6 +90,9 @@ class AppDependencies:
     #: service with no key: the Connector routes then fail with a message
     #: naming the missing configuration, instead of accepting a password they
     #: cannot seal. Last because a defaulted field must follow the required ones.
+    #: The internal Cube model endpoint and connector_model.py's functions
+    #: fail the same way — a clear, typed error rather than an
+    #: AttributeError — whenever this is unset.
     connector: ConnectorService | None = None
 
     @classmethod
@@ -101,8 +106,9 @@ class AppDependencies:
             database=settings.clickhouse_database,
             secure=settings.clickhouse_secure,
         )
-        cube = CubeClient(settings.cube_url, settings.cube_api_secret)
-        semantic_layer = CubeSemanticLayer(cube)
+        # Unauthenticated: /readyz needs no token, and a health probe must
+        # not depend on a JWT's expiry.
+        cube = CubeClient(settings.cube_url, None)
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
         recorder = PostgresExecutionRecorder(unit_of_work_factory)
@@ -114,13 +120,29 @@ class AppDependencies:
         # not to any one tenant.
         breaker = ProviderCircuitBreaker()
 
-        graphs = {
-            tier: _build_graph(
+        connector: ConnectorService | None = None
+
+        async def resolve_relation_fingerprint(
+            tenant_id: UUID, data_connection_id: UUID
+        ) -> str:
+            return await relation_fingerprint(
+                connector,
+                tenant_id=tenant_id,
+                data_connection_id=data_connection_id,
+            )
+
+        semantic_layers = ScopedCubeSemanticLayers(
+            cube_url=settings.cube_url,
+            cube_api_secret=settings.cube_api_secret,
+            resolve_relation_fingerprint=resolve_relation_fingerprint,
+        )
+
+        graph_factories = {
+            tier: _build_graph_factory(
                 tier=tier,
                 models=models,
                 breaker=breaker,
                 registry=registry,
-                semantic_layer=semantic_layer,
                 recorder=recorder,
             )
             for tier in ModelTier
@@ -132,7 +154,7 @@ class AppDependencies:
         )
         investigations = InvestigationService(
             unit_of_work_factory=unit_of_work_factory,
-            pipeline=LangGraphInvestigationPipeline(graphs),
+            pipeline=LangGraphInvestigationPipeline(graph_factories, semantic_layers),
             audit_writer=audit_delivery,
             audit_reader=audit_delivery,
             now=lambda: datetime.now(UTC),
@@ -197,36 +219,42 @@ class AppDependencies:
         await self.models.close()
 
 
-def _build_graph(
+def _build_graph_factory(
     *,
     tier: ModelTier,
     models: ProviderClients,
     breaker: ProviderCircuitBreaker,
     registry: PostgresAgentRegistry,
-    semantic_layer: CubeSemanticLayer,
     recorder: PostgresExecutionRecorder,
-) -> InvestigationGraph:
-    """One compiled graph per tier.
+):
+    """A graph builder per tier, parameterized by the semantic layer.
 
-    The agents are identical; only the routed client behind them differs, which
-    is what keeps the tenant's tier out of `ModelPort.complete()`.
+    The agents are identical; only the routed client behind them differs,
+    which is what keeps the tenant's tier out of `ModelPort.complete()`. The
+    semantic layer is a runtime argument rather than closed over here
+    because it must be scoped per (tenant, Data Connection), not per tier —
+    see `ScopedCubeSemanticLayers`.
     """
     model = RoutedModelClient(
         tier=tier,
         clients=models.as_dict(),
         breaker=breaker,
     )
-    # Insight is required, not optional. Nothing else writes a Finding, so a
-    # deployment whose registry has not promoted it must refuse at plan time
-    # rather than reach the last node with nothing to run.
-    return InvestigationGraph(
-        orchestrator=OrchestratorAgent(
-            model=model,
-            registry=registry,
-            required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
-        ),
-        sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-        evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
-        insight=InsightAgent(model=model),
-        recorder=recorder,
-    )
+
+    def build(semantic_layer: CubeSemanticLayer) -> InvestigationGraph:
+        # Insight is required, not optional. Nothing else writes a Finding, so
+        # a deployment whose registry has not promoted it must refuse at plan
+        # time rather than reach the last node with nothing to run.
+        return InvestigationGraph(
+            orchestrator=OrchestratorAgent(
+                model=model,
+                registry=registry,
+                required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
+            ),
+            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            insight=InsightAgent(model=model),
+            recorder=recorder,
+        )
+
+    return build
