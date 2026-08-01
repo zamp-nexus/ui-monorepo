@@ -2,17 +2,17 @@
 id: adr-0014
 title: Connector-sourced data bypasses Cube
 type: adr
-status: active
+status: superseded
 owner: unassigned
 source: repository
 created: 2026-08-01
 updated: 2026-08-01
 reviewed: 2026-08-01
 confidence: verified
-implementation: current
+implementation: superseded
 priority: high
 tags: [adr, connector, semantic-model, cube]
-related: ["[[Semantic Modeling]]", "[[Cube Semantic Model]]", "[[Connector Domain]]"]
+related: ["[[Semantic Modeling]]", "[[Cube Semantic Model]]", "[[Connector Domain]]", "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"]
 repo_path: libs/application/connector
 code_refs:
   - libs/application/connector/src/zentra_application_connector/service.py
@@ -23,7 +23,12 @@ code_refs:
 
 ## Status
 
-Accepted.
+Superseded by [[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]].
+The port this decision describes — analytical agents reaching ClickHouse
+directly through a Join-Graph-gated capability — was never built; the only
+data-reaching port ever implemented was Cube's. The reasoning below is kept
+for the record; the Consequences section's own prediction is what proved
+out.
 
 ## Context
 

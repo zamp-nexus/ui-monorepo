@@ -34,7 +34,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import insert, select, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_adapter_clickhouse import AuditRepository
-from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
     InsightAgent,
@@ -59,6 +58,7 @@ from zentra_adapter_postgres.schema import (
     users,
 )
 from zentra_api.audit_delivery import AuditDeliveryCoordinator
+from zentra_api.cube_scope import ScopedCubeSemanticLayers
 from zentra_api.pipeline import (
     LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
@@ -182,19 +182,34 @@ def _assemble(
     model: ModelPort,
 ) -> tuple[InvestigationService, AuditRepository]:
     """Everything below the model seam, identical whichever client is above it."""
-    cube = CubeClient(settings.cube_url, settings.cube_api_secret)
-    semantic_layer = CubeSemanticLayer(cube)
     uow = PostgresInvestigationUnitOfWorkFactory(database)
-    graph = InvestigationGraph(
-        orchestrator=OrchestratorAgent(model=model, registry=PostgresAgentRegistry(database)),
-        sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-        evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
-        # Required since the Orchestrator stopped synthesising. A recorded
-        # scenario that skipped Insight would be exercising a pipeline the
-        # product no longer has.
-        insight=InsightAgent(model=model),
-        recorder=PostgresExecutionRecorder(uow),
+
+    async def _unreachable_fingerprint(tenant_id, data_connection_id):
+        # live_run.py never targets a Data Connection — every investigation
+        # here runs against the demo warehouse — so this resolver is never
+        # actually called.
+        raise NotImplementedError(
+            "live_run.py does not support querying a Data Connection"
+        )
+
+    semantic_layers = ScopedCubeSemanticLayers(
+        cube_url=settings.cube_url,
+        cube_api_secret=settings.cube_api_secret,
+        resolve_relation_fingerprint=_unreachable_fingerprint,
     )
+
+    def build_graph(semantic_layer):
+        return InvestigationGraph(
+            orchestrator=OrchestratorAgent(model=model, registry=PostgresAgentRegistry(database)),
+            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            # Required since the Orchestrator stopped synthesising. A recorded
+            # scenario that skipped Insight would be exercising a pipeline the
+            # product no longer has.
+            insight=InsightAgent(model=model),
+            recorder=PostgresExecutionRecorder(uow),
+        )
+
     audit = AuditRepository.connect(
         host=settings.clickhouse_host,
         port=settings.clickhouse_port,
@@ -206,7 +221,7 @@ def _assemble(
     delivery = AuditDeliveryCoordinator(unit_of_work_factory=uow, audit=audit)
     service = InvestigationService(
         unit_of_work_factory=uow,
-        pipeline=LangGraphInvestigationPipeline({tier: graph}),
+        pipeline=LangGraphInvestigationPipeline({tier: build_graph}, semantic_layers),
         audit_writer=delivery,
         audit_reader=delivery,
         now=lambda: datetime.now(UTC),

@@ -144,6 +144,23 @@ class ConnectorService(CatalogOperations, UploadOperations):
     ) -> SourceSummary:
         return to_summary(await self._load_source(actor, data_source_id))
 
+    async def resolve_driver_credentials(
+        self, actor: AuthenticatedActor, data_source_id: UUID
+    ) -> SourceCredentials:
+        """Decrypt a source's credentials for a trusted internal caller.
+
+        Every other method here works with a source's identity, never its
+        secret — `SourceCredentials` otherwise never leaves this layer. This
+        is a deliberate, narrow exception for Cube's dynamic per-tenant
+        schema generator, which needs a live database connection to build a
+        driver config inside a Node process this application does not
+        control. Callers must not log or persist what this returns.
+        """
+        source = await self._load_source(actor, data_source_id)
+        if source.sealed_credentials is None:
+            raise ConnectionFailedError("This source has no stored credentials")
+        return self._cipher.open(source.sealed_credentials)
+
     async def update_credentials(
         self,
         actor: AuthenticatedActor,

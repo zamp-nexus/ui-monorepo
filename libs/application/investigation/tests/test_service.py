@@ -77,6 +77,7 @@ class Pipeline:
         tenant_id: UUID,
         question: str,
         model_tier: str = "free",
+        data_connection_id: UUID | None = None,
     ) -> PipelineResult:
         self.calls.append(investigation_id)
         return PipelineResult(

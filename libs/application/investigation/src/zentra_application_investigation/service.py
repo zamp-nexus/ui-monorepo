@@ -85,6 +85,7 @@ class InvestigationService:
         actor: AuthenticatedActor,
         *,
         scenario_key: str,
+        data_connection_id: UUID | None = None,
     ) -> InvestigationDetail:
         """Register the investigation and return. The agents run afterwards, so
         the caller is not held open for the length of the pipeline."""
@@ -106,6 +107,7 @@ class InvestigationService:
             question=scenario.question,
             scenario_key=scenario_key,
             now=now,
+            data_connection_id=data_connection_id,
         )
         investigation.start(now)
 
@@ -184,6 +186,7 @@ class InvestigationService:
                 tenant_id=actor.tenant_id,
                 question=investigation.question,
                 model_tier=model_tier,
+                data_connection_id=investigation.data_connection_id,
             )
         except Exception as error:
             await self._fail(actor, investigation, error)
