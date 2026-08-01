@@ -14,6 +14,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from zentra_domain_connector import (
+    COMPOSITE_KEY_LIMITATION,
     CatalogVersion,
     DataSource,
     HarvestBudget,
@@ -45,6 +46,7 @@ from .dto import (
     ConflictError,
     ConnectionFailedError,
     DataSourceNotFoundError,
+    DeletionPreview,
     HarvestRunNotFoundError,
     HarvestStatus,
     JoinGraphView,
@@ -202,6 +204,33 @@ class ConnectorService(CatalogOperations, UploadOperations):
             assert check.failure is not None
             raise ConnectionFailedError(check.failure)
         return to_summary(source)
+
+    async def preview_source_deletion(
+        self, actor: AuthenticatedActor, data_source_id: UUID
+    ) -> DeletionPreview:
+        """What deleting this source would destroy.
+
+        A read, and only a read. ``delete_source`` remains unconditional — this
+        exists so the consequence is known beforehand rather than discovered
+        when a Join Graph a reviewer spent an afternoon confirming quietly
+        empties out.
+        """
+        source = await self._load_source(actor, data_source_id)
+        versions = await self._catalogs.list_versions(
+            data_source_id, tenant_id=actor.tenant_id
+        )
+        relations = await self._relations.list_for_source(
+            data_source_id, tenant_id=actor.tenant_id
+        )
+        confirmed = [r for r in relations if r.state is RelationState.CONFIRMED]
+        return DeletionPreview(
+            data_source_id=data_source_id,
+            name=source.name,
+            catalog_versions=len(versions),
+            confirmed_relations=len(confirmed),
+            cross_source_relations=sum(1 for r in confirmed if r.is_cross_source),
+            drops_stored_data=source.kind is SourceKind.UPLOADED,
+        )
 
     async def delete_source(
         self, actor: AuthenticatedActor, data_source_id: UUID
@@ -485,6 +514,10 @@ class ConnectorService(CatalogOperations, UploadOperations):
             catalog_version_id=catalog_version_id,
             relations=tuple(to_relation_view(r) for r in graph.relations),
             isolated_fields=names,
+            # Stated only when the graph is empty. That is the one moment the
+            # absence of joins is ambiguous, and a limitation repeated on every
+            # healthy response is a limitation nobody reads.
+            limitations=() if graph.relations else (COMPOSITE_KEY_LIMITATION,),
         )
 
     async def permits_join(

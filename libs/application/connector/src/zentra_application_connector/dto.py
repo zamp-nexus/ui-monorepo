@@ -216,6 +216,13 @@ class HarvestStatus:
     failure_code: str | None = None
     failure_message: str | None = None
     unreadable: tuple[tuple[str, str], ...] = ()
+    #: Fields inference never examined, grouped by why. Without these an empty
+    #: proposal list reads as "no relationships exist" when it may mean "almost
+    #: nothing here was eligible to be looked at".
+    fields_unexamined: int = 0
+    unexamined_reasons: dict[str, int] = field(default_factory=dict)
+    #: What inference does not look for. Stated, not left to be inferred.
+    limitations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,10 +253,35 @@ class JoinGraphView:
     catalog_version_id: UUID
     relations: tuple[RelationView, ...]
     isolated_fields: tuple[str, ...] = ()
+    #: Carried on the graph itself so a caller reading an empty one is told what
+    #: was not looked for, at the moment the emptiness would otherwise mislead.
+    limitations: tuple[str, ...] = ()
 
     @property
     def is_empty(self) -> bool:
         return not self.relations
+
+
+@dataclass(frozen=True, slots=True)
+class DeletionPreview:
+    """What removing a Data Source would take with it.
+
+    Informs rather than gates: deletion stays unconditional, because a Tenant
+    who wants their data gone should not be argued with. But "this also destroys
+    fourteen confirmed Relations, three of which join your uploaded file to your
+    warehouse" is something they should learn before, not after.
+    """
+
+    data_source_id: UUID
+    name: str
+    catalog_versions: int
+    confirmed_relations: int
+    #: Confirmed Relations reaching into a *different* source. Called out
+    #: separately because deleting this source silently degrades another one,
+    #: which is the consequence least likely to be anticipated.
+    cross_source_relations: int
+    #: True for an uploaded source, whose landed table is dropped outright.
+    drops_stored_data: bool
 
 
 @dataclass(frozen=True, slots=True)
