@@ -46,6 +46,15 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Recorded cassettes of live runs under `evals/cassettes/`, replayed by
   `nx run evals:replay` to re-verify calibration offline at no cost.
 - OpenTelemetry trace correlation and configurable OTLP export.
+- The Connector context: Data Sources (connected and uploaded), immutable Catalog
+  Versions, Field Profiles bounded by explicit query budgets, and Relations
+  inferred from name affinity, type compatibility, and value overlap measured at
+  the source. Confidence is bounded by a sample-size and a cardinality ceiling
+  with the binding ceiling recorded ([[adr/0015-inferred-relations-require-human-confirmation]]).
+  Only human-confirmed Relations form the Join Graph. Connector data bypasses
+  Cube ([[adr/0014-connector-data-bypasses-cube]]). CSV and Parquet uploads land
+  as Data Sources in a database separate from the audit ledger, which is what
+  makes cross-source relation inference possible.
 - Local Docker environment and managed Neon/ClickHouse Terraform definitions.
 
 ## Product phase
@@ -88,15 +97,33 @@ provider and its independence grade drops to `NONE`.
 
 ## Not implemented
 
-The Statistician and later Agents, the cost-ceiling circuit breaker, a cross-
-vendor Evaluator for the premium tier, recovery for a pipeline interrupted
-mid-run, generalized scheduling, arbitrary datasets/questions, production
-application deployment, and a release process.
+The Statistician and later Agents, the cost-ceiling circuit breaker, a
+cross-vendor Evaluator for the premium tier, recovery for a pipeline interrupted
+mid-run, generalized scheduling, production application deployment, and a release
+process.
+
+Within the Connector specifically: **Postgres persistence of Data Sources,
+Catalog Versions, Relations, and Harvest Runs is not implemented**, so the API
+routes exist but have no store behind them. Agent Join Graph enforcement,
+connector Audit Entries and tracing, and the TPC-H accuracy harness are also
+outstanding. See `ch-nexus/ui-monorepo#2` and its child tickets.
+
+Phase 3's Data Source design — Dataset Workspaces, Relation Versions, Workspace
+Snapshots, DuckDB execution, and the PostgreSQL Connector Type — remains
+**planned and unimplemented**. It overlaps the shipped Connector context and the
+two have not been reconciled; see the note in `CONTEXT-MAP.md`.
 
 ## Verification caveat
 
 Phase 1 targeted suites, the agent eval suites, and local integrations pass
-against scripted model responses. Agent behaviour against a live model is
+against scripted model responses.
+
+The Connector's 138 tests (91 at the ConnectorService seam, 40 adapter, 7
+contract) run entirely against in-memory fakes. **No connector
+code has been executed against a live ClickHouse instance**, so real dialect
+behaviour and `system.*` semantics are unverified; a manual pass is required
+before any demo. The connector API routes are covered by a contract test but not
+by request-level tests, because they have no persistence behind them yet. Agent behaviour against a live model is
 unverified here. Existing shared foundation-package test debt is tracked
 separately and must not be misreported as Phase 1 behavior.
 

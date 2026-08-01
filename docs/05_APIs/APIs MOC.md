@@ -19,6 +19,7 @@ repo_path: apps/api/src/zentra_api/routes.py
 
 - [[Health and Context API]]
 - [[Investigation API]]
+- [[Connector API]]
 
 The route declarations and Pydantic response models are authoritative. There is
 no investigation list, arbitrary-question, streaming, agent-management, or
