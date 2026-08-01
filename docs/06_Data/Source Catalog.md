@@ -1,15 +1,15 @@
 ---
 id: data-source-catalog
 title: Source Catalog
-type: data
+type: data-model
 status: active
 owner: unassigned
 source: repository
 created: 2026-08-01
 updated: 2026-08-01
 reviewed: 2026-08-01
-confidence: partial
-implementation: partial
+confidence: verified
+implementation: current
 priority: high
 tags: [data, connector, clickhouse, catalog]
 related:

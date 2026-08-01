@@ -2,6 +2,17 @@
 
 Investigation owns one traceable attempt to answer a governed business question and the states that make its progress explicit.
 
+Groups and Projects organize the Investigation Thread surface. They are
+Tenant-owned navigation containers, not analytical authority and not nested
+ACL boundaries. Archived containers remain readable and make descendants
+read-only without deleting Investigation history.
+
+An Investigation Thread is the linear conversational boundary around immutable
+messages and separately governed Investigations. Draft Threads hold unresolved
+user and router clarification messages without fabricating analytical work.
+Deterministic routing activates a Thread only when exactly one governed scenario
+matches.
+
 ## Language
 
 **Investigation Status**:

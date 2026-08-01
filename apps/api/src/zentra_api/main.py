@@ -11,6 +11,8 @@ from .connector_routes import router as connector_router
 from .dependencies import AppDependencies
 from .routes import router
 from .settings import Settings
+from .thread_routes import router as thread_router
+from .workspace_routes import router as workspace_router
 
 
 def create_app(
@@ -43,11 +45,13 @@ def create_app(
         CORSMiddleware,
         allow_origins=[resolved_settings.frontend_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "Traceparent", "Tracestate"],
     )
     api.include_router(router)
     api.include_router(connector_router)
+    api.include_router(workspace_router)
+    api.include_router(thread_router)
     configure_telemetry(
         api,
         TelemetrySettings(

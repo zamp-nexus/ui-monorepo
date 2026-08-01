@@ -39,7 +39,9 @@
       "Bash(curl -s -o /dev/null -w \"openzentra/nexus#33: %{http_code}\\\\n\" https://api.github.com/repos/openzentra/nexus/issues/33)",
       "Bash(curl -s -o /dev/null -w \"sources: %{http_code}\\\\n\" http://localhost:8000/v1/connector/sources)",
       "Bash(git credential *)",
-      "Bash(curl -s -o /dev/null -w \"ready:%{http_code}  \" http://localhost:8000/health/ready)"
+      "Bash(curl -s -o /dev/null -w \"ready:%{http_code}  \" http://localhost:8000/health/ready)",
+      "Bash(git merge *)",
+      "Bash(TEST_DATABASE_OWNER_URL=\"postgresql+psycopg://zentra_owner:zentra_owner@localhost:5432/zentra_control\" TEST_DATABASE_RUNTIME_URL=\"postgresql+psycopg://zentra_app:zentra_app@localhost:5432/zentra_control\" uv run pytest /private/tmp/claude-501/-Users-satyam-Documents-clickhouse-ui-monorepo/d5b90cff-2695-49b4-a40d-50aa446db7e5/scratchpad/mainwt/libs/adapters/postgres/tests/test_draft_finding_migration.py -q)"
     ]
   },
   "enabledPlugins": {

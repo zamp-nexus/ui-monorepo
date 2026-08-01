@@ -32,14 +32,20 @@ from zentra_adapter_postgres import (
     PostgresDataSourceRepository,
     PostgresHarvestRunRepository,
     PostgresInvestigationUnitOfWorkFactory,
+    PostgresOrganizationUnitOfWorkFactory,
     PostgresRelationRepository,
+    PostgresThreadUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
 from zentra_application_connector import ConnectorService
-from zentra_application_investigation import InvestigationService
+from zentra_application_investigation import (
+    InvestigationService,
+    OrganizationService,
+    ThreadService,
+)
 from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
@@ -76,10 +82,12 @@ class AppDependencies:
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
+    organization: OrganizationService
+    threads: ThreadService
     #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
     #: service with no key: the Connector routes then fail with a message
     #: naming the missing configuration, instead of accepting a password they
-    #: cannot seal.
+    #: cannot seal. Last because a defaulted field must follow the required ones.
     connector: ConnectorService | None = None
 
     @classmethod
@@ -132,6 +140,16 @@ class AppDependencies:
             publication_observer=record_publication_decision,
             erasure_observer=record_evidence_deletion,
         )
+        organization = OrganizationService(
+            unit_of_work_factory=PostgresOrganizationUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
+        threads = ThreadService(
+            unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
         connector = (
             ConnectorService(
                 sources=PostgresDataSourceRepository(database),
@@ -168,6 +186,8 @@ class AppDependencies:
             ),
             investigations=investigations,
             audit_delivery=audit_delivery,
+            organization=organization,
+            threads=threads,
             connector=connector,
         )
 

@@ -19,6 +19,16 @@ from .investigation import (
     PostgresInvestigationUnitOfWorkFactory,
 )
 from .schema import metadata
+from .thread import (
+    PostgresThreadRepository,
+    PostgresThreadUnitOfWork,
+    PostgresThreadUnitOfWorkFactory,
+)
+from .workspace import (
+    PostgresOrganizationRepository,
+    PostgresOrganizationUnitOfWork,
+    PostgresOrganizationUnitOfWorkFactory,
+)
 
 __all__ = [
     "Database",
@@ -31,7 +41,13 @@ __all__ = [
     "PostgresHarvestRunRepository",
     "PostgresInvestigationUnitOfWork",
     "PostgresInvestigationUnitOfWorkFactory",
+    "PostgresOrganizationRepository",
+    "PostgresOrganizationUnitOfWork",
+    "PostgresOrganizationUnitOfWorkFactory",
     "PostgresRelationRepository",
+    "PostgresThreadRepository",
+    "PostgresThreadUnitOfWork",
+    "PostgresThreadUnitOfWorkFactory",
     "metadata",
     "resolve_identity_context",
 ]

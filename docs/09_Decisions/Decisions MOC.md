@@ -30,6 +30,8 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0010-confidence-bounded-by-evidence]]
 - [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]
 - [[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]
+- [[adr/0014-connector-data-bypasses-cube]]
+- [[adr/0015-inferred-relations-require-human-confirmation]]
 
 ## Governance
 
