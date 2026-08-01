@@ -15,7 +15,8 @@ dependencies = [
   "zentra-application-investigation",
   "zentra-domain-agent-execution",
   "zentra-domain-connector",
-  "zentra-domain-investigation"
+  "zentra-domain-investigation",
+  "zentra-domain-sequence"
 ]
 
 [tool.uv.workspace]
@@ -32,7 +33,8 @@ members = [
   "libs/application/investigation",
   "libs/domain/agent-execution",
   "libs/domain/connector",
-  "libs/domain/investigation"
+  "libs/domain/investigation",
+  "libs/domain/sequence"
 ]
 
 [tool.uv.sources.zentra-adapter-clickhouse]
@@ -72,6 +74,9 @@ workspace = true
 workspace = true
 
 [tool.uv.sources.zentra-domain-investigation]
+workspace = true
+
+[tool.uv.sources.zentra-domain-sequence]
 workspace = true
 
 [tool.pytest.ini_options]

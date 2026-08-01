@@ -3,6 +3,7 @@ root_packages =
     zentra_domain_agent_execution
     zentra_domain_connector
     zentra_domain_investigation
+    zentra_domain_sequence
     zentra_application_investigation
     zentra_application_connector
     zentra_adapter_postgres
@@ -21,6 +22,7 @@ source_modules =
     zentra_domain_agent_execution
     zentra_domain_investigation
     zentra_domain_connector
+    zentra_domain_sequence
 forbidden_modules =
     alembic
     anthropic
