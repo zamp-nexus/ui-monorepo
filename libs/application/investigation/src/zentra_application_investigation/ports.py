@@ -35,6 +35,7 @@ class InvestigationPipeline(Protocol):
         tenant_id: UUID,
         question: str,
         model_tier: str,
+        data_connection_id: UUID | None = None,
     ) -> PipelineResult: ...
 
 

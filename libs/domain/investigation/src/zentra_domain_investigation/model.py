@@ -245,6 +245,11 @@ class Investigation:
     outcome: OutcomeSignal | None = None
     completion: CompletionOutcome | None = None
     failure: FailureOutcome | None = None
+    # Which live Data Connection this Investigation queries through, if any.
+    # None means the demo warehouse (today's only reachable source). Set once
+    # at creation and never reassigned — ADR-0012: "No source... may switch
+    # mid-run."
+    data_connection_id: UUID | None = None
     events: list[DomainEvent] = field(default_factory=list)
 
     @classmethod
@@ -256,6 +261,7 @@ class Investigation:
         question: str,
         scenario_key: str,
         now: datetime,
+        data_connection_id: UUID | None = None,
     ) -> Investigation:
         investigation = cls(
             investigation_id=investigation_id,
@@ -267,6 +273,7 @@ class Investigation:
             evaluation_attempts=0,
             created_at=now,
             updated_at=now,
+            data_connection_id=data_connection_id,
         )
         investigation._record("investigation.created", now)
         return investigation

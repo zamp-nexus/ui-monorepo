@@ -112,6 +112,11 @@ def _state_to_json(investigation: Investigation) -> dict[str, Any]:
             if investigation.failure
             else None
         ),
+        "data_connection_id": (
+            str(investigation.data_connection_id)
+            if investigation.data_connection_id
+            else None
+        ),
     }
 
 
@@ -138,6 +143,7 @@ def _investigation_from_row(row: Any) -> Investigation:
         if failure_value
         else None
     )
+    data_connection_value = state.get("data_connection_id")
     return Investigation(
         investigation_id=row.investigation_id,
         tenant_id=row.tenant_id,
@@ -153,6 +159,9 @@ def _investigation_from_row(row: Any) -> Investigation:
         outcome=outcome,
         completion=completion,
         failure=failure,
+        data_connection_id=(
+            UUID(data_connection_value) if data_connection_value else None
+        ),
         events=[],
     )
 
