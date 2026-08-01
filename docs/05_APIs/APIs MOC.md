@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 priority: high
 tags: [api, index]
@@ -19,6 +19,7 @@ repo_path: apps/api/src/zentra_api/routes.py
 
 - [[Health and Context API]]
 - [[Investigation API]]
+- [[Workspace Organization API]]
 
 The route declarations and Pydantic response models are authoritative. There is
 no investigation list, arbitrary-question, streaming, agent-management, or
