@@ -47,8 +47,14 @@ import type { ModalComponent, ModalContextValue } from './types';
  */
 const ModalRoot: ModalComponent = ({
   size = '720',
-  fillContainer,
-  fitContent,
+  // Defaulted to `false` rather than left undefined. The theme resolver only
+  // emits a modifier branch for an actual boolean, so an undefined
+  // `fillContainer` skipped *both* branches — and the `false` branch is what
+  // carries the popup's `max-h-[calc(100vh-4rem)]`. The modal therefore had no
+  // height cap at all, and a long one grew past the viewport with nothing to
+  // scroll.
+  fillContainer = false,
+  fitContent = false,
   open,
   defaultOpen,
   onOpenChange,

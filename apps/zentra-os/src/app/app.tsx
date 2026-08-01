@@ -10,6 +10,7 @@ import { ComingSoon } from './pages/coming-soon';
 import { ConnectionsPage } from './pages/connections/connections-page';
 import { ConnectorConfig } from './pages/connections/connector-config';
 import { ConnectorPicker } from './pages/connections/connector-picker';
+import { DatasetsPage } from './pages/datasets/datasets-page';
 import {
   MembershipUnavailable,
   OrganizationRequired,
@@ -86,13 +87,7 @@ const AuthenticatedWorkspace = () => {
         />
         <Route
           path="/datasets"
-          element={
-            <ComingSoon
-              title="Datasets"
-              icon="database"
-              description="Uploaded snapshots and live connections, with the profile and version each investigation is bound to."
-            />
-          }
+          element={<DatasetsPage getToken={getToken} identity={identity.data} />}
         />
         <Route path="/chat" element={<ChatPage identity={identity.data} />} />
         <Route
