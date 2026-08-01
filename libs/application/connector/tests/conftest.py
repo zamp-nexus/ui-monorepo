@@ -24,6 +24,7 @@ from zentra_application_connector import (
 )
 
 from .fakes import (
+    FakeAgentAccessRepository,
     FakeCatalogRepository,
     FakeCipher,
     FakeClock,
@@ -57,6 +58,7 @@ class Harness:
     catalogs: FakeCatalogRepository
     relations: FakeRelationRepository
     runs: FakeHarvestRunRepository
+    access: FakeAgentAccessRepository
 
 
 @pytest.fixture
@@ -91,11 +93,13 @@ def harness() -> Harness:
     catalogs = FakeCatalogRepository()
     relations = FakeRelationRepository()
     runs = FakeHarvestRunRepository()
+    access = FakeAgentAccessRepository()
     service = ConnectorService(
         sources=sources,
         catalogs=catalogs,
         relations=relations,
         runs=runs,
+        access=access,
         connector=connector,
         cipher=cipher,
         landing_zone=landing,
@@ -110,6 +114,7 @@ def harness() -> Harness:
         catalogs=catalogs,
         relations=relations,
         runs=runs,
+        access=access,
     )
 
 

@@ -183,6 +183,58 @@ relations = Table(
     Index("ix_relations_right_source", "right_data_source_id"),
 )
 
+#: A Tenant decision that a table, or one field within it, is not for agents.
+#:
+#: Keyed by `table_name`/`field_name` rather than by `catalog_version_id` or a
+#: field id, both of which are reassigned on every re-harvest — the point of
+#: this table is that a decision survives re-harvesting the same table.
+#: `field_name` null means the override is table-level.
+#:
+#: Two partial unique indexes rather than one over `(..., field_name)`,
+#: because Postgres treats every `NULL` as distinct from every other `NULL`:
+#: a plain unique index would let a Tenant "toggle" the same table off twice
+#: and get two rows instead of one upsert.
+catalog_agent_access = Table(
+    "catalog_agent_access",
+    metadata,
+    Column("override_id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "data_source_id",
+        UUID(as_uuid=True),
+        ForeignKey("data_sources.data_source_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("table_name", Text, nullable=False),
+    Column("field_name", Text, nullable=True),
+    Column("agent_visible", Boolean, nullable=False),
+    Column("decided_by", UUID(as_uuid=True), nullable=False),
+    Column("decided_at", TIMESTAMP(timezone=True), nullable=False),
+    Index(
+        "ux_catalog_agent_access_table",
+        "tenant_id",
+        "data_source_id",
+        "table_name",
+        unique=True,
+        postgresql_where=text("field_name IS NULL"),
+    ),
+    Index(
+        "ux_catalog_agent_access_field",
+        "tenant_id",
+        "data_source_id",
+        "table_name",
+        "field_name",
+        unique=True,
+        postgresql_where=text("field_name IS NOT NULL"),
+    ),
+    Index("ix_catalog_agent_access_source", "tenant_id", "data_source_id"),
+)
+
 #: One execution of discovery.
 harvest_runs = Table(
     "harvest_runs",

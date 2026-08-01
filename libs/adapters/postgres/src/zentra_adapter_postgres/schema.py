@@ -29,6 +29,7 @@ from ._metadata import metadata
 # `._metadata` alone yields an empty one, and `create_all` would silently do
 # nothing.
 from .schema_connector import (
+    catalog_agent_access,
     catalog_versions,
     data_sources,
     harvest_runs,
@@ -496,6 +497,7 @@ __all__ = [
     "agent_executions",
     "agent_registry",
     "audit_outbox",
+    "catalog_agent_access",
     "catalog_versions",
     "data_sources",
     "draft_finding_claim_citations",
