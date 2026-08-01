@@ -252,3 +252,70 @@ class RegisteredAgent(BaseModel):
 
 class AgentRegistryPort(Protocol):
     def enabled_agents(self) -> Awaitable[tuple[RegisteredAgent, ...]]: ...
+
+
+# ---------------------------------------------------------------------------
+# Sequence Step execution
+#
+# The operation itself is carried as a name + an unchecked parameter bag, not
+# as zentra_domain_sequence's rich SequenceOperation type: sequence depends on
+# agent-execution for this port, so agent-execution cannot depend back on
+# sequence's catalog type without a cycle. zentra_domain_sequence is the one
+# that knows how to validate/construct a SequenceOperation at this boundary.
+# ---------------------------------------------------------------------------
+
+
+class SequenceTableReference(BaseModel):
+    """An opaque, tenant-scoped locator for a table a Sequence Step reads or
+    produces — a Raw Table, or a prior Prepared Table."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tenant_id: UUID
+    reference_id: UUID
+    kind: Literal["raw", "prepared"]
+
+
+class SequenceStepExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tenant_id: UUID
+    sequence_id: UUID
+    step_id: UUID
+    operation_kind: str = Field(min_length=1)
+    operation_parameters: dict[str, JsonValue]
+    input_table: SequenceTableReference
+
+
+class SequenceStepExecutionResult(BaseModel):
+    """A Sequence Step applied successfully, producing a new table."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request: SequenceStepExecutionRequest
+    output_table: SequenceTableReference
+    row_count: int = Field(ge=0)
+    columns: tuple[str, ...]
+
+
+class SequenceExecutionFailureReason(StrEnum):
+    CATALOG_VIOLATION = "catalog_violation"
+    DATA_INCOMPATIBLE = "data_incompatible"
+    UNKNOWN_TABLE = "unknown_table"
+
+
+class SequenceStepExecutionFailure(BaseModel):
+    """A Sequence Step that could not be applied — a typed outcome, never a
+    raw exception escaping the port boundary."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request: SequenceStepExecutionRequest
+    reason: SequenceExecutionFailureReason
+    detail: str = Field(min_length=1)
+
+
+class SequenceExecutionPort(Protocol):
+    def apply_operation(
+        self, request: SequenceStepExecutionRequest
+    ) -> Awaitable[SequenceStepExecutionResult | SequenceStepExecutionFailure]: ...
