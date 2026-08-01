@@ -7,6 +7,9 @@ exclude_lines = ['if TYPE_CHECKING:']
 show_missing = true
 
 [tool.pytest.ini_options]
+# The root pyproject declares this, but a lib directory is its own config
+# root, so it must be restated here for the async fake-adapter tests to run.
+asyncio_mode = "auto"
 addopts = """
  --cov
  --cov-report html:'../../../coverage/libs/domain/sequence/html'
