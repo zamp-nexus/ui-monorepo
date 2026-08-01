@@ -1,10 +1,10 @@
 /**
  * Dark Theme - Primary Theme
- * Linear-inspired dark theme implementation
  *
  * Design principles:
- * - Mercury White (#F4F5F8) for highlights
- * - Nordic Gray (#222326) as base
+ * - Green-tinted charcoal canvas, near black
+ * - Signal lime as the single interactive accent
+ * - Violet reserved for navigation and agent surfaces
  * - Subtle layer elevation
  * - High contrast text hierarchy
  *
@@ -24,81 +24,81 @@ export const darkTheme = createTheme({
   colors: {
     background: {
       // Layer system: darker = deeper
-      layer00: 'hsl(228 6% 10%)', // Deepest - canvas
-      layer01: 'hsl(228 6% 12%)', // Default surface
-      layer02: 'hsl(228 6% 14%)', // Elevated
-      layer03: 'hsl(228 6% 16%)', // Highest - modals
-      overlay: 'hsla(228 6% 8% / 0.8)', // Backdrop
+      layer00: 'hsl(140 8% 4%)', // Deepest - canvas
+      layer01: 'hsl(140 7% 6%)', // Default surface
+      layer02: 'hsl(140 6% 9%)', // Elevated
+      layer03: 'hsl(140 6% 12%)', // Highest - modals
+      overlay: 'hsla(140 10% 2% / 0.82)', // Backdrop
     },
 
     text: {
       // Text hierarchy: lighter = more emphasis
-      highlight: 'hsl(228 15% 96%)', // Mercury White - maximum
-      primary: 'hsl(228 6% 94%)', // High contrast
-      secondary: 'hsl(228 6% 74%)', // Reduced
-      tertiary: 'hsl(228 6% 62%)', // Placeholders
-      muted: 'hsl(228 6% 40%)', // Disabled
-      inverted: 'hsl(228 6% 8%)', // On colored BG
+      highlight: 'hsl(96 14% 96%)', // Maximum
+      primary: 'hsl(96 10% 92%)', // High contrast
+      secondary: 'hsl(140 5% 70%)', // Reduced
+      tertiary: 'hsl(140 5% 57%)', // Placeholders
+      muted: 'hsl(140 5% 40%)', // Disabled
+      inverted: 'hsl(140 10% 4%)', // On colored BG
     },
 
     interactive: {
       primary: {
-        resting: 'hsl(235 56% 60%)', // Linear accent
-        hovered: 'hsl(235 56% 65%)', // Lighter on hover
-        pressed: 'hsl(235 56% 55%)', // Darker on press
-        disabled: 'hsl(235 20% 40%)', // Desaturated
+        resting: 'hsl(88 100% 70%)', // Signal lime
+        hovered: 'hsl(88 100% 78%)', // Lighter on hover
+        pressed: 'hsl(88 92% 63%)', // Darker on press
+        disabled: 'hsl(88 20% 40%)', // Desaturated
       },
       secondary: {
-        resting: 'hsl(228 6% 22%)',
-        hovered: 'hsl(228 6% 24%)',
-        pressed: 'hsl(228 6% 28%)',
-        disabled: 'hsl(228 6% 18%)',
+        resting: 'hsl(140 6% 14%)',
+        hovered: 'hsl(140 6% 18%)',
+        pressed: 'hsl(140 6% 22%)',
+        disabled: 'hsl(140 6% 12%)',
       },
       tertiary: {
         resting: 'transparent',
-        hovered: 'hsl(228 6% 18%)',
-        pressed: 'hsl(228 6% 22%)',
+        hovered: 'hsl(140 6% 12%)',
+        pressed: 'hsl(140 6% 16%)',
         disabled: 'transparent',
       },
       destructive: {
-        resting: 'hsl(0 72% 52%)',
-        hovered: 'hsl(0 72% 60%)',
-        pressed: 'hsl(0 72% 48%)',
+        resting: 'hsl(0 74% 54%)',
+        hovered: 'hsl(0 78% 62%)',
+        pressed: 'hsl(0 74% 48%)',
         disabled: 'hsl(0 30% 40%)',
       },
       smart: {
-        resting: 'hsl(256 94% 63%)',
-        hovered: 'hsl(256 94% 69%)',
-        pressed: 'hsl(256 94% 57%)',
-        disabled: 'hsl(256 40% 45%)',
+        resting: 'hsl(263 83% 58%)',
+        hovered: 'hsl(263 83% 64%)',
+        pressed: 'hsl(263 83% 52%)',
+        disabled: 'hsl(263 40% 45%)',
       },
     },
 
     border: {
-      default: 'hsl(228 6% 18%)',
-      subtle: 'hsl(228 6% 14%)',
-      emphasis: 'hsl(228 6% 24%)',
-      focus: 'hsl(235 56% 60%)',
+      default: 'hsl(140 6% 16%)',
+      subtle: 'hsl(140 6% 12%)',
+      emphasis: 'hsl(140 6% 24%)',
+      focus: 'hsl(88 100% 70%)',
     },
 
     feedback: {
-      success: 'hsl(142 55% 64%)',
-      warning: 'hsl(45 74% 55%)',
-      error: 'hsl(0 72% 60%)',
+      success: 'hsl(92 72% 60%)',
+      warning: 'hsl(45 90% 60%)',
+      error: 'hsl(0 78% 63%)',
       info: 'hsl(210 80% 65%)',
     },
   },
 
   effects: {
     shadow: {
-      depth01: '0 0 2px 0 hsla(228 6% 10% / 0.1), 0 2px 4px 0 hsla(228 6% 10% / 0.05)',
-      depth02: '0 2px 12px 0 hsla(228 6% 10% / 0.12)',
-      depth03: '0 0 6px 1px hsla(228 6% 10% / 0.05), 0 2px 24px 0 hsla(228 6% 10% / 0.08)',
-      depth04: '0 4px 32px 0 hsla(228 6% 10% / 0.2), 0 16px 48px 0 hsla(228 6% 10% / 0.15)',
+      depth01: '0 0 2px 0 hsla(140 10% 2% / 0.4), 0 2px 4px 0 hsla(140 10% 2% / 0.3)',
+      depth02: '0 2px 12px 0 hsla(140 10% 2% / 0.45)',
+      depth03: '0 0 6px 1px hsla(140 10% 2% / 0.3), 0 2px 24px 0 hsla(140 10% 2% / 0.4)',
+      depth04: '0 4px 32px 0 hsla(140 10% 2% / 0.55), 0 16px 48px 0 hsla(140 10% 2% / 0.45)',
     },
     focus: {
-      ring: '0 0 0 2px hsla(235 56% 60% / 0.3)',
-      ringOffset: '0 0 0 4px hsla(235 56% 60% / 0.1)',
+      ring: '0 0 0 2px hsla(88 100% 70% / 0.35)',
+      ringOffset: '0 0 0 4px hsla(88 100% 70% / 0.12)',
     },
   },
 } as const satisfies ThemeContract);

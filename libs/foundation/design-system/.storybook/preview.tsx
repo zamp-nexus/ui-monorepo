@@ -6,7 +6,7 @@ import type { DecoratorFunction } from 'storybook/internal/types';
 import { defaultTheme, ThemeProvider } from '../src/theme';
 import { openInsightsDarkTheme, openInsightsLightTheme } from './theme';
 
-import '../src/tokens/tokens.scss';
+import '../src/tokens/tokens.css';
 
 /**
  * Custom viewport configurations for responsive testing.
