@@ -35,15 +35,25 @@ than deferred quietly.
 
 ## Evidenced
 
-**1 — Every affected Nx target is green.** Verified 2026-08-01 against the local
-stack: `nx run-many -t lint test typecheck build` across 33 projects,
+**1 — Every affected Nx target is green.** Re-verified 2026-08-01 against the
+local stack after the move to `ch-nexus/ui-monorepo` and the history squash: `nx run-many -t lint test typecheck build` across 33 projects,
 `nx run docs:check`, `nx run evals:check`, `uv run lint-imports` (3 contracts
 kept, 0 broken), and `verify_known_bad_boundary.py`.
 
 **2 — Insight is independently registered, executed, attributed and
 evaluation-gated.** `agent_registry` holds `insight_v1` at `enabled = true`,
 `eval_status = 'passing'`, gated by
-`ck_agent_registry_enabled_requires_passing_eval`. The corpus is
+`ck_agent_registry_enabled_requires_passing_eval`.
+
+> **Known operational gap.** This state has now drifted back to
+> `enabled = false` / `eval_status = 'pending'` twice, on a rebuilt database.
+> `nx run evals:promote` is what sets it, and that target does not supply the
+> `DATABASE_OWNER_URL` it requires — so it reports the corpus passing and
+> silently promotes nothing. Nothing in CI runs it either. A deployment that
+> migrates a fresh database therefore starts with the Insight Agent
+> **disabled**, which fails closed rather than dangerously, but means the
+> pipeline does not run. This needs an issue against the new tracker: either
+> the target supplies the variable, or promotion becomes part of migration. The corpus is
 `evals/insight/` at 17/17. The Agent is
 `libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py` (#12, #13).
 
