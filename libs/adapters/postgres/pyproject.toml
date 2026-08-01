@@ -24,6 +24,7 @@ dependencies = [
     "sqlalchemy>=2.0,<3",
     "zentra-application-investigation",
     "zentra-domain-agent-execution",
+    "zentra-domain-connector",
     "zentra-domain-investigation",
     "zentra-domain-sequence",
 ]
@@ -68,5 +69,6 @@ unfixable = []
 [tool.uv.sources]
 zentra-domain-agent-execution = { workspace = true }
 zentra-application-investigation = { workspace = true }
+zentra-domain-connector = { workspace = true }
 zentra-domain-investigation = { workspace = true }
 zentra-domain-sequence = { workspace = true }

@@ -1922,6 +1922,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "zentra-application-investigation" },
     { name = "zentra-domain-agent-execution" },
+    { name = "zentra-domain-connector" },
     { name = "zentra-domain-investigation" },
     { name = "zentra-domain-sequence" },
 ]
@@ -1934,6 +1935,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0,<3" },
     { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
+    { name = "zentra-domain-connector", editable = "libs/domain/connector" },
     { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
     { name = "zentra-domain-sequence", editable = "libs/domain/sequence" },
 ]
