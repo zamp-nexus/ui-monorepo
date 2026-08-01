@@ -1,3 +1,8 @@
 """ZentraOS chDB-backed Sequence Step execution adapter"""
 
-__all__: list[str] = []
+from .raw_table import ConnectorClickHouseConnection, resolve_raw_table_sql
+
+__all__ = [
+    "ConnectorClickHouseConnection",
+    "resolve_raw_table_sql",
+]
