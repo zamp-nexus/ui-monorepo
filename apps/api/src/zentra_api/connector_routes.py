@@ -59,6 +59,7 @@ from .connector_schemas import (
     CatalogResponse,
     CommitUploadRequest,
     DeclareRelationRequest,
+    DeletionPreviewResponse,
     HarvestResponse,
     JoinGraphResponse,
     RegisterSourceRequest,
@@ -237,6 +238,32 @@ async def test_connection(
             _actor(context), data_source_id
         )
     return SourceResponse.from_summary(summary)
+
+
+@router.get(
+    "/sources/{data_source_id}/deletion-preview",
+    response_model=DeletionPreviewResponse,
+)
+async def preview_source_deletion(
+    request: Request, context: AuthenticatedRequest, data_source_id: UUID
+) -> DeletionPreviewResponse:
+    """What DELETE would destroy, so it is known beforehand.
+
+    A read. Deletion itself stays unconditional — a Tenant who wants their data
+    gone should not be argued with, only informed.
+    """
+    with _handle():
+        preview = await _service(request).preview_source_deletion(
+            _actor(context), data_source_id
+        )
+    return DeletionPreviewResponse(
+        data_source_id=preview.data_source_id,
+        name=preview.name,
+        catalog_versions=preview.catalog_versions,
+        confirmed_relations=preview.confirmed_relations,
+        cross_source_relations=preview.cross_source_relations,
+        drops_stored_data=preview.drops_stored_data,
+    )
 
 
 @router.delete("/sources/{data_source_id}", status_code=status.HTTP_204_NO_CONTENT)

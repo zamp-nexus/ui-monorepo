@@ -8,6 +8,7 @@ redaction has exactly one implementation to audit.
 from __future__ import annotations
 
 from zentra_domain_connector import (
+    COMPOSITE_KEY_LIMITATION,
     CatalogAccessOverride,
     DataSource,
     HarvestRun,
@@ -64,6 +65,9 @@ def to_status(
         failure_code=run.failure_code,
         failure_message=run.failure_message,
         unreadable=unreadable,
+        fields_unexamined=run.fields_unexamined,
+        unexamined_reasons=dict(run.unexamined_reasons),
+        limitations=(COMPOSITE_KEY_LIMITATION,),
     )
 
 

@@ -87,6 +87,11 @@ class HarvestRun:
     fields_profiled: int = 0
     relations_proposed: int = 0
     unreadable_count: int = 0
+    #: Fields inference skipped, and why, grouped by reason. Carried on the run
+    #: so that a reviewer reading an empty proposal list can tell "nothing was
+    #: found" from "most of your columns were never eligible".
+    fields_unexamined: int = 0
+    unexamined_reasons: dict[str, int] = field(default_factory=dict)
     catalog_version_id: UUID | None = None
     failure_code: str | None = None
     failure_message: str | None = None

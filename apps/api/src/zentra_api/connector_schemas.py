@@ -96,6 +96,21 @@ class SourceResponse(BaseModel):
         )
 
 
+class DeletionPreviewResponse(BaseModel):
+    """What deleting a source would destroy. Informs; does not gate."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    data_source_id: UUID
+    name: str
+    catalog_versions: int
+    confirmed_relations: int
+    #: Called out separately: deleting this source silently degrades another
+    #: one, which is the consequence least likely to be anticipated.
+    cross_source_relations: int
+    drops_stored_data: bool
+
+
 class StartHarvestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -134,6 +149,13 @@ class HarvestResponse(BaseModel):
     failure_code: str | None = None
     failure_message: str | None = None
     unreadable: list[UnreadableTableResponse] = Field(default_factory=list)
+    #: Fields inference never examined, grouped by why. An empty proposal list
+    #: without these reads as "no relationships exist" when it may mean almost
+    #: nothing was eligible to be examined.
+    fields_unexamined: int = 0
+    unexamined_reasons: dict[str, int] = Field(default_factory=dict)
+    #: What inference does not look for. Stated, not left to be inferred.
+    limitations: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_status(cls, status: HarvestStatus) -> HarvestResponse:
@@ -158,6 +180,9 @@ class HarvestResponse(BaseModel):
                 UnreadableTableResponse(qualified_name=name, reason=reason)
                 for name, reason in status.unreadable
             ],
+            fields_unexamined=status.fields_unexamined,
+            unexamined_reasons=dict(status.unexamined_reasons),
+            limitations=list(status.limitations),
         )
 
 
@@ -380,6 +405,9 @@ class JoinGraphResponse(BaseModel):
     #: Fields nothing connects to. The difference between "your data connects"
     #: and "half of it is unreachable and nobody said so".
     isolated_fields: list[str] = Field(default_factory=list)
+    #: Populated only when the graph is empty, which is the one moment the
+    #: absence of joins could be read as "your data has none".
+    limitations: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_view(cls, view: JoinGraphView) -> JoinGraphResponse:
@@ -387,6 +415,7 @@ class JoinGraphResponse(BaseModel):
             catalog_version_id=view.catalog_version_id,
             relations=[RelationResponse.from_view(r) for r in view.relations],
             isolated_fields=list(view.isolated_fields),
+            limitations=list(view.limitations),
         )
 
 

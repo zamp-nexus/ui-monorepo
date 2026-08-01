@@ -56,6 +56,64 @@
         "title": "AgentAccessResponse",
         "type": "object"
       },
+      "AgentCapability": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 280,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capability_id",
+          "version",
+          "display_name",
+          "description"
+        ],
+        "title": "AgentCapability",
+        "type": "object"
+      },
+      "AgentRole": {
+        "enum": [
+          "orchestrator",
+          "data_intake",
+          "data_quality",
+          "data_preparation",
+          "semantic_modeling",
+          "sql_analyst",
+          "evaluator",
+          "statistician",
+          "insight",
+          "insight_root_cause",
+          "demand_planner",
+          "forecaster",
+          "visualization",
+          "executive_report_writer",
+          "knowledge"
+        ],
+        "title": "AgentRole",
+        "type": "string"
+      },
       "ApprovalDecision": {
         "enum": [
           "approve",
@@ -152,6 +210,326 @@
           "upload_format"
         ],
         "title": "Body_preview_upload_v1_connector_uploads_post",
+        "type": "object"
+      },
+      "BriefAction": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "format": "uuid",
+            "title": "Action Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/VisualizationActionKind"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "kind",
+          "label"
+        ],
+        "title": "BriefAction",
+        "type": "object"
+      },
+      "BriefClaim": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Citation Ids",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "observed",
+              "interpretation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "citation_ids"
+        ],
+        "title": "BriefClaim",
+        "type": "object"
+      },
+      "BriefComparison": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Citation Ids",
+            "type": "array"
+          },
+          "current_display_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Display Value",
+            "type": "string"
+          },
+          "current_exact_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Exact Value",
+            "type": "string"
+          },
+          "current_label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Label"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "previous_display_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Previous Display Value",
+            "type": "string"
+          },
+          "previous_exact_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Previous Exact Value",
+            "type": "string"
+          },
+          "previous_label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Label"
+          },
+          "unit": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "previous_exact_value",
+          "previous_display_value",
+          "current_exact_value",
+          "current_display_value",
+          "unit",
+          "citation_ids"
+        ],
+        "title": "BriefComparison",
+        "type": "object"
+      },
+      "BriefMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Citation Ids",
+            "type": "array"
+          },
+          "direction": {
+            "enum": [
+              "up",
+              "down",
+              "flat",
+              "not_applicable"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "display_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Display Value",
+            "type": "string"
+          },
+          "exact_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Exact Value",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "exact_value",
+          "display_value",
+          "unit",
+          "direction",
+          "citation_ids"
+        ],
+        "title": "BriefMetric",
+        "type": "object"
+      },
+      "BriefSeries": {
+        "additionalProperties": false,
+        "properties": {
+          "dimensions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/BriefSeriesPoint"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "unit": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "unit",
+          "points"
+        ],
+        "title": "BriefSeries",
+        "type": "object"
+      },
+      "BriefSeriesPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Citation Ids",
+            "type": "array"
+          },
+          "display_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Display Value",
+            "type": "string"
+          },
+          "exact_value": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Exact Value",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "position": {
+            "maximum": 199.0,
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "position",
+          "label",
+          "exact_value",
+          "display_value",
+          "citation_ids"
+        ],
+        "title": "BriefSeriesPoint",
+        "type": "object"
+      },
+      "BriefTimeRange": {
+        "additionalProperties": false,
+        "properties": {
+          "end_label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "End Label",
+            "type": "string"
+          },
+          "start_label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Start Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_label",
+          "end_label"
+        ],
+        "title": "BriefTimeRange",
         "type": "object"
       },
       "Cardinality": {
@@ -640,6 +1018,47 @@
           "right_field_id"
         ],
         "title": "DeclareRelationRequest",
+        "type": "object"
+      },
+      "DeletionPreviewResponse": {
+        "additionalProperties": false,
+        "description": "What deleting a source would destroy. Informs; does not gate.",
+        "properties": {
+          "catalog_versions": {
+            "title": "Catalog Versions",
+            "type": "integer"
+          },
+          "confirmed_relations": {
+            "title": "Confirmed Relations",
+            "type": "integer"
+          },
+          "cross_source_relations": {
+            "title": "Cross Source Relations",
+            "type": "integer"
+          },
+          "data_source_id": {
+            "format": "uuid",
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "drops_stored_data": {
+            "title": "Drops Stored Data",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_source_id",
+          "name",
+          "catalog_versions",
+          "confirmed_relations",
+          "cross_source_relations",
+          "drops_stored_data"
+        ],
+        "title": "DeletionPreviewResponse",
         "type": "object"
       },
       "DependencyStatus": {
@@ -1194,6 +1613,11 @@
             "title": "Fields Profiled",
             "type": "integer"
           },
+          "fields_unexamined": {
+            "default": 0,
+            "title": "Fields Unexamined",
+            "type": "integer"
+          },
           "finished_at": {
             "anyOf": [
               {
@@ -1210,6 +1634,13 @@
             "format": "uuid",
             "title": "Harvest Run Id",
             "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
           },
           "phase": {
             "$ref": "#/components/schemas/HarvestPhase"
@@ -1245,6 +1676,13 @@
           "tables_found": {
             "title": "Tables Found",
             "type": "integer"
+          },
+          "unexamined_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Unexamined Reasons",
+            "type": "object"
           },
           "unreadable": {
             "items": {
@@ -1404,6 +1842,9 @@
             "title": "Updated At",
             "type": "string"
           },
+          "usage": {
+            "$ref": "#/components/schemas/UsageResponse"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -1425,7 +1866,8 @@
           "pending_approval",
           "timeline",
           "audit_delivery",
-          "can_delete_evidence"
+          "can_delete_evidence",
+          "usage"
         ],
         "title": "InvestigationDetailResponse",
         "type": "object"
@@ -1443,6 +1885,13 @@
               "type": "string"
             },
             "title": "Isolated Fields",
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
             "type": "array"
           },
           "relations": {
@@ -1631,6 +2080,67 @@
           "can_manage"
         ],
         "title": "ProjectResponse",
+        "type": "object"
+      },
+      "PublicAgent": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/AgentCapability"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "description": {
+            "maxLength": 280,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "evaluation_status": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Evaluation Status",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/AgentRole"
+          },
+          "version": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "role",
+          "version",
+          "display_name",
+          "description",
+          "enabled",
+          "evaluation_status",
+          "capabilities"
+        ],
+        "title": "PublicAgent",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -2238,6 +2748,10 @@
             "title": "Can Archive",
             "type": "boolean"
           },
+          "can_cancel": {
+            "title": "Can Cancel",
+            "type": "boolean"
+          },
           "can_delete": {
             "title": "Can Delete",
             "type": "boolean"
@@ -2245,15 +2759,234 @@
           "can_restore": {
             "title": "Can Restore",
             "type": "boolean"
+          },
+          "can_retry": {
+            "title": "Can Retry",
+            "type": "boolean"
           }
         },
         "required": [
           "can_append_message",
           "can_archive",
           "can_restore",
-          "can_delete"
+          "can_delete",
+          "can_cancel",
+          "can_retry"
         ],
         "title": "ThreadActionsResponse",
+        "type": "object"
+      },
+      "ThreadApprovalStateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_id": {
+            "format": "uuid",
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "can_decide": {
+            "title": "Can Decide",
+            "type": "boolean"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "failed_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Conditions",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id",
+          "reason",
+          "status",
+          "failed_conditions",
+          "requested_at",
+          "decided_at",
+          "decision_reason",
+          "can_decide"
+        ],
+        "title": "ThreadApprovalStateResponse",
+        "type": "object"
+      },
+      "ThreadInvestigationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreadApprovalStateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audit_delivery": {
+            "title": "Audit Delivery",
+            "type": "string"
+          },
+          "canonical_question": {
+            "title": "Canonical Question",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceCitationResponse"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "draft_finding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftFindingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "confidence": "#/components/schemas/ConfidenceResponse",
+                    "validation": "#/components/schemas/ValidationResponse"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConfidenceResponse"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ValidationResponse"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "parent_investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Investigation Id"
+          },
+          "retry_of_investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of Investigation Id"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageResponse"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "sequence",
+          "status",
+          "parent_investigation_id",
+          "retry_of_investigation_id",
+          "created_at",
+          "updated_at",
+          "canonical_question",
+          "finding",
+          "draft_finding",
+          "outcome",
+          "approval",
+          "citations",
+          "audit_delivery",
+          "usage"
+        ],
+        "title": "ThreadInvestigationResponse",
         "type": "object"
       },
       "ThreadMessageRequest": {
@@ -2349,8 +3082,10 @@
             "actions": {
               "can_append_message": true,
               "can_archive": true,
+              "can_cancel": false,
               "can_delete": true,
-              "can_restore": false
+              "can_restore": false,
+              "can_retry": false
             },
             "created_at": "2026-08-01T09:00:00Z",
             "latest_activity_at": "2026-08-01T09:00:00Z",
@@ -2394,6 +3129,11 @@
             "title": "Created At",
             "type": "string"
           },
+          "event_cursor": {
+            "default": 0,
+            "title": "Event Cursor",
+            "type": "integer"
+          },
           "investigation_id": {
             "anyOf": [
               {
@@ -2405,6 +3145,13 @@
               }
             ],
             "title": "Investigation Id"
+          },
+          "investigations": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadInvestigationResponse"
+            },
+            "title": "Investigations",
+            "type": "array"
           },
           "latest_activity_at": {
             "format": "date-time",
@@ -2450,6 +3197,9 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageResponse"
           }
         },
         "required": [
@@ -2461,6 +3211,7 @@
           "updated_at",
           "latest_activity_at",
           "messages",
+          "usage",
           "actions"
         ],
         "title": "ThreadResponse",
@@ -2808,6 +3559,35 @@
         "title": "UploadPreviewResponse",
         "type": "object"
       },
+      "UsageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "total_cost_usd": {
+            "title": "Total Cost Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "total_cost_usd",
+          "latency_ms"
+        ],
+        "title": "UsageResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2883,6 +3663,387 @@
         ],
         "title": "ValidationResponse",
         "type": "object"
+      },
+      "VisualizationActionKind": {
+        "enum": [
+          "continue_conversation",
+          "open_citation"
+        ],
+        "title": "VisualizationActionKind",
+        "type": "string"
+      },
+      "VisualizationActionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "title": "VisualizationActionRequest",
+        "type": "object"
+      },
+      "VisualizationActionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Id"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "VisualizationActionResponse",
+        "type": "object"
+      },
+      "VisualizationBriefV1": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BriefAction"
+            },
+            "maxItems": 24,
+            "title": "Actions",
+            "type": "array"
+          },
+          "caveats": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Caveats",
+            "type": "array"
+          },
+          "claims": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BriefClaim"
+            },
+            "maxItems": 64,
+            "title": "Claims",
+            "type": "array"
+          },
+          "comparisons": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BriefComparison"
+            },
+            "maxItems": 32,
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "headline": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Headline",
+            "type": "string"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BriefMetric"
+            },
+            "maxItems": 32,
+            "title": "Metrics",
+            "type": "array"
+          },
+          "outcome_kind": {
+            "enum": [
+              "confidence",
+              "validation"
+            ],
+            "title": "Outcome Kind",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "series": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BriefSeries"
+            },
+            "maxItems": 12,
+            "title": "Series",
+            "type": "array"
+          },
+          "summary": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BriefTimeRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "view": {
+            "$ref": "#/components/schemas/VisualizationView",
+            "default": "auto"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "question",
+          "headline",
+          "summary",
+          "outcome_kind"
+        ],
+        "title": "VisualizationBriefV1",
+        "type": "object"
+      },
+      "VisualizationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Version"
+          },
+          "c1_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "C1 Response"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "erased_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erased At"
+          },
+          "erasure_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erasure Category"
+          },
+          "failure_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Category"
+          },
+          "fallback_brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisualizationBriefV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "renderer_kind": {
+            "title": "Renderer Kind",
+            "type": "string"
+          },
+          "retry_of_visualization_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of Visualization Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "visualization_id": {
+            "format": "uuid",
+            "title": "Visualization Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "visualization_id",
+          "investigation_id",
+          "status",
+          "renderer_kind",
+          "model",
+          "api_version",
+          "c1_response",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "latency_ms",
+          "failure_category",
+          "retry_of_visualization_id",
+          "fallback_brief",
+          "created_at",
+          "updated_at",
+          "erased_at",
+          "erasure_category"
+        ],
+        "title": "VisualizationResponse",
+        "type": "object"
+      },
+      "VisualizationView": {
+        "enum": [
+          "auto",
+          "line",
+          "area",
+          "bar",
+          "horizontal_bar",
+          "grouped_bar",
+          "stacked_bar",
+          "pie",
+          "radar",
+          "radial",
+          "table",
+          "metric_cards",
+          "structured_text"
+        ],
+        "title": "VisualizationView",
+        "type": "string"
       },
       "zentra_domain_connector__types__RejectionReason": {
         "enum": [
@@ -3911,6 +5072,66 @@
           }
         },
         "summary": "Update Credentials",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/deletion-preview": {
+      "get": {
+        "description": "What DELETE would destroy, so it is known beforehand.\n\nA read. Deletion itself stays unconditional \u2014 a Tenant who wants their data\ngone should not be argued with, only informed.",
+        "operationId": "preview_source_deletion_v1_connector_sources__data_source_id__deletion_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Source Deletion",
         "tags": [
           "connector"
         ]
