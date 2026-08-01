@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -18,6 +19,8 @@ from .ports import InvestigationUnitOfWorkFactory
 
 SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
+
+_log = logging.getLogger(__name__)
 
 
 class DurableInvestigationExecutor(Protocol):
@@ -154,6 +157,17 @@ class ExecutionJobWorker:
                 await self._cancel(tenant_id, job.job_id)
             else:
                 failure = classify_execution_failure(error)
+                # The stored `failure_category` is a safe, public vocabulary —
+                # deliberately so, since it reaches the Work Feed. That leaves
+                # nowhere for the operator to read what actually broke, so it
+                # goes to the server log, which is not a tenant-facing surface.
+                _log.exception(
+                    "Execution job %s (%s) failed: %s",
+                    job.job_id,
+                    job.job_kind.value,
+                    failure.category,
+                    exc_info=error,
+                )
                 await self._record_failure(tenant_id, job.job_id, failure)
         else:
             if await self._cancellation_requested(tenant_id, job.job_id):

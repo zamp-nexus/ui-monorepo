@@ -21,6 +21,7 @@ from zentra_application_connector import SourceCredentials
 from zentra_domain_connector import (
     BindingCeiling,
     Cardinality,
+    CatalogAccessOverride,
     CatalogVersion,
     DataSource,
     FieldIdentity,
@@ -42,6 +43,7 @@ from zentra_domain_connector import (
 
 from zentra_adapter_postgres import (
     Database,
+    PostgresAgentAccessRepository,
     PostgresCatalogRepository,
     PostgresDataSourceRepository,
     PostgresHarvestRunRepository,
@@ -432,3 +434,118 @@ async def test_a_harvest_run_survives_with_its_budget_and_counts() -> None:
         assert found.budget.queries_used == 12
         assert found.tables_found == 8
         assert found.is_running
+
+
+# --------------------------------------------------------------- agent access
+
+
+def _table_override(
+    tenant_id: UUID, data_source_id: UUID, *, agent_visible: bool
+) -> CatalogAccessOverride:
+    return CatalogAccessOverride(
+        override_id=uuid4(),
+        tenant_id=tenant_id,
+        data_source_id=data_source_id,
+        table_name="purchase_completed",
+        field_name=None,
+        agent_visible=agent_visible,
+        decided_by=uuid4(),
+        decided_at=datetime.now(UTC),
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_table_override_survives_and_reads_back() -> None:
+    async with _two_tenants() as (tenant_id, _), _repository() as (sources, database):
+        source = _source(tenant_id)
+        await sources.add(source)
+        access = PostgresAgentAccessRepository(database)
+
+        await access.upsert(
+            _table_override(tenant_id, source.data_source_id, agent_visible=False)
+        )
+
+        found = await access.list_for_source(
+            source.data_source_id, tenant_id=tenant_id
+        )
+        assert len(found) == 1
+        assert found[0].table_name == "purchase_completed"
+        assert found[0].field_name is None
+        assert found[0].agent_visible is False
+
+
+@pytest.mark.asyncio
+async def test_repeating_a_table_toggle_upserts_rather_than_accumulating() -> None:
+    async with _two_tenants() as (tenant_id, _), _repository() as (sources, database):
+        source = _source(tenant_id)
+        await sources.add(source)
+        access = PostgresAgentAccessRepository(database)
+
+        await access.upsert(
+            _table_override(tenant_id, source.data_source_id, agent_visible=False)
+        )
+        await access.upsert(
+            _table_override(tenant_id, source.data_source_id, agent_visible=True)
+        )
+
+        found = await access.list_for_source(
+            source.data_source_id, tenant_id=tenant_id
+        )
+        assert len(found) == 1
+        assert found[0].agent_visible is True
+
+
+@pytest.mark.asyncio
+async def test_a_field_override_is_independent_of_a_table_override() -> None:
+    async with _two_tenants() as (tenant_id, _), _repository() as (sources, database):
+        source = _source(tenant_id)
+        await sources.add(source)
+        access = PostgresAgentAccessRepository(database)
+
+        await access.upsert(
+            _table_override(tenant_id, source.data_source_id, agent_visible=True)
+        )
+        await access.upsert(
+            CatalogAccessOverride(
+                override_id=uuid4(),
+                tenant_id=tenant_id,
+                data_source_id=source.data_source_id,
+                table_name="purchase_completed",
+                field_name="user_id",
+                agent_visible=False,
+                decided_by=uuid4(),
+                decided_at=datetime.now(UTC),
+            )
+        )
+
+        found = {
+            (o.table_name, o.field_name): o.agent_visible
+            for o in await access.list_for_source(
+                source.data_source_id, tenant_id=tenant_id
+            )
+        }
+        assert found[("purchase_completed", None)] is True
+        assert found[("purchase_completed", "user_id")] is False
+
+
+@pytest.mark.asyncio
+async def test_a_second_tenant_reads_no_agent_access_overrides() -> None:
+    async with (
+        _two_tenants() as (tenant_id, other_id),
+        _repository() as (sources, database),
+    ):
+        source = _source(tenant_id)
+        await sources.add(source)
+        access = PostgresAgentAccessRepository(database)
+        await access.upsert(
+            _table_override(tenant_id, source.data_source_id, agent_visible=False)
+        )
+
+        assert (
+            list(
+                await access.list_for_source(
+                    source.data_source_id, tenant_id=other_id
+                )
+            )
+            == []
+        )

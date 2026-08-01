@@ -29,6 +29,7 @@ from fastapi import (
     status,
 )
 from zentra_application_connector import (
+    AgentAccessView,
     AuthenticatedActor,
     CatalogVersionNotFoundError,
     ConflictError,
@@ -44,6 +45,8 @@ from zentra_application_connector import (
     UploadRejectedError,
 )
 from zentra_domain_connector import (
+    AccessOverrides,
+    CatalogAccessOverride,
     HarvestBudget,
     HarvestScope,
     RelationState,
@@ -51,6 +54,7 @@ from zentra_domain_connector import (
 )
 
 from .connector_schemas import (
+    AgentAccessResponse,
     CatalogDiffResponse,
     CatalogResponse,
     CommitUploadRequest,
@@ -61,6 +65,7 @@ from .connector_schemas import (
     RegisterSourceRequest,
     RelationDecisionRequest,
     RelationResponse,
+    SetAgentAccessRequest,
     SourceResponse,
     StartHarvestRequest,
     UpdateCredentialsRequest,
@@ -142,6 +147,28 @@ def _actor(context: RequestContext) -> AuthenticatedActor:
         user_id=context.actor.user_id,
         tenant_id=context.actor.tenant_id,
         role=Role(context.actor.role.value),
+    )
+
+
+def _as_domain(
+    actor: AuthenticatedActor, view: AgentAccessView
+) -> CatalogAccessOverride:
+    """Re-express an access view in the domain's own vocabulary.
+
+    Needed only because `AccessOverrides.build` (the shared filtering logic)
+    takes the domain type; the view crossed into the application layer's
+    vocabulary on its way out of the service and is translated back here
+    rather than duplicating that filtering logic against the view shape.
+    """
+    return CatalogAccessOverride(
+        override_id=view.override_id,
+        tenant_id=actor.tenant_id,
+        data_source_id=view.data_source_id,
+        table_name=view.table_name,
+        field_name=view.field_name,
+        agent_visible=view.agent_visible,
+        decided_by=view.decided_by,
+        decided_at=view.decided_at,
     )
 
 
@@ -328,22 +355,35 @@ async def list_harvests(
 async def latest_catalog(
     request: Request, context: AuthenticatedRequest, data_source_id: UUID
 ) -> CatalogResponse:
+    service = _service(request)
+    actor = _actor(context)
     with _handle():
-        version = await _service(request).latest_catalog(
-            _actor(context), data_source_id
-        )
-    return CatalogResponse.from_version(version)
+        version = await service.latest_catalog(actor, data_source_id)
+        overrides = await service.list_agent_access(actor, data_source_id)
+    return CatalogResponse.from_version(
+        version,
+        overrides=AccessOverrides.build(
+            data_source_id, tuple(_as_domain(actor, o) for o in overrides)
+        ),
+    )
 
 
 @router.get("/catalog-versions/{catalog_version_id}", response_model=CatalogResponse)
 async def get_catalog(
     request: Request, context: AuthenticatedRequest, catalog_version_id: UUID
 ) -> CatalogResponse:
+    service = _service(request)
+    actor = _actor(context)
     with _handle():
-        version = await _service(request).get_catalog(
-            _actor(context), catalog_version_id
-        )
-    return CatalogResponse.from_version(version)
+        version = await service.get_catalog(actor, catalog_version_id)
+        overrides = await service.list_agent_access(actor, version.data_source_id)
+    return CatalogResponse.from_version(
+        version,
+        overrides=AccessOverrides.build(
+            version.data_source_id,
+            tuple(_as_domain(actor, o) for o in overrides),
+        ),
+    )
 
 
 @router.get("/catalog-versions/{catalog_version_id}/search")
@@ -382,6 +422,50 @@ async def diff_catalog(
         removed_fields=report.removed_fields,
         type_changed_fields=report.type_changed_fields,
     )
+
+
+@router.patch(
+    "/sources/{data_source_id}/tables/{table_name}/agent-access",
+    response_model=AgentAccessResponse,
+)
+async def set_table_agent_access(
+    request: Request,
+    context: AuthenticatedRequest,
+    data_source_id: UUID,
+    table_name: str,
+    body: SetAgentAccessRequest,
+) -> AgentAccessResponse:
+    with _handle():
+        view = await _service(request).set_table_agent_access(
+            _actor(context),
+            data_source_id,
+            table_name,
+            agent_visible=body.agent_visible,
+        )
+    return AgentAccessResponse.from_view(view)
+
+
+@router.patch(
+    "/sources/{data_source_id}/tables/{table_name}/fields/{field_name}/agent-access",
+    response_model=AgentAccessResponse,
+)
+async def set_field_agent_access(
+    request: Request,
+    context: AuthenticatedRequest,
+    data_source_id: UUID,
+    table_name: str,
+    field_name: str,
+    body: SetAgentAccessRequest,
+) -> AgentAccessResponse:
+    with _handle():
+        view = await _service(request).set_field_agent_access(
+            _actor(context),
+            data_source_id,
+            table_name,
+            field_name,
+            agent_visible=body.agent_visible,
+        )
+    return AgentAccessResponse.from_view(view)
 
 
 # ----------------------------------------------------------------- relations

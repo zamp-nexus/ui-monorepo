@@ -12,6 +12,8 @@ from zentra_domain_investigation import (
     BriefClaim,
     BriefComparison,
     BriefMetric,
+    BriefSeries,
+    BriefSeriesPoint,
     BriefTimeRange,
     CitationState,
     DraftFinding,
@@ -25,6 +27,7 @@ from zentra_domain_investigation import (
     VisualizationArtifactStatus,
     VisualizationBriefV1,
     VisualizationEventPayload,
+    VisualizationView,
     WorkFeedEventKind,
 )
 
@@ -32,6 +35,9 @@ from .ports import InvestigationUnitOfWork
 
 RENDERER_CONFIGURATION = "thesys_c1:c1/anthropic/claude-sonnet-4/v-20251230"
 _IDENTITY_NAMESPACE = UUID("b8df65f1-5649-4d41-8f92-e7e414592d22")
+# `VisualizationBriefV1.series` admits 12. Truncating here keeps a
+# pathologically wide Finding from failing validation at the very end.
+_MAX_SERIES = 12
 
 
 class IdFactory(Protocol):
@@ -241,14 +247,17 @@ def _brief(
             for citation_id in value.citation_ids
         )
     )
+    series = _series(comparisons)
     outcome = investigation.outcome
     return VisualizationBriefV1(
         investigation_id=investigation.investigation_id,
         question=investigation.question,
         headline=finding.headline,
         summary=finding.summary,
+        view=_view(metrics, comparisons),
         metrics=metrics,
         comparisons=comparisons,
+        series=series,
         time_range=(
             BriefTimeRange(
                 start_label=labelled.previous_label,
@@ -267,6 +276,58 @@ def _brief(
         confidence=outcome.score if isinstance(outcome, ConfidenceOutcome) else None,
         actions=actions[0],
     )
+
+
+def _series(comparisons: tuple[BriefComparison, ...]) -> tuple[BriefSeries, ...]:
+    """Turn each governed comparison into the two-point series it already is.
+
+    Nothing here is measured. A comparison carries a previous and a current
+    value that a single citation already validated, so the series restates that
+    same evidence in the shape a renderer can draw — it does not introduce a
+    figure the Evaluator never saw. That is why both points carry the
+    comparison's own `citation_ids` rather than a fresh reference.
+    """
+    return tuple(
+        BriefSeries(
+            label=comparison.label,
+            unit=comparison.unit,
+            points=(
+                BriefSeriesPoint(
+                    position=0,
+                    label=comparison.previous_label or "Previous",
+                    exact_value=comparison.previous_exact_value,
+                    display_value=comparison.previous_display_value,
+                    citation_ids=comparison.citation_ids,
+                ),
+                BriefSeriesPoint(
+                    position=1,
+                    label=comparison.current_label or "Current",
+                    exact_value=comparison.current_exact_value,
+                    display_value=comparison.current_display_value,
+                    citation_ids=comparison.citation_ids,
+                ),
+            ),
+        )
+        for comparison in comparisons[:_MAX_SERIES]
+    )
+
+
+def _view(
+    metrics: tuple[BriefMetric, ...], comparisons: tuple[BriefComparison, ...]
+) -> VisualizationView:
+    """Decide the presentation here rather than leaving it to the renderer.
+
+    `auto` hands the choice to a model, which makes the same brief render
+    differently on two runs. The shape of the evidence already determines the
+    answer, so it is decided deterministically and travels in the content hash.
+    """
+    if len(comparisons) >= 2:
+        return VisualizationView.GROUPED_BAR
+    if comparisons:
+        return VisualizationView.BAR
+    if metrics:
+        return VisualizationView.METRIC_CARDS
+    return VisualizationView.STRUCTURED_TEXT
 
 
 def _direction(previous: str, current: str) -> str:

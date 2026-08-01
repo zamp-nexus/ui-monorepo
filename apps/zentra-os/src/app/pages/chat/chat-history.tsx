@@ -1,11 +1,14 @@
 import { Button } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
-import type { ChatThread } from '../../types';
+import type { ThreadSummary } from '../../types';
 
 interface ChatHistoryProps {
-  readonly threads: readonly ChatThread[];
+  readonly threads: readonly ThreadSummary[];
   readonly activeThreadId: string | null;
+  readonly loading: boolean;
+  /** Present while the server still has older Threads to hand over. */
+  readonly onLoadMore: (() => void) | null;
   readonly onSelect: (threadId: string) => void;
   readonly onNewChat: () => void;
 }
@@ -18,11 +21,16 @@ const relativeDay = (iso: string): string => {
 };
 
 /**
- * Past conversations, newest first.
+ * Past conversations, most recently active first.
+ *
+ * The order and the page boundaries are the server's — this list is a keyset
+ * page, not a client-side sort of everything that happens to be loaded.
  */
 export const ChatHistory = ({
   threads,
   activeThreadId,
+  loading,
+  onLoadMore,
   onSelect,
   onNewChat,
 }: ChatHistoryProps) => (
@@ -35,6 +43,11 @@ export const ChatHistory = ({
       <h2 className="px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted">
         Recent
       </h2>
+
+      {threads.length === 0 && !loading ? (
+        <p className="px-3 py-2 text-sm text-foreground-muted">No conversations yet.</p>
+      ) : null}
+
       {threads.map((thread) => {
         const active = thread.thread_id === activeThreadId;
         return (
@@ -51,11 +64,17 @@ export const ChatHistory = ({
           >
             <span className="truncate text-sm">{thread.title}</span>
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
-              {relativeDay(thread.updated_at)}
+              {relativeDay(thread.latest_activity_at)}
             </span>
           </button>
         );
       })}
+
+      {onLoadMore ? (
+        <Button intent="ghost" size="sm" onClick={onLoadMore} disabled={loading}>
+          Load older
+        </Button>
+      ) : null}
     </nav>
   </aside>
 );

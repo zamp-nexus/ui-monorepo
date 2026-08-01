@@ -1,6 +1,6 @@
 import { requestJson, type TokenSource } from '../../api';
 
-import type { CatalogResponse, HarvestResponse } from './types';
+import type { AgentAccessResponse, CatalogResponse, HarvestResponse } from './types';
 
 /**
  * The latest catalog for a source.
@@ -37,4 +37,32 @@ export const listHarvests = (getToken: TokenSource, dataSourceId: string) =>
   requestJson<HarvestResponse[]>(
     `/v1/connector/sources/${dataSourceId}/harvests`,
     getToken,
+  );
+
+/** Hide or reveal an entire table from the agent system. */
+export const setTableAgentAccess = (
+  getToken: TokenSource,
+  dataSourceId: string,
+  tableName: string,
+  agentVisible: boolean,
+) =>
+  requestJson<AgentAccessResponse>(
+    `/v1/connector/sources/${dataSourceId}/tables/${encodeURIComponent(tableName)}/agent-access`,
+    getToken,
+    { method: 'PATCH', body: JSON.stringify({ agent_visible: agentVisible }) },
+  );
+
+/** Hide or reveal one field from the agent system. */
+export const setFieldAgentAccess = (
+  getToken: TokenSource,
+  dataSourceId: string,
+  tableName: string,
+  fieldName: string,
+  agentVisible: boolean,
+) =>
+  requestJson<AgentAccessResponse>(
+    `/v1/connector/sources/${dataSourceId}/tables/${encodeURIComponent(tableName)}` +
+      `/fields/${encodeURIComponent(fieldName)}/agent-access`,
+    getToken,
+    { method: 'PATCH', body: JSON.stringify({ agent_visible: agentVisible }) },
   );

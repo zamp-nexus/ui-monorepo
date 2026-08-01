@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from zentra_domain_connector import (
     COMPOSITE_KEY_LIMITATION,
+    CatalogAccessOverride,
     DataSource,
     HarvestRun,
     Relation,
 )
 
-from .dto import HarvestStatus, RelationView, SourceSummary
+from .dto import AgentAccessView, HarvestStatus, RelationView, SourceSummary
 
 
 def to_summary(source: DataSource) -> SourceSummary:
@@ -67,6 +68,18 @@ def to_status(
         fields_unexamined=run.fields_unexamined,
         unexamined_reasons=dict(run.unexamined_reasons),
         limitations=(COMPOSITE_KEY_LIMITATION,),
+    )
+
+
+def to_access_view(override: CatalogAccessOverride) -> AgentAccessView:
+    return AgentAccessView(
+        override_id=override.override_id,
+        data_source_id=override.data_source_id,
+        table_name=override.table_name,
+        field_name=override.field_name,
+        agent_visible=override.agent_visible,
+        decided_by=override.decided_by,
+        decided_at=override.decided_at,
     )
 
 

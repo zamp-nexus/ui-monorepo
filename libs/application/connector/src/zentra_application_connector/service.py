@@ -38,6 +38,7 @@ from zentra_domain_connector.types import (
     RelationTransitionError,
 )
 
+from .agent_access import AgentAccessOperations
 from .catalog_reads import CatalogOperations
 from .dto import (
     HARVEST_ROLES,
@@ -58,6 +59,7 @@ from .dto import (
 )
 from .harvesting import HarvestDependencies, execute_harvest
 from .ports import (
+    AgentAccessRepository,
     CatalogRepository,
     Clock,
     CredentialCipher,
@@ -71,7 +73,7 @@ from .uploads import UploadOperations
 from .views import to_relation_view, to_status, to_summary
 
 
-class ConnectorService(CatalogOperations, UploadOperations):
+class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperations):
     def __init__(
         self,
         *,
@@ -79,6 +81,7 @@ class ConnectorService(CatalogOperations, UploadOperations):
         catalogs: CatalogRepository,
         relations: RelationRepository,
         runs: HarvestRunRepository,
+        access: AgentAccessRepository,
         connector: SourceConnector,
         cipher: CredentialCipher,
         landing_zone: FileLandingZone,
@@ -88,6 +91,7 @@ class ConnectorService(CatalogOperations, UploadOperations):
         self._catalogs = catalogs
         self._relations = relations
         self._runs = runs
+        self._access = access
         self._connector = connector
         self._cipher = cipher
         self._landing = landing_zone

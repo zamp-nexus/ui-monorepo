@@ -1,4 +1,4 @@
-import { Badge, Modal } from '@open-zentra/foundation-design-system';
+import { Badge, Modal, Switch } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { formatBytes, formatFraction, formatRows } from './format';
@@ -6,7 +6,9 @@ import type { CatalogField, CatalogTable } from './types';
 
 interface TableDetailModalProps {
   readonly table: CatalogTable | null;
+  readonly canWrite: boolean;
   readonly onClose: () => void;
+  readonly onToggleField: (fieldName: string, visible: boolean) => void;
 }
 
 const Stat = ({ label, value }: { readonly label: string; readonly value: string }) => (
@@ -52,7 +54,12 @@ const Profile = ({ field }: { readonly field: CatalogField }) => {
  * The column list is the point of the page, so it is a table rather than cards:
  * comparing types down a column is the thing a reader is here to do.
  */
-export const TableDetailModal = ({ table, onClose }: TableDetailModalProps) => {
+export const TableDetailModal = ({
+  table,
+  canWrite,
+  onClose,
+  onToggleField,
+}: TableDetailModalProps) => {
   const fields = [...(table?.fields ?? [])].sort((a, b) => a.position - b.position);
 
   return (
@@ -100,7 +107,7 @@ export const TableDetailModal = ({ table, onClose }: TableDetailModalProps) => {
             <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left">
-                  {['#', 'Column', 'Type', 'Family', 'Null', 'Profile'].map((heading) => (
+                  {['#', 'Column', 'Type', 'Family', 'Null', 'Profile', 'Agent Access'].map((heading) => (
                     <th
                       className="sticky top-0 z-20 border-b border-border bg-[var(--bg-layer-00)] pb-2 pr-4 pt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted shadow-[0_-1.25rem_0_0_var(--bg-layer-00)]"
                       key={heading}
@@ -138,8 +145,16 @@ export const TableDetailModal = ({ table, onClose }: TableDetailModalProps) => {
                         <span className="sr-only">Not nullable</span>
                       )}
                     </td>
-                    <td className="border-b border-border/50 py-2 text-xs text-foreground-muted">
+                    <td className="border-b border-border/50 py-2 pr-4 text-xs text-foreground-muted">
                       <Profile field={field} />
+                    </td>
+                    <td className="border-b border-border/50 py-2">
+                      <Switch
+                        size="sm"
+                        checked={field.agent_visible}
+                        disabled={!canWrite}
+                        onCheckedChange={(visible) => onToggleField(field.name, visible)}
+                      />
                     </td>
                   </tr>
                 ))}

@@ -8,4 +8,50 @@ export type {
   Scenario,
 } from './investigation';
 
-export type { ChatMessage, ChatRole, ChatSuggestion, ChatThread } from './chat';
+export type { ChatMessage, ChatRole, ChatSuggestion } from './chat';
+
+export type {
+  Agent,
+  AgentCapability,
+  AgentEventPayload,
+  ApprovalEventPayload,
+  BriefAction,
+  BriefActionKind,
+  BriefClaim,
+  BriefComparison,
+  BriefMetric,
+  BriefSeries,
+  BriefSeriesPoint,
+  BriefTimeRange,
+  CitationFilter,
+  CitationTombstone,
+  EvidenceCitation,
+  FindingEventPayload,
+  Group,
+  InvestigationEventPayload,
+  InvestigationStatus,
+  MessageEventPayload,
+  Page,
+  Project,
+  ResolvedCitation,
+  RoutingEventPayload,
+  Thread,
+  ThreadActions,
+  ThreadApprovalState,
+  ThreadEvent,
+  ThreadInvestigation,
+  ThreadMessage,
+  ThreadRouting,
+  ThreadSummary,
+  ThreadUsage,
+  Visualization,
+  VisualizationActionResult,
+  VisualizationBrief,
+  VisualizationEventPayload,
+  VisualizationStatus,
+  VisualizationView,
+  WorkFeedEventKind,
+  WorkFeedPayload,
+} from './thread';
+
+export { isTombstone } from './thread';

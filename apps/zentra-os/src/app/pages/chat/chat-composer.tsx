@@ -18,12 +18,7 @@ interface ChatComposerProps {
  * is judged by. The attachment controls are drawn but disabled: they say what
  * is coming without pretending to work.
  */
-export const ChatComposer = ({
-  onSend,
-  disabled,
-  draft,
-  onDraftChange,
-}: ChatComposerProps) => {
+export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatComposerProps) => {
   const [rows, setRows] = useState(1);
 
   const submit = (event?: FormEvent) => {
@@ -53,10 +48,18 @@ export const ChatComposer = ({
         </label>
         <textarea
           id="chat-message"
-          className="max-h-48 w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
+          className="max-h-48 w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed"
           rows={rows}
           value={draft}
-          placeholder="Ask a governed question…"
+          // `submit` refuses while disabled either way. Saying so on the box
+          // itself is the difference between a surface that declines and one
+          // that lets someone type an answer it was never going to accept.
+          disabled={disabled}
+          placeholder={
+            disabled
+              ? 'Waiting for the current investigation to finish…'
+              : 'Ask a governed question…'
+          }
           onKeyDown={handleKeyDown}
           onChange={(event) => {
             onDraftChange(event.target.value);

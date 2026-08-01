@@ -5,6 +5,7 @@ fields that form a Join Graph. Framework independent: this package knows
 nothing about ClickHouse, HTTP, or persistence.
 """
 
+from .access import AccessOverrides, CatalogAccessOverride
 from .catalog import (
     CatalogDiff,
     CatalogVersion,
@@ -77,10 +78,12 @@ __all__ = [
     "MIN_OVERLAP_FRACTION",
     "MIN_PROPOSAL_CONFIDENCE",
     "TERMINAL_PHASES",
+    "AccessOverrides",
     "BindingCeiling",
     "BudgetExhaustedError",
     "CandidatePair",
     "Cardinality",
+    "CatalogAccessOverride",
     "CatalogDiff",
     "CatalogVersion",
     "ConfidenceAssessment",

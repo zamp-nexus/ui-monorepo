@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from zentra_adapter_postgres import IdentityContext
@@ -146,6 +146,22 @@ class SourceRepository:
             del self.rows[data_source_id]
 
 
+class AccessRepository:
+    def __init__(self) -> None:
+        self.rows: dict[tuple[UUID, str, str | None], object] = {}
+
+    async def upsert(self, override) -> None:
+        key = (override.data_source_id, override.table_name, override.field_name)
+        self.rows[key] = override
+
+    async def list_for_source(self, data_source_id: UUID, *, tenant_id: UUID):
+        return [
+            o
+            for o in self.rows.values()
+            if o.data_source_id == data_source_id and o.tenant_id == tenant_id
+        ]
+
+
 class Unused:
     """The repositories these flows never touch."""
 
@@ -176,6 +192,7 @@ def build(
     failure: ConnectionFailure | None = None,
     connector_configured: bool = True,
     sources: SourceRepository | None = None,
+    access: AccessRepository | None = None,
 ) -> tuple[TestClient, SourceRepository]:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return identity
@@ -186,12 +203,14 @@ def build(
     )
 
     sources = SourceRepository() if sources is None else sources
+    access = AccessRepository() if access is None else access
     service = (
         ConnectorService(
             sources=sources,
             catalogs=Unused(),
             relations=Unused(),
             runs=Unused(),
+            access=access,
             connector=Connector(failure),
             cipher=Cipher(),
             landing_zone=Unused(),
@@ -336,3 +355,91 @@ def test_connector_routes_require_a_bearer_token(monkeypatch) -> None:
         response = test_client.get("/v1/connector/sources")
 
     assert response.status_code == 401
+
+
+# ------------------------------------------------------------- agent access
+
+
+def test_an_owner_may_hide_a_table_from_agents(monkeypatch) -> None:
+    with build(monkeypatch)[0] as test_client:
+        created = _register(test_client).json()
+        response = test_client.patch(
+            f"/v1/connector/sources/{created['data_source_id']}"
+            "/tables/customers/agent-access",
+            headers=AUTH,
+            json={"agent_visible": False},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["table_name"] == "customers"
+    assert body["field_name"] is None
+    assert body["agent_visible"] is False
+
+
+def test_an_owner_may_hide_one_field_from_agents(monkeypatch) -> None:
+    with build(monkeypatch)[0] as test_client:
+        created = _register(test_client).json()
+        response = test_client.patch(
+            f"/v1/connector/sources/{created['data_source_id']}"
+            "/tables/customers/fields/email/agent-access",
+            headers=AUTH,
+            json={"agent_visible": False},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["table_name"] == "customers"
+    assert body["field_name"] == "email"
+    assert body["agent_visible"] is False
+
+
+def test_toggling_the_same_table_twice_still_reads_back_as_one_decision(
+    monkeypatch,
+) -> None:
+    test_client, sources = build(monkeypatch)
+    with test_client:
+        created = _register(test_client).json()
+        test_client.patch(
+            f"/v1/connector/sources/{created['data_source_id']}"
+            "/tables/customers/agent-access",
+            headers=AUTH,
+            json={"agent_visible": False},
+        )
+        second = test_client.patch(
+            f"/v1/connector/sources/{created['data_source_id']}"
+            "/tables/customers/agent-access",
+            headers=AUTH,
+            json={"agent_visible": True},
+        )
+
+    assert second.status_code == 200
+    assert second.json()["agent_visible"] is True
+
+
+def test_a_viewer_cannot_toggle_agent_access(monkeypatch) -> None:
+    owner_client, sources = build(monkeypatch)
+    with owner_client:
+        created = _register(owner_client).json()
+
+    viewer_client, _ = build(monkeypatch, identity=VIEWER, sources=sources)
+    with viewer_client:
+        response = viewer_client.patch(
+            f"/v1/connector/sources/{created['data_source_id']}"
+            "/tables/customers/agent-access",
+            headers=AUTH,
+            json={"agent_visible": False},
+        )
+
+    assert response.status_code == 403
+
+
+def test_toggling_access_on_an_unknown_source_is_a_404(monkeypatch) -> None:
+    with build(monkeypatch)[0] as test_client:
+        response = test_client.patch(
+            f"/v1/connector/sources/{uuid4()}/tables/customers/agent-access",
+            headers=AUTH,
+            json={"agent_visible": False},
+        )
+
+    assert response.status_code == 404

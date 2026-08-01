@@ -38,6 +38,7 @@ const CATALOG = {
       engine: 'MergeTree',
       estimated_rows: 7054,
       size_bytes: 883029,
+      agent_visible: true,
       fields: [
         {
           field_id: '80000000-0000-0000-0000-000000000008',
@@ -47,6 +48,7 @@ const CATALOG = {
           nullable: false,
           position: 0,
           profile: { sampled_rows: 1000, null_fraction: 0, distinct_count: 990 },
+          agent_visible: true,
         },
         {
           field_id: '80000000-0000-0000-0000-000000000009',
@@ -55,6 +57,7 @@ const CATALOG = {
           family: 'string',
           nullable: true,
           position: 1,
+          agent_visible: true,
         },
       ],
     },
@@ -188,6 +191,79 @@ describe('Datasets', () => {
           (init as RequestInit | undefined)?.method === 'POST',
       );
       expect(posted).toBeTruthy();
+    });
+  });
+
+  it('toggles a table off from the agent system', async () => {
+    const fetchMock = route({
+      '/agent-access': {
+        body: {
+          override_id: '90000000-0000-0000-0000-000000000009',
+          data_source_id: SOURCE.data_source_id,
+          table_name: 'purchase_completed',
+          field_name: null,
+          agent_visible: false,
+          decided_by: '10000000-0000-0000-0000-000000000001',
+          decided_at: '2026-08-01T20:51:00Z',
+        },
+      },
+      '/catalog': { body: CATALOG },
+      '/v1/connector/sources': { body: [SOURCE] },
+    });
+
+    renderPage();
+    const toggle = await screen.findByRole('switch');
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      const patched = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).includes(
+            '/sources/40000000-0000-0000-0000-000000000004/tables/purchase_completed/agent-access',
+          ) && (init as RequestInit | undefined)?.method === 'PATCH',
+      );
+      expect(patched).toBeTruthy();
+      const body = JSON.parse(
+        (patched?.[1] as RequestInit).body as string,
+      ) as { agent_visible: boolean };
+      expect(body.agent_visible).toBe(false);
+    });
+  });
+
+  it('toggles one column off without leaving the modal', async () => {
+    const fetchMock = route({
+      '/agent-access': {
+        body: {
+          override_id: '90000000-0000-0000-0000-000000000010',
+          data_source_id: SOURCE.data_source_id,
+          table_name: 'purchase_completed',
+          field_name: 'coupon_name',
+          agent_visible: false,
+          decided_by: '10000000-0000-0000-0000-000000000001',
+          decided_at: '2026-08-01T20:51:00Z',
+        },
+      },
+      '/catalog': { body: CATALOG },
+      '/v1/connector/sources': { body: [SOURCE] },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('purchase_completed'));
+    const dialog = await screen.findByRole('dialog');
+    const switches = await waitFor(() =>
+      dialog.querySelectorAll('[role="switch"]'),
+    );
+    // Second row is `coupon_name`; the first switch belongs to `user_id`.
+    fireEvent.click(switches[1]);
+
+    await waitFor(() => {
+      const patched = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).includes(
+            '/tables/purchase_completed/fields/coupon_name/agent-access',
+          ) && (init as RequestInit | undefined)?.method === 'PATCH',
+      );
+      expect(patched).toBeTruthy();
     });
   });
 });
