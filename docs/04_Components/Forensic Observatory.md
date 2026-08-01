@@ -22,6 +22,7 @@ code_refs:
   - apps/zentra-os/src/app/pages
   - apps/zentra-os/src/app/pages/chat
   - apps/zentra-os/src/app/pages/connections
+  - apps/zentra-os/src/app/pages/datasets
   - apps/zentra-os/src/app/providers.tsx
   - apps/zentra-os/src/styles.css
 ---
@@ -53,9 +54,9 @@ through the root's `group`, and as React context the item reads to decide
 whether to wrap itself in a tooltip.
 
 Destinations are listed in `shell/nav-items.ts`. Investigations is the launcher
-at `/`; Dashboard, Datasets, Chat, Connections and Settings are Phase 2 pages
-that currently answer with an explicit placeholder rather than a dead link or a
-mock that looks finished.
+at `/`; Connections and Datasets are built; Chat is a working surface over a
+fixture that says so; Dashboard and Settings still answer with an explicit
+placeholder rather than a dead link or a mock that looks finished.
 
 The launcher renders whatever `GET /v1/scenarios` returns — currently the
 eight-order EU refund spike and the three-hundred-order NA channel growth — so
@@ -111,8 +112,8 @@ routes: `/connections` lists registered sources with their health,
 configures one.
 
 Registering, listing, re-testing and deleting a source work end to end; the
-Data Source repository behind them landed with this page. Harvest and catalog do
-not, and nothing here calls them.
+Data Source repository behind them landed with this page. Harvest and catalog
+persistence followed, and Datasets is what reads them.
 
 **One connector connects.** `SourceCredentialsRequest` is host, port, database,
 username, password and `secure` — a ClickHouse-shaped credential — and the API
@@ -139,6 +140,31 @@ to go and look at.
 `connector-logos.tsx` holds inline vendor marks. `foundation-icons` wraps lucide,
 which ships no brand logos, and a picker where twelve sources share one database
 glyph has to be read rather than recognised.
+
+## Datasets
+
+`pages/datasets` reads the catalog a harvest produced, one section per connected
+source. It is built on Connections rather than beside it: a dataset here is
+always a table in a source someone registered, so with none registered the page
+says so and links to the connector rather than rendering an empty shell.
+
+Three states per source, kept distinct because each needs something different
+offered — a catalog to browse, a harvest to watch, or nothing yet and a button
+to start one. `GET /sources/{id}/catalog` answers **404 until a harvest has
+completed**, which the page treats as an answer rather than an error; React
+Query is told not to retry it, since "not harvested yet" will not become true by
+asking again.
+
+Harvest progress is polled, because the work is scheduled *after* the 202 and
+cannot be awaited. The progress bar is deliberately indeterminate: the total is
+unknown until listing finishes, and a percentage of an unknown total is a
+fiction — so counts are shown instead.
+
+Clicking a table opens a modal listing every column with its position, declared
+type, family and nullability. Statistics carry the sample size they came from,
+and a field that was never profiled says *not profiled* rather than showing
+`0%` — the latter would claim the column was measured and had no nulls, which is
+a different statement from never having looked.
 
 ## Styling
 

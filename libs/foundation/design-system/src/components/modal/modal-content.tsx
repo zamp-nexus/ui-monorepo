@@ -38,7 +38,13 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
           aria-labelledby={rest['aria-labelledby'] ?? titleId}
           aria-describedby={rest['aria-describedby'] ?? descriptionId}
         >
-          <div className="flex h-full flex-col">{children}</div>
+          {/* `flex-1 min-h-0`, not `h-full`. The popup carries a max-height but
+              no definite height, so `height: 100%` here has nothing to resolve
+              against and collapses to auto — the column then grows past the
+              popup and a long modal spills off the screen instead of scrolling.
+              `min-h-0` is what lets this column shrink below its content so the
+              `overflow-auto` on Modal.Body becomes the scroll container. */}
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
         </Dialog.Popup>
       </Dialog.Portal>
     );

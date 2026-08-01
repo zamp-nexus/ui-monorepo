@@ -163,8 +163,14 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
       variants: {},
       modifiers: {},
     },
+    // `flex flex-col overflow-hidden` is what makes the height cap mean
+    // anything. The popup is capped at the viewport and `Modal.Body` is
+    // `flex-1 overflow-auto`, but without a flex column the body is not a flex
+    // item, and without `overflow-hidden` a child that outgrows the cap simply
+    // paints past it — a long modal running off the screen with nothing to
+    // scroll, and its rounded corners no longer clipping.
     popup: {
-      base: 'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-lg transition-all data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
+      base: 'fixed left-1/2 top-1/2 z-50 flex flex-col overflow-hidden -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-lg transition-all data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
       variants: {
         size: {
           '480': 'w-[480px] max-w-[calc(100vw-2rem)]',
@@ -186,7 +192,9 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
       },
     },
     header: {
-      base: 'flex flex-col gap-1.5 border-b px-6 py-4',
+      // `shrink-0`: with the body flexing, a long modal would otherwise
+      // compress the header and footer rather than scrolling the body.
+      base: 'flex shrink-0 flex-col gap-1.5 border-b px-6 py-4',
       variants: {},
       modifiers: {},
     },
@@ -206,7 +214,7 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
       modifiers: {},
     },
     footer: {
-      base: 'flex items-center justify-end gap-2 border-t px-6 py-4',
+      base: 'flex shrink-0 items-center justify-end gap-2 border-t px-6 py-4',
       variants: {},
       modifiers: {},
     },
