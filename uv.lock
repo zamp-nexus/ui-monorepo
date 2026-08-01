@@ -12,8 +12,10 @@ members = [
     "zentra-adapter-postgres",
     "zentra-adapter-telemetry",
     "zentra-api",
+    "zentra-application-connector",
     "zentra-application-investigation",
     "zentra-domain-agent-execution",
+    "zentra-domain-connector",
     "zentra-domain-investigation",
 ]
 
@@ -754,8 +756,10 @@ dependencies = [
     { name = "zentra-adapter-postgres" },
     { name = "zentra-adapter-telemetry" },
     { name = "zentra-api" },
+    { name = "zentra-application-connector" },
     { name = "zentra-application-investigation" },
     { name = "zentra-domain-agent-execution" },
+    { name = "zentra-domain-connector" },
     { name = "zentra-domain-investigation" },
 ]
 
@@ -780,8 +784,10 @@ requires-dist = [
     { name = "zentra-adapter-postgres", editable = "libs/adapters/postgres" },
     { name = "zentra-adapter-telemetry", editable = "libs/adapters/telemetry" },
     { name = "zentra-api", editable = "apps/api" },
+    { name = "zentra-application-connector", editable = "libs/application/connector" },
     { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
+    { name = "zentra-domain-connector", editable = "libs/domain/connector" },
     { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
 ]
 
@@ -1850,6 +1856,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "zentra-application-connector"
+version = "1.0.0"
+source = { editable = "libs/application/connector" }
+dependencies = [
+    { name = "zentra-domain-connector" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "zentra-domain-connector", editable = "libs/domain/connector" }]
+
+[[package]]
 name = "zentra-application-investigation"
 version = "1.0.0"
 source = { editable = "libs/application/investigation" }
@@ -1874,6 +1891,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.12,<3" }]
+
+[[package]]
+name = "zentra-domain-connector"
+version = "1.0.0"
+source = { editable = "libs/domain/connector" }
 
 [[package]]
 name = "zentra-domain-investigation"

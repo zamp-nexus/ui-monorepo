@@ -10,8 +10,10 @@ dependencies = [
   "zentra-adapter-postgres",
   "zentra-adapter-telemetry",
   "zentra-api",
+  "zentra-application-connector",
   "zentra-application-investigation",
   "zentra-domain-agent-execution",
+  "zentra-domain-connector",
   "zentra-domain-investigation"
 ]
 
@@ -24,8 +26,10 @@ members = [
   "libs/adapters/model-providers",
   "libs/adapters/postgres",
   "libs/adapters/telemetry",
+  "libs/application/connector",
   "libs/application/investigation",
   "libs/domain/agent-execution",
+  "libs/domain/connector",
   "libs/domain/investigation"
 ]
 
@@ -50,10 +54,16 @@ workspace = true
 [tool.uv.sources.zentra-api]
 workspace = true
 
+[tool.uv.sources.zentra-application-connector]
+workspace = true
+
 [tool.uv.sources.zentra-application-investigation]
 workspace = true
 
 [tool.uv.sources.zentra-domain-agent-execution]
+workspace = true
+
+[tool.uv.sources.zentra-domain-connector]
 workspace = true
 
 [tool.uv.sources.zentra-domain-investigation]
