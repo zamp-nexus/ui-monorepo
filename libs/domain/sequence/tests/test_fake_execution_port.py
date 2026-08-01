@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from zentra_domain_agent_execution import (
@@ -10,6 +10,8 @@ from zentra_domain_agent_execution import (
     SequenceStepExecutionResult,
     SequenceTableReference,
 )
+
+from zentra_domain_sequence.testing import assert_port_satisfies_contract
 
 from .fakes import FakeSequenceExecutionPort
 
@@ -179,3 +181,28 @@ async def test_tenant_scoping_fails_closed_for_the_wrong_tenant() -> None:
     result = await port.apply_operation(wrong_tenant_request)
     assert isinstance(result, SequenceStepExecutionFailure)
     assert result.reason is SequenceExecutionFailureReason.UNKNOWN_TABLE
+
+
+@pytest.mark.asyncio
+async def test_fake_port_satisfies_the_shared_contract_suite() -> None:
+    port = FakeSequenceExecutionPort()
+
+    def seed_raw_table(*, rows: list[dict], columns: tuple[str, ...]):
+        reference_id = uuid4()
+        port.seed_table(
+            tenant_id=TENANT_ID,
+            reference_id=reference_id,
+            kind="raw",
+            rows=rows,
+            columns=columns,
+        )
+        return SequenceTableReference(
+            tenant_id=TENANT_ID, reference_id=reference_id, kind="raw"
+        )
+
+    await assert_port_satisfies_contract(
+        apply_operation=port.apply_operation,
+        seed_raw_table=seed_raw_table,
+        tenant_id=TENANT_ID,
+        sequence_id=SEQUENCE_ID,
+    )
