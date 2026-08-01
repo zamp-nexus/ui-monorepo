@@ -19,19 +19,19 @@ _Avoid_: Query config, timeout settings, safety rules
 ## Uploaded data
 
 **Dataset Workspace**:
-A Tenant-owned collection of related uploaded Relations that may be modeled and queried together.
+A Tenant-owned collection of related uploaded Dataset Tables that may be modeled and queried together.
 _Avoid_: Dataset, folder, database
 
-**Relation**:
+**Dataset Table**:
 A named tabular concept inside a Dataset Workspace whose contents are supplied through immutable versions.
-_Avoid_: File, sheet, table
+_Avoid_: Relation, file, sheet, table — "Relation" is reserved by [Connector](../connector/CONTEXT.md) for an inferred join
 
-**Relation Version**:
-One immutable uploaded representation of a Relation with its integrity hash and inferred schema.
-_Avoid_: Replacement file, current table
+**Dataset Table Version**:
+One immutable uploaded representation of a Dataset Table with its integrity hash and inferred schema.
+_Avoid_: Relation Version, replacement file, current table
 
 **Workspace Snapshot**:
-The immutable set of Relation Versions selected from one Dataset Workspace for an Investigation.
+The immutable set of Dataset Table Versions selected from one Dataset Workspace for an Investigation.
 _Avoid_: Dataset version, workspace copy
 
 **Column Classification Draft**:

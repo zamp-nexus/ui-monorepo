@@ -31,6 +31,7 @@ from zentra_domain_connector import (
     SourceTable,
     UnreadableTable,
     classify,
+    coverage_summary,
     generate_candidates,
     normalise_type,
     reconcile,
@@ -330,7 +331,11 @@ async def _infer_relations(
         catalogs.append((peer_id, peer_version))
         creds[peer_id] = peer_credentials
 
-    candidates, _ = generate_candidates(tuple(catalogs))
+    candidates, unexamined = generate_candidates(tuple(catalogs))
+    # Recorded rather than discarded. Without it an empty proposal list is
+    # indistinguishable from a schema nothing was eligible to be looked at in.
+    run.fields_unexamined = len(unexamined)
+    run.unexamined_reasons = coverage_summary(unexamined)
     carried = {
         r.pinned_identities
         for r in await deps.relations.list_for_source(

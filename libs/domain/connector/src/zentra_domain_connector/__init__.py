@@ -31,9 +31,11 @@ from .constants import (
 )
 from .harvest import HarvestBudget, HarvestRun, HarvestScope
 from .inference import (
+    COMPOSITE_KEY_LIMITATION,
     CandidatePair,
     ScoredCandidate,
     UnexaminedField,
+    coverage_summary,
     generate_candidates,
     score_candidate,
 )
@@ -69,6 +71,7 @@ from .types import (
 from .typing_rules import classify, normalise_type, types_are_compatible, unwrap_type
 
 __all__ = [
+    "COMPOSITE_KEY_LIMITATION",
     "JOINABLE_FAMILIES",
     "MAX_UPLOAD_BYTES",
     "MIN_OVERLAP_FRACTION",
@@ -115,6 +118,7 @@ __all__ = [
     "assess",
     "cardinality_ceiling",
     "classify",
+    "coverage_summary",
     "diff_catalogs",
     "generate_candidates",
     "infer_cardinality",
