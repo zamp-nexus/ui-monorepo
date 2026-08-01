@@ -19,7 +19,11 @@ requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
     "clickhouse-connect>=0.8,<1",
+    "cryptography>=43,<48",
+    "pyarrow>=18,<22",
     "pydantic>=2.12,<3",
+    "zentra-application-connector",
+    "zentra-domain-connector",
 ]
 
 
@@ -58,3 +62,7 @@ ignore = []
 
 fixable = ["ALL"]
 unfixable = []
+
+[tool.uv.sources]
+zentra-application-connector = { workspace = true }
+zentra-domain-connector = { workspace = true }
