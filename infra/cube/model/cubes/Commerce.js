@@ -1,5 +1,6 @@
 cube('Commerce', {
   sql: `SELECT * FROM commerce_facts`,
+  dataSource: 'default',
 
   measures: {
     grossRevenue: {
