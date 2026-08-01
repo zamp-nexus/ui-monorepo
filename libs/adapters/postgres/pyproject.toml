@@ -25,6 +25,7 @@ dependencies = [
     "zentra-application-investigation",
     "zentra-domain-agent-execution",
     "zentra-domain-investigation",
+    "zentra-domain-sequence",
 ]
 
 
@@ -68,3 +69,4 @@ unfixable = []
 zentra-domain-agent-execution = { workspace = true }
 zentra-application-investigation = { workspace = true }
 zentra-domain-investigation = { workspace = true }
+zentra-domain-sequence = { workspace = true }

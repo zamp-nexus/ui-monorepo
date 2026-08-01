@@ -1837,6 +1837,7 @@ dependencies = [
     { name = "zentra-application-investigation" },
     { name = "zentra-domain-agent-execution" },
     { name = "zentra-domain-investigation" },
+    { name = "zentra-domain-sequence" },
 ]
 
 [package.metadata]
@@ -1848,6 +1849,7 @@ requires-dist = [
     { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
     { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
+    { name = "zentra-domain-sequence", editable = "libs/domain/sequence" },
 ]
 
 [[package]]

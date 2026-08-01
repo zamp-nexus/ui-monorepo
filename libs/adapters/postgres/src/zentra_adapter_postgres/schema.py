@@ -42,6 +42,11 @@ from .schema_phase_2 import (
     erasure_operations,
     evidence_citations,
 )
+from .schema_sequence import prepared_tables as prepared_tables
+from .schema_sequence import sequence_final_tables as sequence_final_tables
+from .schema_sequence import sequence_runs as sequence_runs
+from .schema_sequence import sequence_steps as sequence_steps
+from .schema_sequence import sequences as sequences
 from .schema_threads import investigation_threads as investigation_threads
 from .schema_threads import thread_messages as thread_messages
 from .schema_workspace import projects as projects
@@ -558,9 +563,14 @@ __all__ = [
     "identity_subjects",
     "investigations",
     "metadata",
+    "prepared_tables",
     "projects",
     "relations",
     "semantic_metrics",
+    "sequence_final_tables",
+    "sequence_runs",
+    "sequence_steps",
+    "sequences",
     "tenant_identity_bindings",
     "tenant_memberships",
     "tenants",
