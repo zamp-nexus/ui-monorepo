@@ -25,6 +25,7 @@ description = "ZentraOS chDB-backed Sequence Step execution adapter"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
+    "boto3>=1.35,<2",
     "chdb>=3.0,<4",
     "clickhouse-connect>=0.8,<1",
     "pyarrow>=18,<22",
