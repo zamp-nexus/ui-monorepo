@@ -6,14 +6,14 @@ status: active
 owner: unassigned
 source: context-map
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: critical
 tags: [domain, investigation]
 aliases: [investigation]
-related: ["[[Domains MOC]]", "[[Investigation Trust Loop]]", "[[Investigation Core]]"]
+related: ["[[Domains MOC]]", "[[Investigation Trust Loop]]", "[[Investigation Core]]", "[[Data Source Domain]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
 repo_path: libs/domain/investigation
 code_refs:
   - libs/domain/investigation/src/zentra_domain_investigation/draft_finding.py
@@ -265,6 +265,15 @@ Whether a caller may delete is decided by the server and carried on the
 Investigation, exactly as `can_decide` is for an approval. A client consulting
 its own role would be a second authorisation rule that can disagree with the one
 that applies.
+
+## Phase 3 target boundary
+
+Each real-data Investigation receives one immutable Data Source Binding naming a
+Workspace Snapshot or Data Connection plus exact model and policy versions. No
+source or model switches mid-run. Each plan change creates a Query Version.
+Citations resolve through that version and binding without raw rows. Relation or
+Workspace deletion cascades content erasure while preserving existing identity,
+safe process metadata, Audit Entry, and Tombstone guarantees.
 
 Canonical language:
 [Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:
