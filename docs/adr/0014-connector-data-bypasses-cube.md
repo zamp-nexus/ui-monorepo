@@ -2,7 +2,7 @@
 id: adr-0014
 title: Connector-sourced data bypasses Cube
 type: adr
-status: accepted
+status: active
 owner: unassigned
 source: repository
 created: 2026-08-01

@@ -69,6 +69,7 @@ class Dependencies:
     cube: Probe
     jwt_verifier: Verifier
     investigations: object | None = None
+    organization: object | None = None
 
     async def close(self) -> None:
         return None
@@ -80,6 +81,7 @@ def client(
     clickhouse: bool = True,
     cube: bool = True,
     investigations: object | None = None,
+    organization: object | None = None,
 ) -> TestClient:
     dependencies = Dependencies(
         database=DatabaseProbe(postgres),
@@ -87,6 +89,7 @@ def client(
         cube=Probe(cube),
         jwt_verifier=Verifier(),
         investigations=investigations,
+        organization=organization,
     )
     app = create_app(
         Settings(clerk_issuer="https://example.clerk.accounts.dev"),
