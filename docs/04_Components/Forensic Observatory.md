@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [component, frontend, react]
 aliases: [zentra-os, frontend]
-related: ["[[Components MOC]]", "[[User Workflows]]", "[[Investigation API]]", "[[Design Token Pipeline]]"]
+related: ["[[Components MOC]]", "[[User Workflows]]", "[[Investigation API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
 depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]", "[[Design Token Pipeline]]"]
 repo_path: apps/zentra-os
 code_refs:
@@ -21,6 +21,7 @@ code_refs:
   - apps/zentra-os/src/app/shell/app-shell.tsx
   - apps/zentra-os/src/app/pages
   - apps/zentra-os/src/app/pages/chat
+  - apps/zentra-os/src/app/pages/connections
   - apps/zentra-os/src/app/providers.tsx
   - apps/zentra-os/src/styles.css
 ---
@@ -101,6 +102,43 @@ as the rest of the product.
 
 The page says on screen that it is a fixture. A chat that answers convincingly
 and knows nothing is the one thing a governed product cannot ship by accident.
+
+## Connections
+
+`pages/connections` is the first surface wired to [[Connector API]]. Three
+routes: `/connections` lists registered sources with their health,
+`/connections/new` is the connector picker, `/connections/new/:connectorId`
+configures one.
+
+Registering, listing, re-testing and deleting a source work end to end; the
+Data Source repository behind them landed with this page. Harvest and catalog do
+not, and nothing here calls them.
+
+**One connector connects.** `SourceCredentialsRequest` is host, port, database,
+username, password and `secure` — a ClickHouse-shaped credential — and the API
+carries no notion of which *kind* of source it is talking to. So ClickHouse has
+a real form and the other eleven entries in `constants.ts` are marked
+`available: false` and route to `placeholder-config.tsx`, which has no fields at
+all. A disabled form would imply the credential shape is settled and only a
+click is missing; a form that posts nowhere still collects credentials.
+
+**Save is the test.** `ConnectorService.register_source` opens the connection
+before it persists anything and refuses to store a source it could not reach, so
+there is no separate "Test connection" button on the create form — one button
+reads `Test and save connection`, and a rejection means nothing was stored.
+`POST /sources/{id}/test-connection` needs a `data_source_id`, so it can only
+re-check something already registered; that is the `Re-test` action on each row
+of the list.
+
+A failed connection comes back as a coarse code — `unreachable`,
+`authentication_failed`, `database_not_found` — deliberately carrying no text
+from the source itself, since a warehouse's own error messages contain
+hostnames and topology. `CONNECTION_FAILURE_HELP` turns each code into the field
+to go and look at.
+
+`connector-logos.tsx` holds inline vendor marks. `foundation-icons` wraps lucide,
+which ships no brand logos, and a picker where twelve sources share one database
+glyph has to be read rather than recognised.
 
 ## Styling
 

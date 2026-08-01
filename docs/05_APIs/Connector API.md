@@ -57,6 +57,30 @@ Failures are typed as `unreachable`, `authentication_failed`, or
 `database_not_found`, which tells an admin which field to fix without echoing the
 source's own error text back.
 
+[[Forensic Observatory]] consumes these six endpoints from
+`pages/connections`. Because registration verifies first, its create form has one
+button rather than a "Test" beside a "Save"; `test-connection` appears there only
+as a re-check on an already-registered source, which is the only thing it can be.
+
+### What is wired, and what is not
+
+The contract test asserts this document matches the generated specification. It
+does not call a handler, so a route being *documented* here has never implied it
+*runs* — a distinction worth stating, because for a while none of them did.
+
+Data Source persistence landed in migration `0014_data_sources`:
+`PostgresDataSourceRepository` backs register, list, read, re-test and delete,
+with RLS making a source belong to exactly one Tenant. Credentials are sealed
+with AES-GCM under `CONNECTOR_CREDENTIAL_KEY`; with that variable unset the
+Connector Service is not constructed and every route answers `503` naming it,
+rather than accepting a password it cannot seal.
+
+**Harvest, catalog and relation persistence do not exist.** Those repositories
+are `Unwired*` stand-ins that raise on first call, so `/harvests`,
+`/catalog-versions` and `/relations` fail loudly instead of returning an empty
+catalog — which would read as "this source has no tables" rather than "nobody
+built this".
+
 ## Harvests
 
 | Method | Path | Purpose | Authorization |

@@ -1,5 +1,11 @@
 """ZentraOS Postgres control-plane adapter"""
 
+from .connector import PostgresDataSourceRepository
+from .connector_catalog import (
+    PostgresCatalogRepository,
+    PostgresHarvestRunRepository,
+    PostgresRelationRepository,
+)
 from .database import Database
 from .identity import (
     IdentityContext,
@@ -20,8 +26,12 @@ __all__ = [
     "IdentityNotBoundError",
     "ConcurrentInvestigationUpdateError",
     "OutboxRecord",
+    "PostgresCatalogRepository",
+    "PostgresDataSourceRepository",
+    "PostgresHarvestRunRepository",
     "PostgresInvestigationUnitOfWork",
     "PostgresInvestigationUnitOfWorkFactory",
+    "PostgresRelationRepository",
     "metadata",
     "resolve_identity_context",
 ]
