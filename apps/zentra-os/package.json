@@ -54,6 +54,7 @@
     "@open-zentra/foundation-auth": "^0.0.1",
     "@open-zentra/foundation-authz": "^0.0.1",
     "@open-zentra/foundation-design-system": "^0.0.1",
+    "@open-zentra/foundation-icons": "^0.0.1",
     "@tanstack/react-query": "^5.101.4",
     "motion": "^12.43.0",
     "react-router-dom": "^7.18.1"

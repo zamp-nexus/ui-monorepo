@@ -21,7 +21,7 @@
     "disabledTaskSyncGenerators": ["@juristr/nx-tailwind-sync:source-directives"],
     "generatorOptions": {
       "@juristr/nx-tailwind-sync:source-directives": {
-        "additionalStylePaths": ["src/styles.scss"]
+        "additionalStylePaths": ["src/styles.css"]
       }
     }
   },
