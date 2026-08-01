@@ -1,9 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-// Phase 1: auth machinery only. Every token still mints the same appId
-// ("system") until Phase 2 wires per-tenant/per-Data-Connection claims and
-// the Connector-backed dynamic cube generator, so this is a behavior-neutral
-// change for the existing demo warehouse scenarios.
 module.exports = {
   scheduledRefreshTimer: false,
 
@@ -20,25 +16,53 @@ module.exports = {
     req.securityContext = claims;
   },
 
+  // Keyed on the relation fingerprint, not just tenant/Data Connection: a
+  // Relation confirm/reject/revoke mutates its state under the same
+  // CatalogVersion id, so the version id alone would not invalidate a
+  // stale compiled schema. The fingerprint is minted into the JWT by
+  // apps/api at query time, computed fresh from the Connector's current
+  // Join Graph — see connector_model.relation_fingerprint.
   contextToAppId: ({ securityContext }) =>
     securityContext && securityContext.dataConnectionId
       ? `CUBE_APP_${securityContext.tenantId}_${securityContext.dataConnectionId}_${securityContext.relationFingerprint}`
       : 'CUBE_APP_system',
 
-  driverFactory: ({ dataSource }) => {
-    if (dataSource === 'connector') {
-      // Phase 2 wires this to a per-Data-Connection ClickHouse config
-      // resolved via the internal model endpoint. Not reachable in Phase 1:
-      // no cube declares `dataSource: 'connector'` yet.
-      throw new Error('connector dataSource is not implemented until Phase 2');
+  driverFactory: async ({ securityContext, dataSource }) => {
+    if (dataSource !== 'connector') {
+      return {
+        type: 'postgres',
+        database: process.env.CUBEJS_DB_NAME,
+        host: process.env.CUBEJS_DB_HOST,
+        port: process.env.CUBEJS_DB_PORT,
+        user: process.env.CUBEJS_DB_USER,
+        password: process.env.CUBEJS_DB_PASS,
+      };
     }
+    if (!securityContext || !securityContext.dataConnectionId) {
+      throw new Error('connector dataSource requires a Data Connection in securityContext');
+    }
+    const response = await fetch(
+      `${process.env.INTERNAL_API_URL}/internal/v1/cube/model/${securityContext.tenantId}/${securityContext.dataConnectionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CUBE_INTERNAL_API_SECRET}`,
+        },
+      }
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Connector driver config fetch failed with ${response.status} for data connection ${securityContext.dataConnectionId}`
+      );
+    }
+    const model = await response.json();
     return {
-      type: 'postgres',
-      database: process.env.CUBEJS_DB_NAME,
-      host: process.env.CUBEJS_DB_HOST,
-      port: process.env.CUBEJS_DB_PORT,
-      user: process.env.CUBEJS_DB_USER,
-      password: process.env.CUBEJS_DB_PASS,
+      type: 'clickhouse',
+      host: model.clickhouse.host,
+      port: model.clickhouse.port,
+      database: model.clickhouse.database,
+      username: model.clickhouse.username,
+      password: model.clickhouse.password,
+      ssl: model.clickhouse.secure,
     };
   },
 };

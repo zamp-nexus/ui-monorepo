@@ -9,6 +9,7 @@ from zentra_adapter_telemetry import TelemetrySettings, configure_telemetry
 
 from .connector_routes import router as connector_router
 from .dependencies import AppDependencies
+from .internal_cube_routes import router as internal_cube_router
 from .routes import router
 from .settings import Settings
 from .workspace_routes import router as workspace_router
@@ -50,6 +51,7 @@ def create_app(
     api.include_router(router)
     api.include_router(connector_router)
     api.include_router(workspace_router)
+    api.include_router(internal_cube_router)
     configure_telemetry(
         api,
         TelemetrySettings(
