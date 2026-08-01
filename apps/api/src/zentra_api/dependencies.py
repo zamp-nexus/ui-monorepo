@@ -6,6 +6,7 @@ import socket
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -45,12 +46,14 @@ from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
+from zentra_adapter_thesys import ThesysC1Client
 from zentra_application_connector import ConnectorService
 from zentra_application_investigation import (
     ExecutionJobWorker,
     InvestigationService,
     OrganizationService,
     ThreadService,
+    VisualizationService,
 )
 from zentra_domain_agent_execution import AgentRole
 
@@ -95,6 +98,8 @@ class AppDependencies:
     checkpoints: PostgresCheckpointStore
     execution_worker: ExecutionJobWorker
     execution_worker_enabled: bool
+    registry: PostgresAgentRegistry
+    visualizations: VisualizationService | None = None
     #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
     #: service with no key: the Connector routes then fail with a message
     #: naming the missing configuration, instead of accepting a password they
@@ -184,6 +189,26 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
+        visualizations = VisualizationService(
+            unit_of_work_factory=unit_of_work_factory,
+            renderer=(
+                ThesysC1Client(
+                    api_key=settings.thesys_api_key,
+                    model=settings.thesys_model,
+                    input_price_per_million=Decimal(
+                        str(settings.thesys_input_price_per_million)
+                    ),
+                    output_price_per_million=Decimal(
+                        str(settings.thesys_output_price_per_million)
+                    ),
+                )
+                if settings.thesys_api_key
+                else None
+            ),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+            continuation=threads,
+        )
         connector = (
             ConnectorService(
                 sources=PostgresDataSourceRepository(database),
@@ -215,6 +240,7 @@ class AppDependencies:
         execution_worker = ExecutionJobWorker(
             unit_of_work_factory=unit_of_work_factory,
             executor=investigations,
+            visualization_executor=visualizations,
             worker_id=worker_id,
             now=lambda: datetime.now(UTC),
         )
@@ -234,6 +260,8 @@ class AppDependencies:
             checkpoints=checkpoints,
             execution_worker=execution_worker,
             execution_worker_enabled=settings.execution_worker_enabled,
+            registry=registry,
+            visualizations=visualizations,
             connector=connector,
         )
 
@@ -300,6 +328,7 @@ def _build_graph_factory(
             insight=InsightAgent(model=model),
             recorder=recorder,
             checkpointer=checkpointer,
+            cancellation_checkpoint=recorder.cancellation_checkpoint,
         )
 
     return build

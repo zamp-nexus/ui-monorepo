@@ -11,7 +11,7 @@ from uuid import UUID
 
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_application_investigation import InvestigationUnitOfWork
+from zentra_application_investigation import InvestigationUnitOfWork, UsageSummary
 from zentra_domain_agent_execution import OUTCOME_ADAPTER, AgentExecutionRecord
 from zentra_domain_investigation import (
     ApprovalReason,
@@ -44,6 +44,8 @@ from .schema import (
     tenant_identity_bindings,
     tenants,
 )
+from .visualization import PostgresVisualizationRepository
+from .work_feed import PostgresWorkFeedRepository
 
 
 class ConcurrentInvestigationUpdateError(RuntimeError):
@@ -158,6 +160,8 @@ def _investigation_from_row(row: Any) -> Investigation:
         thread_id=row.thread_id,
         thread_sequence=row.thread_sequence,
         initiating_message_id=row.initiating_message_id,
+        parent_investigation_id=row.parent_investigation_id,
+        retry_of_investigation_id=row.retry_of_investigation_id,
         finished_at=row.finished_at,
         finding=finding,
         outcome=outcome,
@@ -186,6 +190,8 @@ class PostgresInvestigationRepository:
                 thread_id=investigation.thread_id,
                 thread_sequence=investigation.thread_sequence,
                 initiating_message_id=investigation.initiating_message_id,
+                parent_investigation_id=investigation.parent_investigation_id,
+                retry_of_investigation_id=investigation.retry_of_investigation_id,
                 version=investigation.version,
                 evaluation_attempts=investigation.evaluation_attempts,
                 created_at=investigation.created_at,
@@ -207,6 +213,33 @@ class PostgresInvestigationRepository:
             query = query.with_for_update()
         row = (await self._connection.execute(query)).one_or_none()
         return _investigation_from_row(row) if row else None
+
+    async def latest_for_thread(
+        self,
+        thread_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> Investigation | None:
+        query = (
+            select(investigations)
+            .where(investigations.c.thread_id == thread_id)
+            .order_by(investigations.c.thread_sequence.desc())
+            .limit(1)
+        )
+        if for_update:
+            query = query.with_for_update()
+        row = (await self._connection.execute(query)).one_or_none()
+        return _investigation_from_row(row) if row else None
+
+    async def all_for_thread(self, thread_id: UUID) -> tuple[Investigation, ...]:
+        rows = (
+            await self._connection.execute(
+                select(investigations)
+                .where(investigations.c.thread_id == thread_id)
+                .order_by(investigations.c.thread_sequence)
+            )
+        ).all()
+        return tuple(_investigation_from_row(row) for row in rows)
 
     async def save(
         self,
@@ -480,6 +513,7 @@ class PostgresAgentExecutionRepository:
                 investigation_id=execution.investigation_id,
                 tenant_id=execution.tenant_id,
                 agent_id=execution.agent_id,
+                role=execution.role.value,
                 step=execution.step,
                 input=execution.input,
                 output=execution.output,
@@ -494,9 +528,35 @@ class PostgresAgentExecutionRepository:
                 latency_ms=execution.latency_ms,
                 cost_usd=Decimal(str(execution.usage.cost_usd)),
                 model=execution.usage.model,
+                provider=(
+                    execution.usage.model.split("/", maxsplit=1)[0]
+                    if execution.usage.model and "/" in execution.usage.model
+                    else None
+                ),
+                input_tokens=execution.usage.input_tokens,
+                output_tokens=execution.usage.output_tokens,
+                fallbacks=list(execution.fallbacks),
                 started_at=execution.started_at,
                 completed_at=execution.completed_at,
             )
+        )
+
+    async def usage_for_investigation(self, investigation_id: UUID) -> UsageSummary:
+        row = (
+            await self._connection.execute(
+                select(
+                    func.coalesce(func.sum(agent_executions.c.input_tokens), 0),
+                    func.coalesce(func.sum(agent_executions.c.output_tokens), 0),
+                    func.coalesce(func.sum(agent_executions.c.cost_usd), 0),
+                    func.coalesce(func.sum(agent_executions.c.latency_ms), 0),
+                ).where(agent_executions.c.investigation_id == investigation_id)
+            )
+        ).one()
+        return UsageSummary(
+            input_tokens=int(row[0]),
+            output_tokens=int(row[1]),
+            cost_usd=Decimal(row[2]),
+            latency_ms=int(row[3]),
         )
 
 
@@ -545,6 +605,8 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
             trace_id=trace_id,
             span_id=span_id,
         )
+        self.work_feed = PostgresWorkFeedRepository(connection)
+        self.visualizations = PostgresVisualizationRepository(connection)
         self.should_commit = False
 
     async def commit(self) -> None:

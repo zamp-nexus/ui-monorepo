@@ -151,9 +151,7 @@ async def bound_tenant():
         for role in ("owner", "admin", "member", "viewer"):
             user_id = uuid5(NAMESPACE_URL, f"zentraos:acceptance:user:{role}")
             await connection.execute(
-                insert(users).values(
-                    user_id=user_id, email=f"{role}@acceptance.test"
-                )
+                insert(users).values(user_id=user_id, email=f"{role}@acceptance.test")
             )
             await connection.execute(
                 insert(tenant_memberships).values(
@@ -187,8 +185,9 @@ def test_the_suite_runs_through_the_nx_task_surface() -> None:
     being true. This file lives under `apps/api/tests`, which `nx run api:test`
     already collects, so its presence in that directory is the guarantee.
     """
-    assert __file__.replace(os.sep, "/").endswith("apps/api/tests/"
-                                                  "test_phase_2_acceptance.py")
+    assert __file__.replace(os.sep, "/").endswith(
+        "apps/api/tests/test_phase_2_acceptance.py"
+    )
 
 
 class _Harness:
@@ -203,9 +202,7 @@ class _Harness:
         self.database = Database(RUNTIME_URL)
         self.pipeline = _Pipeline(result)
         self.service = InvestigationService(
-            unit_of_work_factory=PostgresInvestigationUnitOfWorkFactory(
-                self.database
-            ),
+            unit_of_work_factory=PostgresInvestigationUnitOfWorkFactory(self.database),
             pipeline=self.pipeline,
             audit_writer=_NullAudit(),
             audit_reader=_NullAudit(),
@@ -234,9 +231,7 @@ class _Harness:
 AUTH = {"Authorization": "Bearer t"}
 
 
-def _result(
-    *, score: float = 0.91, converged: bool = True, **extra
-) -> PipelineResult:
+def _result(*, score: float = 0.91, converged: bool = True, **extra) -> PipelineResult:
     return PipelineResult(
         finding=_finding(),
         outcome=ConfidenceOutcome(score=score, calibration_method="agreement"),
@@ -252,9 +247,7 @@ async def _run(harness: _Harness, client: TestClient) -> dict:
     )
     assert created.status_code == 201, created.text
     identifier = created.json()["investigation_id"]
-    await harness.service.execute(
-        await _actor(harness, client), UUID(identifier)
-    )
+    await harness.service.execute(await _actor(harness, client), UUID(identifier))
     detail = client.get(f"/v1/investigations/{identifier}", headers=AUTH)
     assert detail.status_code == 200, detail.text
     return detail.json()
@@ -395,9 +388,7 @@ async def test_authentication_is_required_everywhere_it_matters(
             ("post", f"/v1/investigations/{uuid4()}/evidence-deletion"),
         ):
             response = (
-                client.post(path, json={})
-                if method == "post"
-                else client.get(path)
+                client.post(path, json={}) if method == "post" else client.get(path)
             )
             # 401 before anything else. A route that validated the body first
             # would tell an anonymous caller which payloads are well-formed.
@@ -525,9 +516,7 @@ async def test_a_legacy_investigation_stays_readable(bound_tenant) -> None:
             "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
-        detail = client.get(
-            f"/v1/investigations/{identifier}", headers=AUTH
-        ).json()
+        detail = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
 
     # No draft: this Investigation never ran Insight, and the API says so with
     # a null rather than by inventing an empty one.

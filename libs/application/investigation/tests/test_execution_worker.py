@@ -71,9 +71,7 @@ class Executor:
         self.calls: list[UUID] = []
         self.failures: list[str] = []
 
-    async def execute_job(
-        self, *, tenant_id: UUID, investigation_id: UUID
-    ) -> None:
+    async def execute_job(self, *, tenant_id: UUID, investigation_id: UUID) -> None:
         self.calls.append(investigation_id)
         if self.error is not None:
             raise self.error

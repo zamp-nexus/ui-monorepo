@@ -14,6 +14,11 @@ class ExecutionJobStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class ExecutionJobKind(StrEnum):
+    INVESTIGATION = "investigation"
+    VISUALIZATION = "visualization"
+
+
 TERMINAL_JOB_STATUSES = frozenset(
     {
         ExecutionJobStatus.COMPLETED,
@@ -44,6 +49,10 @@ class ExecutionJob:
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None
+    job_kind: ExecutionJobKind = ExecutionJobKind.INVESTIGATION
+    visualization_id: UUID | None = None
+    cancel_requested_at: datetime | None = None
+    cancel_requested_by: UUID | None = None
 
     @classmethod
     def create(
@@ -54,9 +63,15 @@ class ExecutionJob:
         investigation_id: UUID,
         now: datetime,
         max_attempts: int = 3,
+        job_kind: ExecutionJobKind = ExecutionJobKind.INVESTIGATION,
+        visualization_id: UUID | None = None,
     ) -> ExecutionJob:
         if max_attempts < 1:
             raise ValueError("Execution Job max attempts must be positive")
+        if (job_kind is ExecutionJobKind.VISUALIZATION) != (
+            visualization_id is not None
+        ):
+            raise ValueError("Execution Job target does not match its kind")
         return cls(
             job_id=job_id,
             tenant_id=tenant_id,
@@ -70,7 +85,29 @@ class ExecutionJob:
             failure_category=None,
             created_at=now,
             updated_at=now,
+            job_kind=job_kind,
+            visualization_id=visualization_id,
         )
+
+    def request_cancel(self, *, actor_id: UUID, now: datetime) -> None:
+        if self.status in TERMINAL_JOB_STATUSES:
+            return
+        self.cancel_requested_at = self.cancel_requested_at or now
+        self.cancel_requested_by = self.cancel_requested_by or actor_id
+        self.updated_at = now
+        if self.status is ExecutionJobStatus.QUEUED:
+            self.status = ExecutionJobStatus.CANCELLED
+            self.completed_at = now
+
+    def cancel(self, *, worker_id: str, now: datetime) -> None:
+        self._require_lease_owner(worker_id)
+        if self.cancel_requested_at is None:
+            raise ExecutionJobTransitionError("Cancellation was not requested")
+        self.status = ExecutionJobStatus.CANCELLED
+        self.lease_owner = None
+        self.lease_expires_at = None
+        self.completed_at = now
+        self.updated_at = now
 
     def claim(self, *, worker_id: str, now: datetime, lease_for: timedelta) -> None:
         if not worker_id.strip():
@@ -140,9 +177,7 @@ class ExecutionJob:
         self.completed_at = now
         self.updated_at = now
 
-    def fail(
-        self, *, worker_id: str, now: datetime, failure_category: str
-    ) -> None:
+    def fail(self, *, worker_id: str, now: datetime, failure_category: str) -> None:
         self._require_lease_owner(worker_id)
         self.status = ExecutionJobStatus.FAILED
         self.failure_category = _failure_category(failure_category)

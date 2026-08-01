@@ -44,6 +44,17 @@ An immutable user, router clarification, or safe system contribution to one
 Investigation Thread. Agent progress belongs to the Work Feed, not messages.
 _Avoid_: Prompt log, editable chat bubble, reasoning event
 
+**Work Feed**:
+A persisted, typed, public projection of Thread and Agent progress, ordered by
+an atomically allocated Thread sequence and resumable without exposing prompts,
+reasoning, SQL, raw rows, credentials, or provider bodies.
+_Avoid_: Agent transcript, log stream, message history
+
+**Visualization Brief**:
+A strict factual projection of a published Finding used as the only input to
+terminal presentation rendering.
+_Avoid_: Prompt, query result, C1 response
+
 **Investigation Replay**:
 The ordered record that explains how an Investigation moved from its question to each claim and decision.
 _Avoid_: Logs, reasoning dump

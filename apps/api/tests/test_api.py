@@ -149,6 +149,7 @@ def test_readiness_reports_sanitized_dependency_state() -> None:
         "postgres": {"status": "ready"},
         "clickhouse": {"status": "unavailable"},
         "cube": {"status": "ready"},
+        "thesys": {"status": "unavailable"},
     }
     assert "password" not in response.text
 

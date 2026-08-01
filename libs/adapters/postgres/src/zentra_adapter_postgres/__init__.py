@@ -25,6 +25,8 @@ from .thread import (
     PostgresThreadUnitOfWork,
     PostgresThreadUnitOfWorkFactory,
 )
+from .visualization import PostgresVisualizationRepository
+from .work_feed import PostgresWorkFeedRepository
 from .workspace import (
     PostgresOrganizationRepository,
     PostgresOrganizationUnitOfWork,
@@ -50,6 +52,8 @@ __all__ = [
     "PostgresThreadRepository",
     "PostgresThreadUnitOfWork",
     "PostgresThreadUnitOfWorkFactory",
+    "PostgresWorkFeedRepository",
+    "PostgresVisualizationRepository",
     "metadata",
     "resolve_identity_context",
 ]

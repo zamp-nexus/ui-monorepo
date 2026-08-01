@@ -199,6 +199,8 @@ investigations = Table(
     Column("thread_id", UUID(as_uuid=True)),
     Column("thread_sequence", Integer),
     Column("initiating_message_id", UUID(as_uuid=True)),
+    Column("parent_investigation_id", UUID(as_uuid=True)),
+    Column("retry_of_investigation_id", UUID(as_uuid=True)),
     Column("version", Integer, nullable=False, server_default="1"),
     Column("evaluation_attempts", Integer, nullable=False, server_default="0"),
     Column("cost_so_far_usd", Numeric(12, 4), nullable=False, server_default="0"),
@@ -249,6 +251,18 @@ investigations = Table(
         name="fk_investigations_initiating_message",
         ondelete="RESTRICT",
     ),
+    ForeignKeyConstraint(
+        ("parent_investigation_id", "tenant_id"),
+        ("investigations.investigation_id", "investigations.tenant_id"),
+        name="fk_investigations_parent_tenant",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ("retry_of_investigation_id", "tenant_id"),
+        ("investigations.investigation_id", "investigations.tenant_id"),
+        name="fk_investigations_retry_tenant",
+        ondelete="RESTRICT",
+    ),
     UniqueConstraint(
         "thread_id", "thread_sequence", name="uq_investigations_thread_sequence"
     ),
@@ -286,6 +300,7 @@ agent_executions = Table(
         nullable=False,
     ),
     Column("agent_id", Text, nullable=False),
+    Column("role", String(64)),
     Column("step", Integer, nullable=False),
     Column("input", JSON, nullable=False),
     Column("output", JSON),
@@ -296,6 +311,10 @@ agent_executions = Table(
     Column("latency_ms", Integer),
     Column("cost_usd", Numeric(12, 6)),
     Column("model", Text),
+    Column("provider", String(64)),
+    Column("input_tokens", Integer, nullable=False, server_default="0"),
+    Column("output_tokens", Integer, nullable=False, server_default="0"),
+    Column("fallbacks", JSON, nullable=False, server_default="[]"),
     Column(
         "started_at",
         TIMESTAMP(timezone=True),
@@ -323,6 +342,10 @@ agent_executions = Table(
     ),
     CheckConstraint(
         "cost_usd IS NULL OR cost_usd >= 0", name="ck_agent_executions_cost"
+    ),
+    CheckConstraint(
+        "input_tokens >= 0 AND output_tokens >= 0",
+        name="ck_agent_executions_tokens",
     ),
 )
 Index(
@@ -481,6 +504,9 @@ agent_registry = Table(
     Column("enabled", Boolean, nullable=False, server_default=text("false")),
     Column("eval_status", String(16), nullable=False, server_default="pending"),
     Column("eval_suite_ref", Text, nullable=False),
+    Column("display_name", Text),
+    Column("description", Text),
+    Column("capabilities", JSON, nullable=False, server_default="[]"),
     # Derived from the enum rather than restated, because a hand-kept copy of
     # this list is exactly the kind of drift nothing would catch. Legacy roles
     # are excluded: this is the canonical *write* vocabulary, and `0005`
@@ -499,6 +525,18 @@ agent_registry = Table(
 
 # Imported after `investigations` is registered because the job table carries
 # a composite Tenant-safe foreign key to it.
+from .schema_chat import (  # noqa: E402
+    thread_events as thread_events,
+)
+from .schema_chat import (  # noqa: E402
+    visualization_actions as visualization_actions,
+)
+from .schema_chat import (  # noqa: E402
+    visualization_artifacts as visualization_artifacts,
+)
+from .schema_chat import (  # noqa: E402
+    visualization_briefs as visualization_briefs,
+)
 from .schema_jobs import execution_jobs as execution_jobs  # noqa: E402
 
 __all__ = [
@@ -524,6 +562,10 @@ __all__ = [
     "tenant_identity_bindings",
     "tenant_memberships",
     "tenants",
+    "thread_events",
     "users",
+    "visualization_actions",
+    "visualization_artifacts",
+    "visualization_briefs",
     "workspace_groups",
 ]

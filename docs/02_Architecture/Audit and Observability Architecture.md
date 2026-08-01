@@ -57,6 +57,12 @@ run's spend was booked again on every verification replay.
 They must not contain prompts, raw Cube rows, uploaded values, reviewer prose,
 credentials, or hidden reasoning.
 
+Visualization audit follows the same rule: artifact reference, lifecycle,
+pinned model/API version, tokens, cost, latency, safe failure category, and
+public event ID only. It never records the API key, Visualization Brief, C1
+response, or provider body. The public Work Feed is a separate bounded read
+model and is not a second audit authority.
+
 Decisions: [[adr/0002-split-transactional-and-audit-storage]],
 [[adr/0006-metadata-only-audit-ledger]], and
 [[adr/0007-transactional-audit-outbox]].

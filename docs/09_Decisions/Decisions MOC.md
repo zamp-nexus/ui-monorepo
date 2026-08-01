@@ -33,6 +33,11 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0014-connector-data-bypasses-cube]] (superseded by 0016)
 - [[adr/0015-inferred-relations-require-human-confirmation]]
 - [[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]
+- [[adr/0017-linked-investigation-threads]]
+- [[adr/0018-postgres-leased-execution]]
+- [[adr/0019-public-work-feed]]
+- [[adr/0020-thesys-terminal-presentation]]
+- [[adr/0021-visualization-brief-factual-separation]]
 
 ## Governance
 

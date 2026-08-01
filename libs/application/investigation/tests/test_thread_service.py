@@ -52,11 +52,13 @@ class Repository:
         self.investigations: dict[UUID, Investigation] = {}
         self.jobs: dict[UUID, ExecutionJob] = {}
         self.enqueued_events = 0
+        self.feed_events: dict[UUID, list[object]] = {}
         self.commits = 0
 
     async def add_thread(self, thread: InvestigationThread) -> None:
         self.threads[thread.thread_id] = thread
         self.messages[thread.thread_id] = []
+        self.feed_events[thread.thread_id] = []
 
     async def get_thread(
         self, thread_id: UUID, *, for_update: bool = False
@@ -133,6 +135,20 @@ class Repository:
     ) -> Investigation | None:
         return self.investigations.get(investigation_id)
 
+    async def latest_for_thread(
+        self, thread_id: UUID, *, for_update: bool = False
+    ) -> Investigation | None:
+        values = sorted(
+            (
+                value
+                for value in self.investigations.values()
+                if value.thread_id == thread_id
+            ),
+            key=lambda value: value.thread_sequence or 0,
+            reverse=True,
+        )
+        return values[0] if values else None
+
     async def save(
         self, investigation: Investigation, *, expected_version: int
     ) -> None:
@@ -143,6 +159,24 @@ class Repository:
 
     async def enqueue(self, events: list[object]) -> None:
         self.enqueued_events += len(events)
+
+    async def append(self, *, thread_id: UUID, **values: object) -> None:
+        self.feed_events[thread_id].append(values)
+
+    async def append_for_investigation(
+        self, *, investigation_id: UUID, **values: object
+    ) -> None:
+        investigation = self.investigations[investigation_id]
+        assert investigation.thread_id is not None
+        await self.append(thread_id=investigation.thread_id, **values)
+
+    async def events_after(
+        self, thread_id: UUID, *, after: int, limit: int
+    ) -> tuple[object, ...]:
+        return tuple(self.feed_events[thread_id][after : after + limit])
+
+    async def latest_sequence(self, thread_id: UUID) -> int:
+        return len(self.feed_events[thread_id])
 
     async def get_group(
         self, group_id: UUID, *, for_update: bool = False
@@ -167,6 +201,7 @@ class UnitOfWork:
         self.investigations = repository
         self.jobs = repository
         self.outbox = repository
+        self.work_feed = repository
         self.repository = repository
 
     async def __aenter__(self) -> UnitOfWork:

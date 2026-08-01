@@ -14,12 +14,14 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from zentra_application_investigation import InvestigationDetail
+from zentra_application_investigation import InvestigationDetail, VisualizationDetail
 from zentra_domain_agent_execution import ConfidenceOutcome, ValidationOutcome
 from zentra_domain_investigation import (
     ApprovalDecision,
     EvidenceCitation,
     RejectionReason,
+    VisualizationArtifact,
+    VisualizationBriefV1,
 )
 
 
@@ -59,6 +61,68 @@ class InvestigationCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scenario_key: str
+
+
+class VisualizationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    visualization_id: UUID
+    investigation_id: UUID
+    status: str
+    renderer_kind: str
+    model: str | None
+    api_version: str | None
+    c1_response: str | None
+    input_tokens: int
+    output_tokens: int
+    cost_usd: str
+    latency_ms: int
+    failure_category: str | None
+    retry_of_visualization_id: UUID | None
+    fallback_brief: VisualizationBriefV1 | None
+    created_at: datetime
+    updated_at: datetime
+    erased_at: datetime | None
+    erasure_category: str | None
+
+    @classmethod
+    def from_detail(cls, detail: VisualizationDetail) -> VisualizationResponse:
+        artifact: VisualizationArtifact = detail.artifact
+        return cls(
+            visualization_id=artifact.visualization_id,
+            investigation_id=artifact.investigation_id,
+            status=artifact.status.value,
+            renderer_kind=artifact.renderer_kind,
+            model=artifact.model,
+            api_version=artifact.api_version,
+            c1_response=artifact.c1_response,
+            input_tokens=artifact.usage.input_tokens,
+            output_tokens=artifact.usage.output_tokens,
+            cost_usd=str(artifact.usage.cost_usd),
+            latency_ms=artifact.usage.latency_ms,
+            failure_category=artifact.failure_category,
+            retry_of_visualization_id=artifact.retry_of_visualization_id,
+            fallback_brief=detail.fallback_brief,
+            created_at=artifact.created_at,
+            updated_at=artifact.updated_at,
+            erased_at=artifact.erased_at,
+            erasure_category=artifact.erasure_category,
+        )
+
+
+class VisualizationActionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parameters: dict[str, object] = Field(default_factory=dict)
+
+
+class VisualizationActionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    citation_id: UUID | None = None
+    thread_id: UUID | None = None
+    investigation_id: UUID | None = None
 
 
 class ApprovalDecisionRequest(BaseModel):
@@ -308,6 +372,15 @@ class TimelineResponse(BaseModel):
     output_tokens: int | None = None
 
 
+class UsageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    input_tokens: int
+    output_tokens: int
+    total_cost_usd: str
+    latency_ms: int
+
+
 class InvestigationDetailResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -329,6 +402,7 @@ class InvestigationDetailResponse(BaseModel):
     # Whether this caller may erase this Investigation's evidence. Decided
     # by the server for the same reason `can_decide` is.
     can_delete_evidence: bool
+    usage: UsageResponse
 
     @classmethod
     def from_detail(cls, detail: InvestigationDetail) -> InvestigationDetailResponse:
@@ -442,4 +516,10 @@ class InvestigationDetailResponse(BaseModel):
             ],
             audit_delivery=detail.audit_delivery.value,
             can_delete_evidence=detail.can_delete_evidence,
+            usage=UsageResponse(
+                input_tokens=detail.usage.input_tokens,
+                output_tokens=detail.usage.output_tokens,
+                total_cost_usd=str(detail.usage.cost_usd),
+                latency_ms=detail.usage.latency_ms,
+            ),
         )

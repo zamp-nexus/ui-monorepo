@@ -24,6 +24,7 @@ from zentra_domain_agent_execution import (
     reject_legacy_role,
 )
 from zentra_domain_investigation import (
+    AgentEventPayload,
     CitationFilter,
     Claim,
     ClaimKind,
@@ -36,6 +37,7 @@ from zentra_domain_investigation import (
     InvestigationStatus,
     MetricComparison,
     RootCauseState,
+    WorkFeedEventKind,
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
@@ -96,6 +98,11 @@ class UncitableClaimError(RuntimeError):
     """A substantive claim has no validated evidence to cite."""
 
 
+class CancellationRequested(RuntimeError):
+    category = "cancellation_requested"
+    transient = False
+
+
 SYSTEM_TRACE_ID = UUID(int=0)
 SYSTEM_SPAN_ID = UUID(int=0)
 
@@ -103,6 +110,20 @@ SYSTEM_SPAN_ID = UUID(int=0)
 # the outbox deduplicates on that. Deriving the start's id keeps both
 # stable across an at-least-once retry without colliding with each other.
 _STARTED_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000001")
+_CAPABILITY_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000002")
+_HANDOFF_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000003")
+_UPDATE_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000004")
+_CAPABILITY_BY_ROLE = {
+    AgentRole.ORCHESTRATOR: "plan_investigation",
+    AgentRole.SQL_ANALYST: "query_semantic_metrics",
+    AgentRole.EVALUATOR: "validate_evidence",
+    AgentRole.INSIGHT: "draft_finding",
+}
+_PREDECESSOR_BY_ROLE = {
+    AgentRole.SQL_ANALYST: "orchestrator_v1",
+    AgentRole.EVALUATOR: "sql_analyst_v1",
+    AgentRole.INSIGHT: "evaluator_v1",
+}
 
 
 def _optional_str(value: object) -> str | None:
@@ -127,6 +148,16 @@ class PostgresExecutionRecorder:
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
 
+    async def cancellation_checkpoint(
+        self, tenant_id: UUID, investigation_id: UUID
+    ) -> None:
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            job = await unit_of_work.jobs.get_for_investigation(investigation_id)
+        if job is not None and job.cancel_requested_at is not None:
+            raise CancellationRequested("Cancellation was requested")
+
     async def record_started(self, start: AgentExecutionStart) -> None:
         reject_legacy_role(start.role)
         async with self._unit_of_work_factory(
@@ -135,6 +166,64 @@ class PostgresExecutionRecorder:
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
             await unit_of_work.outbox.enqueue([_started_event(start)])
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=start.tenant_id,
+                investigation_id=start.investigation_id,
+                kind=WorkFeedEventKind.AGENT_STARTED,
+                payload=AgentEventPayload(
+                    execution_id=start.execution_id,
+                    agent_id=start.agent_id,
+                    role=start.role.value,
+                    summary=f"{start.role.value.replace('_', ' ').title()} started.",
+                ),
+                occurred_at=start.started_at,
+                event_id=start.execution_id,
+            )
+            capability = _CAPABILITY_BY_ROLE[start.role]
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=start.tenant_id,
+                investigation_id=start.investigation_id,
+                kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
+                payload=AgentEventPayload(
+                    execution_id=start.execution_id,
+                    agent_id=start.agent_id,
+                    role=start.role.value,
+                    capability_id=capability,
+                    summary="A declared capability is in use.",
+                ),
+                occurred_at=start.started_at,
+                event_id=uuid5(_CAPABILITY_NAMESPACE, str(start.execution_id)),
+            )
+            predecessor = _PREDECESSOR_BY_ROLE.get(start.role)
+            if predecessor is not None:
+                await unit_of_work.work_feed.append_for_investigation(
+                    tenant_id=start.tenant_id,
+                    investigation_id=start.investigation_id,
+                    kind=WorkFeedEventKind.AGENT_HANDOFF,
+                    payload=AgentEventPayload(
+                        execution_id=start.execution_id,
+                        agent_id=start.agent_id,
+                        role=start.role.value,
+                        from_agent_id=predecessor,
+                        to_agent_id=start.agent_id,
+                        summary="Responsibility moved to the next governed role.",
+                    ),
+                    occurred_at=start.started_at,
+                    event_id=uuid5(_HANDOFF_NAMESPACE, str(start.execution_id)),
+                )
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=start.tenant_id,
+                investigation_id=start.investigation_id,
+                kind=WorkFeedEventKind.AGENT_PUBLIC_UPDATE,
+                payload=AgentEventPayload(
+                    execution_id=start.execution_id,
+                    agent_id=start.agent_id,
+                    role=start.role.value,
+                    summary="The governed step is running.",
+                ),
+                occurred_at=start.started_at,
+                event_id=uuid5(_UPDATE_NAMESPACE, str(start.execution_id)),
+            )
             await unit_of_work.commit()
 
     async def record(self, execution: AgentExecutionRecord) -> None:
@@ -167,6 +256,27 @@ class PostgresExecutionRecorder:
             # Same transaction as the row itself, so the ledger can never
             # disagree with what was actually persisted.
             await unit_of_work.outbox.enqueue([_audit_event(execution)])
+            await unit_of_work.work_feed.append_for_investigation(
+                tenant_id=execution.tenant_id,
+                investigation_id=execution.investigation_id,
+                kind=WorkFeedEventKind.AGENT_COMPLETED,
+                payload=AgentEventPayload(
+                    execution_id=execution.execution_id,
+                    agent_id=execution.agent_id,
+                    role=execution.role.value,
+                    summary=(
+                        f"{execution.role.value.replace('_', ' ').title()} completed."
+                    ),
+                    provider=_provider_of(execution.usage.model),
+                    model=execution.usage.model,
+                    fallback_count=len(execution.fallbacks),
+                    latency_ms=execution.latency_ms,
+                    input_tokens=execution.usage.input_tokens,
+                    output_tokens=execution.usage.output_tokens,
+                    cost_usd=execution.usage.cost_usd,
+                ),
+                occurred_at=execution.completed_at,
+            )
             await unit_of_work.commit()
 
 

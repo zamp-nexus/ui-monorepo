@@ -37,7 +37,12 @@ Postgres owns transactional product state.
 | `projects` | Projects inside a same-Tenant Group |
 | `investigation_threads` | Project-owned Draft, active, or archived conversations |
 | `thread_messages` | Immutable user and router clarification messages |
+| `thread_events` | Public, discriminated Work Feed payloads ordered by Thread sequence |
 | `investigations` | Lifecycle, result, validation, version |
+| `execution_jobs` | Leased analytical and visualization work, retries, cancellation intent |
+| `visualization_briefs` | Strict factual presentation inputs |
+| `visualization_artifacts` | C1 response, independent usage, retry and erasure state |
+| `visualization_actions` | Opaque server-authorized citation/continuation mappings |
 | `agent_executions` | Future bounded Agent invocations |
 | `human_approvals` | Blocking decision and structured reason |
 | `audit_outbox` | Transactional audit delivery state |
@@ -66,6 +71,13 @@ cascades through the Thread foreign key instead.
 Only one pending Human Approval may exist per Investigation. Investigation
 versions support optimistic concurrency. The outbox records safe payload,
 attempts, dispatch timestamp, and sanitized failure code.
+
+Thread event sequence allocation increments `investigation_threads.next_event_sequence`
+in the same transaction as event insertion; Postgres notification is a wake-up
+hint only. Job claims use `SKIP LOCKED`, time-bounded leases, renewal, expired
+lease recovery, bounded retry, and cooperative cancellation. Visualization
+tables use composite Tenant foreign keys and RLS; erasure clears brief content,
+C1 output, and action mappings transactionally.
 
 Migrations are authoritative; SQLAlchemy Core declarations mirror them.
 

@@ -62,10 +62,19 @@ question.
     `awaiting_approval` with `low_confidence` or `contradiction_unresolved`.
 11. Owner/admin approves to `completed` or rejects with structured reason to
     `rejected`. Exact decision replay is idempotent.
+12. Publication atomically creates the strict Visualization Brief, opaque safe
+    actions, pending artifact, visualization job, and public handoff. Renderer
+    failure never changes the completed Investigation. See
+    [[adr/0020-thesys-terminal-presentation]].
 
 Result rows never enter the audit ledger or travel between Agents. They live in
 `agent_executions.output` and are reachable only through the `artifact://`
 pointer the ledger carries.
+
+HTTP requests commit analytical jobs; Postgres-leased workers run and resume
+them. Cancellation is checked before and after provider boundaries. Public
+progress is projected to the resumable [[Visualization and Work Feed API]], not
+to Thread messages or the audit ledger.
 
 ## Phase 2 change
 

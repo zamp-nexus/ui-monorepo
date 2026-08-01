@@ -112,9 +112,7 @@ class PostgresErasureRepository:
             )
             # Two callers can both find no row; the constraint decides, and
             # the loser reads the winner's rather than raising.
-            .on_conflict_do_nothing(
-                constraint="uq_erasure_operations_request"
-            )
+            .on_conflict_do_nothing(constraint="uq_erasure_operations_request")
         )
         existing = await self._get(investigation_id, category)
         if existing is not None:
@@ -357,9 +355,7 @@ class PostgresErasureRepository:
                     # `jsonb_exists` rather than the `?` operator: `?` is the
                     # driver's own placeholder and does not survive the round
                     # trip.
-                    func.jsonb_exists(
-                        cast(investigations.c.state, JSONB), "finding"
-                    ),
+                    func.jsonb_exists(cast(investigations.c.state, JSONB), "finding"),
                 ),
             ),
             (

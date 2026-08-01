@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -242,6 +242,7 @@ def build_graph(
     fallbacks: tuple[str, ...] = (),
     fail_once_schema: dict[str, Any] | None = None,
     checkpointer: Any | None = None,
+    cancellation_checkpoint: Callable[[UUID, UUID], Awaitable[None]] | None = None,
 ) -> tuple[InvestigationGraph, RecordingRecorder, StubSemanticLayer]:
     model = ScriptedModel(
         recheck_passed=recheck_passed,
@@ -269,8 +270,38 @@ def build_graph(
         recorder=recorder,
         now=lambda: next(clock),
         checkpointer=checkpointer,
+        **(
+            {"cancellation_checkpoint": cancellation_checkpoint}
+            if cancellation_checkpoint is not None
+            else {}
+        ),
     )
     return graph, recorder, layer
+
+
+@pytest.mark.asyncio
+async def test_cancellation_is_checked_before_and_after_every_agent_call() -> None:
+    checks = 0
+
+    async def checkpoint(_: UUID, __: UUID) -> None:
+        nonlocal checks
+        checks += 1
+        if checks == 2:
+            raise RuntimeError("cancelled at safe checkpoint")
+
+    graph, recorder, _ = build_graph(
+        recheck_passed=True, cancellation_checkpoint=checkpoint
+    )
+
+    with pytest.raises(RuntimeError, match="safe checkpoint"):
+        await graph.run(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            question=QUESTION,
+        )
+
+    assert checks == 2
+    assert len(recorder.records) == 1
 
 
 @pytest.mark.asyncio

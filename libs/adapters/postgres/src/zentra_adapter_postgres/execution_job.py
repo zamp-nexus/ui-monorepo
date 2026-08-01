@@ -8,6 +8,7 @@ from sqlalchemy import and_, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_domain_investigation import (
     ExecutionJob,
+    ExecutionJobKind,
     ExecutionJobStatus,
 )
 
@@ -29,6 +30,10 @@ def _job_from_row(row: Any) -> ExecutionJob:
         created_at=row.created_at,
         updated_at=row.updated_at,
         completed_at=row.completed_at,
+        job_kind=ExecutionJobKind(row.job_kind),
+        visualization_id=row.visualization_id,
+        cancel_requested_at=row.cancel_requested_at,
+        cancel_requested_by=row.cancel_requested_by,
     )
 
 
@@ -43,6 +48,10 @@ def _values(job: ExecutionJob) -> dict[str, object]:
         "failure_category": job.failure_category,
         "updated_at": job.updated_at,
         "completed_at": job.completed_at,
+        "job_kind": job.job_kind.value,
+        "visualization_id": job.visualization_id,
+        "cancel_requested_at": job.cancel_requested_at,
+        "cancel_requested_by": job.cancel_requested_by,
     }
 
 
@@ -73,14 +82,13 @@ class PostgresExecutionJobRepository:
             .where(
                 or_(
                     and_(
-                        execution_jobs.c.status
-                        == ExecutionJobStatus.QUEUED.value,
+                        execution_jobs.c.status == ExecutionJobStatus.QUEUED.value,
                         execution_jobs.c.attempts < execution_jobs.c.max_attempts,
                         execution_jobs.c.available_at <= now,
+                        execution_jobs.c.cancel_requested_at.is_(None),
                     ),
                     and_(
-                        execution_jobs.c.status
-                        == ExecutionJobStatus.LEASED.value,
+                        execution_jobs.c.status == ExecutionJobStatus.LEASED.value,
                         execution_jobs.c.lease_expires_at <= now,
                     ),
                 ),
@@ -105,6 +113,21 @@ class PostgresExecutionJobRepository:
         self, job_id: UUID, *, for_update: bool = False
     ) -> ExecutionJob | None:
         statement = select(execution_jobs).where(execution_jobs.c.job_id == job_id)
+        if for_update:
+            statement = statement.with_for_update()
+        row = (await self._connection.execute(statement)).one_or_none()
+        return _job_from_row(row) if row is not None else None
+
+    async def get_for_investigation(
+        self,
+        investigation_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ExecutionJob | None:
+        statement = select(execution_jobs).where(
+            execution_jobs.c.investigation_id == investigation_id,
+            execution_jobs.c.job_kind == ExecutionJobKind.INVESTIGATION.value,
+        )
         if for_update:
             statement = statement.with_for_update()
         row = (await self._connection.execute(statement)).one_or_none()

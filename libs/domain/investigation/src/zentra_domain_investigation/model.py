@@ -243,6 +243,8 @@ class Investigation:
     thread_id: UUID | None = None
     thread_sequence: int | None = None
     initiating_message_id: UUID | None = None
+    parent_investigation_id: UUID | None = None
+    retry_of_investigation_id: UUID | None = None
     finished_at: datetime | None = None
     finding: Finding | None = None
     outcome: OutcomeSignal | None = None
@@ -268,6 +270,8 @@ class Investigation:
         thread_id: UUID | None = None,
         thread_sequence: int | None = None,
         initiating_message_id: UUID | None = None,
+        parent_investigation_id: UUID | None = None,
+        retry_of_investigation_id: UUID | None = None,
     ) -> Investigation:
         thread_link = (thread_id, thread_sequence, initiating_message_id)
         if any(value is not None for value in thread_link) and (
@@ -292,6 +296,8 @@ class Investigation:
             thread_id=thread_id,
             thread_sequence=thread_sequence,
             initiating_message_id=initiating_message_id,
+            parent_investigation_id=parent_investigation_id,
+            retry_of_investigation_id=retry_of_investigation_id,
         )
         investigation._record("investigation.created", now)
         return investigation

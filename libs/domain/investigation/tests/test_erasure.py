@@ -48,9 +48,10 @@ def test_a_completed_erasure_must_say_when() -> None:
     with pytest.raises(ErasureError, match="when it completed"):
         operation(progress=ErasureProgress.COMPLETED)
 
-    assert operation(
-        progress=ErasureProgress.COMPLETED, completed_at=NOW
-    ).completed_at == NOW
+    assert (
+        operation(progress=ErasureProgress.COMPLETED, completed_at=NOW).completed_at
+        == NOW
+    )
 
 
 def test_only_a_completed_erasure_may_claim_a_completion_time() -> None:
@@ -62,13 +63,16 @@ def test_a_failure_must_record_a_category() -> None:
     with pytest.raises(ErasureError, match="must record why"):
         operation(progress=ErasureProgress.FAILED)
 
-    assert operation(
-        progress=ErasureProgress.FAILED, failure_code="storage_unavailable"
-    ).failure_code == "storage_unavailable"
+    assert (
+        operation(
+            progress=ErasureProgress.FAILED, failure_code="storage_unavailable"
+        ).failure_code
+        == "storage_unavailable"
+    )
 
 
 def test_a_partial_failure_is_never_settled() -> None:
-    """"We deleted some of it" is the one answer this must never give. A failed
+    """ "We deleted some of it" is the one answer this must never give. A failed
     operation is retryable, and treating it as finished is how content survives
     a deletion that reported success."""
     failed = operation(progress=ErasureProgress.FAILED, failure_code="timeout")

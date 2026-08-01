@@ -554,8 +554,7 @@ def structured_draft() -> DraftFinding:
 
 
 @pytest.mark.asyncio
-async def test_a_drafted_investigation_stores_the_draft_with_its_state_change(
-) -> None:
+async def test_a_drafted_investigation_stores_the_draft_with_its_state_change() -> None:
     """Committed alongside the Investigation's own change. A reader must never
     see a completed evaluation whose draft is missing."""
     unit_of_work = UnitOfWork()
@@ -569,8 +568,7 @@ async def test_a_drafted_investigation_stores_the_draft_with_its_state_change(
 
 
 @pytest.mark.asyncio
-async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight(
-) -> None:
+async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight() -> None:
     """Insight is a paid model call, and regenerating narrative per read would
     let two readers of the same Investigation see different conclusions."""
     unit_of_work = UnitOfWork()

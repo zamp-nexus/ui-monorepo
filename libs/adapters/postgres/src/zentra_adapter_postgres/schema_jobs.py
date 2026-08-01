@@ -8,7 +8,6 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
-    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -31,6 +30,8 @@ execution_jobs = Table(
         nullable=False,
     ),
     Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("job_kind", String(24), nullable=False, server_default="investigation"),
+    Column("visualization_id", UUID(as_uuid=True)),
     Column("status", String(16), nullable=False, server_default="queued"),
     Column("attempts", Integer, nullable=False, server_default="0"),
     Column("max_attempts", Integer, nullable=False, server_default="3"),
@@ -43,6 +44,8 @@ execution_jobs = Table(
     Column("lease_owner", String(128)),
     Column("lease_expires_at", TIMESTAMP(timezone=True)),
     Column("failure_category", String(64)),
+    Column("cancel_requested_at", TIMESTAMP(timezone=True)),
+    Column("cancel_requested_by", UUID(as_uuid=True)),
     Column(
         "created_at",
         TIMESTAMP(timezone=True),
@@ -62,10 +65,14 @@ execution_jobs = Table(
         name="fk_execution_jobs_investigation_tenant",
         ondelete="CASCADE",
     ),
-    UniqueConstraint(
-        "tenant_id",
-        "investigation_id",
-        name="uq_execution_jobs_investigation",
+    CheckConstraint(
+        "job_kind IN ('investigation', 'visualization')",
+        name="ck_execution_jobs_kind",
+    ),
+    CheckConstraint(
+        "(job_kind = 'investigation' AND visualization_id IS NULL) OR "
+        "(job_kind = 'visualization' AND visualization_id IS NOT NULL)",
+        name="ck_execution_jobs_target",
     ),
     CheckConstraint(
         "status IN ('queued', 'leased', 'completed', 'failed', 'cancelled')",
@@ -81,6 +88,20 @@ execution_jobs = Table(
         "(status <> 'leased' AND lease_owner IS NULL AND lease_expires_at IS NULL)",
         name="ck_execution_jobs_lease",
     ),
+)
+Index(
+    "uq_execution_jobs_investigation",
+    execution_jobs.c.tenant_id,
+    execution_jobs.c.investigation_id,
+    unique=True,
+    postgresql_where=execution_jobs.c.job_kind == "investigation",
+)
+Index(
+    "uq_execution_jobs_visualization",
+    execution_jobs.c.tenant_id,
+    execution_jobs.c.visualization_id,
+    unique=True,
+    postgresql_where=execution_jobs.c.job_kind == "visualization",
 )
 Index(
     "ix_execution_jobs_claim",

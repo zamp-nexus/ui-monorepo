@@ -16,9 +16,11 @@ from .dto import (
     ScenarioUnavailableError,
     TimelineEntry,
     UnsupportedScenarioError,
+    UsageSummary,
 )
 from .execution_worker import (
     DurableInvestigationExecutor,
+    DurableVisualizationExecutor,
     ExecutionFailure,
     ExecutionJobWorker,
     classify_execution_failure,
@@ -38,6 +40,7 @@ from .ports import (
     InvestigationUnitOfWork,
     InvestigationUnitOfWorkFactory,
     TenantPolicyRepository,
+    VisualizationRepository,
 )
 from .service import InvestigationService
 from .thread_dto import (
@@ -47,6 +50,7 @@ from .thread_dto import (
     ThreadCursor,
     ThreadCursorError,
     ThreadDetail,
+    ThreadInvestigationSummary,
     ThreadMessageDetail,
     ThreadNotFoundError,
     ThreadPage,
@@ -56,6 +60,11 @@ from .thread_dto import (
 from .thread_ports import ThreadRepository, ThreadUnitOfWork, ThreadUnitOfWorkFactory
 from .thread_routing import deterministic_thread_title, route_governed_question
 from .thread_service import ThreadService
+from .visualization_service import (
+    VisualizationActionResult,
+    VisualizationDetail,
+    VisualizationService,
+)
 from .workspace_dto import (
     GroupDetail,
     OrganizationConflictError,
@@ -88,6 +97,7 @@ __all__ = [
     "ErasureRepository",
     "EvidenceCitationRepository",
     "DurableInvestigationExecutor",
+    "DurableVisualizationExecutor",
     "ExecutionFailure",
     "ExecutionJobRepository",
     "ExecutionJobWorker",
@@ -114,6 +124,7 @@ __all__ = [
     "ThreadCursorError",
     "ThreadDetail",
     "ThreadMessageDetail",
+    "ThreadInvestigationSummary",
     "ThreadNotFoundError",
     "ThreadPage",
     "ThreadRepository",
@@ -123,6 +134,11 @@ __all__ = [
     "ThreadUnitOfWork",
     "ThreadUnitOfWorkFactory",
     "UnsupportedScenarioError",
+    "UsageSummary",
+    "VisualizationDetail",
+    "VisualizationActionResult",
+    "VisualizationRepository",
+    "VisualizationService",
     "deterministic_thread_title",
     "route_governed_question",
     "classify_execution_failure",

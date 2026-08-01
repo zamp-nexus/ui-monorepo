@@ -7,7 +7,18 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from zentra_domain_investigation import ThreadMessageKind, ThreadStatus
+from zentra_domain_agent_execution import OutcomeSignal
+from zentra_domain_investigation import (
+    DraftFinding,
+    EvidenceCitation,
+    Finding,
+    HumanApproval,
+    InvestigationStatus,
+    ThreadMessageKind,
+    ThreadStatus,
+)
+
+from .dto import AuditDelivery, UsageSummary
 
 
 class ThreadNotFoundError(LookupError):
@@ -95,6 +106,30 @@ class ThreadSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class ThreadInvestigationSummary:
+    investigation_id: UUID
+    sequence: int
+    status: InvestigationStatus
+    parent_investigation_id: UUID | None
+    retry_of_investigation_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
+    question: str = ""
+    scenario_key: str = ""
+    version: int = 0
+    evaluation_attempts: int = 0
+    finished_at: datetime | None = None
+    finding: Finding | None = None
+    draft_finding: DraftFinding | None = None
+    outcome: OutcomeSignal | None = None
+    approval: HumanApproval | None = None
+    citations: tuple[EvidenceCitation, ...] = ()
+    audit_delivery: AuditDelivery = AuditDelivery.COMPLETE
+    usage: UsageSummary = UsageSummary()
+    can_decide_approval: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ThreadDetail:
     thread_id: UUID
     project_id: UUID
@@ -110,6 +145,11 @@ class ThreadDetail:
     can_archive: bool
     can_restore: bool
     can_delete: bool
+    investigations: tuple[ThreadInvestigationSummary, ...] = ()
+    event_cursor: int = 0
+    can_cancel: bool = False
+    can_retry: bool = False
+    usage: UsageSummary = UsageSummary()
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
@@ -68,6 +69,14 @@ class Role(StrEnum):
 class AuditDelivery(StrEnum):
     COMPLETE = "complete"
     PENDING = "pending"
+
+
+@dataclass(frozen=True, slots=True)
+class UsageSummary:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: Decimal = Decimal("0")
+    latency_ms: int = 0
 
 
 class UnsupportedScenarioError(ValueError):
@@ -224,3 +233,4 @@ class InvestigationDetail:
     # its own role would be a second authorisation rule that can disagree
     # with the one that actually applies.
     can_delete_evidence: bool = False
+    usage: UsageSummary = UsageSummary()

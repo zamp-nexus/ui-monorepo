@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str | None = None
     anthropic_api_key: str | None = Field(default=None, repr=False)
     openai_api_key: str | None = Field(default=None, repr=False)
+    thesys_api_key: str | None = Field(default=None, repr=False)
+    thesys_model: str = "c1/anthropic/claude-sonnet-4/v-20251230"
+    thesys_input_price_per_million: float = Field(default=3.0, ge=0)
+    thesys_output_price_per_million: float = Field(default=15.0, ge=0)
     gemini_api_key: str | None = Field(default=None, repr=False)
     nvidia_api_key: str | None = Field(default=None, repr=False)
     groq_api_key: str | None = Field(default=None, repr=False)

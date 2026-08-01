@@ -31,6 +31,10 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "projects",
         "investigation_threads",
         "thread_messages",
+        "thread_events",
         "execution_jobs",
+        "visualization_briefs",
+        "visualization_artifacts",
+        "visualization_actions",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"

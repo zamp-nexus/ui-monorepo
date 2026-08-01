@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -99,3 +99,25 @@ def test_expired_lease_can_be_reclaimed_but_live_lease_cannot() -> None:
 
     assert job.lease_owner == "worker-b"
     assert job.attempts == 1
+
+
+def test_queued_cancellation_is_immediate_and_idempotent() -> None:
+    job = queued_job()
+    actor_id = uuid4()
+
+    job.request_cancel(actor_id=actor_id, now=NOW)
+    job.request_cancel(actor_id=uuid4(), now=NOW + timedelta(seconds=1))
+
+    assert job.status is ExecutionJobStatus.CANCELLED
+    assert job.cancel_requested_by == actor_id
+    assert job.completed_at == NOW
+
+
+def test_running_cancellation_waits_for_worker_checkpoint() -> None:
+    job = queued_job()
+    job.claim(worker_id="worker-a", now=NOW, lease_for=timedelta(seconds=30))
+    job.request_cancel(actor_id=uuid4(), now=NOW + timedelta(seconds=1))
+
+    assert job.status is ExecutionJobStatus.LEASED
+    job.cancel(worker_id="worker-a", now=NOW + timedelta(seconds=2))
+    assert job.status is ExecutionJobStatus.CANCELLED
