@@ -990,4 +990,15 @@ describe('App', () => {
 
     expect(screen.queryByRole('button', { name: /delete evidence/i })).toBeNull();
   });
+
+  it('reaches the Sequence page from the navigation rail', async () => {
+    mockApi();
+    signedIn();
+
+    renderApp('/sequences');
+
+    expect(await screen.findByRole('heading', { name: /^sequences$/i })).toBeTruthy();
+    const link = screen.getByRole('link', { name: /sequences/i });
+    expect(link.getAttribute('href')).toBe('/sequences');
+  });
 });
