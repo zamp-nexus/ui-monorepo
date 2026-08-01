@@ -108,9 +108,25 @@ cross-vendor Evaluator for the premium tier, recovery for a pipeline interrupted
 mid-run, generalized scheduling, production application deployment, and a release
 process.
 
-Within the Connector specifically: Agent Join Graph enforcement, connector Audit
-Entries and tracing, and the TPC-H accuracy harness are outstanding. See
-`ch-nexus/ui-monorepo#2` and its child tickets.
+Within the Connector specifically: connector Audit Entries and tracing remain
+outstanding (`ch-nexus/ui-monorepo#14`). Agent Join Graph enforcement as
+originally written is **superseded** — [[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]
+made Cube the only data-reaching path, so the direct-ClickHouse port
+[[adr/0014-connector-data-bypasses-cube]] described was never built and will not
+be; the Join Graph now governs access through the relation fingerprint that keys
+Cube's tenant scoping. See `ch-nexus/ui-monorepo#2` and its child tickets.
+
+Relation inference accuracy is now **measured rather than asserted**. A
+deterministic TPC-H subset seeds eight tables with nine documented foreign keys,
+and `nx run evals:connector-accuracy` scores proposals against them, failing on
+regression. Baseline: **9 of 9 recovered, recall 1.00, precision 0.69** — details
+and what the four spurious proposals actually are in [[Source Catalog]].
+
+A harvest also now reports what inference did *not* examine, grouped by reason,
+and states that only single-field joins are considered. Without that an empty
+proposal list reads as "your data has no relationships" when it may mean almost
+nothing was eligible to be examined. Source deletion can be previewed before it
+happens, including the confirmed Relations it would destroy in *other* sources.
 
 Postgres persistence **is** now implemented (`ch-nexus/ui-monorepo#33`).
 Migrations `0014_data_sources` and `0015_connector_catalog` create tenant-scoped
