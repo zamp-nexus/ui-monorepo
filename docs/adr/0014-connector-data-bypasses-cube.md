@@ -1,5 +1,5 @@
 ---
-id: adr-0012
+id: adr-0014
 title: Connector-sourced data bypasses Cube
 type: adr
 status: accepted

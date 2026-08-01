@@ -50,9 +50,9 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   Versions, Field Profiles bounded by explicit query budgets, and Relations
   inferred from name affinity, type compatibility, and value overlap measured at
   the source. Confidence is bounded by a sample-size and a cardinality ceiling
-  with the binding ceiling recorded ([[adr/0013-inferred-relations-require-human-confirmation]]).
+  with the binding ceiling recorded ([[adr/0015-inferred-relations-require-human-confirmation]]).
   Only human-confirmed Relations form the Join Graph. Connector data bypasses
-  Cube ([[adr/0012-connector-data-bypasses-cube]]). CSV and Parquet uploads land
+  Cube ([[adr/0014-connector-data-bypasses-cube]]). CSV and Parquet uploads land
   as Data Sources in a database separate from the audit ledger, which is what
   makes cross-source relation inference possible.
 - Local Docker environment and managed Neon/ClickHouse Terraform definitions.

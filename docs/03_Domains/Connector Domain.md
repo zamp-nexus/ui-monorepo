@@ -17,8 +17,8 @@ related:
   - "[[Connector API]]"
   - "[[Source Catalog]]"
   - "[[Semantic Modeling]]"
-  - "[[adr/0012-connector-data-bypasses-cube]]"
-  - "[[adr/0013-inferred-relations-require-human-confirmation]]"
+  - "[[adr/0014-connector-data-bypasses-cube]]"
+  - "[[adr/0015-inferred-relations-require-human-confirmation]]"
 repo_path: libs/domain/connector
 code_refs:
   - libs/domain/connector/CONTEXT.md
@@ -82,7 +82,7 @@ proposal is not more confident.
 
 Only a human-confirmed Relation enters the **Join Graph**, and only the Join
 Graph is visible to agents — see
-[[adr/0013-inferred-relations-require-human-confirmation]]. A wrong join does not
+[[adr/0015-inferred-relations-require-human-confirmation]]. A wrong join does not
 fail loudly; it produces a confident, well-cited, wrong Finding.
 
 ```

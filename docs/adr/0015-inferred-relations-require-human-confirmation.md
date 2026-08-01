@@ -1,5 +1,5 @@
 ---
-id: adr-0013
+id: adr-0015
 title: Inferred Relations require human confirmation
 type: adr
 status: accepted
