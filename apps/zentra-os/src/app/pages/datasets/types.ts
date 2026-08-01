@@ -25,6 +25,8 @@ export interface CatalogField {
   readonly nullable: boolean;
   readonly position: number;
   readonly profile?: FieldProfile | null;
+  /** Whether the agent system may see this field. Visible unless toggled off. */
+  readonly agent_visible: boolean;
 }
 
 export interface CatalogTable {
@@ -35,6 +37,18 @@ export interface CatalogTable {
   readonly estimated_rows?: number | null;
   readonly size_bytes?: number | null;
   readonly fields?: readonly CatalogField[];
+  readonly agent_visible: boolean;
+}
+
+/** A table/field agent-access decision, as the toggle endpoints return it. */
+export interface AgentAccessResponse {
+  readonly override_id: string;
+  readonly data_source_id: string;
+  readonly table_name: string;
+  readonly field_name?: string | null;
+  readonly agent_visible: boolean;
+  readonly decided_by: string;
+  readonly decided_at: string;
 }
 
 export interface UnreadableTable {

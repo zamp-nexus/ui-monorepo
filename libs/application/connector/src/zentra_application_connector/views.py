@@ -7,9 +7,14 @@ redaction has exactly one implementation to audit.
 
 from __future__ import annotations
 
-from zentra_domain_connector import DataSource, HarvestRun, Relation
+from zentra_domain_connector import (
+    CatalogAccessOverride,
+    DataSource,
+    HarvestRun,
+    Relation,
+)
 
-from .dto import HarvestStatus, RelationView, SourceSummary
+from .dto import AgentAccessView, HarvestStatus, RelationView, SourceSummary
 
 
 def to_summary(source: DataSource) -> SourceSummary:
@@ -59,6 +64,18 @@ def to_status(
         failure_code=run.failure_code,
         failure_message=run.failure_message,
         unreadable=unreadable,
+    )
+
+
+def to_access_view(override: CatalogAccessOverride) -> AgentAccessView:
+    return AgentAccessView(
+        override_id=override.override_id,
+        data_source_id=override.data_source_id,
+        table_name=override.table_name,
+        field_name=override.field_name,
+        agent_visible=override.agent_visible,
+        decided_by=override.decided_by,
+        decided_at=override.decided_at,
     )
 
 

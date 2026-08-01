@@ -24,7 +24,9 @@ code_refs:
   - libs/domain/connector/CONTEXT.md
   - libs/domain/connector/src/zentra_domain_connector/relation.py
   - libs/domain/connector/src/zentra_domain_connector/confidence.py
+  - libs/domain/connector/src/zentra_domain_connector/access.py
   - libs/application/connector/src/zentra_application_connector/service.py
+  - libs/application/connector/src/zentra_application_connector/agent_access.py
 ---
 
 # Connector Domain
@@ -104,6 +106,28 @@ re-confirms.
 
 Published Findings stay pinned to the Catalog Version they used, so Investigation
 Replay keeps explaining the claim that was actually made.
+
+## Agent access
+
+Every harvested table and field is visible to agents by default. A Tenant
+owner/admin may record a **Catalog Access Override** — the same governance
+weight as confirming a Relation — to hide one table, or one field within it,
+from the agent system without touching the Datasets browsing UI. Absence of
+an override always means visible; a table override overrides any stale
+field-level override underneath it, so hiding a table cannot be reopened one
+column at a time.
+
+Overrides are pinned to `table_name`/`field_name` rather than to a Catalog
+Version or a field id, since both are reassigned on every re-harvest — a
+decision made once survives re-harvesting the same table. They live in their
+own mutable table (`catalog_agent_access`), the same reasoning that already
+keeps Relations out of the immutable Catalog Version payload.
+
+This governs the Datasets UI today and is the seam any future Connector-
+catalog-reading Agent must call before showing a table or field. The
+currently implemented SQL Analyst does not read this catalog — it reaches
+governed metrics through Cube instead — so this override does not yet
+restrict it.
 
 ## Boundary
 

@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from zentra_domain_connector import (
+    CatalogAccessOverride,
     CatalogVersion,
     ConnectionCheck,
     ConnectionFailure,
@@ -318,6 +319,26 @@ class FakeRelationRepository:
             for r in self.items.values()
             if r.tenant_id == tenant_id
             and data_source_id in (r.left_data_source_id, r.right_data_source_id)
+        ]
+
+
+class FakeAgentAccessRepository:
+    """Upserts by (data_source_id, table_name, field_name), like the real one."""
+
+    def __init__(self) -> None:
+        self.items: dict[tuple[UUID, str, str | None], CatalogAccessOverride] = {}
+
+    async def upsert(self, override: CatalogAccessOverride) -> None:
+        key = (override.data_source_id, override.table_name, override.field_name)
+        self.items[key] = override
+
+    async def list_for_source(
+        self, data_source_id: UUID, *, tenant_id: UUID
+    ) -> Sequence[CatalogAccessOverride]:
+        return [
+            o
+            for o in self.items.values()
+            if o.data_source_id == data_source_id and o.tenant_id == tenant_id
         ]
 
 
