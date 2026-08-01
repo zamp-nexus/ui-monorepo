@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 priority: critical
 tags: [zentraos, index, engineering]
@@ -55,8 +55,9 @@ judgment, and immutable audit trail fit together.
 Phase 1 implements two governed scenarios, model-backed Orchestrator, SQL
 Analyst, and Evaluator roles, confidence-bounded publication, Human Approval,
 and ClickHouse-backed Replay. [[01_Overview/Phase 2 - Insight Auditor and Replay]]
-is in progress; generalized data/questions, scheduling, and production
-deployment remain outside the current boundary.
+is in progress. [[01_Overview/Phase 3 - Governed Bring Your Own Data]] is an
+accepted, unimplemented target for CSV/Parquet analysis and one assisted
+PostgreSQL connection; scheduling and general deployment remain outside current.
 
 Source of truth: [root README](../../README.md) and
 [context map](../../CONTEXT-MAP.md).

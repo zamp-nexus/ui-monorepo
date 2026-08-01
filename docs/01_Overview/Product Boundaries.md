@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-01
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: critical
@@ -35,6 +35,10 @@ Phase 2 is now defined but incomplete. It adds an independent Insight Agent,
 resolvable Evidence Citations, deletion Tombstones, and external Replay
 comprehension. See [[Phase 2 - Insight Auditor and Replay]].
 
+Phase 3 is accepted but unimplemented. It generalizes the trust path to related
+CSV/Parquet uploads and one assisted PostgreSQL Data Connection. See
+[[Phase 3 - Governed Bring Your Own Data]].
+
 ## Current users
 
 Users participate through a Tenant Membership:
@@ -50,6 +54,9 @@ Users participate through a Tenant Membership:
 - Resolvable evidence artifacts and deletion Tombstones.
 - Investigation listing, streaming, full replay, or cancellation APIs.
 - Production deployment automation and cloud operational sign-off.
+
+These are current implementation exclusions, not roadmap exclusions. Phase 3
+owns the planned uploaded-data and first-connector subset.
 
 ## Product promises
 

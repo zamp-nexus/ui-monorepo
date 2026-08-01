@@ -7,7 +7,7 @@ owner: unassigned
 source: repository
 created: 2026-07-29
 updated: 2026-08-01
-reviewed: 2026-07-30
+reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: high
@@ -69,6 +69,12 @@ would not be uncoached. Certification is gated on it. See
 [[Phase 2 - Insight Auditor and Replay]] and
 [[adr/0011-complete-phase-2-as-insight-auditor-and-replay]].
 
+Phase 3 — Governed Bring Your Own Data — is **accepted and unimplemented**. It
+adds self-service related CSV/Parquet analysis and one assisted PostgreSQL Data
+Connection without replacing Phase 2's Finding, citation, publication, Replay,
+or deletion contracts. See [[Phase 3 - Governed Bring Your Own Data]] and
+[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]].
+
 ## Configured but not operationally signed off
 
 Clerk, Neon, ClickHouse Cloud, Langfuse, E2B, and every model provider
@@ -82,11 +88,10 @@ provider and its independence grade drops to `NONE`.
 
 ## Not implemented
 
-The Insight Agent, resolvable claim-level Evidence Citations, evidence-deletion
-Tombstones, the Statistician and later Agents, the cost-ceiling circuit breaker,
-a cross-vendor Evaluator for the premium tier, recovery for a pipeline
-interrupted mid-run, generalized scheduling, arbitrary datasets/questions,
-production application deployment, and a release process.
+The Statistician and later Agents, the cost-ceiling circuit breaker, a cross-
+vendor Evaluator for the premium tier, recovery for a pipeline interrupted
+mid-run, generalized scheduling, arbitrary datasets/questions, production
+application deployment, and a release process.
 
 ## Verification caveat
 
