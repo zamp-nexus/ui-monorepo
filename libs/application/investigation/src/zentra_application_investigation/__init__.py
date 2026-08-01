@@ -35,20 +35,21 @@ from .ports import (
 from .service import InvestigationService
 from .workspace_dto import (
     GroupDetail,
+    OrganizationConflictError,
+    OrganizationCursor,
+    OrganizationCursorError,
+    OrganizationNameConflictError,
+    OrganizationNotFoundError,
+    OrganizationPage,
+    OrganizationSlice,
     ProjectDetail,
-    WorkspaceConflictError,
-    WorkspaceCursor,
-    WorkspaceCursorError,
-    WorkspaceNameConflictError,
-    WorkspaceNotFoundError,
-    WorkspacePage,
 )
 from .workspace_ports import (
-    WorkspaceRepository,
-    WorkspaceUnitOfWork,
-    WorkspaceUnitOfWorkFactory,
+    OrganizationRepository,
+    OrganizationUnitOfWork,
+    OrganizationUnitOfWorkFactory,
 )
-from .workspace_service import WorkspaceService
+from .workspace_service import OrganizationService
 
 __all__ = [
     "SCENARIOS",
@@ -82,14 +83,15 @@ __all__ = [
     "UnsupportedScenarioError",
     "GroupDetail",
     "ProjectDetail",
-    "WorkspaceConflictError",
-    "WorkspaceCursor",
-    "WorkspaceCursorError",
-    "WorkspaceNameConflictError",
-    "WorkspaceNotFoundError",
-    "WorkspacePage",
-    "WorkspaceRepository",
-    "WorkspaceService",
-    "WorkspaceUnitOfWork",
-    "WorkspaceUnitOfWorkFactory",
+    "OrganizationConflictError",
+    "OrganizationCursor",
+    "OrganizationCursorError",
+    "OrganizationNameConflictError",
+    "OrganizationNotFoundError",
+    "OrganizationPage",
+    "OrganizationSlice",
+    "OrganizationRepository",
+    "OrganizationService",
+    "OrganizationUnitOfWork",
+    "OrganizationUnitOfWorkFactory",
 ]

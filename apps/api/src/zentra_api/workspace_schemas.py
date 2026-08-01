@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from zentra_application_investigation import GroupDetail, ProjectDetail
 
 
-class WorkspaceNameRequest(BaseModel):
+class OrganizationNameRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={"examples": [{"name": "Finance Operations"}]},
@@ -63,6 +63,7 @@ class ProjectResponse(BaseModel):
                     "name": "Monthly Forecast",
                     "created_at": "2026-08-01T09:00:00Z",
                     "updated_at": "2026-08-01T09:00:00Z",
+                    "latest_activity_at": "2026-08-01T09:00:00Z",
                     "archived_at": None,
                     "can_manage": True,
                 }
@@ -75,6 +76,7 @@ class ProjectResponse(BaseModel):
     name: str
     created_at: datetime
     updated_at: datetime
+    latest_activity_at: datetime
     archived_at: datetime | None
     can_manage: bool
 
@@ -86,6 +88,7 @@ class ProjectResponse(BaseModel):
             name=detail.name,
             created_at=detail.created_at,
             updated_at=detail.updated_at,
+            latest_activity_at=detail.latest_activity_at,
             archived_at=detail.archived_at,
             can_manage=detail.can_manage,
         )

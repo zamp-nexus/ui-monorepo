@@ -37,7 +37,9 @@ permissions. Every identifier is resolved under the authenticated Tenant.
 | POST | `/v1/projects/{project_id}/archive` | Archive a Project | owner/admin |
 | POST | `/v1/projects/{project_id}/restore` | Restore a Project | owner/admin |
 
-Lists use activity-descending stable ordering and return `next_cursor`. The
+Lists use bounded keyset queries and return `next_cursor`. Groups are ordered by
+their metadata activity. Projects are ordered by `latest_activity_at`, which can
+be advanced independently when later Thread or Investigation work occurs. The
 default page size is 50 and the maximum is 100. Archived resources are omitted
 unless `include_archived=true`, but remain directly readable.
 

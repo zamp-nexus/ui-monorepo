@@ -7,42 +7,42 @@ from datetime import datetime
 from uuid import UUID
 
 
-class WorkspaceNotFoundError(LookupError):
+class OrganizationNotFoundError(LookupError):
     pass
 
 
-class WorkspaceConflictError(RuntimeError):
+class OrganizationConflictError(RuntimeError):
     pass
 
 
-class WorkspaceNameConflictError(WorkspaceConflictError):
+class OrganizationNameConflictError(OrganizationConflictError):
     pass
 
 
-class WorkspaceCursorError(ValueError):
+class OrganizationCursorError(ValueError):
     pass
 
 
 @dataclass(frozen=True, slots=True)
-class WorkspaceCursor:
-    updated_at: datetime
+class OrganizationCursor:
+    sort_at: datetime
     resource_id: UUID
 
     def encode(self) -> str:
         payload = json.dumps(
-            {"updated_at": self.updated_at.isoformat(), "id": str(self.resource_id)},
+            {"sort_at": self.sort_at.isoformat(), "id": str(self.resource_id)},
             separators=(",", ":"),
             sort_keys=True,
         ).encode()
         return base64.urlsafe_b64encode(payload).rstrip(b"=").decode()
 
     @classmethod
-    def decode(cls, value: str) -> WorkspaceCursor:
+    def decode(cls, value: str) -> OrganizationCursor:
         try:
             padded = value + "=" * (-len(value) % 4)
             payload = json.loads(base64.urlsafe_b64decode(padded).decode())
             return cls(
-                updated_at=datetime.fromisoformat(payload["updated_at"]),
+                sort_at=datetime.fromisoformat(payload["sort_at"]),
                 resource_id=UUID(payload["id"]),
             )
         except (
@@ -52,7 +52,7 @@ class WorkspaceCursor:
             UnicodeDecodeError,
             json.JSONDecodeError,
         ) as error:
-            raise WorkspaceCursorError("The workspace cursor is invalid") from error
+            raise OrganizationCursorError("The workspace cursor is invalid") from error
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,11 +72,18 @@ class ProjectDetail:
     name: str
     created_at: datetime
     updated_at: datetime
+    latest_activity_at: datetime
     archived_at: datetime | None
     can_manage: bool
 
 
 @dataclass(frozen=True, slots=True)
-class WorkspacePage[T]:
+class OrganizationPage[T]:
     items: tuple[T, ...]
     next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OrganizationSlice[T]:
+    items: tuple[T, ...]
+    next_cursor: OrganizationCursor | None

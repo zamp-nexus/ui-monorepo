@@ -5,7 +5,6 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
-    String,
     Table,
     Text,
     UniqueConstraint,
@@ -31,7 +30,7 @@ workspace_groups = Table(
         nullable=False,
     ),
     Column("name", Text, nullable=False),
-    Column("normalized_name", String(100), nullable=False),
+    Column("normalized_name", Text, nullable=False),
     Column(
         "created_at",
         TIMESTAMP(timezone=True),
@@ -64,7 +63,7 @@ Index(
     "ix_workspace_groups_tenant_activity",
     workspace_groups.c.tenant_id,
     workspace_groups.c.updated_at.desc(),
-    workspace_groups.c.group_id,
+    workspace_groups.c.group_id.desc(),
 )
 
 
@@ -85,7 +84,7 @@ projects = Table(
     ),
     Column("group_id", UUID(as_uuid=True), nullable=False),
     Column("name", Text, nullable=False),
-    Column("normalized_name", String(100), nullable=False),
+    Column("normalized_name", Text, nullable=False),
     Column(
         "created_at",
         TIMESTAMP(timezone=True),
@@ -94,6 +93,12 @@ projects = Table(
     ),
     Column(
         "updated_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column(
+        "latest_activity_at",
         TIMESTAMP(timezone=True),
         nullable=False,
         server_default=text("now()"),
@@ -125,6 +130,6 @@ Index(
     "ix_projects_group_activity",
     projects.c.tenant_id,
     projects.c.group_id,
-    projects.c.updated_at.desc(),
-    projects.c.project_id,
+    projects.c.latest_activity_at.desc(),
+    projects.c.project_id.desc(),
 )
