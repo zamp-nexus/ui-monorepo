@@ -2,7 +2,7 @@
 id: adr-0015
 title: Inferred Relations require human confirmation
 type: adr
-status: accepted
+status: active
 owner: unassigned
 source: repository
 created: 2026-08-01
