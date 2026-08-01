@@ -19,12 +19,14 @@ from zentra_domain_investigation import (
     EvidenceCitation,
     EvidenceReference,
     ExecutionJob,
+    ExecutionJobKind,
     Finding,
     HumanApproval,
     Investigation,
     MetricComparison,
     RejectionReason,
     RootCauseState,
+    WorkFeedEventKind,
 )
 
 from zentra_application_investigation import (
@@ -699,6 +701,116 @@ async def test_all_four_conditions_passing_publishes_without_a_human() -> None:
 
     assert detail.status == "completed"
     assert detail.pending_approval is None
+
+
+class WorkFeed:
+    """Records what would have gone to the Work Feed, without a real store."""
+
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    async def append_for_investigation(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        kind: WorkFeedEventKind,
+        payload: object,
+        occurred_at: datetime,
+        event_id: UUID | None = None,
+    ) -> None:
+        self.events.append(
+            {"investigation_id": investigation_id, "kind": kind, "payload": payload}
+        )
+
+
+class Visualizations:
+    """The visualization repository seam `prepare_published_visualization`
+    needs to exist before it will do anything at all."""
+
+    def __init__(self) -> None:
+        self.rows: dict[UUID, object] = {}
+
+    async def create(
+        self, *, brief_id, brief, renderer_configuration, artifact, actions
+    ) -> None:
+        self.rows[artifact.investigation_id] = artifact
+
+    async def latest_for_investigation(self, investigation_id: UUID) -> object | None:
+        return self.rows.get(investigation_id)
+
+
+class PublishingUnitOfWork(UnitOfWork):
+    """A `UnitOfWork` that also exposes the Work Feed and Visualization
+    repository, so a published Finding's handoff to the Visualization Agent
+    is actually observable rather than silently skipped."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.work_feed = WorkFeed()
+        self.visualizations = Visualizations()
+
+
+@pytest.mark.asyncio
+async def test_auto_publish_hands_the_finding_to_the_visualization_agent_once() -> None:
+    unit_of_work = PublishingUnitOfWork()
+
+    detail = await run_policy(
+        unit_of_work,
+        score=0.91,
+        draft_finding=cited_draft(),
+        evidence_citations=(active_citation(),),
+    )
+
+    assert detail.status == "completed"
+    published = [
+        event
+        for event in unit_of_work.work_feed.events
+        if event["kind"] == WorkFeedEventKind.FINDING_PUBLISHED
+    ]
+    assert len(published) == 1
+    visualization_jobs = [
+        job
+        for job in unit_of_work.jobs.rows.values()
+        if job.job_kind == ExecutionJobKind.VISUALIZATION
+    ]
+    assert len(visualization_jobs) == 1
+
+
+@pytest.mark.asyncio
+async def test_human_approved_publish_hands_finding_to_visualization_agent() -> None:
+    unit_of_work = PublishingUnitOfWork()
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(
+            score=0.42,
+            draft_finding=cited_draft(),
+            evidence_citations=(active_citation(),),
+        ),
+    )
+    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    await application.decide(
+        actor(),
+        investigation_id=INVESTIGATION_ID,
+        approval_id=APPROVAL_ID,
+        decision=ApprovalDecision.APPROVE,
+        rejection_reason=None,
+    )
+
+    published = [
+        event
+        for event in unit_of_work.work_feed.events
+        if event["kind"] == WorkFeedEventKind.FINDING_PUBLISHED
+    ]
+    assert len(published) == 1
+    visualization_jobs = [
+        job
+        for job in unit_of_work.jobs.rows.values()
+        if job.job_kind == ExecutionJobKind.VISUALIZATION
+    ]
+    assert len(visualization_jobs) == 1
 
 
 def test_an_uncited_draft_fails_closed_rather_than_opening_a_gate() -> None:
