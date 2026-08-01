@@ -96,5 +96,15 @@ def downgrade() -> None:
     op.drop_column("investigations", "initiating_message_id")
     op.drop_column("investigations", "thread_sequence")
     op.drop_column("investigations", "thread_id")
+    # fk_investigation_threads_initiating_message is use_alter=True/deferrable
+    # in schema_threads.py precisely because it's the closing edge of a
+    # circular FK between these two tables. That DDL choreography only
+    # applies to SQLAlchemy-driven create_all/drop_all; these raw DROP TABLE
+    # statements bypass it, so the circular edge must be broken explicitly
+    # before either table can be dropped.
+    op.execute(
+        "ALTER TABLE investigation_threads "
+        "DROP CONSTRAINT IF EXISTS fk_investigation_threads_initiating_message"
+    )
     op.execute("DROP TABLE IF EXISTS thread_messages")
     op.execute("DROP TABLE IF EXISTS investigation_threads")
