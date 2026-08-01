@@ -13,6 +13,13 @@ function here accepts `ConnectorService | None` and raises
 `ConnectorNotConfiguredError` when it is absent, so a caller fails loudly
 with a clear reason instead of an AttributeError deep in an unrelated
 method.
+
+`data_connection_id` here is deliberately the ADR-0012 vocabulary — Cube's
+JWT claims and `Investigation.data_connection_id` use the same name — but
+it is passed straight through as `ConnectorService`'s `data_source_id`.
+The Connector domain has not yet split "Data Source" into distinct
+uploaded/live-connection kinds, so today they are the same identifier;
+this mapping will need revisiting if that split happens.
 """
 
 from __future__ import annotations
@@ -83,8 +90,12 @@ async def relation_fingerprint(
     actor = _system_actor(tenant_id)
     catalog = await connector.latest_catalog(actor, data_connection_id)
     graph = await connector.join_graph(actor, catalog.catalog_version_id)
+    return _fingerprint_of(graph.relations)
+
+
+def _fingerprint_of(relations) -> str:
     fingerprint_input = "|".join(
-        sorted(f"{r.relation_id}:{r.state.value}" for r in graph.relations)
+        sorted(f"{r.relation_id}:{r.state.value}" for r in relations)
     )
     return sha256(fingerprint_input.encode()).hexdigest()
 
@@ -122,9 +133,9 @@ async def connector_cube_model(
         for table in catalog.tables
     }
     field_lookup: dict[UUID, tuple[str, str]] = {
-        field_id: (table_name, cast["name"])
+        field_id: (table_name, projected_field["name"])
         for table_name, fields in fields_by_table.items()
-        for field_id, cast in fields.items()
+        for field_id, projected_field in fields.items()
     }
 
     tables = tuple(
@@ -151,11 +162,8 @@ async def connector_cube_model(
         # skipping is the safe default, not a silent guess.
         and r.cardinality.value not in ("many_to_many", "unknown")
     )
-    fingerprint_input = "|".join(
-        sorted(f"{r.relation_id}:{r.state.value}" for r in graph.relations)
-    )
     return ConnectorCubeModel(
-        relation_fingerprint=sha256(fingerprint_input.encode()).hexdigest(),
+        relation_fingerprint=_fingerprint_of(graph.relations),
         clickhouse={
             "host": credentials.host,
             "port": credentials.port,

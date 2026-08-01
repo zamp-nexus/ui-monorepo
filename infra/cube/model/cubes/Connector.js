@@ -9,12 +9,12 @@
 // Absent on the demo-warehouse path on purpose: COMPILE_CONTEXT carries no
 // dataConnectionId there, and this module returns immediately rather than
 // making a wasted (or failing) callback for every non-connector query.
-asyncModule(async () => {
-  const { securityContext } = COMPILE_CONTEXT;
-  if (!securityContext || !securityContext.dataConnectionId) {
-    return;
-  }
-
+// Duplicated in cube.js's driverFactory rather than shared: this file runs
+// inside Cube's own schema-compiler sandbox, which does not support
+// requiring a plain CommonJS helper module the way cube.js (a plain Node
+// config module) does — verified empirically. Both call sites are ~15
+// lines; the duplication is the accepted cost of that boundary.
+async function fetchConnectorModel(securityContext) {
   const response = await fetch(
     `${process.env.INTERNAL_API_URL}/internal/v1/cube/model/${securityContext.tenantId}/${securityContext.dataConnectionId}`,
     {
@@ -28,7 +28,16 @@ asyncModule(async () => {
       `Connector model fetch failed with ${response.status} for data connection ${securityContext.dataConnectionId}`
     );
   }
-  const model = await response.json();
+  return response.json();
+}
+
+asyncModule(async () => {
+  const { securityContext } = COMPILE_CONTEXT;
+  if (!securityContext || !securityContext.dataConnectionId) {
+    return;
+  }
+
+  const model = await fetchConnectorModel(securityContext);
 
   const joinsByTable = {};
   for (const join of model.joins) {
