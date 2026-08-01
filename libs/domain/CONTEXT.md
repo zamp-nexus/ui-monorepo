@@ -39,3 +39,11 @@ _Avoid_: Log line, prompt record
 **Semantic Metric**:
 A governed business measure with one agreed definition and grain for a Tenant.
 _Avoid_: Calculated field, raw SQL metric
+
+**Semantic Model**:
+An immutable Tenant-approved version of governed metrics, dimensions, relationships, classifications, and source mappings.
+_Avoid_: Cube schema, inferred schema, data model
+
+**Metric Draft**:
+A proposed business measure with definition, formula, grain, filters, time behavior, units, and sources that has not entered an approved Semantic Model version.
+_Avoid_: Ad hoc metric, calculated field

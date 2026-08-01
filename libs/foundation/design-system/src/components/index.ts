@@ -316,6 +316,30 @@ export type {
 } from './menu';
 export { MenuVariants, MenuModifiers, MenuSlots, menuDefaultTheme } from './menu';
 
+// Card
+export { Card, CardHeader, CardTitle } from './card';
+export type {
+  CardProps,
+  CardComponent,
+  CardOwnProps,
+  CardHeaderProps,
+  CardTitleProps,
+} from './card';
+export { CardVariants, CardModifiers, CardSlots, cardDefaultTheme } from './card';
+
+// SideNav
+export { SideNav, SideNavItem, SideNavContext, useSideNavContext } from './side-nav';
+export type {
+  SideNavContextValue,
+  SideNavProps,
+  SideNavComponent,
+  SideNavOwnProps,
+  SideNavItemProps,
+  SideNavItemComponent,
+  SideNavItemOwnProps,
+} from './side-nav';
+export { SideNavVariants, SideNavModifiers, SideNavSlots, sideNavDefaultTheme } from './side-nav';
+
 // Tooltip
 export { Tooltip } from './tooltip';
 export type { TooltipProps, TooltipOwnProps } from './tooltip';

@@ -14,3 +14,6 @@ import './registry';
 
 // Export the Icon component (used by design-system)
 export { Icon } from './icon';
+export { ICON_NAMES } from './registry/registry';
+export type { IconName } from './registry/registry';
+export type { IconProps } from './types';
