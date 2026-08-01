@@ -86,21 +86,23 @@ export const TableDetailModal = ({ table, onClose }: TableDetailModalProps) => {
         </Modal.Header>
 
         <Modal.Body>
-          {/* `-mt-4 pt-4` cancels the body's own top padding, so the sticky
-              heading row lands flush against the top of the scrollport. Left
-              as-is, rows would scroll through that 1rem of padding *above* the
-              headings, which is what made them look transparent. */}
-          <div className="-mt-4 pt-4">
+          <div>
             {/* `border-separate`, not `border-collapse`. With collapsed borders
                 a cell's background is not painted by the cell itself, so a
                 sticky `th` shows the rows passing beneath it; separated borders
-                keep each cell opaque. */}
+                keep each cell opaque.
+
+                The background is the layer token directly rather than
+                `bg-background`, and the box-shadow paints that same colour
+                upward over the body's `pt-4` — sticky `top-0` pins the row to
+                the scrollport's padding edge, so without it rows show through
+                that 1rem strip above the headings. */}
             <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left">
                   {['#', 'Column', 'Type', 'Family', 'Null', 'Profile'].map((heading) => (
                     <th
-                      className="sticky top-0 z-20 border-b border-border bg-background pb-2 pr-4 pt-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted"
+                      className="sticky top-0 z-20 border-b border-border bg-[var(--bg-layer-00)] pb-2 pr-4 pt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted shadow-[0_-1.25rem_0_0_var(--bg-layer-00)]"
                       key={heading}
                       scope="col"
                     >
