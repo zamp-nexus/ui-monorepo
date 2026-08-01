@@ -13,6 +13,11 @@ from .investigation import (
     PostgresInvestigationUnitOfWorkFactory,
 )
 from .schema import metadata
+from .thread import (
+    PostgresThreadRepository,
+    PostgresThreadUnitOfWork,
+    PostgresThreadUnitOfWorkFactory,
+)
 from .workspace import (
     PostgresOrganizationRepository,
     PostgresOrganizationUnitOfWork,
@@ -30,6 +35,9 @@ __all__ = [
     "PostgresOrganizationRepository",
     "PostgresOrganizationUnitOfWork",
     "PostgresOrganizationUnitOfWorkFactory",
+    "PostgresThreadRepository",
+    "PostgresThreadUnitOfWork",
+    "PostgresThreadUnitOfWorkFactory",
     "metadata",
     "resolve_identity_context",
 ]

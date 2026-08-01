@@ -70,6 +70,7 @@ class Dependencies:
     jwt_verifier: Verifier
     investigations: object | None = None
     organization: object | None = None
+    threads: object | None = None
 
     async def close(self) -> None:
         return None
@@ -82,6 +83,7 @@ def client(
     cube: bool = True,
     investigations: object | None = None,
     organization: object | None = None,
+    threads: object | None = None,
 ) -> TestClient:
     dependencies = Dependencies(
         database=DatabaseProbe(postgres),
@@ -90,6 +92,7 @@ def client(
         jwt_verifier=Verifier(),
         investigations=investigations,
         organization=organization,
+        threads=threads,
     )
     app = create_app(
         Settings(clerk_issuer="https://example.clerk.accounts.dev"),

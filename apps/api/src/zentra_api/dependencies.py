@@ -25,12 +25,17 @@ from zentra_adapter_postgres import (
     Database,
     PostgresInvestigationUnitOfWorkFactory,
     PostgresOrganizationUnitOfWorkFactory,
+    PostgresThreadUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
-from zentra_application_investigation import InvestigationService, OrganizationService
+from zentra_application_investigation import (
+    InvestigationService,
+    OrganizationService,
+    ThreadService,
+)
 from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
@@ -57,6 +62,7 @@ class AppDependencies:
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
     organization: OrganizationService
+    threads: ThreadService
 
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
@@ -113,6 +119,11 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
+        threads = ThreadService(
+            unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
         return cls(
             database=database,
             audit=audit,
@@ -125,6 +136,7 @@ class AppDependencies:
             investigations=investigations,
             audit_delivery=audit_delivery,
             organization=organization,
+            threads=threads,
         )
 
     async def close(self) -> None:

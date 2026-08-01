@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [component, api, python]
 aliases: [api, zentra-api]
-related: ["[[Components MOC]]", "[[Health and Context API]]", "[[Investigation API]]", "[[Workspace Organization API]]"]
+related: ["[[Components MOC]]", "[[Health and Context API]]", "[[Investigation API]]", "[[Workspace Organization API]]", "[[Investigation Thread API]]"]
 depends_on: ["[[Investigation Core]]", "[[Postgres Adapter]]", "[[ClickHouse Adapter]]", "[[Cube Adapter]]", "[[Telemetry Adapter]]"]
 repo_path: apps/api
 code_refs:
@@ -34,8 +34,10 @@ outbox dispatcher and closes external clients.
 
 The service exposes liveness/readiness, internal identity context, Investigation
 create/read, Human Approval decisions, and tenant-scoped Group and Project
-organization endpoints. Domain and application rules remain outside FastAPI.
-Workspace errors use stable codes while inaccessible resource identifiers
+organization endpoints. It also exposes create-with-first-message, Draft
+clarification, snapshot, archive/restore, and Draft-only Thread deletion
+contracts. Domain and application rules remain outside FastAPI. Organization
+and Thread errors use stable codes while inaccessible resource identifiers
 remain nondisclosing `404` responses.
 
 Run with `npm exec -- nx serve api`; verify with the `api` lint/test/build
