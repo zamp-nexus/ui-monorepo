@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     clickhouse_secure: bool = False
     cube_url: str = "http://localhost:4000"
     cube_api_secret: str | None = None
+    #: Separate from cube_api_secret so the two roles — end-to-end tenant
+    #: auth vs. Cube's Node process calling back into this API — can be
+    #: rotated independently; a leak of one must not imply the other.
+    cube_internal_api_secret: str | None = None
     clerk_issuer: str | None = None
     clerk_audience: str | None = None
     otel_exporter_otlp_endpoint: str | None = None

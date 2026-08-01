@@ -73,6 +73,11 @@ services:
       CUBEJS_DB_USER: warehouse_reader
       CUBEJS_DB_PASS: warehouse_reader
       CUBEJS_API_SECRET: local-cube-secret
+      # The internal model endpoint's own secret, not CUBEJS_API_SECRET —
+      # this is Cube's Node process calling back into apps/api, a different
+      # trust boundary from a tenant's request into Cube.
+      CUBE_INTERNAL_API_SECRET: local-cube-internal-secret
+      INTERNAL_API_URL: http://api:8000
     ports:
       - "4000:4000"
     depends_on:
@@ -98,6 +103,7 @@ services:
       CLICKHOUSE_DATABASE: zentra_audit
       CUBE_URL: http://cube:4000
       CUBE_API_SECRET: local-cube-secret
+      CUBE_INTERNAL_API_SECRET: local-cube-internal-secret
       FRONTEND_ORIGIN: http://localhost:4200
     ports:
       - "8000:8000"
