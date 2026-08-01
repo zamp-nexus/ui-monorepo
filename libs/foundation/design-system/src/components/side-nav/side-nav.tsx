@@ -7,6 +7,7 @@ import React from 'react';
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
 import { SideNavItem } from './side-nav-item';
+import { SideNavContext } from './side-nav.context';
 import type { SideNavComponent, SideNavProps } from './types';
 import { sideNavDefaultTheme } from './types';
 
@@ -32,30 +33,41 @@ const SideNavRoot = React.forwardRef(function SideNav<T extends React.ElementTyp
 ) {
   const theme = useTheme('sideNav', sideNavDefaultTheme);
   const Element = component ?? 'nav';
+  const context = React.useMemo(() => ({ width }), [width]);
 
   return (
-    <Element ref={ref} className={theme.root({ className, width })} data-ozid={ozid} {...rest}>
-      {brand && (
-        <Slot
-          baseOzid={ozid}
-          className={theme.brand?.({}) ?? ''}
-          slotName="brand"
-          slot={brand}
-          component="div"
-        />
-      )}
+    <Element
+      ref={ref}
+      className={theme.root({ className, width })}
+      data-ozid={ozid}
+      // Read by the items through the root's `group`, so a collapsed rail
+      // hides its labels without every item being handed the width.
+      data-collapsed={width === 'compact' ? 'true' : undefined}
+      {...rest}
+    >
+      <SideNavContext.Provider value={context}>
+        {brand && (
+          <Slot
+            baseOzid={ozid}
+            className={theme.brand?.({}) ?? ''}
+            slotName="brand"
+            slot={brand}
+            component="div"
+          />
+        )}
 
-      <div className={theme.list?.({}) ?? ''}>{children}</div>
+        <div className={theme.list?.({}) ?? ''}>{children}</div>
 
-      {footer && (
-        <Slot
-          baseOzid={ozid}
-          className={theme.footer?.({}) ?? ''}
-          slotName="footer"
-          slot={footer}
-          component="div"
-        />
-      )}
+        {footer && (
+          <Slot
+            baseOzid={ozid}
+            className={theme.footer?.({}) ?? ''}
+            slotName="footer"
+            slot={footer}
+            component="div"
+          />
+        )}
+      </SideNavContext.Provider>
     </Element>
   );
 }) as unknown as SideNavComponent;

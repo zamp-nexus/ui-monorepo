@@ -97,6 +97,7 @@ import {
   Sidebar,
   SortAsc,
   SortDesc,
+  Sparkles,
   Star,
   Tag,
   Tags,
@@ -241,5 +242,6 @@ function initializeIcons(): void {
   // Data
   registerIcon({ name: ICON_NAMES.DATABASE, component: Database });
   registerIcon({ name: ICON_NAMES.NETWORK, component: Network });
+  registerIcon({ name: ICON_NAMES.SPARKLES, component: Sparkles });
 }
 initializeIcons();

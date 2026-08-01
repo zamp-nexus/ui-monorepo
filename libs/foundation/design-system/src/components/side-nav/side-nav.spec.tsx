@@ -24,6 +24,19 @@ describe('SideNav composition', () => {
     expect(screen.getByText('Docs')).toBeTruthy();
   });
 
+  it('keeps item labels reachable when collapsed', () => {
+    render(
+      <SideNav aria-label="Primary" width="compact">
+        <SideNav.Item href="/chat">Chat</SideNav.Item>
+      </SideNav>,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Primary' }).dataset.collapsed).toBe('true');
+    // Named, not just drawn: a collapsed rail that dropped its labels would
+    // leave every link anonymous to a screen reader.
+    expect(screen.getByRole('link', { name: 'Chat' })).toBeTruthy();
+  });
+
   it('announces the active item rather than only colouring it', () => {
     render(
       <SideNav aria-label="Primary">

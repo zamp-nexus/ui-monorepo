@@ -6,6 +6,8 @@ import React from 'react';
 
 import { Slot } from '../../primitives/slot';
 import { useTheme } from '../../theme';
+import { Tooltip } from '../tooltip';
+import { useSideNavContext } from './side-nav.context';
 import type { SideNavItemComponent, SideNavItemProps } from './types';
 import { sideNavDefaultTheme } from './types';
 
@@ -16,6 +18,10 @@ import { sideNavDefaultTheme } from './types';
  *
  * `aria-current="page"` rather than a styled state alone: the active item has
  * to be announced, not only coloured.
+ *
+ * On a collapsed rail the label is only visually hidden — so the link keeps its
+ * accessible name — and a tooltip carries it for sighted users, who would
+ * otherwise be reading an unlabelled icon.
  */
 export const SideNavItem = React.forwardRef(function SideNavItem<
   T extends React.ElementType = 'a',
@@ -24,9 +30,10 @@ export const SideNavItem = React.forwardRef(function SideNavItem<
   ref: React.ForwardedRef<Element>,
 ) {
   const theme = useTheme('sideNav', sideNavDefaultTheme);
+  const { width } = useSideNavContext();
   const Element = component ?? 'a';
 
-  return (
+  const item = (
     <Element
       ref={ref}
       className={theme.item?.({ className, active: Boolean(active) }) ?? className}
@@ -45,8 +52,16 @@ export const SideNavItem = React.forwardRef(function SideNavItem<
           aria-hidden="true"
         />
       )}
-      {children}
+      <span className={theme.itemLabel?.({}) ?? ''}>{children}</span>
     </Element>
+  );
+
+  if (width !== 'compact') return item;
+
+  return (
+    <Tooltip content={children} side="right" sideOffset={10}>
+      {item}
+    </Tooltip>
   );
 }) as unknown as SideNavItemComponent;
 
