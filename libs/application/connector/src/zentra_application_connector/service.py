@@ -14,7 +14,6 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from zentra_domain_connector import (
-    CatalogAccessOverride,
     CatalogVersion,
     DataSource,
     HarvestBudget,
@@ -38,11 +37,11 @@ from zentra_domain_connector.types import (
     RelationTransitionError,
 )
 
+from .agent_access import AgentAccessOperations
 from .catalog_reads import CatalogOperations
 from .dto import (
     HARVEST_ROLES,
     WRITE_ROLES,
-    AgentAccessView,
     AuthenticatedActor,
     ConflictError,
     ConnectionFailedError,
@@ -69,10 +68,10 @@ from .ports import (
     SourceConnector,
 )
 from .uploads import UploadOperations
-from .views import to_access_view, to_relation_view, to_status, to_summary
+from .views import to_relation_view, to_status, to_summary
 
 
-class ConnectorService(CatalogOperations, UploadOperations):
+class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperations):
     def __init__(
         self,
         *,
@@ -510,73 +509,6 @@ class ConnectorService(CatalogOperations, UploadOperations):
         )
         graph = JoinGraph.build(catalog_version_id, tuple(relations))
         return graph.permits(left_field_id, right_field_id)
-
-    # ----------------------------------------------------------- agent access
-
-    async def set_table_agent_access(
-        self,
-        actor: AuthenticatedActor,
-        data_source_id: UUID,
-        table_name: str,
-        *,
-        agent_visible: bool,
-    ) -> AgentAccessView:
-        """Hide or reveal an entire table from the agent system.
-
-        Governance, not browsing — same roles as confirming a Relation.
-        """
-        self._require(actor, WRITE_ROLES)
-        await self._load_source(actor, data_source_id)
-        override = CatalogAccessOverride(
-            override_id=uuid4(),
-            tenant_id=actor.tenant_id,
-            data_source_id=data_source_id,
-            table_name=table_name,
-            field_name=None,
-            agent_visible=agent_visible,
-            decided_by=actor.user_id,
-            decided_at=self._clock.now(),
-        )
-        await self._access.upsert(override)
-        return to_access_view(override)
-
-    async def set_field_agent_access(
-        self,
-        actor: AuthenticatedActor,
-        data_source_id: UUID,
-        table_name: str,
-        field_name: str,
-        *,
-        agent_visible: bool,
-    ) -> AgentAccessView:
-        self._require(actor, WRITE_ROLES)
-        await self._load_source(actor, data_source_id)
-        override = CatalogAccessOverride(
-            override_id=uuid4(),
-            tenant_id=actor.tenant_id,
-            data_source_id=data_source_id,
-            table_name=table_name,
-            field_name=field_name,
-            agent_visible=agent_visible,
-            decided_by=actor.user_id,
-            decided_at=self._clock.now(),
-        )
-        await self._access.upsert(override)
-        return to_access_view(override)
-
-    async def list_agent_access(
-        self, actor: AuthenticatedActor, data_source_id: UUID
-    ) -> tuple[AgentAccessView, ...]:
-        """Every override on this source, for a caller merging them into a catalog view.
-
-        A read, so any Tenant member may take it — the same reasoning that
-        makes browsing a Relation proposal open while confirming it is not.
-        """
-        await self._load_source(actor, data_source_id)
-        overrides = await self._access.list_for_source(
-            data_source_id, tenant_id=actor.tenant_id
-        )
-        return tuple(to_access_view(o) for o in overrides)
 
     # ---------------------------------------------------------------- helpers
 
