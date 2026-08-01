@@ -30,9 +30,9 @@ class RoutingResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     disposition: str
-    scenario_key: str | None
-    canonical_question: str | None
-    clarification: str | None
+    scenario_key: str | None = None
+    canonical_question: str | None = None
+    clarification: str | None = None
     suggestions: list[str]
 
     @classmethod
@@ -88,14 +88,46 @@ class ThreadResponse(BaseModel):
                     "created_at": "2026-08-01T09:00:00Z",
                     "updated_at": "2026-08-01T09:00:00Z",
                     "latest_activity_at": "2026-08-01T09:00:00Z",
-                    "messages": [],
+                    "messages": [
+                        {
+                            "message_id": "44000000-0000-0000-0000-000000000001",
+                            "kind": "user_question",
+                            "content": "How is the business doing?",
+                            "created_at": "2026-08-01T09:00:00Z",
+                            "authored_by_user": True,
+                        },
+                        {
+                            "message_id": "44000000-0000-0000-0000-000000000002",
+                            "kind": "router_clarification",
+                            "content": (
+                                "I could not map that message to a governed "
+                                "question. Please choose or rephrase one supported "
+                                "question.\n- Why did EU refunds increase from "
+                                "June to July 2026?\n- Which sales channel accounted "
+                                "for the "
+                                "increase in North America revenue from October to "
+                                "November 2026?"
+                            ),
+                            "created_at": "2026-08-01T09:00:00Z",
+                            "authored_by_user": False,
+                        },
+                    ],
                     "investigation_id": None,
                     "routing": {
                         "disposition": "unsupported",
                         "scenario_key": None,
                         "canonical_question": None,
-                        "clarification": "Please choose a supported question.",
-                        "suggestions": [],
+                        "clarification": (
+                            "I could not map that message to a governed question. "
+                            "Please choose or rephrase one supported question."
+                        ),
+                        "suggestions": [
+                            "Why did EU refunds increase from June to July 2026?",
+                            (
+                                "Which sales channel accounted for the increase in "
+                                "North America revenue from October to November 2026?"
+                            ),
+                        ],
                     },
                     "actions": {
                         "can_append_message": True,
@@ -116,8 +148,8 @@ class ThreadResponse(BaseModel):
     updated_at: datetime
     latest_activity_at: datetime
     messages: list[ThreadMessageResponse]
-    investigation_id: UUID | None
-    routing: RoutingResponse | None
+    investigation_id: UUID | None = None
+    routing: RoutingResponse | None = None
     actions: ThreadActionsResponse
 
     @classmethod
@@ -155,7 +187,7 @@ class ThreadSummaryResponse(BaseModel):
     title: str
     status: str
     latest_activity_at: datetime
-    investigation_id: UUID | None
+    investigation_id: UUID | None = None
 
     @classmethod
     def from_detail(cls, detail: ThreadSummary) -> ThreadSummaryResponse:

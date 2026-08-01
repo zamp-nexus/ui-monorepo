@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from contextlib import AbstractAsyncContextManager
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -23,15 +25,16 @@ from zentra_application_investigation.thread_dto import (
     RoutingDisposition,
     ThreadConflictError,
     ThreadCursor,
+    ThreadCursorError,
     ThreadNotFoundError,
     ThreadSlice,
     ThreadSummary,
 )
-from zentra_application_investigation.thread_service import (
-    ThreadService,
+from zentra_application_investigation.thread_routing import (
     deterministic_thread_title,
     route_governed_question,
 )
+from zentra_application_investigation.thread_service import ThreadService
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
 TENANT_ID = UUID("20000000-0000-0000-0000-000000000002")
@@ -260,6 +263,20 @@ def test_title_is_deterministic_and_bounded_without_a_model() -> None:
     assert len(deterministic_thread_title(value)) == 80
 
 
+def test_cursor_rejects_a_timezone_naive_timestamp() -> None:
+    payload = base64.urlsafe_b64encode(
+        json.dumps(
+            {
+                "activity_at": "2026-08-01T09:00:00",
+                "thread_id": str(uuid4()),
+            }
+        ).encode()
+    ).decode()
+
+    with pytest.raises(ThreadCursorError):
+        ThreadCursor.decode(payload)
+
+
 @pytest.mark.asyncio
 async def test_unsupported_first_message_persists_draft_and_clarification_only() -> (
     None
@@ -286,13 +303,15 @@ async def test_later_clarification_resolves_without_losing_prior_messages() -> N
     value = repository()
     threads = service(value)
     draft = await threads.create(
-        actor(), project_id=PROJECT_ID, content="What changed?"
+        actor(),
+        project_id=PROJECT_ID,
+        content="Why did refunds increase from June to July?",
     )
 
     resolved = await threads.append(
         actor(),
         thread_id=draft.thread_id,
-        content="Explain European refunds from June to July",
+        content="In Europe",
     )
 
     assert resolved.status is ThreadStatus.ACTIVE
