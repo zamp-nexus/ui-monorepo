@@ -19,6 +19,7 @@ repo_path: libs/adapters
 
 - [[Postgres Control Plane]]
 - [[ClickHouse Audit Ledger]]
+- [[Source Catalog]]
 - [[Synthetic Warehouse]]
 - [[Cube Semantic Model]]
 - [[Phase 3 Data Execution]]

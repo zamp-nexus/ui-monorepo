@@ -23,6 +23,8 @@ indent-width = 4
   unfixable = [ ]
 
 [tool.uv.sources]
+zentra-application-connector = { workspace = true }
+zentra-domain-connector = { workspace = true }
 zentra-adapter-clickhouse = { workspace = true }
 zentra-adapter-cube = { workspace = true }
 zentra-adapter-langgraph = { workspace = true }
@@ -44,6 +46,7 @@ dependencies = [
  "httpx>=0.28,<1",
  "pydantic-settings>=2.11,<3",
  "pyjwt[crypto]>=2.10,<3",
+ "python-multipart>=0.0.20,<0.1",
  "uvicorn[standard]>=0.37,<1",
  "zentra-adapter-clickhouse",
  "zentra-adapter-cube",
@@ -51,6 +54,7 @@ dependencies = [
  "zentra-adapter-model-providers",
  "zentra-adapter-postgres",
  "zentra-adapter-telemetry",
+ "zentra-application-connector",
  "zentra-application-investigation",
  "zentra-domain-agent-execution",
  "zentra-domain-investigation",

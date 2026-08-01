@@ -1,8 +1,10 @@
 [importlinter]
 root_packages =
     zentra_domain_agent_execution
+    zentra_domain_connector
     zentra_domain_investigation
     zentra_application_investigation
+    zentra_application_connector
     zentra_adapter_postgres
     zentra_adapter_clickhouse
     zentra_adapter_cube
@@ -18,6 +20,7 @@ type = forbidden
 source_modules =
     zentra_domain_agent_execution
     zentra_domain_investigation
+    zentra_domain_connector
 forbidden_modules =
     alembic
     anthropic
@@ -37,6 +40,7 @@ name = Investigation application is framework independent
 type = forbidden
 source_modules =
     zentra_application_investigation
+    zentra_application_connector
 forbidden_modules =
     alembic
     anthropic
