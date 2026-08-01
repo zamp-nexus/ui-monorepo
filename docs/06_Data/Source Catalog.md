@@ -98,6 +98,39 @@ generated key works perfectly until the process restarts, at which point every
 stored credential becomes permanently unopenable — a failure that surfaces long
 after the mistake causing it.
 
+## Measured inference accuracy
+
+`infra/clickhouse/init/002_tpch.sql` seeds a deterministic TPC-H subset into a
+`tpch` database — eight tables, nine documented foreign keys, generated with
+`numbers()` and never `rand()` so a fresh `docker compose up` reproduces it byte
+for byte. `tools/evals/connector_accuracy.py` scores inference against those
+nine and fails the run on regression (`nx run evals:connector-accuracy`).
+
+Baseline, measured 2026-08-02 against local ClickHouse:
+
+| | |
+| --- | --- |
+| Documented foreign keys recovered | **9 of 9** |
+| Recall | 1.00 |
+| Spurious proposals | 4 |
+| Precision | 0.69 |
+| Fields skipped as ineligible | 12 |
+
+Two things this measurement settles that assertion could not.
+
+The three dimension references — both `nationkey` joins and the `regionkey`
+join — **are** recovered, against 25 and 5 distinct values. The cardinality
+ceiling caps how much confidence such a relation may claim; it does not suppress
+the proposal. A reviewer still sees the join, and still sees that the system is
+not sure of it.
+
+Three of the four spurious proposals are **transitive co-references**:
+`lineitem.l_partkey` and `partsupp.ps_partkey` genuinely share values because
+both reference `part.p_partkey`. They are not foreign keys to each other, and
+deciding that is exactly what human confirmation is for. The fourth pairs two
+account-balance columns occupying the same numeric range — the honest kind of
+false positive, and the reason overlap alone is never sufficient.
+
 ## Verification status
 
 The pure logic around the driver — identifier quoting, failure classification,
