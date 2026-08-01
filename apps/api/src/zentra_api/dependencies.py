@@ -34,6 +34,7 @@ from zentra_adapter_model_providers import (
 )
 from zentra_adapter_postgres import (
     Database,
+    PostgresAgentAccessRepository,
     PostgresCatalogRepository,
     PostgresDataSourceRepository,
     PostgresHarvestRunRepository,
@@ -215,6 +216,7 @@ class AppDependencies:
                 catalogs=PostgresCatalogRepository(database),
                 relations=PostgresRelationRepository(database),
                 runs=PostgresHarvestRunRepository(database),
+                access=PostgresAgentAccessRepository(database),
                 connector=ClickHouseSourceConnector(),
                 # The key comes from Settings rather than `from_env` so it is
                 # read the same way as every other secret, and one .env file

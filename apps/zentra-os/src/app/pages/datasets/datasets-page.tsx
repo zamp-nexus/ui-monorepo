@@ -2,20 +2,26 @@ import { useState } from 'react';
 
 import { Alert, Button, EmptyState, Skeleton } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import type { TokenSource } from '../../api';
 import type { IdentityContext } from '../../types';
 import { listSources } from '../connections/api';
 
+import { setFieldAgentAccess } from './api';
 import { SourceCatalog } from './source-catalog';
 import { TableDetailModal } from './table-detail-modal';
-import type { CatalogTable } from './types';
+import type { CatalogResponse, CatalogTable } from './types';
 
 interface DatasetsPageProps {
   readonly getToken: TokenSource;
   readonly identity: IdentityContext;
+}
+
+interface OpenTable {
+  readonly table: CatalogTable;
+  readonly dataSourceId: string;
 }
 
 /**
@@ -26,12 +32,70 @@ interface DatasetsPageProps {
  * one exists and says so rather than rendering an empty shell.
  */
 export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
-  const [openTable, setOpenTable] = useState<CatalogTable | null>(null);
+  const [openTable, setOpenTable] = useState<OpenTable | null>(null);
   const canWrite = identity.role !== 'viewer';
+  const queryClient = useQueryClient();
 
   const sources = useQuery({
     queryKey: ['connector-sources'],
     queryFn: () => listSources(getToken),
+  });
+
+  const toggleFieldAccess = useMutation({
+    mutationFn: (input: { dataSourceId: string; tableName: string; fieldName: string; visible: boolean }) =>
+      setFieldAgentAccess(
+        getToken,
+        input.dataSourceId,
+        input.tableName,
+        input.fieldName,
+        input.visible,
+      ),
+    onMutate: async (input) => {
+      const queryKey = ['catalog', input.dataSourceId];
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<CatalogResponse>(queryKey);
+      queryClient.setQueryData<CatalogResponse>(queryKey, (current) =>
+        current
+          ? {
+              ...current,
+              tables: current.tables?.map((table) =>
+                table.name === input.tableName
+                  ? {
+                      ...table,
+                      fields: table.fields?.map((field) =>
+                        field.name === input.fieldName
+                          ? { ...field, agent_visible: input.visible }
+                          : field,
+                      ),
+                    }
+                  : table,
+              ),
+            }
+          : current,
+      );
+      setOpenTable((current) =>
+        current && current.table.name === input.tableName
+          ? {
+              ...current,
+              table: {
+                ...current.table,
+                fields: current.table.fields?.map((field) =>
+                  field.name === input.fieldName
+                    ? { ...field, agent_visible: input.visible }
+                    : field,
+                ),
+              },
+            }
+          : current,
+      );
+      return { previous, queryKey };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(context.queryKey, context.previous);
+    },
+    onSettled: (_data, _error, input) => {
+      void queryClient.invalidateQueries({ queryKey: ['catalog', input.dataSourceId] });
+    },
   });
 
   const connected = (sources.data ?? []).filter(
@@ -98,12 +162,27 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
             source={source}
             getToken={getToken}
             canWrite={canWrite}
-            onOpenTable={setOpenTable}
+            onOpenTable={(table) =>
+              setOpenTable({ table, dataSourceId: source.data_source_id })
+            }
           />
         ))}
       </div>
 
-      <TableDetailModal table={openTable} onClose={() => setOpenTable(null)} />
+      <TableDetailModal
+        table={openTable?.table ?? null}
+        canWrite={canWrite}
+        onClose={() => setOpenTable(null)}
+        onToggleField={(fieldName, visible) => {
+          if (!openTable) return;
+          toggleFieldAccess.mutate({
+            dataSourceId: openTable.dataSourceId,
+            tableName: openTable.table.name,
+            fieldName,
+            visible,
+          });
+        }}
+      />
     </section>
   );
 };

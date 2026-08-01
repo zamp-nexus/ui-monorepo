@@ -1,6 +1,61 @@
 {
   "components": {
     "schemas": {
+      "AgentAccessResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_visible": {
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
+          "data_source_id": {
+            "format": "uuid",
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "decided_by": {
+            "format": "uuid",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "field_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Name"
+          },
+          "override_id": {
+            "format": "uuid",
+            "title": "Override Id",
+            "type": "string"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "override_id",
+          "data_source_id",
+          "table_name",
+          "field_name",
+          "agent_visible",
+          "decided_by",
+          "decided_at"
+        ],
+        "title": "AgentAccessResponse",
+        "type": "object"
+      },
       "ApprovalDecision": {
         "enum": [
           "approve",
@@ -356,6 +411,159 @@
           "calibration_method"
         ],
         "title": "ConfidenceResponse",
+        "type": "object"
+      },
+      "ConnectorClickHouseSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "port": {
+            "title": "Port",
+            "type": "integer"
+          },
+          "secure": {
+            "title": "Secure",
+            "type": "boolean"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "database",
+          "username",
+          "password",
+          "secure"
+        ],
+        "title": "ConnectorClickHouseSchema",
+        "type": "object"
+      },
+      "ConnectorCubeModelSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "clickhouse": {
+            "$ref": "#/components/schemas/ConnectorClickHouseSchema"
+          },
+          "joins": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorJoinSchema"
+            },
+            "title": "Joins",
+            "type": "array"
+          },
+          "relationFingerprint": {
+            "title": "Relationfingerprint",
+            "type": "string"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorTableSchema"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "relationFingerprint",
+          "clickhouse",
+          "tables",
+          "joins"
+        ],
+        "title": "ConnectorCubeModelSchema",
+        "type": "object"
+      },
+      "ConnectorFieldModel": {
+        "additionalProperties": false,
+        "properties": {
+          "cubeType": {
+            "title": "Cubetype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "cubeType"
+        ],
+        "title": "ConnectorFieldModel",
+        "type": "object"
+      },
+      "ConnectorJoinSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fromField": {
+            "title": "Fromfield",
+            "type": "string"
+          },
+          "fromTable": {
+            "title": "Fromtable",
+            "type": "string"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "toField": {
+            "title": "Tofield",
+            "type": "string"
+          },
+          "toTable": {
+            "title": "Totable",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromTable",
+          "toTable",
+          "fromField",
+          "toField",
+          "relationship"
+        ],
+        "title": "ConnectorJoinSchema",
+        "type": "object"
+      },
+      "ConnectorTableSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorFieldModel"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sqlTable": {
+            "title": "Sqltable",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "sqlTable",
+          "fields"
+        ],
+        "title": "ConnectorTableSchema",
         "type": "object"
       },
       "ContextResponse": {
@@ -731,6 +939,11 @@
       "FieldResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent_visible": {
+            "default": true,
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
           "declared_type": {
             "title": "Declared Type",
             "type": "string"
@@ -811,6 +1024,94 @@
           "evidence_references"
         ],
         "title": "FindingResponse",
+        "type": "object"
+      },
+      "GroupPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "GroupPageResponse",
+        "type": "object"
+      },
+      "GroupResponse": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "can_manage": true,
+            "created_at": "2026-08-01T09:00:00Z",
+            "group_id": "41000000-0000-0000-0000-000000000001",
+            "name": "Finance Operations",
+            "updated_at": "2026-08-01T09:00:00Z"
+          }
+        ],
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_id": {
+            "format": "uuid",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "name",
+          "created_at",
+          "updated_at",
+          "archived_at",
+          "can_manage"
+        ],
+        "title": "GroupResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1209,6 +1510,129 @@
         "title": "MetricComparisonResponse",
         "type": "object"
       },
+      "OrganizationNameRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "name": "Finance Operations"
+          }
+        ],
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OrganizationNameRequest",
+        "type": "object"
+      },
+      "ProjectPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ProjectPageResponse",
+        "type": "object"
+      },
+      "ProjectResponse": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "can_manage": true,
+            "created_at": "2026-08-01T09:00:00Z",
+            "group_id": "41000000-0000-0000-0000-000000000001",
+            "latest_activity_at": "2026-08-01T09:00:00Z",
+            "name": "Monthly Forecast",
+            "project_id": "42000000-0000-0000-0000-000000000001",
+            "updated_at": "2026-08-01T09:00:00Z"
+          }
+        ],
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_id": {
+            "format": "uuid",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "latest_activity_at": {
+            "format": "date-time",
+            "title": "Latest Activity At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "group_id",
+          "name",
+          "created_at",
+          "updated_at",
+          "latest_activity_at",
+          "archived_at",
+          "can_manage"
+        ],
+        "title": "ProjectResponse",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1435,6 +1859,61 @@
         "title": "RelationState",
         "type": "string"
       },
+      "RoutingResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "canonical_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Question"
+          },
+          "clarification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clarification"
+          },
+          "disposition": {
+            "title": "Disposition",
+            "type": "string"
+          },
+          "scenario_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Key"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "disposition",
+          "suggestions"
+        ],
+        "title": "RoutingResponse",
+        "type": "object"
+      },
       "ScenarioResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1460,6 +1939,20 @@
           "facts"
         ],
         "title": "ScenarioResponse",
+        "type": "object"
+      },
+      "SetAgentAccessRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_visible": {
+            "title": "Agent Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent_visible"
+        ],
+        "title": "SetAgentAccessRequest",
         "type": "object"
       },
       "SourceCredentialsRequest": {
@@ -1667,6 +2160,11 @@
       "TableResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent_visible": {
+            "default": true,
+            "title": "Agent Visible",
+            "type": "boolean"
+          },
           "database": {
             "title": "Database",
             "type": "string"
@@ -1727,6 +2225,294 @@
           "database"
         ],
         "title": "TableResponse",
+        "type": "object"
+      },
+      "ThreadActionsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "can_append_message": {
+            "title": "Can Append Message",
+            "type": "boolean"
+          },
+          "can_archive": {
+            "title": "Can Archive",
+            "type": "boolean"
+          },
+          "can_delete": {
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "can_restore": {
+            "title": "Can Restore",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_append_message",
+          "can_archive",
+          "can_restore",
+          "can_delete"
+        ],
+        "title": "ThreadActionsResponse",
+        "type": "object"
+      },
+      "ThreadMessageRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "message": "Why did EU refunds increase from June to July 2026?"
+          }
+        ],
+        "properties": {
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ThreadMessageRequest",
+        "type": "object"
+      },
+      "ThreadMessageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_by_user": {
+            "title": "Authored By User",
+            "type": "boolean"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "kind",
+          "content",
+          "created_at",
+          "authored_by_user"
+        ],
+        "title": "ThreadMessageResponse",
+        "type": "object"
+      },
+      "ThreadPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadSummaryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ThreadPageResponse",
+        "type": "object"
+      },
+      "ThreadResponse": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "actions": {
+              "can_append_message": true,
+              "can_archive": true,
+              "can_delete": true,
+              "can_restore": false
+            },
+            "created_at": "2026-08-01T09:00:00Z",
+            "latest_activity_at": "2026-08-01T09:00:00Z",
+            "messages": [
+              {
+                "authored_by_user": true,
+                "content": "How is the business doing?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "user_question",
+                "message_id": "44000000-0000-0000-0000-000000000001"
+              },
+              {
+                "authored_by_user": false,
+                "content": "I could not map that message to a governed question. Please choose or rephrase one supported question.\n- Why did EU refunds increase from June to July 2026?\n- Which sales channel accounted for the increase in North America revenue from October to November 2026?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "router_clarification",
+                "message_id": "44000000-0000-0000-0000-000000000002"
+              }
+            ],
+            "project_id": "42000000-0000-0000-0000-000000000001",
+            "routing": {
+              "clarification": "I could not map that message to a governed question. Please choose or rephrase one supported question.",
+              "disposition": "unsupported",
+              "suggestions": [
+                "Why did EU refunds increase from June to July 2026?",
+                "Which sales channel accounted for the increase in North America revenue from October to November 2026?"
+              ]
+            },
+            "status": "draft",
+            "thread_id": "43000000-0000-0000-0000-000000000001",
+            "title": "How is the business doing?",
+            "updated_at": "2026-08-01T09:00:00Z"
+          }
+        ],
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/ThreadActionsResponse"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "latest_activity_at": {
+            "format": "date-time",
+            "title": "Latest Activity At",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "routing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "project_id",
+          "title",
+          "status",
+          "created_at",
+          "updated_at",
+          "latest_activity_at",
+          "messages",
+          "actions"
+        ],
+        "title": "ThreadResponse",
+        "type": "object"
+      },
+      "ThreadSummaryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "latest_activity_at": {
+            "format": "date-time",
+            "title": "Latest Activity At",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "project_id",
+          "title",
+          "status",
+          "latest_activity_at"
+        ],
+        "title": "ThreadSummaryResponse",
         "type": "object"
       },
       "TimelineResponse": {
@@ -3263,6 +4049,171 @@
           }
         },
         "summary": "Start Harvest",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/agent-access": {
+      "patch": {
+        "operationId": "set_table_agent_access_v1_connector_sources__data_source_id__tables__table_name__agent_access_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Table Agent Access",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/fields/{field_name}/agent-access": {
+      "patch": {
+        "operationId": "set_field_agent_access_v1_connector_sources__data_source_id__tables__table_name__fields__field_name__agent_access_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "field_name",
+            "required": true,
+            "schema": {
+              "title": "Field Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Field Agent Access",
         "tags": [
           "connector"
         ]
