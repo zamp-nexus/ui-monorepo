@@ -48,6 +48,13 @@ from .publication import (
     PublicationDecision,
     evaluate_publication,
 )
+from .workspace import (
+    MAX_WORKSPACE_NAME_LENGTH,
+    Project,
+    WorkspaceGroup,
+    WorkspaceNameError,
+    normalize_workspace_name,
+)
 
 __all__ = [
     "ApprovalDecision",
@@ -78,14 +85,19 @@ __all__ = [
     "InvestigationTransitionError",
     "PRESERVED",
     "MetricComparison",
+    "MAX_WORKSPACE_NAME_LENGTH",
+    "Project",
     "PublicationCondition",
     "PublicationDecision",
     "RejectionReason",
     "RootCauseState",
     "TERMINAL_STATUSES",
     "Tombstone",
+    "WorkspaceGroup",
+    "WorkspaceNameError",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",
+    "normalize_workspace_name",
     "require_erasable",
 ]

@@ -24,12 +24,13 @@ from zentra_adapter_model_providers import (
 from zentra_adapter_postgres import (
     Database,
     PostgresInvestigationUnitOfWorkFactory,
+    PostgresWorkspaceUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
-from zentra_application_investigation import InvestigationService
+from zentra_application_investigation import InvestigationService, WorkspaceService
 from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
@@ -55,6 +56,7 @@ class AppDependencies:
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
+    workspaces: WorkspaceService
 
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
@@ -106,6 +108,11 @@ class AppDependencies:
             publication_observer=record_publication_decision,
             erasure_observer=record_evidence_deletion,
         )
+        workspaces = WorkspaceService(
+            unit_of_work_factory=PostgresWorkspaceUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
         return cls(
             database=database,
             audit=audit,
@@ -117,6 +124,7 @@ class AppDependencies:
             ),
             investigations=investigations,
             audit_delivery=audit_delivery,
+            workspaces=workspaces,
         )
 
     async def close(self) -> None:
