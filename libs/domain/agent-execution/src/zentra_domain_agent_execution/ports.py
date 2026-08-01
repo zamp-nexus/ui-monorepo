@@ -302,6 +302,10 @@ class SequenceExecutionFailureReason(StrEnum):
     CATALOG_VIOLATION = "catalog_violation"
     DATA_INCOMPATIBLE = "data_incompatible"
     UNKNOWN_TABLE = "unknown_table"
+    # An infrastructure-level failure (a Lambda invocation throttled, timed
+    # out, or never returned) — distinct from the three above, which are all
+    # about the operation or the data, not about reaching the executor.
+    EXECUTION_ERROR = "execution_error"
 
 
 class SequenceStepExecutionFailure(BaseModel):
