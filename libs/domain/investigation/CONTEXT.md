@@ -2,6 +2,11 @@
 
 Investigation owns one traceable attempt to answer a governed business question and the states that make its progress explicit.
 
+Groups and Projects organize the future Investigation Thread surface. They are
+Tenant-owned navigation containers, not analytical authority and not nested
+ACL boundaries. Archived containers remain readable and make descendants
+read-only without deleting Investigation history.
+
 ## Language
 
 **Investigation Status**:

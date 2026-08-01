@@ -13,6 +13,11 @@ from .investigation import (
     PostgresInvestigationUnitOfWorkFactory,
 )
 from .schema import metadata
+from .workspace import (
+    PostgresWorkspaceRepository,
+    PostgresWorkspaceUnitOfWork,
+    PostgresWorkspaceUnitOfWorkFactory,
+)
 
 __all__ = [
     "Database",
@@ -22,6 +27,9 @@ __all__ = [
     "OutboxRecord",
     "PostgresInvestigationUnitOfWork",
     "PostgresInvestigationUnitOfWorkFactory",
+    "PostgresWorkspaceRepository",
+    "PostgresWorkspaceUnitOfWork",
+    "PostgresWorkspaceUnitOfWorkFactory",
     "metadata",
     "resolve_identity_context",
 ]
