@@ -37,5 +37,11 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "visualization_briefs",
         "visualization_artifacts",
         "visualization_actions",
+        # Sequence: a Dataset Workspace-owned graph of typed transform steps.
+        "sequences",
+        "sequence_steps",
+        "prepared_tables",
+        "sequence_runs",
+        "sequence_final_tables",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"
