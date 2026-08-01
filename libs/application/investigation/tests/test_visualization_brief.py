@@ -10,13 +10,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from zentra_application_investigation.visualization import _series, _view
 from zentra_domain_investigation import (
     BriefComparison,
     BriefMetric,
     BriefSeries,
     VisualizationView,
 )
+
+from zentra_application_investigation.visualization import _series, _view
 
 CITATION_ID = UUID("20000000-0000-0000-0000-000000000001")
 

@@ -41,6 +41,34 @@ class CandidatePair:
         return frozenset({self.left_field.field_id, self.right_field.field_id})
 
 
+#: What inference does *not* look for, stated so a reviewer is not misled.
+#:
+#: An empty proposal list is ambiguous on its own: it reads as "your data has no
+#: relationships" when the truth may be "the relationships your data has are not
+#: of a kind this looks for". Only single-field keys are considered, so a table
+#: keyed on (tenant_id, order_id) yields nothing and looks like a table with no
+#: relations at all. Saying so is the whole reason composite keys can honestly
+#: be out of scope.
+COMPOSITE_KEY_LIMITATION = (
+    "Only single-field joins are considered. A table whose key spans two or "
+    "more columns will not be proposed, and its absence here is not evidence "
+    "that no relationship exists."
+)
+
+
+def coverage_summary(unexamined: tuple[UnexaminedField, ...]) -> dict[str, int]:
+    """How many fields were skipped, grouped by why.
+
+    Counts rather than the fields themselves: the point is to tell a reviewer
+    the shape of what was not looked at, and a list of four hundred column names
+    communicates less than "312 not a joinable type, 88 no counterpart found".
+    """
+    counts: dict[str, int] = {}
+    for entry in unexamined:
+        counts[entry.reason] = counts.get(entry.reason, 0) + 1
+    return counts
+
+
 @dataclass(frozen=True, slots=True)
 class ScoredCandidate:
     """A measured candidate, ready to become a proposed Relation."""
