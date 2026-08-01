@@ -111,3 +111,14 @@ Multi-context layout: root `CONTEXT-MAP.md` points to the relevant domain `CONTE
 
 No single file should execeed more than 600 line of code, it can exceed if it is only absolutely necessary
 Use types, constant file for segreating have utils file and follow best coding practices
+
+## Documentation
+
+Documentation is part of every completed task.
+
+After implementing any feature, bug fix, refactor, or architectural change, update the relevant Obsidian notes before considering the task complete.
+
+If a note exists, update it.
+If not, create it.
+
+Keep documentation concise, accurate, and linked to related notes.

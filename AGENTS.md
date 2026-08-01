@@ -113,3 +113,18 @@ canonical vault note in the same change and run `npm exec -- nx run docs:check`.
 
 No single file should execeed more than 600 line of code, it can exceed if it is only absolutely necessary
 Use types, constant file for segreating have utils file and follow best coding practices
+
+## Obsidian Documentation Agent
+
+### Responsibility
+
+Maintain the Obsidian knowledge base after every completed engineering task.
+
+### Workflow
+
+1. Identify affected notes.
+2. Update or create documentation.
+3. Add relevant backlinks.
+4. Summarize the documentation changes.
+
+A task is complete only after both the implementation and documentation are finished.
