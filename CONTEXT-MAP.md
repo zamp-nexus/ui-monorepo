@@ -5,6 +5,7 @@
 - [ZentraOS Domain](./libs/domain/CONTEXT.md) — owns the product language shared by investigations, tenancy, semantic modeling, and trust
 - [Investigation](./libs/domain/investigation/CONTEXT.md) — owns the lifecycle of a traceable attempt to answer one governed business question
 - [Agent Execution](./libs/domain/agent-execution/CONTEXT.md) — owns autonomous analytical work and its typed outcomes
+- [Data Source](./libs/domain/data-source/CONTEXT.md) — owns uploaded and live analytical inputs, versions, and Investigation bindings
 
 ## Relationships
 
@@ -14,3 +15,6 @@
 - **Agent Execution → Trust & Verification**: completed work supplies typed outcomes and evidence references for gating.
 - **Trust & Verification → Investigation**: Human Approvals determine whether blocked work can continue.
 - **Semantic Modeling → Investigation**: governed Semantic Metrics are the only business definitions analytical agents may query.
+- **Data Source → Investigation**: each Investigation binds one eligible Workspace Snapshot or Data Connection plus exact model and policy versions.
+- **Data Source → Semantic Modeling**: profiles and metadata may propose relationships and metrics; Tenant approval governs them.
+- **Agent Execution → Data Source**: SQL Analyst proposes a Governed Query Plan; deterministic policy authorizes and executes it.
