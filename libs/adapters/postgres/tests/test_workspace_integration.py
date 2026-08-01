@@ -9,13 +9,13 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_application_investigation import (
     AuthenticatedActor,
+    OrganizationNameConflictError,
+    OrganizationNotFoundError,
+    OrganizationService,
     Role,
-    WorkspaceNameConflictError,
-    WorkspaceNotFoundError,
-    WorkspaceService,
 )
 
-from zentra_adapter_postgres import Database, PostgresWorkspaceUnitOfWorkFactory
+from zentra_adapter_postgres import Database, PostgresOrganizationUnitOfWorkFactory
 from zentra_adapter_postgres.schema import tenants
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
@@ -44,8 +44,8 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
         )
 
     database = Database(RUNTIME_URL)
-    service = WorkspaceService(
-        unit_of_work_factory=PostgresWorkspaceUnitOfWorkFactory(database),
+    service = OrganizationService(
+        unit_of_work_factory=PostgresOrganizationUnitOfWorkFactory(database),
         now=lambda: datetime.now(UTC),
         new_id=uuid4,
     )
@@ -66,9 +66,9 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
 
     group = await service.create_group(actor, name="Finance Operations")
     await service.create_project(actor, group_id=group.group_id, name="Forecast")
-    with pytest.raises(WorkspaceNameConflictError):
+    with pytest.raises(OrganizationNameConflictError):
         await service.create_group(actor, name="  FINANCE   OPERATIONS ")
-    with pytest.raises(WorkspaceNotFoundError):
+    with pytest.raises(OrganizationNotFoundError):
         await service.get_group(other_actor, group.group_id)
 
     await database.close()

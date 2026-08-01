@@ -37,7 +37,9 @@ authorization. Owners and admins organize them; members and viewers read them.
 
 Names retain a display form and a normalized uniqueness key. Groups are unique
 within a Tenant and Projects within a Group. Archive is reversible and changes
-write availability only: it never deletes or rewrites descendants.
+write availability only: it never deletes or rewrites descendants. A Project's
+latest activity advances separately from metadata changes so future Thread and
+Investigation activity can determine recent-work ordering.
 
 ## Lifecycle
 

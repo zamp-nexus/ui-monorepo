@@ -1,32 +1,32 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
-from zentra_domain_investigation import Project, WorkspaceGroup
+from zentra_domain_investigation import Group, Project
 
 from .dto import AuthenticatedActor, PermissionDeniedError, Role
 from .workspace_dto import (
     GroupDetail,
+    OrganizationConflictError,
+    OrganizationCursor,
+    OrganizationNotFoundError,
+    OrganizationPage,
     ProjectDetail,
-    WorkspaceConflictError,
-    WorkspaceCursor,
-    WorkspaceNotFoundError,
-    WorkspacePage,
 )
-from .workspace_ports import WorkspaceUnitOfWorkFactory
+from .workspace_ports import OrganizationUnitOfWorkFactory
 
 MANAGER_ROLES = frozenset({Role.OWNER, Role.ADMIN})
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
 
 
-class WorkspaceService:
+class OrganizationService:
     def __init__(
         self,
         *,
-        unit_of_work_factory: WorkspaceUnitOfWorkFactory,
+        unit_of_work_factory: OrganizationUnitOfWorkFactory,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
@@ -38,20 +38,20 @@ class WorkspaceService:
         self, actor: AuthenticatedActor, *, name: str
     ) -> GroupDetail:
         self._require_manager(actor)
-        group = WorkspaceGroup.create(
+        group = Group.create(
             group_id=self._new_id(),
             tenant_id=actor.tenant_id,
             name=name,
             now=self._now(),
         )
         async with self._uow(actor) as unit_of_work:
-            await unit_of_work.workspaces.add_group(group)
+            await unit_of_work.organization.add_group(group)
             await unit_of_work.commit()
         return self._group_detail(group, actor)
 
     async def get_group(self, actor: AuthenticatedActor, group_id: UUID) -> GroupDetail:
         async with self._uow(actor) as unit_of_work:
-            group = await unit_of_work.workspaces.get_group(group_id)
+            group = await unit_of_work.organization.get_group(group_id)
         return self._group_detail(self._require_group(group), actor)
 
     async def list_groups(
@@ -61,16 +61,16 @@ class WorkspaceService:
         include_archived: bool = False,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
-    ) -> WorkspacePage[GroupDetail]:
+    ) -> OrganizationPage[GroupDetail]:
         limit = self._page_size(limit)
+        after = OrganizationCursor.decode(cursor) if cursor is not None else None
         async with self._uow(actor) as unit_of_work:
-            groups = await unit_of_work.workspaces.list_groups(
-                include_archived=include_archived
+            page = await unit_of_work.organization.list_groups(
+                include_archived=include_archived, limit=limit, after=after
             )
-        page, next_cursor = self._page(groups, limit=limit, cursor=cursor)
-        return WorkspacePage(
-            items=tuple(self._group_detail(group, actor) for group in page),
-            next_cursor=next_cursor,
+        return OrganizationPage(
+            items=tuple(self._group_detail(group, actor) for group in page.items),
+            next_cursor=page.next_cursor.encode() if page.next_cursor else None,
         )
 
     async def rename_group(
@@ -104,10 +104,12 @@ class WorkspaceService:
         self._require_manager(actor)
         async with self._uow(actor) as unit_of_work:
             group = self._require_group(
-                await unit_of_work.workspaces.get_group(group_id, for_update=True)
+                await unit_of_work.organization.get_group(group_id, for_update=True)
             )
             if group.archived_at is not None:
-                raise WorkspaceConflictError("Archived Groups cannot accept Projects")
+                raise OrganizationConflictError(
+                    "Archived Groups cannot accept Projects"
+                )
             project = Project.create(
                 project_id=self._new_id(),
                 tenant_id=actor.tenant_id,
@@ -115,16 +117,23 @@ class WorkspaceService:
                 name=name,
                 now=self._now(),
             )
-            await unit_of_work.workspaces.add_project(project)
+            await unit_of_work.organization.add_project(project)
             await unit_of_work.commit()
-        return self._project_detail(project, actor)
+        return self._project_detail(project, actor, group_archived=False)
 
     async def get_project(
         self, actor: AuthenticatedActor, project_id: UUID
     ) -> ProjectDetail:
         async with self._uow(actor) as unit_of_work:
-            project = await unit_of_work.workspaces.get_project(project_id)
-        return self._project_detail(self._require_project(project), actor)
+            project = self._require_project(
+                await unit_of_work.organization.get_project(project_id)
+            )
+            group = self._require_group(
+                await unit_of_work.organization.get_group(project.group_id)
+            )
+        return self._project_detail(
+            project, actor, group_archived=group.archived_at is not None
+        )
 
     async def list_projects(
         self,
@@ -134,17 +143,27 @@ class WorkspaceService:
         include_archived: bool = False,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
-    ) -> WorkspacePage[ProjectDetail]:
+    ) -> OrganizationPage[ProjectDetail]:
         limit = self._page_size(limit)
+        after = OrganizationCursor.decode(cursor) if cursor is not None else None
         async with self._uow(actor) as unit_of_work:
-            self._require_group(await unit_of_work.workspaces.get_group(group_id))
-            projects = await unit_of_work.workspaces.list_projects(
-                group_id=group_id, include_archived=include_archived
+            group = self._require_group(
+                await unit_of_work.organization.get_group(group_id)
             )
-        page, next_cursor = self._page(projects, limit=limit, cursor=cursor)
-        return WorkspacePage(
-            items=tuple(self._project_detail(project, actor) for project in page),
-            next_cursor=next_cursor,
+            page = await unit_of_work.organization.list_projects(
+                group_id=group_id,
+                include_archived=include_archived,
+                limit=limit,
+                after=after,
+            )
+        return OrganizationPage(
+            items=tuple(
+                self._project_detail(
+                    project, actor, group_archived=group.archived_at is not None
+                )
+                for project in page.items
+            ),
+            next_cursor=page.next_cursor.encode() if page.next_cursor else None,
         )
 
     async def rename_project(
@@ -172,15 +191,15 @@ class WorkspaceService:
         self,
         actor: AuthenticatedActor,
         group_id: UUID,
-        change: Callable[[WorkspaceGroup], None],
+        change: Callable[[Group], None],
     ) -> GroupDetail:
         self._require_manager(actor)
         async with self._uow(actor) as unit_of_work:
             group = self._require_group(
-                await unit_of_work.workspaces.get_group(group_id, for_update=True)
+                await unit_of_work.organization.get_group(group_id, for_update=True)
             )
             change(group)
-            await unit_of_work.workspaces.save_group(group)
+            await unit_of_work.organization.save_group(group)
             await unit_of_work.commit()
         return self._group_detail(group, actor)
 
@@ -193,17 +212,19 @@ class WorkspaceService:
         self._require_manager(actor)
         async with self._uow(actor) as unit_of_work:
             project = self._require_project(
-                await unit_of_work.workspaces.get_project(project_id, for_update=True)
+                await unit_of_work.organization.get_project(project_id, for_update=True)
             )
             group = self._require_group(
-                await unit_of_work.workspaces.get_group(project.group_id)
+                await unit_of_work.organization.get_group(project.group_id)
             )
             if group.archived_at is not None:
-                raise WorkspaceConflictError("Archived Groups make Projects read-only")
+                raise OrganizationConflictError(
+                    "Archived Groups make Projects read-only"
+                )
             change(project)
-            await unit_of_work.workspaces.save_project(project)
+            await unit_of_work.organization.save_project(project)
             await unit_of_work.commit()
-        return self._project_detail(project, actor)
+        return self._project_detail(project, actor, group_archived=False)
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
@@ -216,15 +237,15 @@ class WorkspaceService:
             raise PermissionDeniedError("This membership cannot organize workspaces")
 
     @staticmethod
-    def _require_group(group: WorkspaceGroup | None) -> WorkspaceGroup:
+    def _require_group(group: Group | None) -> Group:
         if group is None:
-            raise WorkspaceNotFoundError("Group was not found")
+            raise OrganizationNotFoundError("Group was not found")
         return group
 
     @staticmethod
     def _require_project(project: Project | None) -> Project:
         if project is None:
-            raise WorkspaceNotFoundError("Project was not found")
+            raise OrganizationNotFoundError("Project was not found")
         return project
 
     @staticmethod
@@ -234,37 +255,7 @@ class WorkspaceService:
         return limit
 
     @staticmethod
-    def _page(
-        resources: Sequence[WorkspaceGroup] | Sequence[Project],
-        *,
-        limit: int,
-        cursor: str | None,
-    ) -> tuple[Sequence[WorkspaceGroup] | Sequence[Project], str | None]:
-        if cursor is not None:
-            after = WorkspaceCursor.decode(cursor)
-            resources = tuple(
-                resource
-                for resource in resources
-                if (
-                    resource.updated_at,
-                    resource.group_id
-                    if isinstance(resource, WorkspaceGroup)
-                    else resource.project_id,
-                )
-                < (after.updated_at, after.resource_id)
-            )
-        page = resources[: limit + 1]
-        if len(page) <= limit:
-            return page, None
-        visible = page[:limit]
-        last = visible[-1]
-        resource_id = (
-            last.group_id if isinstance(last, WorkspaceGroup) else last.project_id
-        )
-        return visible, WorkspaceCursor(last.updated_at, resource_id).encode()
-
-    @staticmethod
-    def _group_detail(group: WorkspaceGroup, actor: AuthenticatedActor) -> GroupDetail:
+    def _group_detail(group: Group, actor: AuthenticatedActor) -> GroupDetail:
         return GroupDetail(
             group_id=group.group_id,
             name=group.name,
@@ -275,13 +266,19 @@ class WorkspaceService:
         )
 
     @staticmethod
-    def _project_detail(project: Project, actor: AuthenticatedActor) -> ProjectDetail:
+    def _project_detail(
+        project: Project,
+        actor: AuthenticatedActor,
+        *,
+        group_archived: bool,
+    ) -> ProjectDetail:
         return ProjectDetail(
             project_id=project.project_id,
             group_id=project.group_id,
             name=project.name,
             created_at=project.created_at,
             updated_at=project.updated_at,
+            latest_activity_at=project.latest_activity_at,
             archived_at=project.archived_at,
-            can_manage=actor.role in MANAGER_ROLES,
+            can_manage=actor.role in MANAGER_ROLES and not group_archived,
         )
