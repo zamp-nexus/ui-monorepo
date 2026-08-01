@@ -52,6 +52,18 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Linear Investigation follow-ups, a five-Agent public roster, strict factual
   Visualization Briefs, independently retriable Thesys C1 artifacts, safe
   server-mapped actions, and visualization-aware evidence erasure.
+- A Visualization Brief that decides its own presentation: `view` is derived
+  deterministically from the shape of the evidence rather than left as `auto`
+  for the renderer to choose, and each governed comparison also travels as a
+  two-point `series` carrying the citation that already validated both figures.
+  No new query, no new evidence — the renderer can simply draw what was always
+  there.
+- The Chat Surface bound to the Thread API end to end: auto-provisioned
+  workspace, Thread create and follow-up, a resumable SSE Work Feed read with
+  `fetch` and deduplicated by `event_id`, live five-Agent progress, server-decided
+  cancel/retry/approval affordances, and answers rendered as Thesys C1
+  generative UI with a native fallback-brief renderer whenever the renderer is
+  pending, failed, erased, or unconfigured. See [[Chat Surface]].
 - The Connector context: Data Sources (connected and uploaded), immutable Catalog
   Versions, Field Profiles bounded by explicit query budgets, and Relations
   inferred from name affinity, type compatibility, and value overlap measured at

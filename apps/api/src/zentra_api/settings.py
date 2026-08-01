@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, get_args
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: `apps/api/.env`, located from this module rather than from the working
+#: directory. `uv run` executes at the uv workspace root whatever directory it
+#: was invoked from, so a bare relative ".env" can only ever mean the repository
+#: root — which silently leaves the API's own env file unread and every provider
+#: chain empty. Later entries win, so a repository-root `.env` still overrides.
+_API_ENV = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(_API_ENV, ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )

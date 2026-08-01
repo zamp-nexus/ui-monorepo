@@ -37,6 +37,14 @@ slice:
 `foundation-shared-events` provides typed emitter and hotkey primitives outside
 the foundation folder. Internal Nx generators live under `tools`.
 
+## Third-party renderer
+
+`zentra-os` additionally depends on `@thesysai/genui-sdk`, `@crayonai/react-ui`,
+and `@crayonai/react-core` to display Thesys C1 generative UI. They are confined
+to [[Chat Surface]] and loaded lazily. `foundation-design-system` has no chart
+component, so the native fallback renderer draws its two-point comparison as
+inline markup rather than adding a charting library.
+
 These packages have their own READMEs and tests. Their existence does not imply
 that every capability participates in the Phase 1A product workflow.
 

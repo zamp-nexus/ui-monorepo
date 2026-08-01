@@ -12,11 +12,7 @@ interface ChatEmptyStateProps {
  * What an empty thread offers: a greeting, and four questions this tenant is
  * actually allowed to ask.
  */
-export const ChatEmptyState = ({
-  greetingName,
-  suggestions,
-  onChoose,
-}: ChatEmptyStateProps) => (
+export const ChatEmptyState = ({ greetingName, suggestions, onChoose }: ChatEmptyStateProps) => (
   <div className="flex h-full flex-col items-center justify-center px-6 py-10">
     <span
       className="mb-6 flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground"
@@ -29,8 +25,8 @@ export const ChatEmptyState = ({
       How can I help, {greetingName}?
     </h2>
     <p className="mt-3 max-w-lg text-center text-sm leading-relaxed text-foreground-muted">
-      Ask about a governed metric, an Investigation, or what is waiting on your judgment.
-      Every answer is traceable to the evidence behind it.
+      Ask about a governed metric, an Investigation, or what is waiting on your judgment. Every
+      answer is traceable to the evidence behind it.
     </p>
 
     <div className="mt-10 grid w-full max-w-2xl gap-3 sm:grid-cols-2">

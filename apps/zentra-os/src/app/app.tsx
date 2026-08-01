@@ -89,7 +89,10 @@ const AuthenticatedWorkspace = () => {
           path="/datasets"
           element={<DatasetsPage getToken={getToken} identity={identity.data} />}
         />
-        <Route path="/chat" element={<ChatPage identity={identity.data} />} />
+        <Route
+          path="/chat"
+          element={<ChatPage getToken={getToken} identity={identity.data} />}
+        />
         <Route
           path="/connections"
           element={<ConnectionsPage getToken={getToken} identity={identity.data} />}

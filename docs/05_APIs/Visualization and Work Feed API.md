@@ -45,6 +45,18 @@ strict fallback brief. Safe actions ignore generated parameters and resolve the
 stored mapping. Frontends render returned C1 content with `<C1Component>` inside
 `ThemeProvider` plus Crayon styles, not `<C1Chat>`. Compatible renderer packages:
 `@thesysai/genui-sdk ~0.7.15`, `@crayonai/react-ui ~0.9.9`, and
-`@crayonai/react-core ~0.7.6`.
+`@crayonai/react-core ~0.7.6`. The consuming surface is [[Chat Surface]].
+
+## Brief presentation
+
+The brief decides its own presentation rather than deferring to the renderer.
+`view` is derived from the shape of the evidence — `grouped_bar` for two or more
+comparisons, `bar` for one, `metric_cards` for metrics alone, `structured_text`
+otherwise — so the same brief cannot render differently on two runs, and the
+choice travels inside `content_hash`. Each comparison is also emitted as a
+two-point `series` whose points restate the comparison's own previous and
+current figures under the citation that already validated them. Nothing is
+measured to produce a series; a client that cannot render C1 can still draw the
+comparison from `fallback_brief` alone.
 
 Parent: [[APIs MOC]]
