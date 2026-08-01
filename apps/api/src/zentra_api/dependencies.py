@@ -41,6 +41,7 @@ from zentra_adapter_postgres import (
     PostgresInvestigationUnitOfWorkFactory,
     PostgresOrganizationUnitOfWorkFactory,
     PostgresRelationRepository,
+    PostgresSequenceUnitOfWorkFactory,
     PostgresThreadUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
@@ -56,6 +57,7 @@ from zentra_application_investigation import (
     ThreadService,
     VisualizationService,
 )
+from zentra_application_sequence import SequenceService
 from zentra_domain_agent_execution import AgentRole
 
 from .audit_delivery import AuditDeliveryCoordinator
@@ -67,6 +69,7 @@ from .pipeline import (
     PostgresExecutionRecorder,
 )
 from .registry import PostgresAgentRegistry
+from .sequence_model import ConnectorRawTableResolver
 from .settings import Settings
 
 
@@ -110,6 +113,11 @@ class AppDependencies:
     #: AttributeError — whenever this is unset.
     worker_task: asyncio.Task[None] | None = None
     connector: ConnectorService | None = None
+    #: Absent whenever `connector` is, since its `RawTableResolver` is built
+    #: over `ConnectorService` — a Sequence's Raw Table is always either a
+    #: Connector Source Table or a Data Source upload, and only the former
+    #: has any adapter to confirm against today.
+    sequences: SequenceService | None = None
 
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
@@ -236,6 +244,16 @@ class AppDependencies:
             if settings.connector_credential_key
             else None
         )
+        sequences = (
+            SequenceService(
+                unit_of_work_factory=PostgresSequenceUnitOfWorkFactory(database),
+                raw_tables=ConnectorRawTableResolver(connector),
+                now=lambda: datetime.now(UTC),
+                new_id=uuid4,
+            )
+            if connector is not None
+            else None
+        )
         worker_id = settings.execution_worker_id or (
             f"{socket.gethostname()}:{os.getpid()}"
         )
@@ -265,6 +283,7 @@ class AppDependencies:
             registry=registry,
             visualizations=visualizations,
             connector=connector,
+            sequences=sequences,
         )
 
     async def start(self) -> None:
