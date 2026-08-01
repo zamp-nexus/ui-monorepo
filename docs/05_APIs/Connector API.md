@@ -19,6 +19,7 @@ code_refs:
   - apps/api/src/zentra_api/connector_routes.py
   - apps/api/src/zentra_api/connector_schemas.py
   - apps/api/tests/test_connector_contract.py
+  - apps/api/tests/test_connector_schemas.py
   - docs/05_APIs/connector-openapi.json
 ---
 
@@ -109,6 +110,21 @@ would produce a Catalog Version that never existed at any moment in the source.
 Row counts are named `estimated_rows` because that is what ClickHouse stores.
 Every Field Profile carries `sampled_rows`, so no statistic is presented without
 the size of the evidence behind it.
+
+## Agent access
+
+| Method | Path | Purpose | Authorization |
+| --- | --- | --- | --- |
+| PATCH | `/v1/connector/sources/{id}/tables/{table}/agent-access` | Hide or reveal a whole table from agents | owner/admin |
+| PATCH | `/v1/connector/sources/{id}/tables/{table}/fields/{field}/agent-access` | Hide or reveal one field | owner/admin |
+
+Every table and field defaults to `agent_visible: true`; these endpoints only
+ever record a departure from that default, keyed by table/field name so it
+survives a re-harvest. A repeat toggle on the same target upserts rather than
+accumulating rows. `GET /sources/{id}/catalog` and
+`GET /catalog-versions/{id}` fold the current overrides into each
+`TableResponse`/`FieldResponse` as `agent_visible`. See [[Connector Domain]]
+for the visibility semantics (table hide beats a stale field override).
 
 ## Relations
 
