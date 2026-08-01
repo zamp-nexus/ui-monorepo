@@ -44,6 +44,14 @@
         "cwd": "."
       },
       "cache": true
+    },
+    "connector-accuracy": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run python tools/evals/connector_accuracy.py",
+        "cwd": "."
+      },
+      "cache": false
     }
   },
   "tags": [
