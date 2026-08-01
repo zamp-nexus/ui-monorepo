@@ -33,6 +33,22 @@ from .ports import (
     TenantPolicyRepository,
 )
 from .service import InvestigationService
+from .thread_dto import (
+    RoutingDisposition,
+    RoutingResult,
+    ThreadConflictError,
+    ThreadCursor,
+    ThreadCursorError,
+    ThreadDetail,
+    ThreadMessageDetail,
+    ThreadNotFoundError,
+    ThreadPage,
+    ThreadSlice,
+    ThreadSummary,
+)
+from .thread_ports import ThreadRepository, ThreadUnitOfWork, ThreadUnitOfWorkFactory
+from .thread_routing import deterministic_thread_title, route_governed_question
+from .thread_service import ThreadService
 from .workspace_dto import (
     GroupDetail,
     OrganizationConflictError,
@@ -76,11 +92,28 @@ __all__ = [
     "PermissionDeniedError",
     "PipelineResult",
     "Role",
+    "RoutingDisposition",
+    "RoutingResult",
     "Scenario",
     "ScenarioUnavailableError",
     "TenantPolicyRepository",
     "TimelineEntry",
+    "ThreadConflictError",
+    "ThreadCursor",
+    "ThreadCursorError",
+    "ThreadDetail",
+    "ThreadMessageDetail",
+    "ThreadNotFoundError",
+    "ThreadPage",
+    "ThreadRepository",
+    "ThreadService",
+    "ThreadSlice",
+    "ThreadSummary",
+    "ThreadUnitOfWork",
+    "ThreadUnitOfWorkFactory",
     "UnsupportedScenarioError",
+    "deterministic_thread_title",
+    "route_governed_question",
     "GroupDetail",
     "ProjectDetail",
     "OrganizationConflictError",

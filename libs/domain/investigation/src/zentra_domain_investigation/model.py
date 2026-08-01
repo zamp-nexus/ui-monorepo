@@ -240,6 +240,9 @@ class Investigation:
     evaluation_attempts: int
     created_at: datetime
     updated_at: datetime
+    thread_id: UUID | None = None
+    thread_sequence: int | None = None
+    initiating_message_id: UUID | None = None
     finished_at: datetime | None = None
     finding: Finding | None = None
     outcome: OutcomeSignal | None = None
@@ -256,7 +259,19 @@ class Investigation:
         question: str,
         scenario_key: str,
         now: datetime,
+        thread_id: UUID | None = None,
+        thread_sequence: int | None = None,
+        initiating_message_id: UUID | None = None,
     ) -> Investigation:
+        thread_link = (thread_id, thread_sequence, initiating_message_id)
+        if any(value is not None for value in thread_link) and (
+            any(value is None for value in thread_link)
+            or (thread_sequence is not None and thread_sequence < 1)
+        ):
+            raise InvestigationTransitionError(
+                "A Thread-linked Investigation requires a Thread, positive sequence, "
+                "and initiating message"
+            )
         investigation = cls(
             investigation_id=investigation_id,
             tenant_id=tenant_id,
@@ -267,6 +282,9 @@ class Investigation:
             evaluation_attempts=0,
             created_at=now,
             updated_at=now,
+            thread_id=thread_id,
+            thread_sequence=thread_sequence,
+            initiating_message_id=initiating_message_id,
         )
         investigation._record("investigation.created", now)
         return investigation

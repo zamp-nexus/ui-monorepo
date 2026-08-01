@@ -23,5 +23,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "erasure_operations",
         "workspace_groups",
         "projects",
+        "investigation_threads",
+        "thread_messages",
     } == set(metadata.tables)
     assert agent_registry.c.enabled.server_default.arg.text == "false"
