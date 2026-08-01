@@ -19,6 +19,7 @@ code_refs: [CONTEXT-MAP.md, libs/domain/CONTEXT.md]
 # Domains
 
 - [[Investigation Domain]]
+- [[Connector Domain]]
 - [[Agent Execution Domain]]
 - [[Identity and Tenancy]]
 - [[Semantic Modeling]]

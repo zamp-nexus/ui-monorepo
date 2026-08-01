@@ -1,0 +1,139 @@
+---
+id: api-connector
+title: Connector API
+type: api
+status: active
+owner: unassigned
+source: repository
+created: 2026-08-01
+updated: 2026-08-01
+reviewed: 2026-08-01
+confidence: verified
+implementation: current
+priority: critical
+tags: [api, connector, relations, upload]
+related: ["[[APIs MOC]]", "[[Connector Domain]]", "[[Source Catalog]]"]
+depends_on: ["[[Authenticated Tenant Resolution]]"]
+repo_path: apps/api/src/zentra_api/connector_routes.py
+code_refs:
+  - apps/api/src/zentra_api/connector_routes.py
+  - apps/api/src/zentra_api/connector_schemas.py
+  - apps/api/tests/test_connector_contract.py
+  - docs/05_APIs/connector-openapi.json
+---
+
+# Connector API
+
+Machine-readable contract: `docs/05_APIs/connector-openapi.json`. It is
+committed, and `apps/api/tests/test_connector_contract.py` asserts full equality
+between it and the specification the application generates — so a frontend built
+against the file cannot be building against a lie.
+
+Regenerate after any route change:
+
+```
+uv run python tools/scripts/export_connector_openapi.py
+```
+
+## Data Sources
+
+| Method | Path | Purpose | Authorization |
+| --- | --- | --- | --- |
+| POST | `/v1/connector/sources` | Register a source, verified before it is saved | owner/admin |
+| GET | `/v1/connector/sources` | List this Tenant's sources | all roles |
+| GET | `/v1/connector/sources/{id}` | Read one source | all roles |
+| PUT | `/v1/connector/sources/{id}/credentials` | Rotate the secret | owner/admin |
+| POST | `/v1/connector/sources/{id}/test-connection` | Re-verify reachability | all roles |
+| DELETE | `/v1/connector/sources/{id}` | Remove, dropping an uploaded table | owner/admin |
+
+**Credentials are write-only.** They are accepted on create and rotate and
+returned by nothing. Reads carry a `connection_hint` of host and database only —
+never username, never anything derived from the password. A contract test asserts
+no response schema in the document has a credential field.
+
+Registration tests the connection **before** persisting. An unreachable source is
+never saved, so a typo surfaces immediately rather than at the next harvest.
+Failures are typed as `unreachable`, `authentication_failed`, or
+`database_not_found`, which tells an admin which field to fix without echoing the
+source's own error text back.
+
+## Harvests
+
+| Method | Path | Purpose | Authorization |
+| --- | --- | --- | --- |
+| POST | `/v1/connector/sources/{id}/harvests` | Start discovery — returns `202` | owner/admin/member |
+| GET | `/v1/connector/harvests/{id}` | Poll phase, counts, budget | all roles |
+| POST | `/v1/connector/harvests/{id}/cancel` | Request a stop | owner/admin/member |
+| GET | `/v1/connector/sources/{id}/harvests` | Run history | all roles |
+
+`202` and a run to poll, because relation inference issues a query per candidate
+pair and will not complete inside a request. Progress is counts — tables found,
+fields described, fields profiled, relations proposed — plus budget consumption.
+
+A second concurrent run on one source is refused with `409`: two runs interleaving
+would produce a Catalog Version that never existed at any moment in the source.
+
+## Catalog
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/v1/connector/sources/{id}/catalog` | Latest Catalog Version |
+| GET | `/v1/connector/catalog-versions/{id}` | One version, with tables, fields, profiles |
+| GET | `/v1/connector/catalog-versions/{id}/search?q=` | Find a field across tables |
+| GET | `/v1/connector/catalog-versions/{id}/diff?against=` | What changed between versions |
+
+Row counts are named `estimated_rows` because that is what ClickHouse stores.
+Every Field Profile carries `sampled_rows`, so no statistic is presented without
+the size of the evidence behind it.
+
+## Relations
+
+| Method | Path | Purpose | Authorization |
+| --- | --- | --- | --- |
+| GET | `/v1/connector/catalog-versions/{id}/relations` | List, filterable by state | all roles |
+| POST | `/v1/connector/relations/{id}/decision` | Confirm or reject | owner/admin |
+| POST | `/v1/connector/relations/{id}/revoke` | Withdraw a confirmation | owner/admin |
+| POST | `/v1/connector/catalog-versions/{id}/relations` | Declare one manually | owner/admin |
+| GET | `/v1/connector/catalog-versions/{id}/join-graph` | Confirmed Relations only | all roles |
+
+Every proposal carries its evidence — which signals fired, the measured overlap
+fraction, the sample size, both cardinalities — plus `binding_ceiling` naming
+which bound held its confidence down. A proposal a reviewer could not argue with
+would be an instruction rather than a judgement.
+
+Decisions are idempotent when repeated identically and `409` when contradictory,
+so a double-clicked button cannot corrupt state. A rejection must state a reason
+(`422` without one): the reason is what suppresses re-proposal, so defaulting it
+would silently pick one on the reviewer's behalf.
+
+A manually declared Relation is still validated against real data. The reviewer's
+typo can produce a wrong Finding as easily as the system's guess.
+
+The join-graph response also lists `isolated_fields` — the fields nothing
+connects to, which is the difference between "your data connects" and "half of it
+is unreachable and nobody said so".
+
+## Uploads
+
+| Method | Path | Purpose | Authorization |
+| --- | --- | --- | --- |
+| POST | `/v1/connector/uploads` | Stream a file, get a preview | owner/admin/member |
+| POST | `/v1/connector/uploads/{id}/commit` | Land it as a Data Source | owner/admin/member |
+
+Multipart, streamed in chunks so a large file need not fit in memory before being
+rejected for size. The preview returns inferred columns and first rows; commit
+accepts corrected column types. A malformed file fails `422` with the offending
+row or column named. The limit is 100 MB and stated, so failure is predictable.
+
+Commit creates an ordinary Data Source of kind `uploaded`, which is then
+harvested, profiled and relation-inferred by exactly the same path as a connected
+warehouse.
+
+## Error behavior
+
+`403` permission denied, `404` not found (never distinguishing "wrong tenant"
+from "does not exist"), `409` lifecycle conflict, `422` malformed input or
+upload, `502` source unreachable with the typed failure and nothing more. No
+error body carries connection details or raw field values.
+
+Parent: [[APIs MOC]]
