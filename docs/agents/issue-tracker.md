@@ -7,17 +7,16 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 The repository is `ch-nexus/ui-monorepo`. Infer it from `git remote -v`; `gh`
 does this automatically when run inside this clone.
 
-### Where older issue numbers point
+### Resolve historical issue references explicitly
 
-Issue references numbered **#9–#45** — in commit messages and in governed
-documents — refer to `openzentra/nexus`, which remains the historical record for
-Phase 2. They were written before the move and are not renumbered here.
+Some governed documents written before the repository move contain issue numbers
+from `openzentra/nexus`, which remains the historical record for Phase 2. Current
+issues, including the chat-backend sequence **#18–#32**, belong to
+`ch-nexus/ui-monorepo`.
 
-This matters because GitHub resolves `#NN` against whichever repository you are
-viewing. Left unstated, a citation like `Closes #22` would quietly point at an
-unrelated issue in this repo rather than at the evidence it names — and a link
-that resolves to the wrong thing is worse than one that breaks, because nothing
-looks amiss.
+Before interpreting a bare reference in older documentation, verify its repository
+context. Commit and PR closing references resolve against the repository receiving
+the commit or PR.
 
 The old remote is retained as `openzentra` for exactly this reason:
 

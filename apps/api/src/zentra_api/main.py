@@ -11,6 +11,7 @@ from .connector_routes import router as connector_router
 from .dependencies import AppDependencies
 from .routes import router
 from .settings import Settings
+from .thread_routes import router as thread_router
 from .workspace_routes import router as workspace_router
 
 
@@ -50,6 +51,7 @@ def create_app(
     api.include_router(router)
     api.include_router(connector_router)
     api.include_router(workspace_router)
+    api.include_router(thread_router)
     configure_telemetry(
         api,
         TelemetrySettings(
