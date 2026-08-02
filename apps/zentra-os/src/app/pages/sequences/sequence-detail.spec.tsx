@@ -201,6 +201,8 @@ const renderDetail = () => {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  // jsdom has no layout engine and does not implement scrollIntoView.
+  Element.prototype.scrollIntoView = () => undefined;
 });
 
 describe('SequenceDetailPage', () => {

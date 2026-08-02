@@ -28,13 +28,17 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const project = useActiveProject(getToken);
-  const [dataSourceId, setDataSourceId] = useState<string | null>(null);
-  const [tableName, setTableName] = useState<string | null>(null);
+  // Empty string, not `null`, means "nothing picked yet" — Select is
+  // controlled from its first render either way, and Base UI warns if a
+  // component switches from uncontrolled (`value={undefined}`) to
+  // controlled partway through its life.
+  const [dataSourceId, setDataSourceId] = useState('');
+  const [tableName, setTableName] = useState('');
   const [message, setMessage] = useState('');
 
   const reset = () => {
-    setDataSourceId(null);
-    setTableName(null);
+    setDataSourceId('');
+    setTableName('');
     setMessage('');
   };
 
@@ -47,8 +51,8 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
 
   const catalog = useQuery({
     queryKey: ['catalog', dataSourceId],
-    queryFn: () => latestCatalog(getToken, dataSourceId as string),
-    enabled: open && dataSourceId !== null,
+    queryFn: () => latestCatalog(getToken, dataSourceId),
+    enabled: open && dataSourceId !== '',
   });
   const tables = catalog.data?.tables ?? [];
 
@@ -103,10 +107,10 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
               Source
             </label>
             <Select
-              value={dataSourceId ?? undefined}
+              value={dataSourceId}
               onValueChange={(value) => {
                 setDataSourceId(value);
-                setTableName(null);
+                setTableName('');
               }}
             >
               <Select.Trigger id="sequence-source" placeholder="Choose a connected source" />
@@ -125,9 +129,9 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
               Table
             </label>
             <Select
-              value={tableName ?? undefined}
+              value={tableName}
               onValueChange={setTableName}
-              disabled={dataSourceId === null || catalog.isPending}
+              disabled={dataSourceId === '' || catalog.isPending}
             >
               <Select.Trigger id="sequence-table" placeholder="Choose a table" />
               <Select.Content>

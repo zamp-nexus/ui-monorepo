@@ -32,9 +32,14 @@ if (typeof globalThis.DOMMatrixReadOnly === 'undefined') {
   globalThis.DOMMatrixReadOnly = DOMMatrixReadOnlyStub as unknown as typeof DOMMatrixReadOnly;
 }
 
-if (typeof SVGElement !== 'undefined' && !SVGElement.prototype.getBBox) {
+// `getBBox` belongs to `SVGGraphicsElement`, not `SVGElement` itself — hence
+// the `any` cast on both the read and the write.
+if (typeof SVGElement !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (SVGElement.prototype as any).getBBox = () => ({ x: 0, y: 0, width: 0, height: 0 });
+  const svgElementPrototype = SVGElement.prototype as any;
+  if (!svgElementPrototype.getBBox) {
+    svgElementPrototype.getBBox = () => ({ x: 0, y: 0, width: 0, height: 0 });
+  }
 }
 
 // jsdom's own implementation returns every dimension as 0, which is
