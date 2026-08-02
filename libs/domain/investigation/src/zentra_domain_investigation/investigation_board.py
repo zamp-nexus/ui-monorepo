@@ -138,6 +138,29 @@ class InvestigationBoard:
     def unresolved_conflicts(self) -> tuple[Conflict, ...]:
         return tuple(c for c in self.conflicts if c.status is ConflictStatus.OPEN)
 
+    def contradicted_by(self, fact: Fact) -> Fact | None:
+        """The Fact already on the Board that this one disagrees with.
+
+        Two Work Items measuring the same metric over the same period must
+        arrive at the same value; when they do not, one of them is wrong and
+        the Board cannot silently keep both. Same metric and period with the
+        *same* value is corroboration, not a contradiction — a fan-out that
+        re-measures what the primary Analyst already measured is the cheapest
+        confirmation available and must not read as a conflict.
+
+        Returns the incumbent rather than opening the Conflict here: minting
+        the `conflict_id` is the caller's job, as it is everywhere else in
+        this domain.
+        """
+        for existing in self.facts:
+            if (
+                existing.metric == fact.metric
+                and existing.period == fact.period
+                and existing.value != fact.value
+            ):
+                return existing
+        return None
+
     def record_fact(self, fact: Fact, *, now: datetime) -> None:
         self.facts.append(fact)
         self.updated_at = now

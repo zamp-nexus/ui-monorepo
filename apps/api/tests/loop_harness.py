@@ -24,6 +24,7 @@ from uuid import UUID
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
     InsightAgent,
+    OrchestratorAgent,
     SqlAnalystAgent,
 )
 from zentra_adapter_langgraph.schemas import (
@@ -31,14 +32,17 @@ from zentra_adapter_langgraph.schemas import (
     DRAFT_FINDING_SCHEMA,
     QUERY_PLAN_SCHEMA,
     RECHECK_SCHEMA,
+    TASK_LEDGER_SCHEMA,
 )
 from zentra_adapter_model_providers import ModelTier
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     AgentExecutionStart,
+    AgentRole,
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    RegisteredAgent,
     SemanticCatalog,
     SemanticDimension,
     SemanticMeasure,
@@ -46,7 +50,7 @@ from zentra_domain_agent_execution import (
     SemanticResult,
 )
 
-from zentra_api.pipeline import OrchestratorLoop, StepAgents
+from zentra_api.orchestrator_loop import OrchestratorLoop, StepAgents
 
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -91,6 +95,7 @@ METRICS = [
 # What the router resolves each role to, mirrored here so these tests keep
 # asserting on real model identities rather than on role keys.
 ROLE_MODELS = {
+    "orchestrator": "gemini/gemini-3-flash",
     "sql_analyst": "cerebras/zai-glm-4.7",
     "evaluator": "groq/openai/gpt-oss-120b",
     # Deliberately distinct from every other role, so a test asserting Insight's
@@ -124,9 +129,21 @@ class ScriptedModel:
         *,
         recheck_passed: bool,
         fallbacks: tuple[str, ...] = (),
+        tasks: list[dict[str, str]] | None = None,
+        measured_values: tuple[str, ...] = ("260.00",),
+        failing_analysis: int | None = None,
     ) -> None:
         self._recheck_passed = recheck_passed
         self._fallbacks = fallbacks
+        self._tasks = tasks or []
+        # One per Analyst interpretation call, in order, the last repeating.
+        # A fan-out whose child measures a *different* value for the same
+        # metric and period is how a Conflict gets exercised end to end.
+        self._measured_values = measured_values
+        # Which Analyst interpretation call raises, 0-based. The provider
+        # falling over inside one branch is the failure a fan-out must survive.
+        self._failing_analysis = failing_analysis
+        self._analyses = 0
         self.calls = 0
 
     async def complete(
@@ -152,12 +169,21 @@ class ScriptedModel:
         )
 
     def _payload(self, schema: dict[str, Any] | None) -> dict[str, Any]:
+        if schema == TASK_LEDGER_SCHEMA:
+            return {"tasks": self._tasks}
         if schema == QUERY_PLAN_SCHEMA:
             return QUERY_PLAN
         if schema == ANALYSIS_SCHEMA:
+            index = min(self._analyses, len(self._measured_values) - 1)
+            failed = self._analyses == self._failing_analysis
+            self._analyses += 1
+            if failed:
+                raise TimeoutError("simulated provider interruption")
             return {
                 "result_summary": "EU refunds rose from $20 to $260.",
-                "metrics": METRICS,
+                "metrics": [
+                    {**METRICS[0], "current_value": self._measured_values[index]}
+                ],
                 "confidence": 0.88,
                 # Underlying records, not returned rows: two monthly totals
                 # over 240 orders.
@@ -234,6 +260,12 @@ class FakeBoardRepository:
     async def record_fact(self, board_id, tenant_id, fact) -> None:
         self._store["facts"].append(fact)
 
+    async def open_conflict(self, board_id, tenant_id, conflict) -> None:
+        self._store["conflicts"][conflict.conflict_id] = conflict
+
+    async def settle_conflict(self, tenant_id, conflict) -> None:
+        self._store["conflicts"][conflict.conflict_id] = conflict
+
 
 class FakeWorkItemRepository:
     def __init__(self, store: dict) -> None:
@@ -270,7 +302,13 @@ class FakeUnitOfWork:
 
 class FakeUnitOfWorkFactory:
     def __init__(self) -> None:
-        self.store: dict = {"boards": {}, "gaps": {}, "facts": [], "items": {}}
+        self.store: dict = {
+            "boards": {},
+            "gaps": {},
+            "facts": [],
+            "items": {},
+            "conflicts": {},
+        }
 
     def __call__(self, tenant_id, trace_id, span_id) -> FakeUnitOfWork:
         return FakeUnitOfWork(self.store)
@@ -284,16 +322,47 @@ class FakeSemanticLayers:
         return self._layer
 
 
+class StubRegistry:
+    def __init__(self, roles: Sequence[AgentRole]) -> None:
+        self._roles = roles
+
+    async def enabled_agents(self) -> tuple[RegisteredAgent, ...]:
+        return tuple(
+            RegisteredAgent(agent_id=f"{role.value}_v1", role=role, version="1")
+            for role in self._roles
+        )
+
+
+PROMOTED = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT)
+
+
 def build_loop(
     *,
     recheck_passed: bool,
     fallbacks: tuple[str, ...] = (),
     insight: object | None = None,
     cancellation_checkpoint: Callable[[UUID, UUID], Awaitable[None]] | None = None,
+    tasks: list[dict[str, str]] | None = None,
+    promoted: Sequence[AgentRole] = PROMOTED,
+    measured_values: tuple[str, ...] = ("260.00",),
+    failing_analysis: int | None = None,
+    max_fanout: int | None = None,
 ) -> tuple[OrchestratorLoop, RecordingRecorder, StubSemanticLayer]:
-    model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
+    """A loop over the real Agents.
+
+    Passing `tasks` wires a planner that proposes them, which is what turns
+    fan-out on; leaving it `None` is a Phase 1/2-shaped run with no children.
+    """
+    model = ScriptedModel(
+        recheck_passed=recheck_passed,
+        fallbacks=fallbacks,
+        tasks=tasks,
+        measured_values=measured_values,
+        failing_analysis=failing_analysis,
+    )
     layer = StubSemanticLayer()
     recorder = RecordingRecorder()
+    unit_of_work_factory = FakeUnitOfWorkFactory()
     clock = iter(
         datetime(2026, 7, 29, 8, 0, tzinfo=UTC) + timedelta(seconds=n)
         for n in range(1000)
@@ -304,12 +373,21 @@ def build_loop(
             sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
             evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
             insight=insight if insight is not None else InsightAgent(model=model),
+            planner=(
+                None
+                if tasks is None
+                else OrchestratorAgent(
+                    model=model,
+                    registry=StubRegistry(promoted),
+                    required_roles=PROMOTED,
+                )
+            ),
         )
 
     loop = OrchestratorLoop(
         {ModelTier.FREE: build},
         FakeSemanticLayers(layer),
-        unit_of_work_factory=FakeUnitOfWorkFactory(),
+        unit_of_work_factory=unit_of_work_factory,
         recorder=recorder,
         now=lambda: next(clock),
         **(
@@ -317,8 +395,19 @@ def build_loop(
             if cancellation_checkpoint is not None
             else {}
         ),
+        **({"max_fanout": max_fanout} if max_fanout is not None else {}),
     )
     return loop, recorder, layer
+
+
+def board_store(loop: OrchestratorLoop) -> dict:
+    """What the run actually persisted: boards, gaps, facts and Work Items.
+
+    Reaches through the loop for the fake factory it was built with, so the
+    one private access lives here rather than in every test that needs to see
+    what a run wrote.
+    """
+    return loop._unit_of_work_factory.store  # type: ignore[attr-defined]
 
 
 async def run(loop: OrchestratorLoop):

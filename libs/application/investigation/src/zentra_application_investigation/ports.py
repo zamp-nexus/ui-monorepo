@@ -14,6 +14,7 @@ from uuid import UUID
 
 from zentra_domain_agent_execution import AgentExecutionRecord
 from zentra_domain_investigation import (
+    Conflict,
     DeletionCategory,
     DomainEvent,
     DraftFinding,
@@ -266,6 +267,19 @@ class InvestigationBoardRepository(Protocol):
     async def record_fact(
         self, board_id: UUID, tenant_id: UUID, fact: Fact
     ) -> None: ...
+
+    async def open_conflict(
+        self, board_id: UUID, tenant_id: UUID, conflict: Conflict
+    ) -> None: ...
+
+    async def settle_conflict(self, tenant_id: UUID, conflict: Conflict) -> None:
+        """Persist a Conflict's status and the explanation that settled it.
+
+        Takes the whole Conflict rather than its id and a status: `resolved`
+        and `documented` are two different claims about the same row, and the
+        resolution text is what tells them apart to a reader.
+        """
+        ...
 
 
 class WorkItemRepository(Protocol):

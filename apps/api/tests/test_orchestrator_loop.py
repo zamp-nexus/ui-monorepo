@@ -26,7 +26,7 @@ from zentra_domain_agent_execution import (
 )
 from zentra_domain_investigation import WorkItemStatus
 
-from zentra_api.pipeline import OrchestratorLoop
+from zentra_api.orchestrator_loop import OrchestratorLoop
 
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -155,6 +155,12 @@ class FakeBoardRepository:
     async def record_fact(self, board_id, tenant_id, fact) -> None:
         self._store["facts"].append(fact)
 
+    async def open_conflict(self, board_id, tenant_id, conflict) -> None:
+        self._store["conflicts"][conflict.conflict_id] = conflict
+
+    async def settle_conflict(self, tenant_id, conflict) -> None:
+        self._store["conflicts"][conflict.conflict_id] = conflict
+
 
 class FakeWorkItemRepository:
     def __init__(self, store: dict) -> None:
@@ -191,7 +197,13 @@ class FakeUnitOfWork:
 
 class FakeUnitOfWorkFactory:
     def __init__(self) -> None:
-        self.store: dict = {"boards": {}, "gaps": {}, "facts": [], "items": {}}
+        self.store: dict = {
+            "boards": {},
+            "gaps": {},
+            "facts": [],
+            "items": {},
+            "conflicts": {},
+        }
 
     def __call__(self, tenant_id, trace_id, span_id) -> FakeUnitOfWork:
         return FakeUnitOfWork(self.store)
@@ -215,6 +227,9 @@ def build_loop(
         ),
         evaluator=FakeAgent(agent_id="evaluator_v1", outputs=evaluator_outputs),
         insight=FakeAgent(agent_id="insight_v1", outputs=[insight_output()]),
+        # No planner: these tests are about the trust loop's control flow, and
+        # a run with nothing to fan out to is the shape they assert on.
+        planner=None,
     )
     loop = OrchestratorLoop(
         {ModelTier.FREE: lambda _semantic_layer: agents},

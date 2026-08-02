@@ -120,3 +120,64 @@ def test_record_fact_appends_and_bumps_updated_at() -> None:
 
     assert board.facts == [fact]
     assert board.updated_at == NOW + timedelta(seconds=5)
+
+
+def fact(
+    *, value: str, period: str | None = "2026-07", metric: str = "refund_amount"
+) -> Fact:
+    return Fact(
+        fact_id=uuid4(),
+        metric=metric,
+        value=value,
+        period=period,
+        producing_work_item_id=uuid4(),
+    )
+
+
+def test_a_second_measurement_disagreeing_is_a_contradiction() -> None:
+    """Two Work Items measuring the same thing must agree. When they do not,
+    one of them is wrong and the Board may not silently keep both."""
+    board = new_board()
+    incumbent = fact(value="120000")
+    board.record_fact(incumbent, now=NOW)
+
+    assert board.contradicted_by(fact(value="98000")) is incumbent
+
+
+def test_a_second_measurement_agreeing_is_corroboration_not_a_conflict() -> None:
+    """A fan-out that re-measures what the primary Analyst already measured is
+    the cheapest confirmation available; reading it as a conflict would punish
+    the investigation for checking itself."""
+    board = new_board()
+    board.record_fact(fact(value="120000"), now=NOW)
+
+    assert board.contradicted_by(fact(value="120000")) is None
+
+
+def test_the_same_metric_over_a_different_period_does_not_contradict() -> None:
+    board = new_board()
+    board.record_fact(fact(value="120000", period="2026-06"), now=NOW)
+
+    assert board.contradicted_by(fact(value="98000", period="2026-07")) is None
+
+
+def test_a_different_metric_over_the_same_period_does_not_contradict() -> None:
+    board = new_board()
+    board.record_fact(fact(value="120000", metric="refund_amount"), now=NOW)
+
+    assert board.contradicted_by(fact(value="98000", metric="order_count")) is None
+
+
+def test_an_empty_board_contradicts_nothing() -> None:
+    assert new_board().contradicted_by(fact(value="120000")) is None
+
+
+def test_a_periodless_fact_contradicts_only_another_periodless_one() -> None:
+    """`None` is a period like any other here: a lifetime total and a July
+    total are different measurements, not disagreeing ones."""
+    board = new_board()
+    lifetime = fact(value="120000", period=None)
+    board.record_fact(lifetime, now=NOW)
+
+    assert board.contradicted_by(fact(value="98000", period="2026-07")) is None
+    assert board.contradicted_by(fact(value="98000", period=None)) is lifetime
