@@ -165,7 +165,10 @@ describe('Sequences', () => {
     fireEvent.click(await screen.findByText(/choose a connected source/i));
     fireEvent.click(await screen.findByText('click-house-db'));
 
-    fireEvent.click(await screen.findByText(/choose a table/i));
+    // The table Select stays disabled until the catalog fetch (triggered by
+    // picking a source) resolves — wait for that before opening it.
+    await waitFor(() => expect(screen.getByLabelText('Table')).not.toBeDisabled());
+    fireEvent.click(screen.getByText(/choose a table/i));
     fireEvent.click(await screen.findByText('clickathon.orders'));
 
     fireEvent.change(screen.getByLabelText(/first instruction/i), {
