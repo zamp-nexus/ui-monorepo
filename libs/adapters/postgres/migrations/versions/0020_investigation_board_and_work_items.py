@@ -1,5 +1,5 @@
 """Add the Investigation Board, Work Item queue, and Analytical Scope
-(ADR-0023, ADR-0024): the durable working memory an Orchestrator Loop reads
+(ADR-0026, ADR-0027): the durable working memory an Orchestrator Loop reads
 and writes in place of a fixed LangGraph pipeline.
 """
 

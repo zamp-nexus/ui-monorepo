@@ -1,7 +1,7 @@
 """The Tenant-configured slice of the governed catalog Intake may resolve a
 question against.
 
-See ADR-0024: this replaces the two-scenario keyword whitelist. An
+See ADR-0027: this replaces the two-scenario keyword whitelist. An
 Analytical Scope can only narrow what a Tenant may be asked about — it is
 validated against, and can never widen past, `SemanticCatalog.reject_ungoverned`
 (`libs/domain/agent-execution/.../ports.py`), which stays the absolute floor.

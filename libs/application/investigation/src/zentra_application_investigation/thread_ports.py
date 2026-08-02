@@ -21,11 +21,11 @@ from .workspace_ports import OrganizationRepository
 
 
 class IntakePort(Protocol):
-    """Resolves a message against the Tenant's Analytical Scope (ADR-0024).
+    """Resolves a message against the Tenant's Analytical Scope (ADR-0027).
 
-    Replaces the keyword-matched `route_governed_question`/
-    `route_draft_messages` functions: same `RoutingResult` shape, but decided
-    by an Agent reading a scoped catalog instead of a token-overlap check.
+    Replaces the keyword-matched scenario whitelist that used to sit in
+    `thread_routing.py`: same `RoutingResult` shape, but decided by an Agent
+    reading a scoped catalog instead of a token-overlap check.
     """
 
     async def resolve(self, question: str, *, tenant_id: UUID) -> RoutingResult: ...

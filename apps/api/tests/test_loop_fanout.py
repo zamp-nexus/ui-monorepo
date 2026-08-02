@@ -1,6 +1,6 @@
 """Fan-out: the loop asking what else is worth measuring, and deciding by rule.
 
-ADR-0023's Phase 3. The Board stops being a record of one measurement and
+ADR-0026's Phase 3. The Board stops being a record of one measurement and
 becomes the thing the investigation reasons over: follow-ups run against it
 concurrently, their Facts land beside the primary one, and a disagreement
 between two of them is a Conflict nobody would have seen while each result
@@ -29,8 +29,8 @@ from zentra_api.orchestrator_loop import (
 
 from .loop_harness import QUESTION, board_store, build_loop, run
 
-BY_REGION = {"role": "sql_analyst", "objective": "Which region drove the rise?"}
-BY_CHANNEL = {"role": "sql_analyst", "objective": "Which channel drove the rise?"}
+BY_REGION = {"role": "cube_analyst", "objective": "Which region drove the rise?"}
+BY_CHANNEL = {"role": "cube_analyst", "objective": "Which channel drove the rise?"}
 
 
 # -- the rules ------------------------------------------------------------
@@ -47,7 +47,7 @@ def test_a_proposal_naming_a_role_with_no_runtime_is_rejected() -> None:
 def test_a_proposal_restating_the_question_is_rejected() -> None:
     """It would spend a second measurement re-deriving the answer the primary
     Analyst already has."""
-    proposals = [{"role": "sql_analyst", "objective": f"  {QUESTION.upper()}  "}]
+    proposals = [{"role": "cube_analyst", "objective": f"  {QUESTION.upper()}  "}]
 
     assert _accept(proposals, question=QUESTION, limit=3) == ()
 
@@ -59,7 +59,7 @@ def test_two_proposals_asking_the_same_thing_are_accepted_once() -> None:
 
 
 def test_a_proposal_with_no_objective_is_rejected() -> None:
-    proposals = [{"role": "sql_analyst", "objective": "   "}, BY_REGION]
+    proposals = [{"role": "cube_analyst", "objective": "   "}, BY_REGION]
 
     assert _accept(proposals, question=QUESTION, limit=3) == (BY_REGION["objective"],)
 
@@ -92,7 +92,7 @@ async def test_a_run_with_no_planner_fans_out_to_nothing() -> None:
     await run(loop)
 
     assert [r.role for r in recorder.records] == [
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]
@@ -106,7 +106,7 @@ async def test_accepted_proposals_become_rechecked_child_measurements() -> None:
 
     await run(loop)
 
-    analysts = [r for r in recorder.records if r.role is AgentRole.SQL_ANALYST]
+    analysts = [r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST]
     evaluators = [r for r in recorder.records if r.role is AgentRole.EVALUATOR]
     planners = [r for r in recorder.records if r.role is AgentRole.ORCHESTRATOR]
     assert len(planners) == 1
@@ -123,7 +123,7 @@ async def test_a_child_work_item_names_the_measurement_it_came_from() -> None:
     await run(loop)
 
     items = board_store(loop)["items"].values()
-    analysts = [i for i in items if i.role is AgentRole.SQL_ANALYST]
+    analysts = [i for i in items if i.role is AgentRole.CUBE_ANALYST]
     primary = next(i for i in analysts if i.parent_work_item_id is None)
     child = next(i for i in analysts if i.parent_work_item_id is not None)
 
@@ -159,7 +159,7 @@ async def test_the_cap_bounds_what_one_investigation_may_spend() -> None:
 
     await run(loop)
 
-    analysts = [r for r in recorder.records if r.role is AgentRole.SQL_ANALYST]
+    analysts = [r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST]
     assert len(analysts) == 2
 
 
@@ -170,7 +170,7 @@ async def test_a_cap_of_zero_turns_fan_out_off_without_skipping_the_answer() -> 
     result = await run(loop)
 
     assert [r.role for r in recorder.records] == [
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]
@@ -226,7 +226,7 @@ async def test_a_run_refuses_when_a_required_role_is_not_promoted() -> None:
     loop, recorder, _ = build_loop(
         recheck_passed=True,
         tasks=[BY_REGION],
-        promoted=(AgentRole.SQL_ANALYST, AgentRole.EVALUATOR),
+        promoted=(AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR),
     )
 
     with pytest.raises(NoEnabledAgentError, match="insight"):

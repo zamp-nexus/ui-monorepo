@@ -1,6 +1,6 @@
 {
-  "name": "reports_governed_metrics_with_evidence",
-  "agent": "sql_analyst",
+  "name": "clamps_negative_confidence",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -85,20 +85,13 @@
           "unit": "USD"
         }
       ],
-      "confidence": 0.88,
+      "confidence": -0.4,
       "sample_size": 240
     }
   ],
   "expect": {
     "outcome_kind": "confidence",
-    "min_score": 0.88,
-    "max_score": 0.88,
-    "evidence_refs": 1,
-    "field_present": [
-      "query",
-      "result_summary",
-      "metrics",
-      "rows"
-    ]
+    "min_score": 0.0,
+    "max_score": 0.0
   }
 }

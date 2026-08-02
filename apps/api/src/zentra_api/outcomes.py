@@ -1,7 +1,7 @@
 """What a completed Investigation run established, before it becomes domain.
 
 These three travelled with `InvestigationGraph` while LangGraph was the
-mechanism (ADR-0023). They never depended on it — they are plain dataclasses —
+mechanism (ADR-0026). They never depended on it — they are plain dataclasses —
 and nothing inside the agent adapter reads them, so with the graph deleted they
 belong beside their only consumer: the Orchestrator Loop that produces them and
 the assembly that turns them into a `Finding`, a `DraftFinding`, and its

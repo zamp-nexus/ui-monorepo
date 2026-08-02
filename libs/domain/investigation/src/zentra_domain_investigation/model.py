@@ -234,12 +234,17 @@ class Investigation:
     investigation_id: UUID
     tenant_id: UUID
     question: str
-    scenario_key: str
     status: InvestigationStatus
     version: int
     evaluation_attempts: int
     created_at: datetime
     updated_at: datetime
+    # Read-compatibility only. Investigations started before ADR-0023 were
+    # created from one of two governed scenarios and carry its key; a question
+    # is free text now and nothing writes one. Kept because dropping it would
+    # make those Investigations unreplayable rather than merely unlabelled —
+    # the same reasoning as LEGACY_ROLES in the Agent Execution context.
+    scenario_key: str | None = None
     thread_id: UUID | None = None
     thread_sequence: int | None = None
     initiating_message_id: UUID | None = None
@@ -264,7 +269,6 @@ class Investigation:
         investigation_id: UUID,
         tenant_id: UUID,
         question: str,
-        scenario_key: str,
         now: datetime,
         data_connection_id: UUID | None = None,
         thread_id: UUID | None = None,
@@ -286,7 +290,6 @@ class Investigation:
             investigation_id=investigation_id,
             tenant_id=tenant_id,
             question=question,
-            scenario_key=scenario_key,
             status=InvestigationStatus.PENDING,
             version=1,
             evaluation_attempts=0,

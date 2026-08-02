@@ -100,6 +100,13 @@ class ModelChoice:
     # Free tiers meter tokens per minute far more tightly than Anthropic, so
     # the ceiling belongs to the rung rather than being global.
     max_tokens: int
+    # Whether this rung can be handed tools. A property of the model, not the
+    # provider: `openrouter/free` resolves to whatever is free today, and the
+    # NIM catalogue mixes tool-capable and text-only models behind one base
+    # URL. Default False so a rung is opted in deliberately, after being
+    # checked — the same discipline the strict-json_schema notes in
+    # `routing.py` already record.
+    supports_tools: bool = False
 
     @property
     def trains_on_input(self) -> bool:

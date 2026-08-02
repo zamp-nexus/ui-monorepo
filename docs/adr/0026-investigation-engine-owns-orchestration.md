@@ -1,5 +1,5 @@
 ---
-id: adr-0023
+id: adr-0026
 title: Investigation Engine owns orchestration; LangGraph is not the platform controller
 type: adr
 status: active

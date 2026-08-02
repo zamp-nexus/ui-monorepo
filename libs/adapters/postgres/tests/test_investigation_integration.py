@@ -125,7 +125,9 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
         span_id=uuid4(),
     )
 
-    started = await service.start(actor, scenario_key="eu_refund_spike")
+    started = await service.start(
+        actor, question="Why did EU refunds increase from June to July 2026?"
+    )
     assert started.status is InvestigationStatus.RUNNING
     # An undeliverable ledger is surfaced, never silently treated as written.
     assert started.audit_delivery.value == "pending"

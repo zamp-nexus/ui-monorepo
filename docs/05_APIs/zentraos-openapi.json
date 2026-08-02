@@ -101,6 +101,7 @@
           "data_quality",
           "data_preparation",
           "semantic_modeling",
+          "cube_analyst",
           "sql_analyst",
           "evaluator",
           "statistician",
@@ -584,6 +585,43 @@
         "title": "CatalogDiffResponse",
         "type": "object"
       },
+      "CatalogMemberResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "CatalogMemberResponse",
+        "type": "object"
+      },
       "CatalogResponse": {
         "additionalProperties": false,
         "properties": {
@@ -629,6 +667,32 @@
           "created_at"
         ],
         "title": "CatalogResponse",
+        "type": "object"
+      },
+      "CatalogSummaryResponse": {
+        "additionalProperties": false,
+        "description": "What this tenant can actually be asked about.\n\nReplaces the fixed list of governed scenarios (ADR-0023). A client that has\nto offer the user a starting question needs the tenant's own vocabulary,\nand this is the same governed catalog the Cube Analyst reasons over \u2014 so a\nsuggestion the UI makes is one the agent can genuinely answer.",
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Measures",
+            "type": "array"
+          }
+        },
+        "required": [
+          "measures",
+          "dimensions"
+        ],
+        "title": "CatalogSummaryResponse",
         "type": "object"
       },
       "CitationFilterResponse": {
@@ -872,6 +936,17 @@
             "title": "Cubetype",
             "type": "string"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -921,6 +996,17 @@
       "ConnectorTableSchema": {
         "additionalProperties": false,
         "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "fields": {
             "items": {
               "$ref": "#/components/schemas/ConnectorFieldModel"
@@ -1716,13 +1802,27 @@
       "InvestigationCreateRequest": {
         "additionalProperties": false,
         "properties": {
-          "scenario_key": {
-            "title": "Scenario Key",
+          "data_connection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Connection Id"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
             "type": "string"
           }
         },
         "required": [
-          "scenario_key"
+          "question"
         ],
         "title": "InvestigationCreateRequest",
         "type": "object"
@@ -1824,8 +1924,15 @@
             ]
           },
           "scenario_key": {
-            "title": "Scenario Key",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Key"
           },
           "status": {
             "title": "Status",
@@ -2423,33 +2530,6 @@
           "suggestions"
         ],
         "title": "RoutingResponse",
-        "type": "object"
-      },
-      "ScenarioResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "facts": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Facts",
-            "type": "array"
-          },
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "question": {
-            "title": "Question",
-            "type": "string"
-          }
-        },
-        "required": [
-          "key",
-          "question",
-          "facts"
-        ],
-        "title": "ScenarioResponse",
         "type": "object"
       },
       "SetAgentAccessRequest": {
@@ -4237,6 +4317,53 @@
           }
         },
         "summary": "Agents"
+      }
+    },
+    "/v1/catalog": {
+      "get": {
+        "description": "The governed vocabulary this tenant may ask questions about.\n\nResolved per tenant, so it is the tenant's own catalog and never another's\n\u2014 the whole reason `ScopedCubeSemanticLayers` exists. Measures and\ndimensions only: no rows, and no physical schema.",
+        "operationId": "catalog_v1_catalog_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog"
       }
     },
     "/v1/connector/catalog-versions/{catalog_version_id}": {
@@ -7253,57 +7380,6 @@
           }
         },
         "summary": "Create Thread"
-      }
-    },
-    "/v1/scenarios": {
-      "get": {
-        "description": "The governed questions this deployment will answer.\n\nServed rather than hardcoded in the client so the question text has one\nhome: the launcher renders whatever the API supports, and adding a scenario\nis a server change alone.",
-        "operationId": "scenarios_v1_scenarios_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ScenarioResponse"
-                  },
-                  "title": "Response Scenarios V1 Scenarios Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Scenarios"
       }
     },
     "/v1/threads/{thread_id}": {

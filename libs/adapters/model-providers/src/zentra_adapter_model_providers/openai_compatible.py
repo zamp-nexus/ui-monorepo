@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from decimal import Decimal
 
@@ -10,6 +11,8 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    ToolCall,
+    ToolDefinition,
 )
 
 from .errors import (
@@ -25,6 +28,60 @@ from .providers import (
 )
 
 SCHEMA_NAME = "agent_output"
+
+
+def _arguments(raw: str | None) -> dict[str, JsonValue]:
+    """Tool arguments arrive as a JSON *string* here, unlike Anthropic's dict.
+
+    A model that emits malformed arguments is a model that made a bad call, not
+    a provider that broke: returning empty lets the tool refuse on its own
+    terms and tell the model why, which is a turn it can recover from.
+    """
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _wire_messages(message: ModelMessage) -> list[dict[str, object]]:
+    """One ModelMessage as OpenAI chat messages.
+
+    Fans out rather than mapping one-to-one: a turn carrying tool results
+    becomes one `role: "tool"` message per result, because this wire format
+    has no way to put several results in a single message the way Anthropic's
+    content blocks do.
+    """
+    if message.tool_results:
+        return [
+            {
+                "role": "tool",
+                "tool_call_id": result.call_id,
+                "content": result.content,
+            }
+            for result in message.tool_results
+        ]
+
+    wire: dict[str, object] = {"role": message.role, "content": message.content}
+    if message.tool_calls:
+        wire["tool_calls"] = [
+            {
+                "id": call.call_id,
+                "type": "function",
+                "function": {
+                    "name": call.name,
+                    "arguments": json.dumps(call.arguments),
+                },
+            }
+            for call in message.tool_calls
+        ]
+        # An assistant turn that only asked for tools has no prose, and some
+        # providers reject an empty string where they accept a null.
+        if not message.content:
+            wire["content"] = None
+    return [wire]
 
 
 class OpenAICompatibleModelClient:
@@ -65,16 +122,29 @@ class OpenAICompatibleModelClient:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
+        tools: Sequence[ToolDefinition] = (),
     ) -> ModelResponse:
         name = self._config.provider.value
+        wire: list[dict[str, object]] = [{"role": "system", "content": system}]
+        for message in messages:
+            wire.extend(_wire_messages(message))
         request: dict[str, object] = {
             "model": model,
             "max_tokens": max_tokens,
-            "messages": [
-                {"role": "system", "content": system},
-                *(message.model_dump() for message in messages),
-            ],
+            "messages": wire,
         }
+        if tools:
+            request["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+                for tool in tools
+            ]
         if response_schema is not None:
             request["response_format"] = {
                 "type": "json_schema",
@@ -118,6 +188,19 @@ class OpenAICompatibleModelClient:
                 f"{_qualified(name, model)} hit the {max_tokens} token ceiling"
             )
 
+        tool_calls = tuple(
+            ToolCall(
+                call_id=call.id,
+                name=call.function.name,
+                arguments=_arguments(call.function.arguments),
+            )
+            for call in (choice.message.tool_calls or ())
+            # Only function calls carry a `.function`. Providers are starting
+            # to return other call types (custom, built-in), and reaching for
+            # `.function` on one of those would fail the whole response.
+            if getattr(call, "type", "function") == "function"
+        )
+
         usage = response.usage
         input_tokens = usage.prompt_tokens if usage else 0
         output_tokens = usage.completion_tokens if usage else 0
@@ -127,6 +210,8 @@ class OpenAICompatibleModelClient:
 
         return ModelResponse(
             text=choice.message.content or "",
+            tool_calls=tool_calls,
+            stop_reason=choice.finish_reason,
             usage=ExecutionUsage(
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,

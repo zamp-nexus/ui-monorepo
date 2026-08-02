@@ -33,7 +33,7 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   unmodified `AgentPort` implementations, now driven serially by an
   `OrchestratorLoop` against a durable Postgres `InvestigationBoard` and
   `WorkItem` queue instead of a compiled LangGraph graph
-  ([[adr/0023-investigation-engine-owns-orchestration]]), with the
+  ([[adr/0026-investigation-engine-owns-orchestration]]), with the
   Evaluator-Optimizer loop still exiting hard at three attempts. The graph,
   its Postgres checkpointer and the `langgraph` dependency are deleted.
   Resuming a crashed run from its Board is not yet built.
@@ -54,7 +54,7 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   ([[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]).
 - Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
   replacing the two-scenario keyword whitelist
-  ([[adr/0024-analytical-scope-replaces-scenario-whitelist]]); the two
+  ([[adr/0027-analytical-scope-replaces-scenario-whitelist]]); the two
   fixture scenarios below are no longer the only questions chat can resolve,
   though a real per-Tenant Analytical Scope is not yet configurable.
 - Confidence bounded by evidence before it meets the Tenant threshold — a

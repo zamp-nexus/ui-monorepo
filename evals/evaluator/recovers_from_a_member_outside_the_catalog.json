@@ -1,6 +1,6 @@
 {
-  "name": "clamps_negative_confidence",
-  "agent": "sql_analyst",
+  "name": "recovers_from_a_member_outside_the_catalog",
+  "agent": "evaluator",
   "catalog": {
     "measures": [
       {
@@ -44,39 +44,8 @@
     }
   ],
   "state": {
-    "question": "Why did EU refunds increase from June to July 2026?"
-  },
-  "model_responses": [
-    {
-      "reasoning": "Compare governed EU refunds month over month.",
-      "query": {
-        "measures": [
-          "Commerce.refundAmount"
-        ],
-        "dimensions": [],
-        "time_dimensions": [
-          {
-            "dimension": "Commerce.orderedAt",
-            "granularity": "month",
-            "date_range": [
-              "2026-06-01",
-              "2026-07-31"
-            ]
-          }
-        ],
-        "filters": [
-          {
-            "member": "Commerce.region",
-            "operator": "equals",
-            "values": [
-              "EU"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "result_summary": "EU refunds rose from $20 to $260.",
+    "question": "Why did EU refunds increase from June to July 2026?",
+    "analyst": {
       "metrics": [
         {
           "metric": "refund_amount",
@@ -85,13 +54,52 @@
           "unit": "USD"
         }
       ],
-      "confidence": -0.4,
+      "result_summary": "EU refunds rose from $20 to $260.",
+      "outcome": {
+        "kind": "confidence",
+        "score": 0.88,
+        "calibration_method": "cube_analyst_self_reported"
+      }
+    }
+  },
+  "model_responses": [
+    {
+      "reasoning": "Compare governed EU refunds month over month.",
+      "query": {
+        "measures": [
+          "commerce_facts.margin"
+        ],
+        "dimensions": [],
+        "time_dimensions": [],
+        "filters": []
+      }
+    },
+    {
+      "reasoning": "Use a measure the catalog actually defines.",
+      "query": {
+        "measures": [
+          "Commerce.refundAmount"
+        ],
+        "dimensions": [],
+        "time_dimensions": [],
+        "filters": []
+      }
+    },
+    {
+      "recheck_passed": true,
+      "discrepancy_pct": 0.0,
+      "confidence": 0.9,
+      "issues": [],
       "sample_size": 240
     }
   ],
   "expect": {
     "outcome_kind": "confidence",
-    "min_score": 0.0,
-    "max_score": 0.0
+    "evidence_refs": 1,
+    "field_present": [
+      "query",
+      "recheck_passed",
+      "rows"
+    ]
   }
 }

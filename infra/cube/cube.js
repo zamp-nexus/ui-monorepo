@@ -37,7 +37,19 @@ module.exports = {
     const claims = jwt.verify(authorization, process.env.CUBEJS_API_SECRET, {
       algorithms: ['HS256'],
     });
-    req.securityContext = claims;
+    // The schema-compiler sandbox has no `process`, so model files cannot read
+    // their own configuration. It does get COMPILE_CONTEXT, which is this
+    // object — so the internal endpoint's address is attached here, after the
+    // tenant's token has been verified.
+    //
+    // The secret is added server-side and is not part of the JWT: a tenant's
+    // token carries only tenantId, dataConnectionId and relationFingerprint,
+    // and nothing here is ever sent back to a client.
+    req.securityContext = {
+      ...claims,
+      internalApiUrl: process.env.INTERNAL_API_URL,
+      internalApiSecret: process.env.CUBE_INTERNAL_API_SECRET,
+    };
   },
 
   // Keyed on the relation fingerprint, not just tenant/Data Connection: a
@@ -73,7 +85,12 @@ module.exports = {
       database: model.clickhouse.database,
       username: model.clickhouse.username,
       password: model.clickhouse.password,
-      ssl: model.clickhouse.secure,
+      // `protocol`, not `ssl`. The driver builds its URL from
+      // `config.protocol ?? (CUBEJS_DB_SSL ? 'https:' : 'http:')` and never
+      // reads an `ssl` key — so passing `ssl: true` left it speaking plain
+      // HTTP to ClickHouse Cloud's TLS port 8443, which closes the connection
+      // and surfaces as "Connection check failed: socket hang up".
+      protocol: model.clickhouse.secure ? 'https:' : 'http:',
     };
   },
 };

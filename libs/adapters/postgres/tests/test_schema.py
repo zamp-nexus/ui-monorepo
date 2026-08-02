@@ -39,14 +39,14 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "visualization_actions",
         # The Investigation Engine's working memory: what an investigation has
         # established, what it still does not know, and the queue it works off
-        # (ADR-0023). Migration 0020.
+        # (ADR-0026). Migration 0020.
         "investigation_boards",
         "board_facts",
         "board_hypotheses",
         "board_gaps",
         "board_conflicts",
         "work_items",
-        # Per-Tenant narrowing of the governed catalog (ADR-0024). The table
+        # Per-Tenant narrowing of the governed catalog (ADR-0027). The table
         # exists; nothing writes it yet, so every Tenant reads the whole
         # catalog.
         "analytical_scopes",

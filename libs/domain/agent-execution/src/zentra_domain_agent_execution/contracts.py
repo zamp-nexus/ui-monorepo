@@ -17,6 +17,7 @@ class AgentRole(StrEnum):
     DATA_QUALITY = "data_quality"
     DATA_PREPARATION = "data_preparation"
     SEMANTIC_MODELING = "semantic_modeling"
+    CUBE_ANALYST = "cube_analyst"
     SQL_ANALYST = "sql_analyst"
     EVALUATOR = "evaluator"
     STATISTICIAN = "statistician"
@@ -29,12 +30,25 @@ class AgentRole(StrEnum):
     KNOWLEDGE = "knowledge"
 
 
-# Read-compatibility only. Phase 1 wrote `insight_root_cause` before any Insight
-# implementation existed, and ADR 0011 forbids naming the Agent for a causal
-# promise its evidence cannot keep. Dropping the value would make those
-# investigations unreadable rather than merely mislabelled, so it stays
-# deserialisable and is refused at the write seams instead.
-LEGACY_ROLES: frozenset[AgentRole] = frozenset({AgentRole.INSIGHT_ROOT_CAUSE})
+# Read-compatibility only, each mapped to the role that replaced it.
+#
+# `insight_root_cause`: Phase 1 wrote it before any Insight implementation
+# existed, and ADR 0011 forbids naming the Agent for a causal promise its
+# evidence cannot keep.
+#
+# `sql_analyst`: the Agent never had raw-SQL authority — it writes a governed
+# semantic query and Cube compiles it (ADR-0025). The name described a
+# capability the tree deliberately does not contain.
+#
+# Dropping either value would make those Agent Executions unreadable rather
+# than merely mislabelled, so both stay deserialisable and are refused at the
+# write seams instead.
+LEGACY_ROLE_REPLACEMENTS: dict[AgentRole, AgentRole] = {
+    AgentRole.INSIGHT_ROOT_CAUSE: AgentRole.INSIGHT,
+    AgentRole.SQL_ANALYST: AgentRole.CUBE_ANALYST,
+}
+
+LEGACY_ROLES: frozenset[AgentRole] = frozenset(LEGACY_ROLE_REPLACEMENTS)
 
 
 CANONICAL_ROLES: frozenset[AgentRole] = frozenset(AgentRole) - LEGACY_ROLES
@@ -48,12 +62,16 @@ def reject_legacy_role(role: AgentRole) -> None:
     """Refuses a role that may only ever be read.
 
     This is the expand step of an expand-contract migration: the accepted write
-    vocabulary narrows now, the legacy read path is removed separately.
+    vocabulary narrows now, the legacy read path is removed separately. The
+    message names the specific replacement rather than a single hardcoded one,
+    because there is now more than one legacy role and pointing a caller at
+    the wrong successor is worse than not pointing at all.
     """
-    if role in LEGACY_ROLES:
+    replacement = LEGACY_ROLE_REPLACEMENTS.get(role)
+    if replacement is not None:
         raise LegacyRoleWriteError(
             f"{role.value!r} is a read-compatibility role and cannot be "
-            f"written. Use {AgentRole.INSIGHT.value!r}."
+            f"written. Use {replacement.value!r}."
         )
 
 
@@ -68,6 +86,21 @@ class ToolScope(BaseModel):
 
     tool_name: str = Field(min_length=1)
     access: ToolAccess
+
+
+class ToolInvocation(BaseModel):
+    """That a tool ran, and how it went. Never what it returned.
+
+    Recorded so Replay can show an agent searching the catalog twice before
+    querying. Deliberately carries no arguments and no content: tool results
+    hold rows, and the audit ledger takes metadata only (ADR-0006).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str = Field(min_length=1)
+    latency_ms: int = Field(ge=0)
+    ok: bool = True
 
 
 class ConfidenceOutcome(BaseModel):
@@ -138,6 +171,11 @@ class AgentOutput(BaseModel):
     outcome: OutcomeSignal
     usage: ExecutionUsage = ExecutionUsage()
     fallbacks: tuple[str, ...] = ()
+    # Which tools the Agent ran to get here. Empty for an Agent that holds
+    # none, which is most of them. Carried on the output rather than returned
+    # separately so the record written for this step cannot disagree with the
+    # answer it describes.
+    tool_calls: tuple[ToolInvocation, ...] = ()
 
     @field_validator("evidence_refs")
     @classmethod

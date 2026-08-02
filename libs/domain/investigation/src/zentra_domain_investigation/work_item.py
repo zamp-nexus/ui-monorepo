@@ -1,6 +1,6 @@
 """One unit of work an Orchestrator Loop assigns against an Investigation Board.
 
-See ADR-0023: the Investigation Engine replaces a fixed pipeline with a Board
+See ADR-0026: the Investigation Engine replaces a fixed pipeline with a Board
 an Orchestrator Loop reads and a queue of Work Items it assigns. A Work Item
 carries no analytical content itself — only enough to route it to a
 capability-matched Agent and to know what it produced.

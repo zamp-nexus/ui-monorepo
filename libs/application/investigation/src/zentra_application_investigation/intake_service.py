@@ -1,6 +1,6 @@
 """Resolves a Thread message against the Tenant's Analytical Scope.
 
-Replaces `thread_routing.py`'s keyword whitelist (ADR-0024). `IntakeService`
+Replaces `thread_routing.py`'s keyword whitelist (ADR-0027). `IntakeService`
 implements `IntakePort` by invoking an `AgentPort`-shaped Intake Agent — the
 application layer depends only on that Protocol, never on a concrete
 adapter, matching how `InvestigationPipeline` is wired.
@@ -92,7 +92,7 @@ class IntakeService:
 def _scenario_key(canonical_question: str) -> str:
     """A short, stable slug for `Investigation.scenario_key`.
 
-    No longer a lookup key into a scenario whitelist (ADR-0024) — just a
+    No longer a lookup key into a scenario whitelist (ADR-0027) — just a
     readable identifier derived from what Intake resolved, bounded to the
     column's width.
     """

@@ -81,6 +81,11 @@ class AppDependencies:
     database: Database
     audit: AuditRepository
     cube: CubeClient
+    #: Per (tenant, Data Connection) governed catalogs. Held here as well as
+    #: inside the pipeline because the catalog is now read on the request path
+    #: too — a client that must offer a question needs to know what this tenant
+    #: can actually be asked about.
+    semantic_layers: ScopedCubeSemanticLayers
     models: ProviderClients
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
@@ -143,7 +148,7 @@ class AppDependencies:
             resolve_relation_fingerprint=resolve_relation_fingerprint,
         )
 
-        # ADR-0023: the Investigation Engine's Board and Work Item queue
+        # ADR-0026: the Investigation Engine's Board and Work Item queue
         # are the platform controller. There is no graph to build any more —
         # the loop holds the Agents directly.
         #
@@ -275,6 +280,7 @@ class AppDependencies:
             database=database,
             audit=audit,
             cube=cube,
+            semantic_layers=semantic_layers,
             models=models,
             jwt_verifier=ClerkJwtVerifier(
                 settings.clerk_issuer,

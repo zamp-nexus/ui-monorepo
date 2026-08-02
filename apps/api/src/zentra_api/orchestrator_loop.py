@@ -6,7 +6,7 @@ surrounds a run — the execution recorder, the audit events, and the assembly
 that turns an outcome into a `Finding` and its Citations; this module is the
 run itself.
 
-See ADR-0023. The loop is a deterministic service, not an Agent: it may ask a
+See ADR-0026. The loop is a deterministic service, not an Agent: it may ask a
 model for planning *proposals*, but which proposals become Work Items, and when
 the investigation is finished, are decided by rule here.
 """
@@ -23,10 +23,11 @@ from uuid import UUID, uuid4
 
 from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     OrchestratorAgent,
-    SqlAnalystAgent,
+    SkillRegistry,
 )
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 from zentra_adapter_model_providers import (
@@ -173,7 +174,7 @@ def _accept(
 ) -> tuple[str, ...]:
     """Which proposed follow-ups become Work Items.
 
-    Rule-based on purpose (ADR-0023): the planner may propose anything, and
+    Rule-based on purpose (ADR-0026): the planner may propose anything, and
     what it proposes is model output. Three rules decide.
 
     A proposal is accepted only if the loop can actually execute its role —
@@ -188,7 +189,7 @@ def _accept(
     seen = {question.strip().casefold()}
     accepted: list[str] = []
     for proposal in proposals:
-        if proposal.get("role") != AgentRole.SQL_ANALYST.value:
+        if proposal.get("role") != AgentRole.CUBE_ANALYST.value:
             continue
         objective = str(proposal.get("objective", "")).strip()
         if not objective or objective.casefold() in seen:
@@ -254,7 +255,7 @@ class StepAgents:
     and every test that predates Phase 3 want.
     """
 
-    sql_analyst: SqlAnalystAgent
+    cube_analyst: CubeAnalystAgent
     evaluator: EvaluatorAgent
     insight: InsightAgent
     planner: OrchestratorAgent | None = None
@@ -306,11 +307,20 @@ def build_agents_factory(
     the last Work Item with nothing to run.
     """
     model = RoutedModelClient(tier=tier, clients=models.as_dict(), breaker=breaker)
+    # Read from disk once per tier rather than per Agent Execution. Skills are
+    # stable per role, and they are appended to the cached system prefix — a
+    # registry rebuilt per investigation would still be correct but would do
+    # the file I/O on the request path for no reason.
+    skills = SkillRegistry.from_directory()
 
     def build(semantic_layer: CubeSemanticLayer) -> StepAgents:
         return StepAgents(
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            cube_analyst=CubeAnalystAgent(
+                model=model, semantic_layer=semantic_layer, skills=skills
+            ),
+            evaluator=EvaluatorAgent(
+                model=model, semantic_layer=semantic_layer, skills=skills
+            ),
             insight=InsightAgent(model=model),
             planner=(
                 None
@@ -319,7 +329,7 @@ def build_agents_factory(
                     model=model,
                     registry=registry,
                     required_roles=(
-                        AgentRole.SQL_ANALYST,
+                        AgentRole.CUBE_ANALYST,
                         AgentRole.EVALUATOR,
                         AgentRole.INSIGHT,
                     ),
@@ -332,7 +342,7 @@ def build_agents_factory(
 
 class OrchestratorLoop:
     """Drives the existing specialist Agents through a durable Investigation
-    Board and Work Item queue instead of a compiled LangGraph (ADR-0023).
+    Board and Work Item queue instead of a compiled LangGraph (ADR-0026).
 
     Phase 3 shape: the primary question is measured and rechecked exactly as
     before, then the planner proposes follow-ups against the Board's open
@@ -583,7 +593,7 @@ class OrchestratorLoop:
         nobody rechecked is not evidence this product is willing to cite.
         """
         analyst_state, analyst_item_id = await self._run_analyst(
-            agents.sql_analyst,
+            agents.cube_analyst,
             investigation_id=investigation_id,
             tenant_id=tenant_id,
             question=question,
@@ -614,7 +624,7 @@ class OrchestratorLoop:
             ):
                 break
             analyst_state, analyst_item_id = await self._run_analyst(
-                agents.sql_analyst,
+                agents.cube_analyst,
                 investigation_id=investigation_id,
                 tenant_id=tenant_id,
                 question=question,
@@ -645,7 +655,7 @@ class OrchestratorLoop:
         """Ask what else is worth measuring, then decide by rule.
 
         The planner's output is a proposal, never an instruction — see
-        ADR-0023. Its own job is the registry's capability match: it raises
+        ADR-0026. Its own job is the registry's capability match: it raises
         `NoEnabledAgentError` when a required role has no promoted agent, and
         that refusal propagates from here, before anything has been measured.
         What this method adds is `_accept`, the rules deciding which proposals
@@ -876,7 +886,7 @@ class OrchestratorLoop:
 
     async def _run_analyst(
         self,
-        agent: SqlAnalystAgent,
+        agent: CubeAnalystAgent,
         *,
         investigation_id: UUID,
         tenant_id: UUID,
@@ -892,7 +902,7 @@ class OrchestratorLoop:
             payload["previous_issues"] = previous_issues
         state, execution_id, work_item_id = await self._run_step(
             agent=agent,
-            role=AgentRole.SQL_ANALYST,
+            role=AgentRole.CUBE_ANALYST,
             investigation_id=investigation_id,
             tenant_id=tenant_id,
             objective=objective,

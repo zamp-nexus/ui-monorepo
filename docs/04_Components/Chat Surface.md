@@ -71,7 +71,7 @@ message the Intake Agent resolves against the Tenant's governed semantic layer.
 There is no scenario whitelist: Intake answers `resolved`, `ambiguous`, or
 `unsupported` by reading the catalog, so a question nobody anticipated is
 answerable when the data supports it and refused with a reason when it does not.
-See [[adr/0024-analytical-scope-replaces-scenario-whitelist]].
+See [[adr/0027-analytical-scope-replaces-scenario-whitelist]].
 
 ## Generative UI, and what happens without it
 

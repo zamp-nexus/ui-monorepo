@@ -89,7 +89,9 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
         trace_id=uuid4(),
         span_id=uuid4(),
     )
-    started = await service.start(actor, scenario_key="eu_refund_spike")
+    started = await service.start(
+        actor, question="Why did EU refunds increase from June to July 2026?"
+    )
     claimed_at = datetime.now(UTC)
 
     first, second = await asyncio.gather(

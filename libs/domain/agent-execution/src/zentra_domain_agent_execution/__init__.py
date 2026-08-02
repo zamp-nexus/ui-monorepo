@@ -3,6 +3,7 @@
 from .catalogue import AgentCapability, PublicAgent
 from .contracts import (
     CANONICAL_ROLES,
+    LEGACY_ROLE_REPLACEMENTS,
     LEGACY_ROLES,
     OUTCOME_ADAPTER,
     AgentDescriptor,
@@ -16,6 +17,7 @@ from .contracts import (
     LegacyRoleWriteError,
     OutcomeSignal,
     ToolAccess,
+    ToolInvocation,
     ToolScope,
     ValidationOutcome,
     independence_of,
@@ -29,6 +31,7 @@ from .ports import (
     AgentExecutionStart,
     AgentRegistryPort,
     ExecutionStatus,
+    InvalidSemanticQueryError,
     ModelMessage,
     ModelPort,
     ModelResponse,
@@ -50,8 +53,23 @@ from .ports import (
     UnknownSemanticMemberError,
     merged_fallbacks,
 )
+from .tools import (
+    ToolCall,
+    ToolDefinition,
+    ToolPort,
+    ToolResult,
+    UnauthorizedToolError,
+)
 
 __all__ = [
+    "InvalidSemanticQueryError",
+    "UnauthorizedToolError",
+    "ToolResult",
+    "ToolPort",
+    "ToolInvocation",
+    "ToolDefinition",
+    "ToolCall",
+    "LEGACY_ROLE_REPLACEMENTS",
     "AgentCapability",
     "AgentDescriptor",
     "AgentInput",

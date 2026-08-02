@@ -55,7 +55,7 @@ async def test_insight_runs_after_the_evaluator_and_only_once() -> None:
     result = await run(loop)
 
     assert [record.role for record in recorder.records] == [
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]

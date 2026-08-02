@@ -21,8 +21,10 @@ from zentra_application_connector import (
     SourceCredentials,
 )
 from zentra_domain_connector import (
+    AccessOverrides,
     BindingCeiling,
     Cardinality,
+    CatalogAccessOverride,
     CatalogVersion,
     RelationOrigin,
     RelationState,
@@ -87,10 +89,12 @@ class FakeConnectorService:
         tables: tuple[SourceTable, ...],
         relations: tuple[RelationView, ...],
         credentials: SourceCredentials,
+        overrides: tuple[CatalogAccessOverride, ...] = (),
     ) -> None:
         self._tables = tables
         self._relations = relations
         self._credentials = credentials
+        self._overrides = overrides
         self.join_graph_calls = 0
 
     async def latest_catalog(
@@ -104,6 +108,19 @@ class FakeConnectorService:
             created_at=datetime.now(UTC),
             tables=self._tables,
         )
+
+    async def agent_visible_catalog(
+        self, actor: AuthenticatedActor, data_source_id: UUID
+    ) -> CatalogVersion:
+        # Mirrors the real method: the harvest, with the Tenant's overrides
+        # applied by the same domain object the service uses.
+        version = await self.latest_catalog(actor, data_source_id)
+        return AccessOverrides.build(data_source_id, self._overrides).apply(version)
+
+    async def list_agent_access(
+        self, actor: AuthenticatedActor, data_source_id: UUID
+    ) -> tuple[CatalogAccessOverride, ...]:
+        return self._overrides
 
     async def join_graph(
         self, actor: AuthenticatedActor, catalog_version_id: UUID
@@ -125,7 +142,26 @@ class FakeConnectorService:
         return self._credentials
 
 
-def _connector(*, pending_relation: bool) -> FakeConnectorService:
+def _override(
+    table_name: str, field_name: str | None, *, agent_visible: bool
+) -> CatalogAccessOverride:
+    return CatalogAccessOverride(
+        override_id=uuid4(),
+        tenant_id=TENANT_ID,
+        data_source_id=DATA_CONNECTION_ID,
+        table_name=table_name,
+        field_name=field_name,
+        agent_visible=agent_visible,
+        decided_by=uuid4(),
+        decided_at=datetime.now(UTC),
+    )
+
+
+def _connector(
+    *,
+    pending_relation: bool,
+    overrides: tuple[CatalogAccessOverride, ...] = (),
+) -> FakeConnectorService:
     orders = SourceTable(
         table_id=uuid4(),
         name="orders",
@@ -159,6 +195,7 @@ def _connector(*, pending_relation: bool) -> FakeConnectorService:
     return FakeConnectorService(
         tables=(orders, customers),
         relations=relations,
+        overrides=overrides,
         credentials=SourceCredentials(
             host="clickhouse.tenant.example",
             port=8443,
@@ -331,3 +368,92 @@ def test_fake_satisfies_the_real_protocol_shape() -> None:
     silently going stale."""
     for name in ("latest_catalog", "join_graph", "resolve_driver_credentials"):
         assert hasattr(ConnectorService, name)
+
+
+@pytest.mark.asyncio
+async def test_a_hidden_table_is_absent_from_the_compiled_model() -> None:
+    """The per-table agent-access toggle, enforced by absence.
+
+    This is the governance-parity case for #40's toggle, and it was broken:
+    `connector_cube_model` read `latest_catalog`, so a table a Tenant turned
+    off was still compiled into a queryable cube. Same discipline as an
+    unconfirmed join — there is nothing to enforce at query time because there
+    is nothing to query.
+    """
+    connector = _connector(
+        pending_relation=False,
+        overrides=(_override("customers", None, agent_visible=False),),
+    )
+
+    model = await connector_cube_model(
+        connector,
+        tenant_id=TENANT_ID,
+        data_connection_id=DATA_CONNECTION_ID,
+    )
+
+    assert [table.name for table in model.tables] == ["orders"]
+    # The confirmed join pointed at `customers`. Hiding the table takes the
+    # join with it rather than leaving an edge to a cube that does not exist.
+    assert model.joins == ()
+
+
+@pytest.mark.asyncio
+async def test_a_hidden_field_leaves_its_table_reachable() -> None:
+    connector = _connector(
+        pending_relation=False,
+        overrides=(_override("orders", "customer_id", agent_visible=False),),
+    )
+
+    model = await connector_cube_model(
+        connector,
+        tenant_id=TENANT_ID,
+        data_connection_id=DATA_CONNECTION_ID,
+    )
+
+    orders = next(table for table in model.tables if table.name == "orders")
+    assert [field["name"] for field in orders.fields] == ["order_id"]
+    # The join was on the hidden field, so it cannot be compiled either.
+    assert model.joins == ()
+
+
+@pytest.mark.asyncio
+async def test_visibility_changes_move_the_fingerprint() -> None:
+    """Hiding a table changes which cubes exist without touching a Relation.
+
+    A fingerprint over Relations alone would leave `ScopedCubeSemanticLayers`
+    serving a cached catalog — and Cube a compiled schema — that still carries
+    the table the Tenant just turned off.
+    """
+    unchanged = await relation_fingerprint(
+        _connector(pending_relation=False),
+        tenant_id=TENANT_ID,
+        data_connection_id=DATA_CONNECTION_ID,
+    )
+    hidden = await relation_fingerprint(
+        _connector(
+            pending_relation=False,
+            overrides=(_override("customers", None, agent_visible=False),),
+        ),
+        tenant_id=TENANT_ID,
+        data_connection_id=DATA_CONNECTION_ID,
+    )
+
+    assert unchanged != hidden
+
+
+@pytest.mark.asyncio
+async def test_field_descriptions_reach_the_model_without_sampled_values() -> None:
+    """What the harvest observed travels to Cube, so it reaches `/meta` and
+    from there the catalog an agent reasons over. Sampled values do not —
+    they are raw customer data and this string ends up in a prompt."""
+    connector = _connector(pending_relation=False)
+
+    model = await connector_cube_model(
+        connector,
+        tenant_id=TENANT_ID,
+        data_connection_id=DATA_CONNECTION_ID,
+    )
+
+    orders = next(table for table in model.tables if table.name == "orders")
+    order_id = next(f for f in orders.fields if f["name"] == "order_id")
+    assert order_id["description"] == "int, nullable"

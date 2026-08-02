@@ -1,5 +1,5 @@
 ---
-id: adr-0024
+id: adr-0027
 title: Analytical Scope replaces the scenario whitelist
 type: adr
 status: active
@@ -16,7 +16,7 @@ related:
   - "[[Investigation Domain]]"
   - "[[Chat Surface]]"
   - "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"
-  - "[[adr/0023-investigation-engine-owns-orchestration]]"
+  - "[[adr/0026-investigation-engine-owns-orchestration]]"
 repo_path: libs/application/investigation
 code_refs:
   - libs/application/investigation/src/zentra_application_investigation/thread_routing.py

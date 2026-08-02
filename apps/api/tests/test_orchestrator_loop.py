@@ -1,5 +1,5 @@
 """The Orchestrator Loop replaces `InvestigationGraph` as the mechanism that
-drives the existing Analyst/Evaluator/Insight Agents (ADR-0023). These tests
+drives the existing Analyst/Evaluator/Insight Agents (ADR-0026). These tests
 guard the two things that would silently regress chat if this seam broke:
 the same trust-loop behavior (retry up to `MAX_EVALUATION_ATTEMPTS`, then
 settle) and the same `PipelineResult` shape `LangGraphInvestigationPipeline`
@@ -228,8 +228,8 @@ def build_loop(
     analyst_outputs: list[AgentOutput] | None = None,
 ) -> tuple[OrchestratorLoop, SimpleNamespace]:
     agents = SimpleNamespace(
-        sql_analyst=FakeAgent(
-            agent_id="sql_analyst_v1", outputs=analyst_outputs or [analyst_output()]
+        cube_analyst=FakeAgent(
+            agent_id="cube_analyst_v1", outputs=analyst_outputs or [analyst_output()]
         ),
         evaluator=FakeAgent(agent_id="evaluator_v1", outputs=evaluator_outputs),
         insight=FakeAgent(agent_id="insight_v1", outputs=[insight_output()]),
@@ -280,7 +280,7 @@ async def test_a_converged_run_persists_work_items_and_resolves_the_gap() -> Non
     assert len(store["boards"]) == 1
     roles = sorted(item.role for item in store["items"].values())
     assert roles == sorted(
-        [AgentRole.SQL_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT]
+        [AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT]
     )
     assert all(
         item.status is WorkItemStatus.COMPLETED for item in store["items"].values()
@@ -314,7 +314,7 @@ async def test_a_failed_recheck_retries_the_analyst_before_settling() -> None:
     analyst_items = [
         item
         for item in unit_of_work_factory.store["items"].values()
-        if item.role is AgentRole.SQL_ANALYST
+        if item.role is AgentRole.CUBE_ANALYST
     ]
     evaluator_items = [
         item

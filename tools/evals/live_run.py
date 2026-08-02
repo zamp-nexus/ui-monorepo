@@ -35,9 +35,9 @@ from sqlalchemy import insert, select, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_adapter_clickhouse import AuditRepository
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
-    SqlAnalystAgent,
 )
 from zentra_adapter_model_providers import (
     ModelTier,
@@ -149,7 +149,7 @@ def build(
     print(f"tier: {tier.value}")
     for role in (
         AgentRole.ORCHESTRATOR,
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ):
@@ -195,7 +195,7 @@ def _assemble(
 
     def build_agents(semantic_layer):
         return StepAgents(
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+            cube_analyst=CubeAnalystAgent(model=model, semantic_layer=semantic_layer),
             evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
             # Required since the Orchestrator stopped synthesising. A recorded
             # scenario that skipped Insight would be exercising a pipeline the
@@ -232,7 +232,7 @@ def observed(
     detail,
     rows,
     *,
-    scenario: str,
+    question: str,
     tier: ModelTier,
     without: Sequence[str],
 ) -> dict:
@@ -249,16 +249,16 @@ def observed(
     }
     outcome = detail.outcome.model_dump() if detail.outcome is not None else {}
     return {
-        "scenario": scenario,
+        "question": question,
         "tier": tier.value,
         "without": sorted(without),
         "status": detail.status.value,
         "approval_reason": (detail.pending_approval.reason if detail.pending_approval else None),
         "score": outcome.get("score"),
         "calibration_method": outcome.get("calibration_method"),
-        "analyst_model": models.get("sql_analyst_v1"),
+        "analyst_model": models.get("cube_analyst_v1"),
         "evaluator_model": models.get("evaluator_v1"),
-        "analyst_sample_size": samples.get("sql_analyst_v1"),
+        "analyst_sample_size": samples.get("cube_analyst_v1"),
         "evaluator_sample_size": samples.get("evaluator_v1"),
     }
 
@@ -281,9 +281,9 @@ async def main() -> int:
         help="Defaults to free so premium spend is always deliberate.",
     )
     parser.add_argument(
-        "--scenario",
-        default="eu_refund_spike",
-        help="Which governed question to run. Recorded into the cassette.",
+        "--question",
+        default="Why did EU refunds increase from June to July 2026?",
+        help="The question to investigate, verbatim. Recorded into the cassette.",
     )
     parser.add_argument(
         "--without",
@@ -305,7 +305,7 @@ async def main() -> int:
         expected = json.loads((CASSETTE_ROOT / args.replay / EXPECT_FILE).read_text())
         args.tier = expected["tier"]
         args.without = expected["without"]
-        args.scenario = expected["scenario"]
+        args.question = expected["question"]
 
     tier = ModelTier(args.tier)
     tenant_id, user_id = await seed_tenant(args.tier)
@@ -328,7 +328,7 @@ async def main() -> int:
     )
 
     started = datetime.now(UTC)
-    detail = await service.start(actor, scenario_key=args.scenario)
+    detail = await service.start(actor, question=args.question)
     print(f"started  {detail.investigation_id}  status={detail.status.value}")
     print("running the agents...\n")
 
@@ -386,7 +386,7 @@ async def main() -> int:
         for rung in entry.fallbacks:
             print(f"      fell through: {rung}")
 
-    actual = observed(detail, rows, scenario=args.scenario, tier=tier, without=args.without)
+    actual = observed(detail, rows, question=args.question, tier=tier, without=args.without)
     status = 0
 
     if args.record is not None:

@@ -1,6 +1,6 @@
 {
-  "name": "refuses_members_outside_the_catalog",
-  "agent": "sql_analyst",
+  "name": "handles_an_empty_result_set",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -33,16 +33,7 @@
       }
     ]
   },
-  "rows": [
-    {
-      "Commerce.orderedAt.month": "2026-06-01T00:00:00.000",
-      "Commerce.refundAmount": "20.00"
-    },
-    {
-      "Commerce.orderedAt.month": "2026-07-01T00:00:00.000",
-      "Commerce.refundAmount": "260.00"
-    }
-  ],
+  "rows": [],
   "state": {
     "question": "Why did EU refunds increase from June to July 2026?"
   },
@@ -51,28 +42,42 @@
       "reasoning": "Compare governed EU refunds month over month.",
       "query": {
         "measures": [
-          "commerce_facts.margin"
+          "Commerce.refundAmount"
         ],
         "dimensions": [],
-        "time_dimensions": [],
-        "filters": []
+        "time_dimensions": [
+          {
+            "dimension": "Commerce.orderedAt",
+            "granularity": "month",
+            "date_range": [
+              "2026-06-01",
+              "2026-07-31"
+            ]
+          }
+        ],
+        "filters": [
+          {
+            "member": "Commerce.region",
+            "operator": "equals",
+            "values": [
+              "EU"
+            ]
+          }
+        ]
       }
     },
     {
-      "result_summary": "EU refunds rose from $20 to $260.",
-      "metrics": [
-        {
-          "metric": "refund_amount",
-          "previous_value": "20.00",
-          "current_value": "260.00",
-          "unit": "USD"
-        }
-      ],
-      "confidence": 0.9,
-      "sample_size": 240
+      "result_summary": "No governed rows matched.",
+      "metrics": [],
+      "confidence": 0.2,
+      "sample_size": 0
     }
   ],
   "expect": {
-    "raises": "UnknownSemanticMemberError"
+    "outcome_kind": "confidence",
+    "max_score": 0.2,
+    "fields": {
+      "metrics": []
+    }
   }
 }

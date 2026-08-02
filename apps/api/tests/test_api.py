@@ -10,7 +10,12 @@ from zentra_application_investigation import (
     InvestigationDetail,
     PermissionDeniedError,
 )
-from zentra_domain_agent_execution import ConfidenceOutcome
+from zentra_domain_agent_execution import (
+    ConfidenceOutcome,
+    SemanticCatalog,
+    SemanticDimension,
+    SemanticMeasure,
+)
 from zentra_domain_investigation import (
     ApprovalDecision,
     DraftFinding,
@@ -62,6 +67,41 @@ class DatabaseProbe(Probe):
         self.engine = Engine()
 
 
+class SemanticLayer:
+    async def catalog(self) -> SemanticCatalog:
+        return SemanticCatalog(
+            measures=(
+                SemanticMeasure(
+                    name="Commerce.refundAmount",
+                    type="number",
+                    description="Value refunded to customers",
+                ),
+            ),
+            dimensions=(
+                SemanticDimension(
+                    name="Commerce.region",
+                    type="string",
+                    values=("EU", "NA"),
+                ),
+            ),
+        )
+
+
+class SemanticLayers:
+    """Stands in for ScopedCubeSemanticLayers. Records what it was asked for,
+    because serving one tenant another's catalog is the bug the real one
+    exists to prevent."""
+
+    def __init__(self) -> None:
+        self.resolved: list[tuple[object, object]] = []
+
+    async def resolve(
+        self, *, tenant_id: object, data_connection_id: object
+    ) -> SemanticLayer:
+        self.resolved.append((tenant_id, data_connection_id))
+        return SemanticLayer()
+
+
 @dataclass
 class Dependencies:
     database: DatabaseProbe
@@ -71,6 +111,10 @@ class Dependencies:
     investigations: object | None = None
     organization: object | None = None
     threads: object | None = None
+    semantic_layers: object | None = None
+    #: No Connector wired: these tests are about the API surface, and a
+    #: tenant with no Data Connection asks against the demo warehouse.
+    connector: object | None = None
 
     async def close(self) -> None:
         return None
@@ -96,6 +140,7 @@ def client(
     investigations: object | None = None,
     organization: object | None = None,
     threads: object | None = None,
+    semantic_layers: object | None = None,
 ) -> TestClient:
     dependencies = Dependencies(
         database=DatabaseProbe(postgres),
@@ -105,6 +150,7 @@ def client(
         investigations=investigations,
         organization=organization,
         threads=threads,
+        semantic_layers=semantic_layers or SemanticLayers(),
     )
     app = create_app(
         Settings(
@@ -247,7 +293,7 @@ def investigation_detail(
     return InvestigationDetail(
         investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
         question="Why did EU refunds increase from June to July 2026?",
-        scenario_key="eu_refund_spike",
+        scenario_key=None,
         status=InvestigationStatus.AWAITING_APPROVAL,
         version=5,
         evaluation_attempts=1,
@@ -323,7 +369,7 @@ def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
         response = test_client.post(
             "/v1/investigations",
             headers={"Authorization": "Bearer valid"},
-            json={"scenario_key": "eu_refund_spike"},
+            json={"question": "Why did EU refunds increase from June to July 2026?"},
         )
 
     assert response.status_code == 201
@@ -354,7 +400,7 @@ def test_a_metric_carries_the_periods_it_compares(monkeypatch) -> None:
         response = test_client.post(
             "/v1/investigations",
             headers={"Authorization": "Bearer valid"},
-            json={"scenario_key": "eu_refund_spike"},
+            json={"question": "Why did EU refunds increase from June to July 2026?"},
         )
 
     dated, undated = response.json()["finding"]["metrics"]
@@ -391,19 +437,23 @@ def test_approval_request_validates_reason_before_service(monkeypatch) -> None:
     assert service.last_decision is None
 
 
-def test_scenarios_require_authentication() -> None:
+def test_catalog_requires_authentication() -> None:
     with client() as test_client:
-        response = test_client.get("/v1/scenarios")
+        response = test_client.get("/v1/catalog")
 
     assert response.status_code == 401
 
 
-def test_scenarios_are_served_so_the_client_never_hardcodes_a_question(
+def test_the_catalog_served_is_the_asking_tenants_own(
     monkeypatch,
 ) -> None:
-    """The launcher renders whatever this returns. Question text lived in both
-    the service and the React bundle before; a second scenario would have made
-    it three copies."""
+    """The launcher offers whatever this returns.
+
+    It served two hardcoded scenarios before. It now serves the tenant's own
+    governed vocabulary, resolved per tenant — the same catalog the Cube
+    Analyst reasons over, so a suggestion the UI makes is one the agent can
+    actually answer.
+    """
 
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
@@ -416,21 +466,25 @@ def test_scenarios_are_served_so_the_client_never_hardcodes_a_question(
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
 
-    with client() as test_client:
+    layers = SemanticLayers()
+    with client(semantic_layers=layers) as test_client:
         response = test_client.get(
-            "/v1/scenarios",
+            "/v1/catalog",
             headers={"Authorization": "Bearer valid"},
         )
 
     assert response.status_code == 200
-    scenarios = {item["key"]: item for item in response.json()}
-    assert set(scenarios) == {"eu_refund_spike", "na_channel_growth"}
-    assert "EU refunds" in scenarios["eu_refund_spike"]["question"]
-    assert scenarios["na_channel_growth"]["facts"] == [
-        "NA commerce",
-        "October → November 2026",
-        "300 orders",
+    body = response.json()
+    assert [measure["name"] for measure in body["measures"]] == [
+        "Commerce.refundAmount"
     ]
+    assert body["measures"][0]["description"] == "Value refunded to customers"
+    dimension = body["dimensions"][0]
+    assert dimension["name"] == "Commerce.region"
+    # Discovered values travel too: an agent, and a suggestion built for one,
+    # needs to know the region is spelled "EU" rather than "Europe".
+    assert dimension["values"] == ["EU", "NA"]
+    assert layers.resolved == [(UUID("20000000-0000-0000-0000-000000000002"), None)]
 
 
 def test_every_blank_setting_means_unconfigured_not_configured_as_empty() -> None:
