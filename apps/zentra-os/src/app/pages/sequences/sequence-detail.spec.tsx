@@ -211,7 +211,7 @@ describe('SequenceDetailPage', () => {
 
     renderDetail();
 
-    expect(await screen.findByText('clickathon.orders')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'clickathon.orders' })).toBeTruthy();
     expect(await screen.findByText('Drop nulls')).toBeTruthy();
     expect(screen.getByText('Final')).toBeTruthy();
   });
