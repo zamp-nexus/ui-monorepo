@@ -35,12 +35,12 @@ from .schema_connector import (
     harvest_runs,
     relations,
 )
+from .schema_investigation_board import analysis_workspaces as analysis_workspaces
 from .schema_investigation_board import analytical_scopes as analytical_scopes
 from .schema_investigation_board import board_conflicts as board_conflicts
 from .schema_investigation_board import board_facts as board_facts
 from .schema_investigation_board import board_gaps as board_gaps
 from .schema_investigation_board import board_hypotheses as board_hypotheses
-from .schema_investigation_board import investigation_boards as investigation_boards
 from .schema_investigation_board import work_items as work_items
 from .schema_phase_2 import (
     draft_finding_claim_citations,
