@@ -32,11 +32,14 @@ chat_sessions = Table(
         nullable=False,
     ),
     Column("group_id", UUID(as_uuid=True), nullable=False),
+    # Nullable for now: the current Thread aggregate (its rename to Chat
+    # Session is deferred, per ADR-0028) has no creator field to supply
+    # this from. Tightened to NOT NULL once the application layer wires
+    # Chat Session creation to an authenticated User (ADR-0033).
     Column(
         "created_by",
         UUID(as_uuid=True),
         ForeignKey("users.user_id"),
-        nullable=False,
     ),
     Column("visibility", String(16), nullable=False, server_default="shared"),
     Column("initiating_message_id", UUID(as_uuid=True), nullable=False),
