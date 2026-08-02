@@ -12,6 +12,7 @@ from zentra_domain_agent_execution import (
     ModelMessage,
     ModelPort,
     ModelResponse,
+    ToolDefinition,
 )
 
 
@@ -29,11 +30,16 @@ def _key(
     system: str,
     messages: Sequence[ModelMessage],
     response_schema: dict[str, JsonValue] | None,
+    tools: Sequence[ToolDefinition] = (),
 ) -> str:
     """Content hash of everything that determines the answer.
 
     Deliberately excludes max_tokens: the routed chain lowers it per rung, and a
     recording should survive that being retuned.
+
+    Tool definitions are included, and omitted from the payload entirely when
+    there are none, so that adding tool support did not silently invalidate
+    every recording made before it existed.
     """
     payload = json.dumps(
         {
@@ -41,6 +47,7 @@ def _key(
             "system": system,
             "messages": [message.model_dump() for message in messages],
             "schema": response_schema,
+            **({"tools": [tool.model_dump() for tool in tools]} if tools else {}),
         },
         sort_keys=True,
     )
@@ -68,6 +75,8 @@ class RecordingModelClient:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
+        tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         response = await self._inner.complete(
             model=model,
@@ -75,12 +84,15 @@ class RecordingModelClient:
             messages=messages,
             max_tokens=max_tokens,
             response_schema=response_schema,
+            tools=tools,
+            temperature=temperature,
         )
         key = _key(
             model=model,
             system=system,
             messages=messages,
             response_schema=response_schema,
+            tools=tools,
         )
         (self._directory / f"{key}.json").write_text(
             json.dumps(
@@ -120,12 +132,15 @@ class ReplayModelClient:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
+        tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         key = _key(
             model=model,
             system=system,
             messages=messages,
             response_schema=response_schema,
+            tools=tools,
         )
         path = self._directory / f"{key}.json"
         if not path.exists():

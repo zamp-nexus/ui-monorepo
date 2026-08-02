@@ -3,11 +3,14 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from zentra_adapter_telemetry import TelemetrySettings, configure_telemetry
 
 from .connector_routes import router as connector_router
+from .connector_rows_routes import router as connector_rows_router
 from .dependencies import AppDependencies
 from .internal_cube_routes import router as internal_cube_router
 from .routes import router
@@ -42,6 +45,34 @@ def create_app(
         if dependencies is None:
             await resolved_dependencies.close()
 
+    async def _validation_error_discloses_nothing(
+        _: Request,
+        error: RequestValidationError,
+    ) -> JSONResponse:
+        """Say what was wrong with a field, never what was in it.
+
+        FastAPI's default handler puts the rejected value in `input`, and
+        `ctx` can carry it too. That was harmless while every rejected body
+        field was a short opaque key the handler already declined to echo; a
+        question is free text now (ADR-0023), so the default would reflect an
+        attacker's payload back inside a response this product vouches for.
+        The location and the reason are what a caller needs, and it already
+        knows what it sent.
+        """
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "detail": [
+                    {
+                        "type": item["type"],
+                        "loc": [str(part) for part in item["loc"]],
+                        "msg": item["msg"],
+                    }
+                    for item in error.errors()
+                ]
+            },
+        )
+
     api = FastAPI(
         title="ZentraOS API",
         version="0.1.0",
@@ -64,8 +95,13 @@ def create_app(
             "Last-Event-ID",
         ],
     )
+    api.add_exception_handler(
+        RequestValidationError,
+        _validation_error_discloses_nothing,  # type: ignore[arg-type]
+    )
     api.include_router(router)
     api.include_router(connector_router)
+    api.include_router(connector_rows_router)
     api.include_router(workspace_router)
     api.include_router(internal_cube_router)
     api.include_router(thread_router)

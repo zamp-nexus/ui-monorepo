@@ -33,7 +33,7 @@ const contextResponse = {
 const investigation = {
   investigation_id: '30000000-0000-0000-0000-000000000003',
   canonical_question: 'Why did EU refunds increase from June to July 2026?',
-  scenario_key: 'eu_refund_spike',
+  scenario_key: null,
   status: 'awaiting_approval',
   version: 5,
   evaluation_attempts: 1,
@@ -104,7 +104,7 @@ const investigation = {
       created_at: '2026-07-29T00:00:01Z',
       artifact_references: ['artifact://execution/60000000-0000-0000-0000-000000000006'],
       delivery: 'complete',
-      agent_id: 'sql_analyst_v1',
+      agent_id: 'cube_analyst_v1',
       step: 2,
       model: 'cerebras/zai-glm-4.7',
       fallbacks: ['gemini/gemini-3.6-flash: circuit open'],
@@ -137,19 +137,24 @@ const response = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-const scenariosResponse = [
-  {
-    key: 'eu_refund_spike',
-    question: 'Why did EU refunds increase from June to July 2026?',
-    facts: ['EU commerce', 'June \u2192 July 2026', '8 orders'],
-  },
-  {
-    key: 'na_channel_growth',
-    question:
-      'Which sales channel accounted for the increase in North America revenue from October to November 2026?',
-    facts: ['NA commerce', 'October \u2192 November 2026', '300 orders'],
-  },
-];
+const catalogResponse = {
+  measures: [
+    {
+      name: 'Commerce.refundAmount',
+      type: 'number',
+      description: 'Value refunded to customers',
+      values: [],
+    },
+  ],
+  dimensions: [
+    {
+      name: 'Commerce.region',
+      type: 'string',
+      description: null,
+      values: ['EU', 'NA'],
+    },
+  ],
+};
 
 const mockApi = (
   detail: unknown = investigation,
@@ -160,7 +165,7 @@ const mockApi = (
     const url = String(input);
     if (url.endsWith('/health/ready')) return response(readyResponse);
     if (url.endsWith('/v1/context')) return response(context);
-    if (url.endsWith('/v1/scenarios')) return response(scenariosResponse);
+    if (url.endsWith('/v1/catalog')) return response(catalogResponse);
     if (url.endsWith('/v1/investigations') && options?.method === 'POST') {
       return response(detail, 201);
     }
@@ -245,7 +250,7 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('launches only the governed synthetic scenarios the API offers', async () => {
+  it('orients the launcher with this tenant\'s own catalog', async () => {
     const fetchMock = mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -257,19 +262,17 @@ describe('App', () => {
     renderApp();
     expect(await screen.findByText('Acme Europe')).toBeTruthy();
 
-    // Rendered from the API, not from a question hardcoded in this bundle.
-    expect(
-      await screen.findByRole('heading', { name: /eu refunds increase/i }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('heading', { name: /which sales channel/i }),
-    ).toBeTruthy();
+    // Orientation comes from this tenant's own catalog, not from a question
+    // hardcoded in this bundle or in a fixed server-side list.
+    expect(await screen.findByText(/refund amount/i)).toBeTruthy();
+    expect(screen.getByText(/region/i)).toBeTruthy();
 
-    const launches = screen.getAllByRole('button', {
-      name: /begin evidence trace/i,
+    const asked = 'Why did EU refunds increase from June to July 2026?';
+    fireEvent.change(screen.getByLabelText(/ask/i), {
+      target: { value: asked },
     });
-    expect(launches).toHaveLength(2);
-    fireEvent.click(launches[0]);
+    fireEvent.click(screen.getByRole('button', { name: /begin evidence trace/i }));
+
     expect(
       await screen.findByRole('heading', {
         name: /eu refunds rose \$240 in july/i,
@@ -280,11 +283,11 @@ describe('App', () => {
       ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
     );
     expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
-      scenario_key: 'eu_refund_spike',
+      question: asked,
     });
   });
 
-  it('launches the second scenario with its own key', async () => {
+  it('sends the question verbatim and refuses to send an empty one', async () => {
     const fetchMock = mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -294,18 +297,23 @@ describe('App', () => {
       user: { email: 'owner@example.com' },
     });
     renderApp();
-    await screen.findByRole('heading', { name: /which sales channel/i });
+    const field = await screen.findByLabelText(/ask/i);
+    const launch = screen.getByRole('button', { name: /begin evidence trace/i });
 
-    fireEvent.click(
-      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
-    );
+    // Nothing typed yet: there is no question to investigate.
+    expect((launch as HTMLButtonElement).disabled).toBe(true);
+
+    const asked = 'Which warehouse absorbed the October backlog?';
+    fireEvent.change(field, { target: { value: `  ${asked}  ` } });
+    fireEvent.click(screen.getByRole('button', { name: /begin evidence trace/i }));
 
     await waitFor(() => {
       const posted = fetchMock.mock.calls.find(
         ([, options]) => (options as RequestInit | undefined)?.method === 'POST',
       );
+      // Trimmed, but otherwise exactly what was typed — no rewriting.
       expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toEqual({
-        scenario_key: 'na_channel_growth',
+        question: asked,
       });
     });
   });
@@ -331,7 +339,7 @@ describe('App', () => {
     expect(screen.getByText('Question registered')).toBeTruthy();
     expect(screen.getByRole('button', { name: /approve finding/i })).toBeTruthy();
     // The agent that produced each step is named on the timeline.
-    expect(screen.getByText('SQL Analyst · step 2')).toBeTruthy();
+    expect(screen.getByText('Cube Analyst · step 2')).toBeTruthy();
     // The provider and model that actually served the step are named.
     expect(screen.getByText('cerebras/zai-glm-4.7')).toBeTruthy();
     // A score below the tenant threshold gates on low confidence, not policy.
@@ -410,10 +418,10 @@ describe('App', () => {
     });
 
     renderApp();
-    await screen.findByRole('heading', { name: /which sales channel/i });
-    fireEvent.click(
-      screen.getAllByRole('button', { name: /begin evidence trace/i })[1],
-    );
+    fireEvent.change(await screen.findByLabelText(/ask/i), {
+      target: { value: 'Which sales channel grew fastest?' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /begin evidence trace/i }));
     await waitFor(() =>
       expect(
         fetchMock.mock.calls.some(

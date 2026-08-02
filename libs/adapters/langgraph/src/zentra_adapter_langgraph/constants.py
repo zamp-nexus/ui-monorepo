@@ -5,8 +5,9 @@ from zentra_domain_agent_execution import AgentRole
 # Agents address a *role*, never a model. Which provider and model actually
 # serve that role is the router's decision, resolved per tenant tier, so
 # swapping providers never touches agent code (ADR-001).
+INTAKE_MODEL = AgentRole.INTAKE.value
 ORCHESTRATOR_MODEL = AgentRole.ORCHESTRATOR.value
-SQL_ANALYST_MODEL = AgentRole.SQL_ANALYST.value
+CUBE_ANALYST_MODEL = AgentRole.CUBE_ANALYST.value
 EVALUATOR_MODEL = AgentRole.EVALUATOR.value
 INSIGHT_MODEL = AgentRole.INSIGHT.value
 

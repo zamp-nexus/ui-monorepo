@@ -1,3 +1,11 @@
+// The demo warehouse's one cube, defined only when no Data Connection is in
+// scope. Cube compiles every file under model/ for every context, so an
+// unconditional `cube(...)` here put `Commerce` in the catalog of a tenant
+// querying their own ClickHouse — where it is not their data, cannot be
+// queried through their driver, and is one more wrong member for an Agent to
+// pick. The mirror of Connector.js, which returns early when there *is* no
+// Data Connection.
+if (!COMPILE_CONTEXT.securityContext || !COMPILE_CONTEXT.securityContext.dataConnectionId) {
 cube('Commerce', {
   sql: `SELECT * FROM commerce_facts`,
   dataSource: 'default',
@@ -81,3 +89,4 @@ cube('Commerce', {
     },
   },
 });
+}

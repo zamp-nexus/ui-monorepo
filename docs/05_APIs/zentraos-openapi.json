@@ -95,11 +95,13 @@
       },
       "AgentRole": {
         "enum": [
+          "intake",
           "orchestrator",
           "data_intake",
           "data_quality",
           "data_preparation",
           "semantic_modeling",
+          "cube_analyst",
           "sql_analyst",
           "evaluator",
           "statistician",
@@ -583,6 +585,43 @@
         "title": "CatalogDiffResponse",
         "type": "object"
       },
+      "CatalogMemberResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "CatalogMemberResponse",
+        "type": "object"
+      },
       "CatalogResponse": {
         "additionalProperties": false,
         "properties": {
@@ -628,6 +667,32 @@
           "created_at"
         ],
         "title": "CatalogResponse",
+        "type": "object"
+      },
+      "CatalogSummaryResponse": {
+        "additionalProperties": false,
+        "description": "What this tenant can actually be asked about.\n\nReplaces the fixed list of governed scenarios (ADR-0023). A client that has\nto offer the user a starting question needs the tenant's own vocabulary,\nand this is the same governed catalog the Cube Analyst reasons over \u2014 so a\nsuggestion the UI makes is one the agent can genuinely answer.",
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Measures",
+            "type": "array"
+          }
+        },
+        "required": [
+          "measures",
+          "dimensions"
+        ],
+        "title": "CatalogSummaryResponse",
         "type": "object"
       },
       "CitationFilterResponse": {
@@ -871,6 +936,17 @@
             "title": "Cubetype",
             "type": "string"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -947,6 +1023,17 @@
       "ConnectorTableSchema": {
         "additionalProperties": false,
         "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "fields": {
             "items": {
               "$ref": "#/components/schemas/ConnectorFieldModel"
@@ -1857,13 +1944,27 @@
       "InvestigationCreateRequest": {
         "additionalProperties": false,
         "properties": {
-          "scenario_key": {
-            "title": "Scenario Key",
+          "data_connection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Connection Id"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
             "type": "string"
           }
         },
         "required": [
-          "scenario_key"
+          "question"
         ],
         "title": "InvestigationCreateRequest",
         "type": "object"
@@ -1965,8 +2066,15 @@
             ]
           },
           "scenario_key": {
-            "title": "Scenario Key",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Key"
           },
           "status": {
             "title": "Status",
@@ -2697,33 +2805,6 @@
         "title": "RoutingResponse",
         "type": "object"
       },
-      "ScenarioResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "facts": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Facts",
-            "type": "array"
-          },
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "question": {
-            "title": "Question",
-            "type": "string"
-          }
-        },
-        "required": [
-          "key",
-          "question",
-          "facts"
-        ],
-        "title": "ScenarioResponse",
-        "type": "object"
-      },
       "SequenceGraphResponse": {
         "additionalProperties": false,
         "properties": {
@@ -3242,6 +3323,68 @@
         "title": "TableResponse",
         "type": "object"
       },
+      "TableRowsResponse": {
+        "additionalProperties": false,
+        "description": "A page of raw rows from one Source Table, read straight through Cube.\n\nColumns and rows are pre-shaped server-side, in the catalog's own field\norder, so the frontend never has to reconcile Cube's `\"table.field\"`-keyed\nrow objects against a separately-fetched column list.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "data_source_id": {
+            "format": "uuid",
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data_source_id",
+          "table_name",
+          "columns",
+          "rows",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "TableRowsResponse",
+        "type": "object"
+      },
       "ThreadActionsResponse": {
         "additionalProperties": false,
         "properties": {
@@ -3622,7 +3765,13 @@
             "status": "draft",
             "thread_id": "43000000-0000-0000-0000-000000000001",
             "title": "How is the business doing?",
-            "updated_at": "2026-08-01T09:00:00Z"
+            "updated_at": "2026-08-01T09:00:00Z",
+            "usage": {
+              "input_tokens": 0,
+              "latency_ms": 0,
+              "output_tokens": 0,
+              "total_cost_usd": "0"
+            }
           }
         ],
         "properties": {
@@ -4735,6 +4884,53 @@
           }
         },
         "summary": "Agents"
+      }
+    },
+    "/v1/catalog": {
+      "get": {
+        "description": "The governed vocabulary this tenant may ask questions about.\n\nResolved per tenant, so it is the tenant's own catalog and never another's\n\u2014 the whole reason `ScopedCubeSemanticLayers` exists. Measures and\ndimensions only: no rows, and no physical schema.",
+        "operationId": "catalog_v1_catalog_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog"
       }
     },
     "/v1/connector/catalog-versions/{catalog_version_id}": {
@@ -6098,6 +6294,85 @@
           }
         },
         "summary": "Set Field Agent Access",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/rows": {
+      "get": {
+        "operationId": "browse_table_rows_v1_connector_sources__data_source_id__tables__table_name__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRowsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse Table Rows",
         "tags": [
           "connector"
         ]
@@ -7751,57 +8026,6 @@
           }
         },
         "summary": "Create Thread"
-      }
-    },
-    "/v1/scenarios": {
-      "get": {
-        "description": "The governed questions this deployment will answer.\n\nServed rather than hardcoded in the client so the question text has one\nhome: the launcher renders whatever the API supports, and adding a scenario\nis a server change alone.",
-        "operationId": "scenarios_v1_scenarios_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ScenarioResponse"
-                  },
-                  "title": "Response Scenarios V1 Scenarios Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Scenarios"
       }
     },
     "/v1/sequences": {

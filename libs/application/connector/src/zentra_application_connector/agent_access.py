@@ -11,7 +11,11 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from zentra_domain_connector import CatalogAccessOverride
+from zentra_domain_connector import (
+    AccessOverrides,
+    CatalogAccessOverride,
+    CatalogVersion,
+)
 
 from .dto import WRITE_ROLES, AgentAccessView, AuthenticatedActor
 from .views import to_access_view
@@ -19,6 +23,23 @@ from .views import to_access_view
 
 class AgentAccessOperations:
     """The agent-visibility half of ``ConnectorService``."""
+
+    async def agent_visible_catalog(
+        self, actor: AuthenticatedActor, data_source_id: UUID
+    ) -> CatalogVersion:
+        """The latest Catalog Version with every hidden table and field dropped.
+
+        The single call anything building an agent-facing view of this source
+        should make. ``latest_catalog`` returns what was harvested, which is
+        the right answer for a human browsing the Datasets page and the wrong
+        one for the semantic layer: a table a Tenant turned off must be absent
+        from what agents can reach, not merely dimmed in a UI.
+        """
+        version = await self.latest_catalog(actor, data_source_id)
+        overrides = await self._access.list_for_source(
+            data_source_id, tenant_id=actor.tenant_id
+        )
+        return AccessOverrides.build(data_source_id, tuple(overrides)).apply(version)
 
     async def _record_access(
         self,

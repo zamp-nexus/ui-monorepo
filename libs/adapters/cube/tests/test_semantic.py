@@ -65,14 +65,49 @@ async def test_catalog_exposes_governed_members_and_is_cached() -> None:
         "Commerce.orderedAt",
         "Commerce.region",
     }
-    # Discovered once and cached with the catalog: an agent that cannot see how
-    # a value is spelled filters on "North America" and silently gets nothing.
+    # Names and types only — no value probing here. Against a real tenant
+    # catalog of hundreds of dimensions, discovering every string dimension's
+    # values eagerly meant hundreds of sequential round trips before a single
+    # question could be read. `values_for` is where discovery actually happens.
     region = next(d for d in catalog.dimensions if d.name == "Commerce.region")
-    assert region.values == ("EU", "NA")
+    assert region.values == ()
     time_dimension = next(
         d for d in catalog.dimensions if d.name == "Commerce.orderedAt"
     )
     assert time_dimension.values == ()
+
+
+@pytest.mark.asyncio
+async def test_values_for_discovers_a_string_dimensions_values_once() -> None:
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    catalog = await layer.catalog()
+    region = next(d for d in catalog.dimensions if d.name == "Commerce.region")
+
+    discovered = await layer.values_for(region)
+    cached = await layer.values_for(discovered)
+
+    # A caller that cannot see how a value is spelled filters on "North
+    # America" and silently gets nothing.
+    assert discovered.values == ("EU", "NA")
+    assert cached.values == ("EU", "NA")
+    assert len(client.caller_queries) == 0
+    assert len(client.queries) == 1
+
+
+@pytest.mark.asyncio
+async def test_values_for_does_not_probe_a_non_string_dimension() -> None:
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    catalog = await layer.catalog()
+    time_dimension = next(
+        d for d in catalog.dimensions if d.name == "Commerce.orderedAt"
+    )
+
+    result = await layer.values_for(time_dimension)
+
+    assert result.values == ()
+    assert client.queries == []
 
 
 @pytest.mark.asyncio
@@ -131,3 +166,43 @@ async def test_ungoverned_member_is_refused_before_any_query_runs() -> None:
         await layer.query(SemanticQuery(measures=("commerce_facts.margin",)))
 
     assert client.caller_queries == []
+
+
+@pytest.mark.asyncio
+async def test_query_raw_bypasses_governance_for_an_ungoverned_member() -> None:
+    """A member outside the compiled catalog must not be refused here.
+
+    `query_raw` is the escape hatch a tenant that opted out of ADR-003's
+    restriction uses — its whole point is to skip `reject_ungoverned`.
+    """
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+
+    result = await layer.query_raw(
+        SemanticQuery(measures=("commerce_facts.margin",))
+    )
+
+    assert client.caller_queries == [{"measures": ["commerce_facts.margin"]}]
+    assert result.rows == ({"Commerce.refundAmount": "260.00"},)
+
+
+@pytest.mark.asyncio
+async def test_load_raw_bypasses_governance_and_forwards_the_query_verbatim() -> None:
+    """A dimension outside the governed catalog must not be refused here.
+
+    `load_raw` is the escape hatch a raw row-browse route uses — its whole
+    point is to skip `reject_ungoverned` for a caller that already trusts its
+    own dimension list.
+    """
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    query = {
+        "dimensions": ["orders_raw.status"],
+        "limit": 50,
+        "offset": 0,
+        "total": True,
+    }
+
+    await layer.load_raw(query)
+
+    assert client.queries == [query]

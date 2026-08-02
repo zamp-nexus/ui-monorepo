@@ -9,14 +9,22 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.types import JsonValue
 
-from .contracts import AgentRole, ConfidenceOutcome, ExecutionUsage, OutcomeSignal
+from .contracts import (
+    AgentRole,
+    ConfidenceOutcome,
+    ExecutionUsage,
+    OutcomeSignal,
+    ToolInvocation,
+)
+from .tools import ToolCall, ToolDefinition, ToolResult
 
 # ---------------------------------------------------------------------------
 # Semantic layer
 #
-# This is the only port in the system that reaches data. There is deliberately
-# no raw-SQL port anywhere in the tree: ADR-003's "the SQL Analyst structurally
-# cannot see raw tables" holds because no such capability exists to hand it.
+# This is the only port in the system that reaches data. `query()` enforces
+# ADR-003's governed-catalog restriction; `query_raw()` deliberately does not,
+# for tenants/agents that have opted out of it (still tenant-scoped — never
+# cross-tenant).
 # ---------------------------------------------------------------------------
 
 
@@ -26,6 +34,11 @@ class SemanticMeasure(BaseModel):
     name: str = Field(min_length=1)
     type: str = Field(min_length=1)
     format: str | None = None
+    # What this measure means in the tenant's own terms, carried from the
+    # semantic model. A name tells an agent that `orders.revenue` exists; it
+    # does not say whether that is gross or net of refunds, and choosing wrong
+    # produces a confident answer to a different question.
+    description: str | None = None
 
 
 class SemanticDimension(BaseModel):
@@ -39,6 +52,8 @@ class SemanticDimension(BaseModel):
     # exist returns zero rows rather than an error. Empty means unconstrained,
     # not empty.
     values: tuple[str, ...] = ()
+    # See SemanticMeasure.description.
+    description: str | None = None
 
 
 class SemanticCatalog(BaseModel):
@@ -113,10 +128,27 @@ class UnknownSemanticMemberError(ValueError):
     """A query referenced a member the governed catalog does not define."""
 
 
+class InvalidSemanticQueryError(ValueError):
+    """The semantic layer refused a query built only from governed members.
+
+    Naming every member correctly is not the same as asking something the
+    layer can answer: a granularity a dimension does not support, or a filter
+    operator it does not implement, is a well-formed request for an impossible
+    result. Distinct from `UnknownSemanticMemberError` because the caller's
+    correction is different — reshape the query, not rename its members — and
+    distinct from a transport failure, which is not the caller's mistake at
+    all and must not be reported to an Agent as though it were.
+    """
+
+
 class SemanticLayerPort(Protocol):
     def catalog(self) -> Awaitable[SemanticCatalog]: ...
 
     def query(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
+
+    # Same shape as `query`, but skips the governed-catalog rejection. Only
+    # offered to an Agent whose tenant has opted out of ADR-003's restriction.
+    def query_raw(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +161,12 @@ class ModelMessage(BaseModel):
 
     role: Literal["user", "assistant"]
     content: str
+    # A turn in a tool conversation. An assistant turn carries the calls it
+    # asked for; the user turn that answers carries their results. Both are
+    # needed because a provider will not accept a result for a call it cannot
+    # see it made — the transcript has to be replayed whole on every round.
+    tool_calls: tuple[ToolCall, ...] = ()
+    tool_results: tuple[ToolResult, ...] = ()
 
 
 class ModelResponse(BaseModel):
@@ -140,6 +178,12 @@ class ModelResponse(BaseModel):
     # Replay shows "Cerebras 402 -> NVIDIA 404 -> served by Gemini" rather than
     # silently showing Gemini.
     fallbacks: tuple[str, ...] = ()
+    # Non-empty means the model wants tools run before it will answer. A
+    # caller that passed no tools never sees these.
+    tool_calls: tuple[ToolCall, ...] = ()
+    # Why the model stopped. The runtime loop needs to tell "asked for a tool"
+    # apart from "finished", and cannot infer it from an empty text block.
+    stop_reason: str | None = None
 
 
 def merged_fallbacks(*responses: ModelResponse) -> tuple[str, ...]:
@@ -163,6 +207,15 @@ class ModelPort(Protocol):
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
+        # Empty keeps the one-shot behaviour every existing caller relies on.
+        # Non-empty offers the model these tools and may come back asking for
+        # one, which only a caller prepared to run them should do.
+        tools: Sequence[ToolDefinition] = (),
+        # Low and fixed rather than left to provider defaults: this is a
+        # trust-first system, and every agent's output is checked against
+        # governed evidence either way, so there is nothing to gain from
+        # sampling variance and a repeatable answer is easier to trust.
+        temperature: float = 0.2,
     ) -> Awaitable[ModelResponse]: ...
 
 
@@ -198,6 +251,11 @@ class AgentExecutionRecord(BaseModel):
     evidence_refs: tuple[str, ...] = ()
     errors: tuple[str, ...] = ()
     fallbacks: tuple[str, ...] = ()
+    # What the Agent actually did, in order. Names and timings only — never
+    # arguments or results, which carry rows (ADR-0006). Without this, an
+    # Agent that searched the catalog four times and queried twice is
+    # indistinguishable in Replay from one that answered in a single shot.
+    tool_calls: tuple[ToolInvocation, ...] = ()
     started_at: datetime
     completed_at: datetime
 

@@ -6,13 +6,12 @@ bespoke runtime gate: everything here reads only what `ConnectorService`
 already exposes as confirmed, and nothing here can see a proposed or
 rejected Relation.
 
-`ConnectorService` has no production wiring yet (its four repository ports
-have no adapter implementation anywhere in this repo) — this is a
-pre-existing gap, unrelated to Cube, discovered while building this. Every
-function here accepts `ConnectorService | None` and raises
-`ConnectorNotConfiguredError` when it is absent, so a caller fails loudly
-with a clear reason instead of an AttributeError deep in an unrelated
-method.
+`ConnectorService`'s four repository ports now have real Postgres adapter
+implementations, wired in `dependencies.py`. It is still `None` whenever
+`CONNECTOR_CREDENTIAL_KEY` is unset, since without it no credential can be
+sealed — every function here accepts `ConnectorService | None` and raises
+`ConnectorNotConfiguredError` in that case, so a caller fails loudly with a
+clear reason instead of an `AttributeError` deep in an unrelated method.
 
 `data_connection_id` here is deliberately the ADR-0012 vocabulary — Cube's
 JWT claims and `Investigation.data_connection_id` use the same name — but
@@ -49,6 +48,7 @@ class ConnectorTableModel:
     name: str
     sql_table: str
     fields: tuple[dict[str, object], ...]
+    description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,14 +74,19 @@ async def relation_fingerprint(
     tenant_id: UUID,
     data_connection_id: UUID,
 ) -> str:
-    """A fingerprint that changes on any Relation confirm/reject/revoke.
+    """A fingerprint that changes on anything altering the compiled schema.
 
     Confirming or rejecting a Relation mutates its state under the *same*
     CatalogVersion id, so the version id alone does not invalidate a
     compiled Cube schema. `join_graph` already returns only confirmed
     Relations (`JoinGraph.build` filters to `r.in_join_graph`), so hashing
-    that set's membership is enough: any transition changes which relation
-    ids appear in it.
+    that set's membership is enough to catch any transition.
+
+    Agent-visibility overrides go into the same hash, and must: hiding a
+    table changes which cubes exist without touching a single Relation, so a
+    fingerprint over Relations alone would leave the cached semantic layer —
+    and Cube's compiled schema — serving a table the Tenant just turned off
+    for up to the cache TTL.
     """
     if connector is None:
         raise ConnectorNotConfiguredError(
@@ -90,14 +95,19 @@ async def relation_fingerprint(
     actor = _system_actor(tenant_id)
     catalog = await connector.latest_catalog(actor, data_connection_id)
     graph = await connector.join_graph(actor, catalog.catalog_version_id)
-    return _fingerprint_of(graph.relations)
+    overrides = await connector.list_agent_access(actor, data_connection_id)
+    return _fingerprint_of(graph.relations, overrides)
 
 
-def _fingerprint_of(relations) -> str:
-    fingerprint_input = "|".join(
-        sorted(f"{r.relation_id}:{r.state.value}" for r in relations)
+def _fingerprint_of(relations, overrides=()) -> str:
+    parts = sorted(f"{r.relation_id}:{r.state.value}" for r in relations)
+    parts.extend(
+        sorted(
+            f"{o.table_name}.{o.field_name or '*'}:{o.agent_visible}"
+            for o in overrides
+        )
     )
-    return sha256(fingerprint_input.encode()).hexdigest()
+    return sha256("|".join(parts).encode()).hexdigest()
 
 
 async def connector_cube_model(
@@ -119,7 +129,12 @@ async def connector_cube_model(
             "No ConnectorService is configured; cannot read a Join Graph"
         )
     actor = _system_actor(tenant_id)
-    catalog = await connector.latest_catalog(actor, data_connection_id)
+    # Access-filtered, not the raw harvest. Everything compiled from this model
+    # becomes a queryable cube, so a table a Tenant turned off in the Datasets
+    # UI has to be structurally absent here — the same governance-by-absence
+    # that keeps unconfirmed joins unqueryable. Reading `latest_catalog` here
+    # instead left the per-table and per-field toggles with no effect at all.
+    catalog = await connector.agent_visible_catalog(actor, data_connection_id)
     graph = await connector.join_graph(actor, catalog.catalog_version_id)
     credentials = await connector.resolve_driver_credentials(
         actor, data_connection_id
@@ -127,7 +142,11 @@ async def connector_cube_model(
 
     fields_by_table: dict[str, dict[UUID, dict[str, object]]] = {
         table.name: {
-            f.field_id: {"name": f.name, "cubeType": _cube_type(f.normalised_type)}
+            f.field_id: {
+                "name": f.name,
+                "cubeType": _cube_type(f.normalised_type),
+                "description": _field_description(f),
+            }
             for f in table.fields
         }
         for table in catalog.tables
@@ -143,6 +162,7 @@ async def connector_cube_model(
             name=table.name,
             sql_table=f"{table.database}.{table.name}",
             fields=tuple(fields_by_table[table.name].values()),
+            description=_table_description(table),
         )
         for table in catalog.tables
     )
@@ -175,6 +195,37 @@ async def connector_cube_model(
         tables=tables,
         joins=joins,
     )
+
+
+def _table_description(table) -> str | None:
+    """What a harvest observed about a table, in one line.
+
+    Row scale is the part an agent can act on: it is the difference between a
+    result worth a claim and eight rows that support nothing.
+    """
+    if table.estimated_rows is None:
+        return None
+    return f"Harvested table, approximately {table.estimated_rows:,} rows."
+
+
+def _field_description(field) -> str | None:
+    """What a harvest observed about a column, in one line.
+
+    Declared type and nullability come from the schema; distinct count and
+    null fraction come from the Field Profile. `sample_values` is deliberately
+    excluded — it is raw customer data, opt-in for a reason, and this string
+    is bound for a model prompt.
+    """
+    parts = [field.declared_type]
+    if field.nullable:
+        parts.append("nullable")
+    profile = field.profile
+    if profile is not None:
+        if profile.distinct_count is not None:
+            parts.append(f"{profile.distinct_count:,} distinct")
+        if profile.null_fraction:
+            parts.append(f"{profile.null_fraction:.0%} null")
+    return ", ".join(parts)
 
 
 def _cube_type(data_type: str) -> str:

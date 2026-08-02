@@ -12,6 +12,8 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    ToolCall,
+    ToolDefinition,
 )
 
 from zentra_adapter_model_providers import (
@@ -43,6 +45,7 @@ class StubClient:
         self._outcomes = list(outcomes)
         self.calls = 0
         self.max_tokens_seen: list[int] = []
+        self.tools_seen: list[tuple[Any, ...]] = []
 
     async def complete(
         self,
@@ -52,12 +55,19 @@ class StubClient:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, Any] | None = None,
+        tools: Sequence[Any] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         self.calls += 1
         self.max_tokens_seen.append(max_tokens)
+        self.tools_seen.append(tuple(tools))
         outcome = self._outcomes[min(self.calls - 1, len(self._outcomes) - 1)]
         if isinstance(outcome, Exception):
             raise outcome
+        # A whole response, for cases that need to script something other than
+        # the text — a turn that asks for a tool, say.
+        if isinstance(outcome, ModelResponse):
+            return outcome
         return ModelResponse(
             text=outcome,
             usage=ExecutionUsage(
@@ -73,7 +83,7 @@ async def run(
     clients: dict[Provider, Any],
     *,
     tier: ModelTier = ModelTier.FREE,
-    role: AgentRole = AgentRole.SQL_ANALYST,
+    role: AgentRole = AgentRole.CUBE_ANALYST,
     breaker: ProviderCircuitBreaker | None = None,
     schema: dict[str, Any] | None = SCHEMA,
 ) -> ModelResponse:
@@ -196,9 +206,9 @@ async def test_exhausted_chain_reports_every_attempt() -> None:
     with pytest.raises(ChainExhaustedError) as caught:
         await run({Provider.GEMINI: failing, Provider.CEREBRAS: failing})
 
-    assert "sql_analyst" in str(caught.value)
+    assert "cube_analyst" in str(caught.value)
     assert len(caught.value.attempts) == len(
-        chain_for(ModelTier.FREE, AgentRole.SQL_ANALYST)
+        chain_for(ModelTier.FREE, AgentRole.CUBE_ANALYST)
     )
 
 
@@ -284,3 +294,113 @@ async def test_a_first_rung_success_carries_an_empty_trail() -> None:
     response = await run({Provider.GEMINI: StubClient(VALID)})
 
     assert response.fallbacks == ()
+
+
+# --- tool calling ---------------------------------------------------------
+
+TOOL = ToolDefinition(
+    name="semantic_catalog_search",
+    description="Find governed members matching a term.",
+    input_schema={
+        "type": "object",
+        "properties": {"term": {"type": "string"}},
+        "required": ["term"],
+        "additionalProperties": False,
+    },
+)
+
+
+@pytest.mark.asyncio
+async def test_a_rung_without_tool_support_is_skipped_and_recorded() -> None:
+    """Cerebras and OpenRouter still serve one-shot calls; they are passed over
+    only when tools are actually asked for, and the pass is visible."""
+    cerebras = StubClient(VALID)
+    anthropic = StubClient(VALID)
+
+    client = RoutedModelClient(
+        tier=ModelTier.FREE,
+        clients={Provider.CEREBRAS: cerebras, Provider.ANTHROPIC: anthropic},
+    )
+    response = await client.complete(
+        model=AgentRole.CUBE_ANALYST.value,
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+        response_schema=SCHEMA,
+        tools=[TOOL],
+    )
+
+    assert cerebras.calls == 0
+    assert anthropic.calls == 1
+    assert any("no tool support" in attempt for attempt in response.fallbacks)
+
+
+@pytest.mark.asyncio
+async def test_the_same_rung_still_serves_when_no_tools_are_requested() -> None:
+    cerebras = StubClient(VALID)
+
+    client = RoutedModelClient(
+        tier=ModelTier.FREE,
+        clients={Provider.CEREBRAS: cerebras},
+    )
+    await client.complete(
+        model=AgentRole.CUBE_ANALYST.value,
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+        response_schema=SCHEMA,
+    )
+
+    assert cerebras.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_a_tool_request_is_not_validated_against_the_final_schema() -> None:
+    """A turn asking for a tool has not answered yet.
+
+    Validating its empty text against the declared schema would fail every
+    tool round, retry once, and then burn the rest of the chain — turning a
+    working loop into an exhausted one.
+    """
+    asking = ModelResponse(
+        text="",
+        tool_calls=(ToolCall(call_id="c1", name="semantic_catalog_search"),),
+        stop_reason="tool_use",
+        usage=ExecutionUsage(model="anthropic/claude-sonnet-5"),
+    )
+    anthropic = StubClient(asking)
+
+    client = RoutedModelClient(
+        tier=ModelTier.FREE,
+        clients={Provider.ANTHROPIC: anthropic},
+    )
+    response = await client.complete(
+        model=AgentRole.CUBE_ANALYST.value,
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+        response_schema=SCHEMA,
+        tools=[TOOL],
+    )
+
+    assert anthropic.calls == 1
+    assert response.tool_calls[0].name == "semantic_catalog_search"
+
+
+@pytest.mark.asyncio
+async def test_tools_reach_the_provider_client() -> None:
+    anthropic = StubClient(VALID)
+
+    client = RoutedModelClient(
+        tier=ModelTier.FREE,
+        clients={Provider.ANTHROPIC: anthropic},
+    )
+    await client.complete(
+        model=AgentRole.CUBE_ANALYST.value,
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+        tools=[TOOL],
+    )
+
+    assert anthropic.tools_seen == [(TOOL,)]

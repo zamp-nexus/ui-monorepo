@@ -24,8 +24,8 @@ _PUBLIC_DEFAULTS: dict[AgentRole, tuple[str, str, tuple[AgentCapability, ...]]] 
             ),
         ),
     ),
-    AgentRole.SQL_ANALYST: (
-        "SQL Analyst",
+    AgentRole.CUBE_ANALYST: (
+        "Cube Analyst",
         "Queries governed Semantic Metrics without raw SQL authority.",
         (
             AgentCapability(

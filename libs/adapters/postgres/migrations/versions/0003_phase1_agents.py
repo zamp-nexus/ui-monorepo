@@ -11,9 +11,17 @@ depends_on = None
 # forbids anything else: `enabled = false OR eval_status = 'passing'`.
 # `nx run evals:check` is what promotes a row, so an agent cannot reach a
 # tenant without its suite having actually run.
+#
+# Named `cube_analyst`, not the `sql_analyst` this migration originally
+# seeded: `0001_phase0_foundation.py` creates every table via
+# `metadata.create_all()` against the schema module's *current* definitions,
+# so `agent_registry`'s role CHECK on a fresh database is always today's
+# `CANONICAL_ROLES` — which no longer includes `sql_analyst` (ADR-0025) — not
+# whatever the CHECK looked like the day this migration was written. Seeding
+# the legacy name here would fail that CHECK on every from-scratch bootstrap.
 AGENTS = (
     ("orchestrator_v1", "orchestrator", "1", "evals/orchestrator"),
-    ("sql_analyst_v1", "sql_analyst", "1", "evals/sql_analyst"),
+    ("cube_analyst_v1", "cube_analyst", "1", "evals/cube_analyst"),
     ("evaluator_v1", "evaluator", "1", "evals/evaluator"),
 )
 
