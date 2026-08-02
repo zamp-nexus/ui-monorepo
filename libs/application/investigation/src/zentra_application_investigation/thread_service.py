@@ -38,17 +38,30 @@ from .thread_dto import (
     ThreadNotFoundError,
     ThreadPage,
 )
-from .thread_ports import ThreadUnitOfWork, ThreadUnitOfWorkFactory
-from .thread_routing import (
-    deterministic_thread_title,
-    route_draft_messages,
-    route_governed_question,
-)
+from .thread_ports import IntakePort, ThreadUnitOfWork, ThreadUnitOfWorkFactory
+from .thread_routing import deterministic_thread_title
 from .thread_snapshot import build_thread_detail, require_project, validate_page_size
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
 THREAD_MUTATOR_ROLES = frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER})
+
+_ROUTABLE_KINDS = frozenset(
+    {ThreadMessageKind.USER_QUESTION, ThreadMessageKind.USER_CLARIFICATION}
+)
+
+
+def _combined_question_text(messages: tuple[ThreadMessage, ...]) -> str:
+    """A Draft Thread's user and clarification messages, as one question.
+
+    Intake reasons over text, not tokens, so accumulating a Draft Thread's
+    messages into one passage (rather than merging separately-matched token
+    sets, as the keyword router did) is what lets a later clarification like
+    "In Europe" resolve a question the first message alone could not.
+    """
+    return "\n".join(
+        message.content for message in messages if message.kind in _ROUTABLE_KINDS
+    )
 
 
 class ThreadService:
@@ -56,10 +69,12 @@ class ThreadService:
         self,
         *,
         unit_of_work_factory: ThreadUnitOfWorkFactory,
+        intake: IntakePort,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
+        self._intake = intake
         self._now = now
         self._new_id = new_id
 
@@ -79,7 +94,7 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = route_governed_question(message.content)
+        routing = await self._intake.resolve(message.content, tenant_id=actor.tenant_id)
         title_source = routing.canonical_question or message.content
         thread = InvestigationThread.create(
             thread_id=thread_id,
@@ -147,7 +162,10 @@ class ThreadService:
             existing_messages = await unit_of_work.threads.messages_for_thread(
                 thread_id
             )
-            routing = route_draft_messages(existing_messages + (message,))
+            routing = await self._intake.resolve(
+                _combined_question_text(existing_messages + (message,)),
+                tenant_id=actor.tenant_id,
+            )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
@@ -198,7 +216,7 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = route_governed_question(message.content)
+        routing = await self._intake.resolve(message.content, tenant_id=actor.tenant_id)
         normalized = message.content.casefold()
         published_reference = any(
             token in normalized

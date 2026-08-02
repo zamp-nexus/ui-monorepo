@@ -20,6 +20,7 @@ from zentra_adapter_cube import CubeClient, CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
     InsightAgent,
+    IntakeAgent,
     InvestigationGraph,
     OrchestratorAgent,
     PostgresCheckpointStore,
@@ -51,20 +52,22 @@ from zentra_adapter_thesys import ThesysC1Client
 from zentra_application_connector import ConnectorService
 from zentra_application_investigation import (
     ExecutionJobWorker,
+    IntakeService,
     InvestigationService,
     OrganizationService,
     ThreadService,
     VisualizationService,
 )
-from zentra_domain_agent_execution import AgentRole
+from zentra_domain_agent_execution import AgentRole, SemanticLayerPort
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
 from .connector_model import relation_fingerprint
 from .cube_scope import ScopedCubeSemanticLayers
 from .pipeline import (
-    LangGraphInvestigationPipeline,
+    OrchestratorLoop,
     PostgresExecutionRecorder,
+    build_agents_factory,
 )
 from .registry import PostgresAgentRegistry
 from .settings import Settings
@@ -154,15 +157,13 @@ class AppDependencies:
             resolve_relation_fingerprint=resolve_relation_fingerprint,
         )
 
-        graph_factories = {
-            tier: _build_graph_factory(
-                tier=tier,
-                models=models,
-                breaker=breaker,
-                registry=registry,
-                recorder=recorder,
-                checkpointer=checkpoints.saver,
-            )
+        # ADR-0023: the Investigation Engine's Board and Work Item queue
+        # replace LangGraph as the platform controller. `_build_graph_factory`
+        # / `InvestigationGraph` stay in the tree, importable and tested in
+        # isolation, until Phase 2 deletes them — nothing in this wiring
+        # calls them any more.
+        agents_factories = {
+            tier: build_agents_factory(tier=tier, models=models, breaker=breaker)
             for tier in ModelTier
         }
 
@@ -172,7 +173,12 @@ class AppDependencies:
         )
         investigations = InvestigationService(
             unit_of_work_factory=unit_of_work_factory,
-            pipeline=LangGraphInvestigationPipeline(graph_factories, semantic_layers),
+            pipeline=OrchestratorLoop(
+                agents_factories,
+                semantic_layers,
+                unit_of_work_factory=unit_of_work_factory,
+                recorder=recorder,
+            ),
             audit_writer=audit_delivery,
             audit_reader=audit_delivery,
             now=lambda: datetime.now(UTC),
@@ -185,8 +191,33 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
+        # Free tier: Intake is a light classification call, not the deep
+        # analysis a tenant's paid tier buys. Chat never threads a Data
+        # Connection through routing, so this always resolves the demo
+        # warehouse's semantic layer, scoped per Tenant.
+        intake_model = RoutedModelClient(
+            tier=ModelTier.FREE,
+            clients=models.as_dict(),
+            breaker=breaker,
+        )
+
+        def _build_intake_agent(semantic_layer: SemanticLayerPort) -> IntakeAgent:
+            return IntakeAgent(model=intake_model, semantic_layer=semantic_layer)
+
+        async def _resolve_intake_semantic_layer(
+            tenant_id: UUID,
+        ) -> SemanticLayerPort:
+            return await semantic_layers.resolve(
+                tenant_id=tenant_id, data_connection_id=None
+            )
+
         threads = ThreadService(
             unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
+            intake=IntakeService(
+                agent_factory=_build_intake_agent,
+                resolve_semantic_layer=_resolve_intake_semantic_layer,
+                new_id=uuid4,
+            ),
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )

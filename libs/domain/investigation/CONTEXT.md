@@ -10,8 +10,13 @@ read-only without deleting Investigation history.
 An Investigation Thread is the linear conversational boundary around immutable
 messages and separately governed Investigations. Draft Threads hold unresolved
 user and router clarification messages without fabricating analytical work.
-Deterministic routing activates a Thread only when exactly one governed scenario
-matches.
+Intake activates a Thread only when a question resolves inside the tenant's
+Analytical Scope (see [[adr/0024-analytical-scope-replaces-scenario-whitelist]]);
+an out-of-scope or ambiguous question clarifies instead of fabricating work.
+
+Once activated, an Investigation accumulates its working memory on an
+Investigation Board rather than passing through a fixed sequence of steps —
+see [[adr/0023-investigation-engine-owns-orchestration]].
 
 Follow-ups and retries create new immutable Investigations with linear parent,
 retry-of, and Thread-sequence lineage. Published Findings may create a strict
@@ -22,6 +27,30 @@ Visualization Brief and independently retriable presentation artifact.
 **Investigation Status**:
 The current lifecycle position of an Investigation, including whether it is active, blocked for Human Approval, or terminal.
 _Avoid_: Run state, workflow status
+
+**Investigation Board**:
+The durable object one Investigation accumulates its working memory onto — Facts, Hypotheses, Knowledge Gaps, Conflicts, evidence references, and bounded Confidence — read and written by Work Items rather than passed through a fixed sequence of steps.
+_Avoid_: Workspace, state, scratchpad
+
+**Work Item**:
+One unit of work an Orchestrator Loop assigns to a capability-matched Agent against a gap on the Investigation Board, tracked through pending, running, waiting, blocked, completed, or rejected.
+_Avoid_: Task, step, node
+
+**Knowledge Gap**:
+Something the Investigation Board does not yet know, carrying a priority an Orchestrator Loop uses to decide what to work on next.
+_Avoid_: Question, todo, missing data
+
+**Conflict**:
+A contradiction between two pieces of evidence on the Investigation Board that must be resolved or explicitly documented before Insight may proceed.
+_Avoid_: Discrepancy, error, mismatch
+
+**Analytical Scope**:
+The Tenant-configured allowlist of Cube cubes, and optionally members, that Intake and analytical Agents may resolve a question against; narrower than but never wider than `SemanticCatalog.reject_ungoverned`.
+_Avoid_: Scenario, whitelist, permission
+
+**Completion Criteria**:
+The deterministic set of conditions — question answered, no high-priority Knowledge Gaps, evidence validated, Conflicts resolved or documented, confidence bounded above threshold, budget not exhausted — an Orchestrator Loop checks before stopping; never "no Work Items remain" alone.
+_Avoid_: Done, finished, queue empty
 
 **Finding**:
 A published, evidence-backed analytical conclusion produced by an Investigation after deterministic publication policy or any required Human Approval.

@@ -115,6 +115,23 @@ TASK_LEDGER_SCHEMA = _obj(
     }
 )
 
+# Intake's structured decision: whether a message resolves inside the scoped
+# catalog it was given. `normalized_question` and `clarification` are
+# mutually exclusive in practice (one is null depending on `disposition`),
+# nullable rather than split into two schemas so one call always returns one
+# shape.
+INTAKE_SCHEMA = _obj(
+    {
+        "disposition": {
+            "type": "string",
+            "enum": ["resolved", "ambiguous", "unsupported"],
+        },
+        "normalized_question": _nullable({"type": "string"}),
+        "clarification": _nullable({"type": "string"}),
+        "reasoning": {"type": "string"},
+    }
+)
+
 # `SYNTHESIS_SCHEMA` was the Orchestrator's. It is gone with the node that
 # used it; the Insight Agent's `DRAFT_FINDING_SCHEMA` is the only shape a
 # conclusion now takes.

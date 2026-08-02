@@ -1,25 +1,42 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4, uuid5
 
 from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
+    EvaluatorAgent,
+    InsightAgent,
     InsightOutcome,
     InvestigationGraph,
+    SqlAnalystAgent,
     ValidatedEvidence,
 )
-from zentra_adapter_model_providers import ModelTier
+from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
+from zentra_adapter_model_providers import (
+    ModelTier,
+    ProviderCircuitBreaker,
+    ProviderClients,
+    RoutedModelClient,
+)
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_adapter_telemetry import record_insight_execution
 from zentra_application_investigation import PipelineResult
 from zentra_domain_agent_execution import (
+    OUTCOME_ADAPTER,
     AgentExecutionRecord,
+    AgentExecutionRecorder,
     AgentExecutionStart,
+    AgentInput,
+    AgentOutput,
+    AgentPort,
     AgentRole,
     ConfidenceOutcome,
     ExecutionStatus,
+    ExecutionUsage,
     OutcomeSignal,
     reject_legacy_role,
 )
@@ -33,11 +50,16 @@ from zentra_domain_investigation import (
     DraftFinding,
     EvidenceCitation,
     EvidenceReference,
+    Fact,
     Finding,
+    GapPriority,
+    InvestigationBoard,
     InvestigationStatus,
+    KnowledgeGap,
     MetricComparison,
     RootCauseState,
     WorkFeedEventKind,
+    WorkItem,
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
@@ -562,4 +584,508 @@ def _citation(
         producing_execution_id=measured.producing_execution_id,
         aggregate_value=value,
         evaluator_outcome=evaluator_outcome,
+    )
+
+
+# Mirrors `InvestigationGraph`'s `_EXCLUDED_FROM_STATE` (graph.py): result rows
+# stay in `agent_executions.output`, reachable only through the artifact://
+# pointer, never carried in the state a later Agent or the Board sees.
+_EXCLUDED_FROM_STATE = frozenset({"rows"})
+
+
+def _for_state(output: AgentOutput) -> dict[str, Any]:
+    """The subset of an Agent's output the next step (or the Board) may see.
+
+    Identical in shape to `InvestigationGraph._for_state` on purpose: Insight
+    and the Evaluator are unmodified and still expect exactly this shape,
+    whichever mechanism produced it.
+    """
+    return {
+        "fields": {
+            key: value
+            for key, value in output.fields.items()
+            if key not in _EXCLUDED_FROM_STATE
+        },
+        "metrics": output.fields.get("metrics", []),
+        "result_summary": output.fields.get("result_summary", ""),
+        "issues": output.fields.get("issues", []),
+        "recheck_passed": output.fields.get("recheck_passed"),
+        "discrepancy_pct": output.fields.get("discrepancy_pct"),
+        "outcome": output.outcome.model_dump(mode="json"),
+        "evidence_refs": list(output.evidence_refs),
+        "model": output.usage.model,
+        "fallbacks": list(output.fallbacks),
+        "sample_size": output.fields.get("sample_size"),
+    }
+
+
+def _outcome_signal(payload: dict[str, Any]) -> OutcomeSignal:
+    return OUTCOME_ADAPTER.validate_python(payload)
+
+
+def _insight_outcome_from_state(state: dict[str, Any]) -> InsightOutcome:
+    fields = state["fields"]
+    return InsightOutcome(
+        execution_id=UUID(state["execution_id"]),
+        headline=str(fields["headline"]),
+        summary=str(fields["summary"]),
+        claims=list(fields.get("claims", [])),
+        contradictions=tuple(fields.get("contradictions", [])),
+        root_cause=str(fields["root_cause"]),
+        outcome=_outcome_signal(state["outcome"]),
+        model=state.get("model"),
+        fallbacks=tuple(state.get("fallbacks", [])),
+    )
+
+
+def _validated_evidence_from_state(analyst_state: dict[str, Any]) -> tuple[
+    ValidatedEvidence, ...
+]:
+    """Mirrors `InvestigationGraph._validated_evidence` (graph.py)."""
+    execution_id = analyst_state.get("execution_id")
+    if not execution_id:
+        return ()
+    query = _mapping(_mapping(analyst_state.get("fields")).get("query"))
+    time_dimensions = [_mapping(item) for item in query.get("time_dimensions", [])]
+    grain = next(
+        (
+            str(item["granularity"])
+            for item in time_dimensions
+            if item.get("granularity")
+        ),
+        None,
+    )
+    filters = tuple(_mapping(item) for item in query.get("filters", []))
+    return tuple(
+        ValidatedEvidence(
+            metric=str(metric.get("metric")),
+            previous_value=str(metric.get("previous_value")),
+            current_value=str(metric.get("current_value")),
+            previous_period=metric.get("previous_label"),
+            current_period=metric.get("current_label"),
+            filters=filters,
+            grain=grain,
+            producing_execution_id=UUID(str(execution_id)),
+        )
+        for metric in (_mapping(m) for m in analyst_state.get("metrics", []))
+        if metric.get("metric")
+    )
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+@dataclass(slots=True)
+class _StepAgents:
+    sql_analyst: SqlAnalystAgent
+    evaluator: EvaluatorAgent
+    insight: InsightAgent
+
+
+AgentsFactory = Callable[[CubeSemanticLayer], "_StepAgents"]
+
+
+def build_agents_factory(
+    *, tier: ModelTier, models: ProviderClients, breaker: ProviderCircuitBreaker
+) -> AgentsFactory:
+    """A per-tier factory mirroring `_build_graph_factory`, minus the graph.
+
+    Same reason the graph builds fresh per call: the semantic layer must be
+    scoped per (Tenant, Data Connection), not fixed at wiring time.
+    """
+    model = RoutedModelClient(tier=tier, clients=models.as_dict(), breaker=breaker)
+
+    def build(semantic_layer: CubeSemanticLayer) -> _StepAgents:
+        return _StepAgents(
+            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
+            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
+            insight=InsightAgent(model=model),
+        )
+
+    return build
+
+
+class OrchestratorLoop:
+    """Drives the existing specialist Agents through a durable Investigation
+    Board and Work Item queue instead of a compiled LangGraph (ADR-0023).
+
+    Phase 1 shape: still serial — Analyst -> Evaluator (retried up to
+    `MAX_EVALUATION_ATTEMPTS`) -> Insight — with identical trust-loop
+    behavior to `LangGraphInvestigationPipeline`. Only the mechanism
+    changed: a Knowledge Gap, Work Items, and Facts are real Postgres rows
+    an Orchestrator Loop (and, from Phase 2, a reactive one) can read —
+    never a graph's private state.
+    """
+
+    def __init__(
+        self,
+        agent_factories: Mapping[ModelTier, AgentsFactory],
+        semantic_layers: ScopedCubeSemanticLayers,
+        *,
+        unit_of_work_factory: PostgresInvestigationUnitOfWorkFactory,
+        recorder: AgentExecutionRecorder,
+        now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        new_id: Callable[[], UUID] = uuid4,
+    ) -> None:
+        self._agent_factories = dict(agent_factories)
+        self._semantic_layers = semantic_layers
+        self._unit_of_work_factory = unit_of_work_factory
+        self._recorder = recorder
+        self._now = now
+        self._new_id = new_id
+
+    async def run(
+        self,
+        *,
+        investigation_id: UUID,
+        tenant_id: UUID,
+        question: str,
+        model_tier: str = ModelTier.FREE.value,
+        data_connection_id: UUID | None = None,
+    ) -> PipelineResult:
+        semantic_layer = await self._semantic_layers.resolve(
+            tenant_id=tenant_id, data_connection_id=data_connection_id
+        )
+        agents = self._agent_factories[ModelTier(model_tier)](semantic_layer)
+        board_id = self._new_id()
+        gap_id = await self._open_board(board_id, investigation_id, tenant_id, question)
+
+        step = 0
+        analyst_state, step, analyst_item_id = await self._run_analyst(
+            agents.sql_analyst,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+            question=question,
+            step=step,
+            objective=f"Measure what the question asks: {question}",
+            previous_issues=None,
+        )
+
+        attempts = 0
+        while True:
+            evaluator_state, step, _, _ = await self._run_step(
+                agent=agents.evaluator,
+                role=AgentRole.EVALUATOR,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+                objective="Independently verify the Analyst's measurement",
+                payload={"question": question, "analyst": analyst_state},
+                depends_on=(analyst_item_id,),
+                step=step,
+            )
+            attempts += 1
+            if (
+                bool(evaluator_state.get("recheck_passed"))
+                or attempts >= MAX_EVALUATION_ATTEMPTS
+            ):
+                break
+            analyst_state, step, analyst_item_id = await self._run_analyst(
+                agents.sql_analyst,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+                question=question,
+                step=step,
+                objective="Re-measure after the Evaluator's recheck disagreed",
+                previous_issues=evaluator_state.get("issues", []),
+            )
+
+        insight_state, step, insight_execution_id, _ = await self._run_step(
+            agent=agents.insight,
+            role=AgentRole.INSIGHT,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+            objective="Draft a Finding from the validated evidence",
+            payload={
+                "question": question,
+                "analyst": analyst_state,
+                "evaluator": evaluator_state,
+            },
+            depends_on=(analyst_item_id,),
+            step=step,
+        )
+        insight_state = {
+            **insight_state,
+            "execution_id": str(insight_execution_id),
+        }
+
+        converged = bool(evaluator_state.get("recheck_passed"))
+        insight = _insight_outcome_from_state(insight_state)
+        evidence = _validated_evidence_from_state(analyst_state)
+        await self._close_board(board_id, tenant_id, gap_id, analyst_item_id, evidence)
+
+        draft, citations = _draft_with_citations(
+            insight,
+            evidence,
+            evaluator_outcome=_outcome_signal(evaluator_state["outcome"]),
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+        )
+        evidence_refs: list[str] = []
+        for source in (analyst_state, evaluator_state):
+            evidence_refs.extend(source.get("evidence_refs", []))
+
+        return PipelineResult(
+            finding=Finding(
+                headline=insight.headline,
+                summary=insight.summary,
+                metrics=tuple(
+                    MetricComparison(
+                        metric=str(metric["metric"]),
+                        previous_value=str(metric["previous_value"]),
+                        current_value=str(metric["current_value"]),
+                        unit=str(metric["unit"]),
+                        previous_label=_optional_str(metric.get("previous_label")),
+                        current_label=_optional_str(metric.get("current_label")),
+                    )
+                    for metric in analyst_state.get("metrics", [])
+                ),
+                evidence_refs=tuple(
+                    EvidenceReference(reference) for reference in evidence_refs
+                ),
+            ),
+            outcome=_outcome_signal(evaluator_state["outcome"]),
+            converged=converged,
+            contradictions=insight.contradictions,
+            analyst_model=analyst_state.get("model"),
+            evaluator_model=evaluator_state.get("model"),
+            analyst_sample_size=analyst_state.get("sample_size"),
+            evaluator_sample_size=evaluator_state.get("sample_size"),
+            draft_finding=draft,
+            evidence_citations=citations,
+        )
+
+    async def _open_board(
+        self, board_id: UUID, investigation_id: UUID, tenant_id: UUID, question: str
+    ) -> UUID:
+        now = self._now()
+        board = InvestigationBoard.create(
+            board_id=board_id,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+            now=now,
+        )
+        gap = KnowledgeGap(
+            gap_id=self._new_id(), description=question, priority=GapPriority.HIGH
+        )
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            await unit_of_work.investigation_boards.create(board)
+            await unit_of_work.investigation_boards.open_gap(board_id, tenant_id, gap)
+            await unit_of_work.commit()
+        return gap.gap_id
+
+    async def _close_board(
+        self,
+        board_id: UUID,
+        tenant_id: UUID,
+        gap_id: UUID,
+        analyst_item_id: UUID,
+        evidence: Sequence[ValidatedEvidence],
+    ) -> None:
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            for measured in evidence:
+                await unit_of_work.investigation_boards.record_fact(
+                    board_id,
+                    tenant_id,
+                    Fact(
+                        fact_id=self._new_id(),
+                        metric=measured.metric,
+                        value=measured.current_value,
+                        period=measured.current_period,
+                        producing_work_item_id=analyst_item_id,
+                        evidence_refs=(
+                            EvidenceReference(
+                                f"artifact://execution/{measured.producing_execution_id}"
+                            ),
+                        ),
+                    ),
+                )
+            await unit_of_work.investigation_boards.resolve_gap(gap_id, tenant_id)
+            await unit_of_work.commit()
+
+    async def _run_analyst(
+        self,
+        agent: SqlAnalystAgent,
+        *,
+        investigation_id: UUID,
+        tenant_id: UUID,
+        question: str,
+        step: int,
+        objective: str,
+        previous_issues: list[Any] | None,
+    ) -> tuple[dict[str, Any], int, UUID]:
+        payload: dict[str, Any] = {"question": question}
+        if previous_issues is not None:
+            payload["previous_issues"] = previous_issues
+        state, step, execution_id, work_item_id = await self._run_step(
+            agent=agent,
+            role=AgentRole.SQL_ANALYST,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+            objective=objective,
+            payload=payload,
+            depends_on=(),
+            step=step,
+        )
+        return (
+            {**state, "execution_id": str(execution_id)},
+            step,
+            work_item_id,
+        )
+
+    async def _run_step(
+        self,
+        *,
+        agent: AgentPort,
+        role: AgentRole,
+        investigation_id: UUID,
+        tenant_id: UUID,
+        objective: str,
+        payload: dict[str, Any],
+        depends_on: tuple[UUID, ...],
+        step: int,
+    ) -> tuple[dict[str, Any], int, UUID, UUID]:
+        """Runs one Agent as one Work Item, recording it exactly as the
+        graph recorded a node: a started event, the Agent Execution, and the
+        same Work Feed events chat already reads. Returns the resulting
+        state, the step counter, the execution id, and the Work Item id.
+        """
+        now = self._now()
+        item = WorkItem.create(
+            work_item_id=self._new_id(),
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
+            role=role,
+            objective=objective,
+            now=now,
+            depends_on=depends_on,
+        )
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            await unit_of_work.work_items.add(item)
+            await unit_of_work.commit()
+
+        step += 1
+        execution_id = self._new_id()
+        started_at = self._now()
+        agent_state = {**payload, "execution_id": str(execution_id)}
+        await self._recorder.record_started(
+            AgentExecutionStart(
+                execution_id=execution_id,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+                agent_id=agent.descriptor.agent_id,
+                role=role,
+                step=step,
+                started_at=started_at,
+            )
+        )
+        item.start(now=self._now())
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            await unit_of_work.work_items.save(item)
+            await unit_of_work.commit()
+
+        try:
+            output = await agent.invoke(
+                AgentInput(
+                    investigation_id=investigation_id,
+                    tenant_id=tenant_id,
+                    state=agent_state,
+                )
+            )
+        except Exception as error:
+            completed_at = self._now()
+            await self._recorder.record(
+                _execution_record(
+                    execution_id=execution_id,
+                    investigation_id=investigation_id,
+                    tenant_id=tenant_id,
+                    agent_id=agent.descriptor.agent_id,
+                    role=role,
+                    step=step,
+                    input_state=agent_state,
+                    output=None,
+                    status=ExecutionStatus.FAILURE,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    errors=(f"{type(error).__name__}: {error}",),
+                )
+            )
+            async with self._unit_of_work_factory(
+                tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            ) as unit_of_work:
+                item.reject(now=completed_at, reason=str(error))
+                await unit_of_work.work_items.save(item)
+                await unit_of_work.commit()
+            raise
+
+        completed_at = self._now()
+        await self._recorder.record(
+            _execution_record(
+                execution_id=execution_id,
+                investigation_id=investigation_id,
+                tenant_id=tenant_id,
+                agent_id=agent.descriptor.agent_id,
+                role=role,
+                step=step,
+                input_state=agent_state,
+                output=output,
+                status=ExecutionStatus.SUCCESS,
+                started_at=started_at,
+                completed_at=completed_at,
+            )
+        )
+        item.complete(
+            now=completed_at,
+            artifact_refs=(EvidenceReference(f"artifact://execution/{execution_id}"),),
+        )
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            await unit_of_work.work_items.save(item)
+            await unit_of_work.commit()
+
+        return _for_state(output), step, execution_id, item.work_item_id
+
+
+def _execution_record(
+    *,
+    execution_id: UUID,
+    investigation_id: UUID,
+    tenant_id: UUID,
+    agent_id: str,
+    role: AgentRole,
+    step: int,
+    input_state: dict[str, Any],
+    output: AgentOutput | None,
+    status: ExecutionStatus,
+    started_at: datetime,
+    completed_at: datetime,
+    errors: tuple[str, ...] = (),
+) -> AgentExecutionRecord:
+    return AgentExecutionRecord(
+        execution_id=execution_id,
+        investigation_id=investigation_id,
+        tenant_id=tenant_id,
+        agent_id=agent_id,
+        role=role,
+        step=step,
+        input=input_state,
+        output=dict(output.fields) if output else None,
+        outcome=output.outcome if output else None,
+        status=status,
+        latency_ms=max(0, int((completed_at - started_at).total_seconds() * 1000)),
+        usage=output.usage if output is not None else ExecutionUsage(),
+        evidence_refs=output.evidence_refs if output else (),
+        fallbacks=output.fallbacks if output else (),
+        errors=errors,
+        started_at=started_at,
+        completed_at=completed_at,
     )
