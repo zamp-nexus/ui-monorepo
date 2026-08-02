@@ -24,7 +24,7 @@ code_refs:
   - libs/application/investigation/src/zentra_application_investigation/ports.py
   - apps/api/src/zentra_api/pipeline.py
   - apps/api/src/zentra_api/dependencies.py
-  - libs/adapters/langgraph/src/zentra_adapter_langgraph/graph.py
+  - apps/api/src/zentra_api/outcomes.py
   - libs/domain/investigation/src/zentra_domain_investigation/investigation_board.py
   - libs/domain/investigation/src/zentra_domain_investigation/work_item.py
 ---
@@ -135,3 +135,52 @@ attempt-cap-exhausted) and verified against a live Postgres instance
 (migration upgrade/downgrade, RLS tenant isolation). `graph.py` /
 `InvestigationGraph` / `_build_graph_factory` remain in the tree, unused by
 this wiring, exactly as planned for Phase 2's deletion — not removed here.
+
+## Phase 2 status
+
+Implemented as the deletion, not the reactive loop. `graph.py`,
+`checkpoints.py`, `InvestigationGraph`, `PostgresCheckpointStore`,
+`LangGraphInvestigationPipeline` and `_build_graph_factory` are gone;
+`langgraph` and `langgraph-checkpoint-postgres` are removed from
+`libs/adapters/langgraph/pyproject.toml` and from the lock, so the package
+imports nothing from LangGraph and the venv no longer contains it. The
+adapter keeps its name and its four Agents, which never depended on the
+framework. `InsightOutcome` / `ValidatedEvidence` / `PipelineOutcome` moved
+to `apps/api/src/zentra_api/outcomes.py`, beside their only consumer.
+
+Continuous re-planning was deliberately **not** built. For a single-question
+workload there is one Knowledge Gap and one sane capability order (Analyst →
+Evaluator → Insight), so a generic planner would be indirection with no
+behavior behind it. That payoff arrives with Phase 3's fan-out, and the
+reactive loop is folded into it.
+
+Two properties the graph enforced needed attention rather than deletion:
+
+- **Cancellation.** `InvestigationGraph` called `cancellation_checkpoint`
+  around every agent call; the Phase 1 loop did not, so a `/cancel` during a
+  three-attempt run took effect only once the whole pipeline finished.
+  Restored in `OrchestratorLoop._run_step` — checked before the Work Item is
+  created and again once the step is durable — and wired at
+  `dependencies.py`. This is what ADR-0018's "next checkpoint observes
+  cancellation" refers to for analytical jobs.
+- **The registry gate.** `NoEnabledAgentError` — refuse when the registry has
+  not promoted a required role — lives in `OrchestratorAgent`, which the loop
+  does not invoke. It is therefore **not enforced on the live chat path**.
+  The agent and its tests are kept
+  (`libs/adapters/langgraph/tests/test_orchestrator_agent.py`), and deciding
+  whether the Engine re-imposes the gap is open work, not a settled decision.
+  `NoEnabledAgentError` remains in `pipeline.py`'s and `audit_delivery.py`'s
+  known-error allowlists against that.
+
+Crash recovery is still unbuilt: `OrchestratorLoop.run()` opens a new Board
+on every call and never resumes an in-flight one, so LangGraph's checkpointer
+was removed without a replacement. Reconstructing an interrupted run needs
+`AgentExecutionRecord.output` for the persisted Work Item's execution, which
+`AgentExecutionRepository` can already read and the loop does not.
+
+Test coverage moved rather than went away: the ~30 tests that exercised the
+Agents through the graph became 21 in `apps/api/tests/test_loop_agents.py` and
+`test_loop_insight.py` (the same Agents, driven by the loop, faking only the
+model and semantic layer) plus 8 standalone agent tests in the adapter. The
+exceptions are the two LangGraph checkpointer-resume tests and
+`test_checkpoints.py`, which tested the capability this ADR removes.

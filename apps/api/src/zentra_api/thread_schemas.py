@@ -258,6 +258,12 @@ class ThreadResponse(BaseModel):
                         },
                     ],
                     "investigation_id": None,
+                    "usage": {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "total_cost_usd": "0",
+                        "latency_ms": 0,
+                    },
                     "routing": {
                         "disposition": "unsupported",
                         "scenario_key": None,

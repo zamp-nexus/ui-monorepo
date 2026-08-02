@@ -16,17 +16,8 @@ from zentra_adapter_clickhouse import (
     ClickHouseLandingZone,
     ClickHouseSourceConnector,
 )
-from zentra_adapter_cube import CubeClient, CubeSemanticLayer
-from zentra_adapter_langgraph import (
-    EvaluatorAgent,
-    InsightAgent,
-    IntakeAgent,
-    InvestigationGraph,
-    OrchestratorAgent,
-    PostgresCheckpointStore,
-    SqlAnalystAgent,
-)
-from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
+from zentra_adapter_cube import CubeClient
+from zentra_adapter_langgraph import IntakeAgent
 from zentra_adapter_model_providers import (
     ModelTier,
     ProviderCircuitBreaker,
@@ -58,7 +49,7 @@ from zentra_application_investigation import (
     ThreadService,
     VisualizationService,
 )
-from zentra_domain_agent_execution import AgentRole, SemanticLayerPort
+from zentra_domain_agent_execution import SemanticLayerPort
 
 from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
@@ -99,7 +90,6 @@ class AppDependencies:
     audit_delivery: AuditDeliveryCoordinator
     organization: OrganizationService
     threads: ThreadService
-    checkpoints: PostgresCheckpointStore
     execution_worker: ExecutionJobWorker
     execution_worker_enabled: bool
     registry: PostgresAgentRegistry
@@ -131,7 +121,6 @@ class AppDependencies:
         unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
         recorder = PostgresExecutionRecorder(unit_of_work_factory)
-        checkpoints = PostgresCheckpointStore(settings.database_url)
 
         # A provider with no key is simply absent from the chain, so the whole
         # system still runs on ANTHROPIC_API_KEY alone.
@@ -158,10 +147,8 @@ class AppDependencies:
         )
 
         # ADR-0023: the Investigation Engine's Board and Work Item queue
-        # replace LangGraph as the platform controller. `_build_graph_factory`
-        # / `InvestigationGraph` stay in the tree, importable and tested in
-        # isolation, until Phase 2 deletes them — nothing in this wiring
-        # calls them any more.
+        # are the platform controller. There is no graph to build any more —
+        # the loop holds the Agents directly.
         agents_factories = {
             tier: build_agents_factory(tier=tier, models=models, breaker=breaker)
             for tier in ModelTier
@@ -178,6 +165,10 @@ class AppDependencies:
                 semantic_layers,
                 unit_of_work_factory=unit_of_work_factory,
                 recorder=recorder,
+                # Checked between Work Items, which is the only safe place to
+                # stop: a cancellation observed mid-call would abandon an Agent
+                # Execution the ledger has already announced.
+                cancellation_checkpoint=recorder.cancellation_checkpoint,
             ),
             audit_writer=audit_delivery,
             audit_reader=audit_delivery,
@@ -290,7 +281,6 @@ class AppDependencies:
             audit_delivery=audit_delivery,
             organization=organization,
             threads=threads,
-            checkpoints=checkpoints,
             execution_worker=execution_worker,
             execution_worker_enabled=settings.execution_worker_enabled,
             registry=registry,
@@ -299,7 +289,6 @@ class AppDependencies:
         )
 
     async def start(self) -> None:
-        await self.checkpoints.open()
         self.audit_delivery.start()
         if self.execution_worker_enabled and self.worker_task is None:
             self.worker_task = asyncio.create_task(
@@ -315,7 +304,6 @@ class AppDependencies:
                 await self.worker_task
             self.worker_task = None
         await self.audit_delivery.stop()
-        await self.checkpoints.close()
 
     async def close(self) -> None:
         await self.database.close()
@@ -323,45 +311,3 @@ class AppDependencies:
         await self.models.close()
 
 
-def _build_graph_factory(
-    *,
-    tier: ModelTier,
-    models: ProviderClients,
-    breaker: ProviderCircuitBreaker,
-    registry: PostgresAgentRegistry,
-    recorder: PostgresExecutionRecorder,
-    checkpointer: object | None = None,
-):
-    """A graph builder per tier, parameterized by the semantic layer.
-
-    The agents are identical; only the routed client behind them differs,
-    which is what keeps the tenant's tier out of `ModelPort.complete()`. The
-    semantic layer is a runtime argument rather than closed over here
-    because it must be scoped per (tenant, Data Connection), not per tier —
-    see `ScopedCubeSemanticLayers`.
-    """
-    model = RoutedModelClient(
-        tier=tier,
-        clients=models.as_dict(),
-        breaker=breaker,
-    )
-
-    def build(semantic_layer: CubeSemanticLayer) -> InvestigationGraph:
-        # Insight is required, not optional. Nothing else writes a Finding, so
-        # a deployment whose registry has not promoted it must refuse at plan
-        # time rather than reach the last node with nothing to run.
-        return InvestigationGraph(
-            orchestrator=OrchestratorAgent(
-                model=model,
-                registry=registry,
-                required_roles=(*REQUIRED_ROLES, AgentRole.INSIGHT),
-            ),
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
-            evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
-            insight=InsightAgent(model=model),
-            recorder=recorder,
-            checkpointer=checkpointer,
-            cancellation_checkpoint=recorder.cancellation_checkpoint,
-        )
-
-    return build

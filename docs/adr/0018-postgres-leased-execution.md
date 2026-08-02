@@ -24,6 +24,12 @@ One Postgres queue owns analytical and visualization jobs. Workers claim with
 resume persisted checkpoints. Request handlers only commit work; they never run
 it in request-bound background tasks.
 
+For analytical jobs, "persisted checkpoints" meant LangGraph's checkpointer
+when this was written. ADR-0023 removed it: the durable record of an
+in-flight Investigation is now its `InvestigationBoard` and `WorkItem` rows.
+Reloading them to resume a crashed run is not yet implemented — see that
+ADR's Phase 2 status.
+
 Cancellation is cooperative at provider boundaries. A queued job terminates in
 the cancellation transaction; a running request is allowed to return before the
 next checkpoint observes cancellation. Retries are bounded and create explicit

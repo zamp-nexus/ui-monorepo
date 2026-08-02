@@ -59,7 +59,9 @@ class PostgresInvestigationBoardRepository:
             )
         )
 
-    async def open_gap(self, board_id: UUID, tenant_id: UUID, gap: KnowledgeGap) -> None:
+    async def open_gap(
+        self, board_id: UUID, tenant_id: UUID, gap: KnowledgeGap
+    ) -> None:
         await self._connection.execute(
             insert(board_gaps).values(
                 gap_id=gap.gap_id,

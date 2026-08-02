@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -10,10 +10,7 @@ from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
     InsightAgent,
-    InsightOutcome,
-    InvestigationGraph,
     SqlAnalystAgent,
-    ValidatedEvidence,
 )
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 from zentra_adapter_model_providers import (
@@ -63,10 +60,7 @@ from zentra_domain_investigation import (
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
-
-#: Builds a graph for a runtime-scoped semantic layer rather than closing
-#: over one at factory-construction time — see LangGraphInvestigationPipeline.
-GraphFactory = Callable[[CubeSemanticLayer], InvestigationGraph]
+from .outcomes import InsightOutcome, PipelineOutcome, ValidatedEvidence
 
 
 def _provider_of(model: str | None) -> str | None:
@@ -123,6 +117,11 @@ class UncitableClaimError(RuntimeError):
 class CancellationRequested(RuntimeError):
     category = "cancellation_requested"
     transient = False
+
+
+async def _no_cancellation(_: UUID, __: UUID) -> None:
+    """The default for tests and eval harnesses, which have no job to cancel."""
+    return None
 
 
 SYSTEM_TRACE_ID = UUID(int=0)
@@ -366,83 +365,56 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
     )
 
 
-class LangGraphInvestigationPipeline:
-    """Adapts the agent graph's outcome to what the application expects.
+def _pipeline_result(
+    outcome: PipelineOutcome,
+    *,
+    investigation_id: UUID,
+    tenant_id: UUID,
+) -> PipelineResult:
+    """Adapt what the run established to what the application expects.
 
-    Holds one graph *factory* per tier — two at most — rather than a
-    pre-built graph, because the semantic layer a graph's SqlAnalyst/
-    Evaluator hold must be scoped to one (tenant, Data Connection) pair, not
-    shared across every investigation the process ever runs. Building the
-    graph fresh per `run()` call is cheap: its constructors just hold
-    references, and `ScopedCubeSemanticLayers` is what actually caches.
+    The seam a field rename used to slip through: everything else mocks the
+    pipeline, so a renamed field on `PipelineOutcome` still type-checked, still
+    passed every test, and only a live run found it.
     """
-
-    def __init__(
-        self,
-        graph_factories: Mapping[ModelTier, GraphFactory],
-        semantic_layers: ScopedCubeSemanticLayers,
-    ) -> None:
-        self._graph_factories = dict(graph_factories)
-        self._semantic_layers = semantic_layers
-
-    async def run(
-        self,
-        *,
-        investigation_id: UUID,
-        tenant_id: UUID,
-        question: str,
-        model_tier: str = ModelTier.FREE.value,
-        data_connection_id: UUID | None = None,
-    ) -> PipelineResult:
-        semantic_layer = await self._semantic_layers.resolve(
-            tenant_id=tenant_id,
-            data_connection_id=data_connection_id,
-        )
-        graph = self._graph_factories[ModelTier(model_tier)](semantic_layer)
-        outcome = await graph.run(
-            investigation_id=investigation_id,
-            tenant_id=tenant_id,
-            question=question,
-            thread_id=f"{tenant_id}:{investigation_id}",
-        )
-        draft, citations = _draft_with_citations(
-            outcome.insight,
-            outcome.evidence,
-            evaluator_outcome=outcome.outcome,
-            investigation_id=investigation_id,
-            tenant_id=tenant_id,
-        )
-        return PipelineResult(
-            finding=Finding(
-                headline=outcome.headline,
-                summary=outcome.summary,
-                metrics=tuple(
-                    MetricComparison(
-                        metric=str(metric["metric"]),
-                        previous_value=str(metric["previous_value"]),
-                        current_value=str(metric["current_value"]),
-                        unit=str(metric["unit"]),
-                        previous_label=_optional_str(metric.get("previous_label")),
-                        current_label=_optional_str(metric.get("current_label")),
-                    )
-                    for metric in outcome.metrics
-                ),
-                evidence_refs=tuple(
-                    EvidenceReference(reference) for reference in outcome.evidence_refs
-                ),
+    draft, citations = _draft_with_citations(
+        outcome.insight,
+        outcome.evidence,
+        evaluator_outcome=outcome.outcome,
+        investigation_id=investigation_id,
+        tenant_id=tenant_id,
+    )
+    return PipelineResult(
+        finding=Finding(
+            headline=outcome.headline,
+            summary=outcome.summary,
+            metrics=tuple(
+                MetricComparison(
+                    metric=str(metric["metric"]),
+                    previous_value=str(metric["previous_value"]),
+                    current_value=str(metric["current_value"]),
+                    unit=str(metric["unit"]),
+                    previous_label=_optional_str(metric.get("previous_label")),
+                    current_label=_optional_str(metric.get("current_label")),
+                )
+                for metric in outcome.metrics
             ),
-            outcome=outcome.outcome,
-            converged=outcome.converged,
-            contradictions=outcome.contradictions,
-            # The evidence the application needs to bound the confidence: which
-            # models actually served, and how much data each one counted.
-            analyst_model=outcome.analyst_model,
-            evaluator_model=outcome.evaluator_model,
-            analyst_sample_size=outcome.analyst_sample_size,
-            evaluator_sample_size=outcome.evaluator_sample_size,
-            draft_finding=draft,
-            evidence_citations=citations,
-        )
+            evidence_refs=tuple(
+                EvidenceReference(reference) for reference in outcome.evidence_refs
+            ),
+        ),
+        outcome=outcome.outcome,
+        converged=outcome.converged,
+        contradictions=outcome.contradictions,
+        # The evidence the application needs to bound the confidence: which
+        # models actually served, and how much data each one counted.
+        analyst_model=outcome.analyst_model,
+        evaluator_model=outcome.evaluator_model,
+        analyst_sample_size=outcome.analyst_sample_size,
+        evaluator_sample_size=outcome.evaluator_sample_size,
+        draft_finding=draft,
+        evidence_citations=citations,
+    )
 
 
 def _draft_with_citations(
@@ -677,13 +649,13 @@ def _mapping(value: object) -> dict[str, Any]:
 
 
 @dataclass(slots=True)
-class _StepAgents:
+class StepAgents:
     sql_analyst: SqlAnalystAgent
     evaluator: EvaluatorAgent
     insight: InsightAgent
 
 
-AgentsFactory = Callable[[CubeSemanticLayer], "_StepAgents"]
+AgentsFactory = Callable[[CubeSemanticLayer], "StepAgents"]
 
 
 def build_agents_factory(
@@ -696,8 +668,8 @@ def build_agents_factory(
     """
     model = RoutedModelClient(tier=tier, clients=models.as_dict(), breaker=breaker)
 
-    def build(semantic_layer: CubeSemanticLayer) -> _StepAgents:
-        return _StepAgents(
+    def build(semantic_layer: CubeSemanticLayer) -> StepAgents:
+        return StepAgents(
             sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
             evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
             insight=InsightAgent(model=model),
@@ -727,6 +699,9 @@ class OrchestratorLoop:
         recorder: AgentExecutionRecorder,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
+        cancellation_checkpoint: Callable[[UUID, UUID], Awaitable[None]] = (
+            _no_cancellation
+        ),
     ) -> None:
         self._agent_factories = dict(agent_factories)
         self._semantic_layers = semantic_layers
@@ -734,6 +709,7 @@ class OrchestratorLoop:
         self._recorder = recorder
         self._now = now
         self._new_id = new_id
+        self._cancellation_checkpoint = cancellation_checkpoint
 
     async def run(
         self,
@@ -809,50 +785,36 @@ class OrchestratorLoop:
             "execution_id": str(insight_execution_id),
         }
 
-        converged = bool(evaluator_state.get("recheck_passed"))
         insight = _insight_outcome_from_state(insight_state)
         evidence = _validated_evidence_from_state(analyst_state)
         await self._close_board(board_id, tenant_id, gap_id, analyst_item_id, evidence)
 
-        draft, citations = _draft_with_citations(
-            insight,
-            evidence,
-            evaluator_outcome=_outcome_signal(evaluator_state["outcome"]),
-            investigation_id=investigation_id,
-            tenant_id=tenant_id,
-        )
         evidence_refs: list[str] = []
         for source in (analyst_state, evaluator_state):
             evidence_refs.extend(source.get("evidence_refs", []))
 
-        return PipelineResult(
-            finding=Finding(
+        return _pipeline_result(
+            PipelineOutcome(
+                # From the Agent that was evaluated for writing them.
                 headline=insight.headline,
                 summary=insight.summary,
-                metrics=tuple(
-                    MetricComparison(
-                        metric=str(metric["metric"]),
-                        previous_value=str(metric["previous_value"]),
-                        current_value=str(metric["current_value"]),
-                        unit=str(metric["unit"]),
-                        previous_label=_optional_str(metric.get("previous_label")),
-                        current_label=_optional_str(metric.get("current_label")),
-                    )
-                    for metric in analyst_state.get("metrics", [])
-                ),
-                evidence_refs=tuple(
-                    EvidenceReference(reference) for reference in evidence_refs
-                ),
+                metrics=list(analyst_state.get("metrics", [])),
+                evidence_refs=tuple(evidence_refs),
+                # The Evaluator's recheck is the authoritative confidence: it is
+                # already capped at the analyst's own score.
+                outcome=_outcome_signal(evaluator_state["outcome"]),
+                converged=bool(evaluator_state.get("recheck_passed")),
+                contradictions=insight.contradictions,
+                attempts=attempts,
+                insight=insight,
+                analyst_model=analyst_state.get("model"),
+                evaluator_model=evaluator_state.get("model"),
+                analyst_sample_size=analyst_state.get("sample_size"),
+                evaluator_sample_size=evaluator_state.get("sample_size"),
+                evidence=evidence,
             ),
-            outcome=_outcome_signal(evaluator_state["outcome"]),
-            converged=converged,
-            contradictions=insight.contradictions,
-            analyst_model=analyst_state.get("model"),
-            evaluator_model=evaluator_state.get("model"),
-            analyst_sample_size=analyst_state.get("sample_size"),
-            evaluator_sample_size=evaluator_state.get("sample_size"),
-            draft_finding=draft,
-            evidence_citations=citations,
+            investigation_id=investigation_id,
+            tenant_id=tenant_id,
         )
 
     async def _open_board(
@@ -954,6 +916,10 @@ class OrchestratorLoop:
         same Work Feed events chat already reads. Returns the resulting
         state, the step counter, the execution id, and the Work Item id.
         """
+        # Before the Work Item exists, not after: a run cancelled here should
+        # leave no pending row behind claiming work nobody will ever do.
+        await self._cancellation_checkpoint(tenant_id, investigation_id)
+
         now = self._now()
         item = WorkItem.create(
             work_item_id=self._new_id(),
@@ -1052,6 +1018,10 @@ class OrchestratorLoop:
             await unit_of_work.work_items.save(item)
             await unit_of_work.commit()
 
+        # And again once the step is durable, so a cancellation requested
+        # mid-call stops the loop before the next Agent is paid for rather
+        # than after the whole three-attempt trust loop has run.
+        await self._cancellation_checkpoint(tenant_id, investigation_id)
         return _for_state(output), step, execution_id, item.work_item_id
 
 

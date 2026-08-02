@@ -67,7 +67,11 @@ surfaces when it does.
 
 Chat never posts to `/v1/investigations` — that is the older standalone flow the
 launcher uses. Analytical work here is only ever a consequence of a Thread
-message resolving to a governed scenario.
+message the Intake Agent resolves against the Tenant's governed semantic layer.
+There is no scenario whitelist: Intake answers `resolved`, `ambiguous`, or
+`unsupported` by reading the catalog, so a question nobody anticipated is
+answerable when the data supports it and refused with a reason when it does not.
+See [[adr/0024-analytical-scope-replaces-scenario-whitelist]].
 
 ## Generative UI, and what happens without it
 
