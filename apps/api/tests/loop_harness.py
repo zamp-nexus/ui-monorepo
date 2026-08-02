@@ -1,0 +1,329 @@
+"""The Orchestrator Loop wired to the *real* Analyst, Evaluator and Insight.
+
+`test_orchestrator_loop.py` fakes the Agents to test the loop's control flow.
+This harness does the opposite: it fakes only the model and the semantic layer,
+so the assertions it supports are about what the Agents actually do — the shape
+they hand each other, what reaches the ledger, and what must never travel
+between them.
+
+It replaces the harness that lived in `libs/adapters/langgraph/tests/
+test_graph.py`. Those tests exercised the same four Agents through
+`InvestigationGraph`; ADR-0023 deleted the graph, not the Agents, so the
+coverage moved here rather than out.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from typing import Any
+from uuid import UUID
+
+from zentra_adapter_langgraph import (
+    EvaluatorAgent,
+    InsightAgent,
+    SqlAnalystAgent,
+)
+from zentra_adapter_langgraph.schemas import (
+    ANALYSIS_SCHEMA,
+    DRAFT_FINDING_SCHEMA,
+    QUERY_PLAN_SCHEMA,
+    RECHECK_SCHEMA,
+)
+from zentra_adapter_model_providers import ModelTier
+from zentra_domain_agent_execution import (
+    AgentExecutionRecord,
+    AgentExecutionStart,
+    ExecutionUsage,
+    ModelMessage,
+    ModelResponse,
+    SemanticCatalog,
+    SemanticDimension,
+    SemanticMeasure,
+    SemanticQuery,
+    SemanticResult,
+)
+
+from zentra_api.pipeline import OrchestratorLoop, StepAgents
+
+INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
+QUESTION = "Why did EU refunds increase from June to July 2026?"
+
+CATALOG = SemanticCatalog(
+    measures=(
+        SemanticMeasure(name="Commerce.refundAmount", type="sum"),
+        SemanticMeasure(name="Commerce.orderCount", type="countDistinct"),
+    ),
+    dimensions=(
+        SemanticDimension(name="Commerce.orderedAt", type="time"),
+        SemanticDimension(name="Commerce.region", type="string"),
+    ),
+)
+
+QUERY_PLAN = {
+    "reasoning": "Compare governed EU refund amount month over month.",
+    "query": {
+        "measures": ["Commerce.refundAmount"],
+        "dimensions": [],
+        "time_dimensions": [
+            {
+                "dimension": "Commerce.orderedAt",
+                "granularity": "month",
+                "date_range": ["2026-06-01", "2026-07-31"],
+            }
+        ],
+        "filters": [],
+    },
+}
+
+METRICS = [
+    {
+        "metric": "refund_amount",
+        "previous_value": "20.00",
+        "current_value": "260.00",
+        "unit": "USD",
+    }
+]
+
+# What the router resolves each role to, mirrored here so these tests keep
+# asserting on real model identities rather than on role keys.
+ROLE_MODELS = {
+    "sql_analyst": "cerebras/zai-glm-4.7",
+    "evaluator": "groq/openai/gpt-oss-120b",
+    # Deliberately distinct from every other role, so a test asserting Insight's
+    # attribution cannot pass by picking up another agent's model.
+    "insight": "nvidia/nemotron-3-ultra-550b-a55b",
+}
+
+
+class StubSemanticLayer:
+    def __init__(self) -> None:
+        self.queries: list[SemanticQuery] = []
+
+    async def catalog(self) -> SemanticCatalog:
+        return CATALOG
+
+    async def query(self, request: SemanticQuery) -> SemanticResult:
+        CATALOG.reject_ungoverned(request)
+        self.queries.append(request)
+        return SemanticResult(
+            query=request,
+            rows=({"Commerce.refundAmount": "260.00"},),
+        )
+
+
+class ScriptedModel:
+    """Answers by declared schema, so the loop's control flow is what is
+    under test rather than any particular model wording."""
+
+    def __init__(
+        self,
+        *,
+        recheck_passed: bool,
+        fallbacks: tuple[str, ...] = (),
+    ) -> None:
+        self._recheck_passed = recheck_passed
+        self._fallbacks = fallbacks
+        self.calls = 0
+
+    async def complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        response_schema: dict[str, Any] | None = None,
+    ) -> ModelResponse:
+        self.calls += 1
+        payload = self._payload(response_schema)
+        return ModelResponse(
+            text=json.dumps(payload),
+            usage=ExecutionUsage(
+                input_tokens=100,
+                output_tokens=20,
+                cost_usd=Decimal("0.001"),
+                model=ROLE_MODELS[model],
+            ),
+            fallbacks=self._fallbacks,
+        )
+
+    def _payload(self, schema: dict[str, Any] | None) -> dict[str, Any]:
+        if schema == QUERY_PLAN_SCHEMA:
+            return QUERY_PLAN
+        if schema == ANALYSIS_SCHEMA:
+            return {
+                "result_summary": "EU refunds rose from $20 to $260.",
+                "metrics": METRICS,
+                "confidence": 0.88,
+                # Underlying records, not returned rows: two monthly totals
+                # over 240 orders.
+                "sample_size": 240,
+            }
+        if schema == RECHECK_SCHEMA:
+            return {
+                "recheck_passed": self._recheck_passed,
+                "discrepancy_pct": 0.0 if self._recheck_passed else 0.42,
+                "confidence": 0.86 if self._recheck_passed else 0.2,
+                "sample_size": 240,
+                "issues": [] if self._recheck_passed else ["Figures disagree."],
+            }
+        if schema == DRAFT_FINDING_SCHEMA:
+            return {
+                "headline": "EU refunds rose $240 in July.",
+                "summary": "Governed EU refund amount rose from $20 to $260.",
+                "claims": [
+                    {
+                        "kind": "observed",
+                        "text": "EU refund amount rose to $260.00.",
+                        "metric": "refund_amount",
+                        "value": "260.00",
+                    }
+                ],
+                "contradictions": [],
+                "root_cause_resolved": False,
+                "confidence": 0.9,
+            }
+        raise AssertionError(f"Unscripted schema: {schema}")
+
+
+def keys(value: Any) -> set[str]:
+    """Every key at every depth."""
+    found: set[str] = set()
+    if isinstance(value, dict):
+        for key, child in value.items():
+            found.add(str(key))
+            found |= keys(child)
+    elif isinstance(value, list):
+        for child in value:
+            found |= keys(child)
+    return found
+
+
+class RecordingRecorder:
+    def __init__(self) -> None:
+        self.records: list[AgentExecutionRecord] = []
+        self.starts: list[AgentExecutionStart] = []
+
+    async def record_started(self, start: AgentExecutionStart) -> None:
+        self.starts.append(start)
+
+    async def record(self, execution: AgentExecutionRecord) -> None:
+        self.records.append(execution)
+
+
+class FakeBoardRepository:
+    def __init__(self, store: dict) -> None:
+        self._store = store
+
+    async def create(self, board) -> None:
+        self._store["boards"][board.board_id] = board
+
+    async def save(self, board) -> None:
+        self._store["boards"][board.board_id] = board
+
+    async def open_gap(self, board_id, tenant_id, gap) -> None:
+        self._store["gaps"][gap.gap_id] = gap
+
+    async def resolve_gap(self, gap_id, tenant_id) -> None:
+        self._store["gaps"][gap_id].resolved = True
+
+    async def record_fact(self, board_id, tenant_id, fact) -> None:
+        self._store["facts"].append(fact)
+
+
+class FakeWorkItemRepository:
+    def __init__(self, store: dict) -> None:
+        self._store = store
+
+    async def add(self, item) -> None:
+        self._store["items"][item.work_item_id] = item
+
+    async def save(self, item) -> None:
+        self._store["items"][item.work_item_id] = item
+
+    async def list_for_investigation(self, investigation_id, tenant_id):
+        return tuple(
+            item
+            for item in self._store["items"].values()
+            if item.investigation_id == investigation_id
+        )
+
+
+class FakeUnitOfWork:
+    def __init__(self, store: dict) -> None:
+        self.investigation_boards = FakeBoardRepository(store)
+        self.work_items = FakeWorkItemRepository(store)
+
+    async def __aenter__(self) -> FakeUnitOfWork:
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+    async def commit(self) -> None:
+        return None
+
+
+class FakeUnitOfWorkFactory:
+    def __init__(self) -> None:
+        self.store: dict = {"boards": {}, "gaps": {}, "facts": [], "items": {}}
+
+    def __call__(self, tenant_id, trace_id, span_id) -> FakeUnitOfWork:
+        return FakeUnitOfWork(self.store)
+
+
+class FakeSemanticLayers:
+    def __init__(self, layer: StubSemanticLayer) -> None:
+        self._layer = layer
+
+    async def resolve(self, *, tenant_id, data_connection_id):
+        return self._layer
+
+
+def build_loop(
+    *,
+    recheck_passed: bool,
+    fallbacks: tuple[str, ...] = (),
+    insight: object | None = None,
+    cancellation_checkpoint: Callable[[UUID, UUID], Awaitable[None]] | None = None,
+) -> tuple[OrchestratorLoop, RecordingRecorder, StubSemanticLayer]:
+    model = ScriptedModel(recheck_passed=recheck_passed, fallbacks=fallbacks)
+    layer = StubSemanticLayer()
+    recorder = RecordingRecorder()
+    clock = iter(
+        datetime(2026, 7, 29, 8, 0, tzinfo=UTC) + timedelta(seconds=n)
+        for n in range(1000)
+    )
+
+    def build(_semantic_layer: object) -> StepAgents:
+        return StepAgents(
+            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
+            evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
+            insight=insight if insight is not None else InsightAgent(model=model),
+        )
+
+    loop = OrchestratorLoop(
+        {ModelTier.FREE: build},
+        FakeSemanticLayers(layer),
+        unit_of_work_factory=FakeUnitOfWorkFactory(),
+        recorder=recorder,
+        now=lambda: next(clock),
+        **(
+            {"cancellation_checkpoint": cancellation_checkpoint}
+            if cancellation_checkpoint is not None
+            else {}
+        ),
+    )
+    return loop, recorder, layer
+
+
+async def run(loop: OrchestratorLoop):
+    return await loop.run(
+        investigation_id=INVESTIGATION_ID,
+        tenant_id=TENANT_ID,
+        question=QUESTION,
+    )

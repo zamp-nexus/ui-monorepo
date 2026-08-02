@@ -37,8 +37,6 @@ from zentra_adapter_clickhouse import AuditRepository
 from zentra_adapter_langgraph import (
     EvaluatorAgent,
     InsightAgent,
-    InvestigationGraph,
-    OrchestratorAgent,
     SqlAnalystAgent,
 )
 from zentra_adapter_model_providers import (
@@ -60,10 +58,10 @@ from zentra_adapter_postgres.schema import (
 from zentra_api.audit_delivery import AuditDeliveryCoordinator
 from zentra_api.cube_scope import ScopedCubeSemanticLayers
 from zentra_api.pipeline import (
-    LangGraphInvestigationPipeline,
+    OrchestratorLoop,
     PostgresExecutionRecorder,
+    StepAgents,
 )
-from zentra_api.registry import PostgresAgentRegistry
 from zentra_api.settings import Settings
 from zentra_application_investigation import (
     AuthenticatedActor,
@@ -198,16 +196,14 @@ def _assemble(
         resolve_relation_fingerprint=_unreachable_fingerprint,
     )
 
-    def build_graph(semantic_layer):
-        return InvestigationGraph(
-            orchestrator=OrchestratorAgent(model=model, registry=PostgresAgentRegistry(database)),
+    def build_agents(semantic_layer):
+        return StepAgents(
             sql_analyst=SqlAnalystAgent(model=model, semantic_layer=semantic_layer),
             evaluator=EvaluatorAgent(model=model, semantic_layer=semantic_layer),
             # Required since the Orchestrator stopped synthesising. A recorded
             # scenario that skipped Insight would be exercising a pipeline the
             # product no longer has.
             insight=InsightAgent(model=model),
-            recorder=PostgresExecutionRecorder(uow),
         )
 
     audit = AuditRepository.connect(
@@ -221,7 +217,12 @@ def _assemble(
     delivery = AuditDeliveryCoordinator(unit_of_work_factory=uow, audit=audit)
     service = InvestigationService(
         unit_of_work_factory=uow,
-        pipeline=LangGraphInvestigationPipeline({tier: build_graph}, semantic_layers),
+        pipeline=OrchestratorLoop(
+            {tier: build_agents},
+            semantic_layers,
+            unit_of_work_factory=uow,
+            recorder=PostgresExecutionRecorder(uow),
+        ),
         audit_writer=delivery,
         audit_reader=delivery,
         now=lambda: datetime.now(UTC),

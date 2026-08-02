@@ -32,8 +32,11 @@ question.
 1. Resolve verified internal actor and Tenant.
 2. Create `pending`, transition to `running`, and return. The request is not
    held open for the length of the pipeline.
-3. The Orchestrator resolves the enabled Agents from the registry and refuses
-   if a required role is absent.
+3. The Orchestrator Loop opens an `InvestigationBoard` with the question as
+   its seed Knowledge Gap, and drives each step below as a persisted
+   `WorkItem` — see [[adr/0023-investigation-engine-owns-orchestration]]. It
+   checks for a requested cancellation between Work Items, which is the only
+   place a run can stop without abandoning an announced Agent Execution.
 4. The SQL Analyst builds one governed query, executes it, and reports the
    movement with a self-reported confidence and the number of underlying
    records the figures rest on.

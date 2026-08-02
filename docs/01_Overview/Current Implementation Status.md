@@ -34,7 +34,10 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   `OrchestratorLoop` against a durable Postgres `InvestigationBoard` and
   `WorkItem` queue instead of a compiled LangGraph graph
   ([[adr/0023-investigation-engine-owns-orchestration]]), with the
-  Evaluator-Optimizer loop still exiting hard at three attempts.
+  Evaluator-Optimizer loop still exiting hard at three attempts. The graph,
+  its Postgres checkpointer and the `langgraph` dependency are deleted; the
+  loop is not yet reactive, and resuming a crashed run from its Board is not
+  yet built.
 - Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
   replacing the two-scenario keyword whitelist
   ([[adr/0024-analytical-scope-replaces-scenario-whitelist]]); the two

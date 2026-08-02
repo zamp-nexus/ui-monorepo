@@ -1,8 +1,12 @@
-"""The graph-to-application adapter.
+"""The run-to-application adapter.
 
 Everything else mocks the pipeline, so this seam was unguarded: a field renamed
 on `PipelineOutcome` still type-checked and still passed every test, and only a
 live run found it. These tests cost nothing and close that gap.
+
+`_pipeline_result` is what `OrchestratorLoop.run()` ends on, so calling it
+directly tests the same assembly the product uses without standing up a Board,
+a Work Item queue and three Agents to reach it.
 """
 
 from __future__ import annotations
@@ -12,8 +16,6 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
-from zentra_adapter_langgraph import PipelineOutcome
-from zentra_adapter_model_providers import ModelTier
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     AgentRole,
@@ -22,22 +24,14 @@ from zentra_domain_agent_execution import (
     LegacyRoleWriteError,
 )
 
-from zentra_api.cube_scope import ScopedCubeSemanticLayers
+from zentra_api.outcomes import PipelineOutcome
 from zentra_api.pipeline import (
-    LangGraphInvestigationPipeline,
     PostgresExecutionRecorder,
+    _pipeline_result,
 )
 
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
-
-
-class StubGraph:
-    def __init__(self, outcome: PipelineOutcome) -> None:
-        self._outcome = outcome
-
-    async def run(self, **_: object) -> PipelineOutcome:
-        return self._outcome
 
 
 EVIDENCE = None  # built lazily; see validated_evidence()
@@ -49,7 +43,7 @@ def validated_evidence():
     """
     from uuid import UUID as _UUID
 
-    from zentra_adapter_langgraph import ValidatedEvidence
+    from zentra_api.outcomes import ValidatedEvidence
 
     return (
         ValidatedEvidence(
@@ -82,7 +76,7 @@ def validated_evidence():
 
 
 def insight_outcome(**overrides: object):
-    from zentra_adapter_langgraph import InsightOutcome
+    from zentra_api.outcomes import InsightOutcome
 
     defaults: dict[str, object] = {
         "execution_id": UUID("70000000-0000-0000-0000-000000000007"),
@@ -144,26 +138,11 @@ def outcome(**overrides: object) -> PipelineOutcome:
     return PipelineOutcome(**(defaults | overrides))  # type: ignore[arg-type]
 
 
-async def _unreachable_fingerprint(
-    tenant_id: object, data_connection_id: object
-) -> str:
-    raise AssertionError("no test here targets a Data Connection")
-
-
 async def run(**overrides: object):
-    graph = StubGraph(outcome(**overrides))
-    semantic_layers = ScopedCubeSemanticLayers(
-        cube_url="http://unused",
-        cube_api_secret=None,
-        resolve_relation_fingerprint=_unreachable_fingerprint,
-    )
-    pipeline = LangGraphInvestigationPipeline(
-        {ModelTier.FREE: lambda _semantic_layer: graph}, semantic_layers
-    )
-    return await pipeline.run(
+    return _pipeline_result(
+        outcome(**overrides),
         investigation_id=INVESTIGATION_ID,
         tenant_id=TENANT_ID,
-        question="Why did EU refunds increase?",
     )
 
 

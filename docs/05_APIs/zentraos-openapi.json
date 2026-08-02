@@ -3118,7 +3118,13 @@
             "status": "draft",
             "thread_id": "43000000-0000-0000-0000-000000000001",
             "title": "How is the business doing?",
-            "updated_at": "2026-08-01T09:00:00Z"
+            "updated_at": "2026-08-01T09:00:00Z",
+            "usage": {
+              "input_tokens": 0,
+              "latency_ms": 0,
+              "output_tokens": 0,
+              "total_cost_usd": "0"
+            }
           }
         ],
         "properties": {

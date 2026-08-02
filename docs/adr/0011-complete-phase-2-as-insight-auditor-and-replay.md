@@ -19,7 +19,7 @@ code_refs:
   - libs/domain/agent-execution/src/zentra_domain_agent_execution/ports.py
   - libs/domain/investigation/src/zentra_domain_investigation/model.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
-  - libs/adapters/langgraph/src/zentra_adapter_langgraph/graph.py
+  - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py
 ---
 
 # Complete Phase 2 as Insight, Auditor, and Replay
