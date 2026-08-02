@@ -54,8 +54,8 @@ from .schema_sequence import sequence_final_tables as sequence_final_tables
 from .schema_sequence import sequence_runs as sequence_runs
 from .schema_sequence import sequence_steps as sequence_steps
 from .schema_sequence import sequences as sequences
-from .schema_threads import investigation_threads as investigation_threads
-from .schema_threads import thread_messages as thread_messages
+from .schema_threads import chat_sessions as chat_sessions
+from .schema_threads import messages as messages
 from .schema_workspace import workspace_groups as workspace_groups
 
 
@@ -560,6 +560,7 @@ __all__ = [
     "audit_outbox",
     "catalog_agent_access",
     "catalog_versions",
+    "chat_sessions",
     "data_sources",
     "draft_finding_claim_citations",
     "draft_finding_claims",
@@ -571,6 +572,7 @@ __all__ = [
     "human_approvals",
     "identity_subjects",
     "investigations",
+    "messages",
     "metadata",
     "prepared_tables",
     "relations",
