@@ -144,11 +144,11 @@ describe('Sequences', () => {
           json: async () => ({ dataset_workspace_id: 'ws-1', items: [] }),
         } as Response;
       }
-      if (url.includes('/v1/connector/sources')) {
-        return { ok: true, status: 200, json: async () => [SOURCE] } as Response;
-      }
       if (url.includes('/catalog')) {
         return { ok: true, status: 200, json: async () => CATALOG } as Response;
+      }
+      if (url.includes('/v1/connector/sources')) {
+        return { ok: true, status: 200, json: async () => [SOURCE] } as Response;
       }
       if (url.includes('/projects')) {
         return { ok: true, status: 200, json: async () => PROJECT_PAGE } as Response;
@@ -163,12 +163,15 @@ describe('Sequences', () => {
     fireEvent.click(await screen.findByRole('button', { name: /new sequence/i }));
 
     fireEvent.click(await screen.findByText(/choose a connected source/i));
+    await screen.findByRole('listbox');
     fireEvent.click(await screen.findByText('click-house-db'));
 
-    // The table Select stays disabled until the catalog fetch (triggered by
-    // picking a source) resolves — wait for that before opening it.
-    await waitFor(() => expect(screen.getByLabelText('Table')).not.toBeDisabled());
-    fireEvent.click(screen.getByText(/choose a table/i));
+    const tableTrigger = await screen.findByLabelText('Table');
+    await waitFor(() => {
+      expect(tableTrigger.hasAttribute('disabled')).toBe(false);
+    });
+    fireEvent.click(tableTrigger);
+    await screen.findByRole('listbox');
     fireEvent.click(await screen.findByText('clickathon.orders'));
 
     fireEvent.change(screen.getByLabelText(/first instruction/i), {
