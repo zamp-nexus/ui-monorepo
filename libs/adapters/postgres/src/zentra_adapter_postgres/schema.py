@@ -189,11 +189,11 @@ tenant_memberships = Table(
     ),
 )
 
-investigations = Table(
-    "investigations",
+analysis_runs = Table(
+    "analysis_runs",
     metadata,
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
@@ -208,11 +208,11 @@ investigations = Table(
     Column("status", String(32), nullable=False, server_default="pending"),
     Column("state", JSON, nullable=False, server_default=text("'{}'::jsonb")),
     Column("scenario_key", String(64)),
-    Column("thread_id", UUID(as_uuid=True)),
-    Column("thread_sequence", Integer),
+    Column("chat_session_id", UUID(as_uuid=True)),
+    Column("chat_sequence", Integer),
     Column("initiating_message_id", UUID(as_uuid=True)),
-    Column("parent_investigation_id", UUID(as_uuid=True)),
-    Column("retry_of_investigation_id", UUID(as_uuid=True)),
+    Column("parent_analysis_run_id", UUID(as_uuid=True)),
+    Column("retry_of_analysis_run_id", UUID(as_uuid=True)),
     Column("version", Integer, nullable=False, server_default="1"),
     Column("evaluation_attempts", Integer, nullable=False, server_default="0"),
     Column("cost_so_far_usd", Numeric(12, 4), nullable=False, server_default="0"),
@@ -232,62 +232,78 @@ investigations = Table(
     CheckConstraint(
         "status IN ('pending', 'running', 'evaluating', 'awaiting_approval', "
         "'completed', 'rejected', 'failed', 'cancelled')",
-        name="ck_investigations_status",
+        name="ck_analysis_runs_status",
     ),
-    CheckConstraint("cost_so_far_usd >= 0", name="ck_investigations_cost"),
-    CheckConstraint("version >= 1", name="ck_investigations_version"),
+    CheckConstraint("cost_so_far_usd >= 0", name="ck_analysis_runs_cost"),
+    CheckConstraint("version >= 1", name="ck_analysis_runs_version"),
     CheckConstraint(
         "evaluation_attempts >= 0 AND evaluation_attempts <= 3",
-        name="ck_investigations_evaluation_attempts",
+        name="ck_analysis_runs_evaluation_attempts",
     ),
     CheckConstraint(
-        "(thread_id IS NULL AND thread_sequence IS NULL AND "
+        "(chat_session_id IS NULL AND chat_sequence IS NULL AND "
         "initiating_message_id IS NULL) OR "
-        "(thread_id IS NOT NULL AND thread_sequence >= 1 AND "
+        "(chat_session_id IS NOT NULL AND chat_sequence >= 1 AND "
         "initiating_message_id IS NOT NULL)",
-        name="ck_investigations_thread_link",
+        name="ck_analysis_runs_chat_session_link",
     ),
     ForeignKeyConstraint(
-        ("thread_id", "tenant_id"),
-        ("investigation_threads.thread_id", "investigation_threads.tenant_id"),
-        name="fk_investigations_thread_tenant",
+        ("chat_session_id", "tenant_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
+        name="fk_analysis_runs_chat_session_tenant",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("initiating_message_id", "thread_id", "tenant_id"),
+        ("initiating_message_id", "chat_session_id", "tenant_id"),
         (
-            "thread_messages.message_id",
-            "thread_messages.thread_id",
-            "thread_messages.tenant_id",
+            "messages.message_id",
+            "messages.chat_session_id",
+            "messages.tenant_id",
         ),
-        name="fk_investigations_initiating_message",
+        name="fk_analysis_runs_initiating_message",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("parent_investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_investigations_parent_tenant",
+        ("parent_analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_analysis_runs_parent_tenant",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("retry_of_investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_investigations_retry_tenant",
+        ("retry_of_analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_analysis_runs_retry_tenant",
         ondelete="RESTRICT",
     ),
     UniqueConstraint(
-        "thread_id", "thread_sequence", name="uq_investigations_thread_sequence"
+        "chat_session_id", "chat_sequence", name="uq_analysis_runs_chat_sequence"
     ),
     UniqueConstraint(
-        "investigation_id",
+        "analysis_run_id",
         "tenant_id",
-        name="uq_investigations_tenant_identity",
+        name="uq_analysis_runs_tenant_identity",
     ),
 )
 Index(
-    "ix_investigations_tenant_created",
-    investigations.c.tenant_id,
-    investigations.c.created_at,
+    "ix_analysis_runs_tenant_created",
+    analysis_runs.c.tenant_id,
+    analysis_runs.c.created_at,
+)
+
+# `messages.analysis_run_id` is declared in schema_threads.py, before this
+# table exists — added here with the same deferred, use_alter pattern
+# `chat_sessions.initiating_message_id` already uses against `messages`,
+# for the same reason: a circular reference between the two tables.
+messages.append_constraint(
+    ForeignKeyConstraint(
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_messages_analysis_run_tenant",
+        ondelete="RESTRICT",
+        deferrable=True,
+        initially="DEFERRED",
+        use_alter=True,
+    )
 )
 
 agent_executions = Table(
@@ -300,9 +316,9 @@ agent_executions = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -364,15 +380,15 @@ agent_executions = Table(
     ),
 )
 Index(
-    "ix_agent_executions_tenant_investigation_step",
+    "ix_agent_executions_tenant_analysis_run_step",
     agent_executions.c.tenant_id,
-    agent_executions.c.investigation_id,
+    agent_executions.c.analysis_run_id,
     agent_executions.c.step,
 )
 
 # Phase 2. Additive: the Phase 1 narrative Finding stays where it is, inside
-# `investigations.state`, and is neither moved nor rewritten. A structured draft
-# is a separate row an Investigation may or may not have, so an Investigation
+# `analysis_runs.state`, and is neither moved nor rewritten. A structured draft
+# is a separate row an Analysis Run may or may not have, so an Analysis Run
 # that ran before Insight existed reads back exactly as it did.
 human_approvals = Table(
     "human_approvals",
@@ -384,9 +400,9 @@ human_approvals = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -434,7 +450,7 @@ Index(
 Index(
     "uq_human_approvals_one_pending",
     human_approvals.c.tenant_id,
-    human_approvals.c.investigation_id,
+    human_approvals.c.analysis_run_id,
     unique=True,
     postgresql_where=human_approvals.c.status == "pending",
 )
@@ -450,9 +466,9 @@ audit_outbox = Table(
         nullable=False,
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("payload", JSON, nullable=False),
@@ -467,12 +483,12 @@ audit_outbox = Table(
     Column("last_error_code", String(64)),
     CheckConstraint("attempts >= 0", name="ck_audit_outbox_attempts"),
 )
-# The ordering floor reads the latest `created_at` for one Investigation on
+# The ordering floor reads the latest `created_at` for one Analysis Run on
 # every enqueue. Without this it is a sequential scan over all history, in
 # the request path.
 Index(
-    "ix_audit_outbox_investigation_created",
-    audit_outbox.c.investigation_id,
+    "ix_audit_outbox_analysis_run_created",
+    audit_outbox.c.analysis_run_id,
     audit_outbox.c.created_at,
 )
 Index(
@@ -538,7 +554,7 @@ agent_registry = Table(
     ),
 )
 
-# Imported after `investigations` is registered because the job table carries
+# Imported after `analysis_runs` is registered because the job table carries
 # a composite Tenant-safe foreign key to it.
 from .schema_chat import (  # noqa: E402
     thread_events as thread_events,
@@ -557,6 +573,7 @@ from .schema_jobs import execution_jobs as execution_jobs  # noqa: E402
 __all__ = [
     "agent_executions",
     "agent_registry",
+    "analysis_runs",
     "audit_outbox",
     "catalog_agent_access",
     "catalog_versions",
@@ -571,7 +588,6 @@ __all__ = [
     "harvest_runs",
     "human_approvals",
     "identity_subjects",
-    "investigations",
     "messages",
     "metadata",
     "prepared_tables",
