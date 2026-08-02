@@ -11,6 +11,7 @@ import { ConnectionsPage } from './pages/connections/connections-page';
 import { ConnectorConfig } from './pages/connections/connector-config';
 import { ConnectorPicker } from './pages/connections/connector-picker';
 import { DatasetsPage } from './pages/datasets/datasets-page';
+import { RowsPage } from './pages/datasets/rows-page';
 import {
   MembershipUnavailable,
   OrganizationRequired,
@@ -88,6 +89,10 @@ const AuthenticatedWorkspace = () => {
         <Route
           path="/datasets"
           element={<DatasetsPage getToken={getToken} identity={identity.data} />}
+        />
+        <Route
+          path="/datasets/:dataSourceId/tables/:tableName/rows"
+          element={<RowsPage getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/chat"
