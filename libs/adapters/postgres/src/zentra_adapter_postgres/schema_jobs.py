@@ -29,7 +29,7 @@ execution_jobs = Table(
         ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
         nullable=False,
     ),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("job_kind", String(24), nullable=False, server_default="investigation"),
     Column("visualization_id", UUID(as_uuid=True)),
     Column("status", String(16), nullable=False, server_default="queued"),
@@ -60,9 +60,9 @@ execution_jobs = Table(
     ),
     Column("completed_at", TIMESTAMP(timezone=True)),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_execution_jobs_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_execution_jobs_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -90,9 +90,9 @@ execution_jobs = Table(
     ),
 )
 Index(
-    "uq_execution_jobs_investigation",
+    "uq_execution_jobs_analysis_run",
     execution_jobs.c.tenant_id,
-    execution_jobs.c.investigation_id,
+    execution_jobs.c.analysis_run_id,
     unique=True,
     postgresql_where=execution_jobs.c.job_kind == "investigation",
 )
