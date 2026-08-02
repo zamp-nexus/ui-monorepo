@@ -557,7 +557,7 @@ agent_registry = Table(
 # Imported after `analysis_runs` is registered because the job table carries
 # a composite Tenant-safe foreign key to it.
 from .schema_chat import (  # noqa: E402
-    thread_events as thread_events,
+    activity_events as activity_events,
 )
 from .schema_chat import (  # noqa: E402
     visualization_actions as visualization_actions,
@@ -571,6 +571,7 @@ from .schema_chat import (  # noqa: E402
 from .schema_jobs import execution_jobs as execution_jobs  # noqa: E402
 
 __all__ = [
+    "activity_events",
     "agent_executions",
     "agent_registry",
     "analysis_runs",
@@ -600,7 +601,6 @@ __all__ = [
     "tenant_identity_bindings",
     "tenant_memberships",
     "tenants",
-    "thread_events",
     "users",
     "visualization_actions",
     "visualization_artifacts",
