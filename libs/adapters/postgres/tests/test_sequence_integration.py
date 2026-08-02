@@ -49,7 +49,11 @@ async def _seed_tenants(*tenant_ids: UUID) -> None:
 
 
 def _build_sequence_with_two_steps(
-    *, tenant_id: UUID, sequence_id: UUID, dataset_workspace_id: UUID
+    *,
+    tenant_id: UUID,
+    sequence_id: UUID,
+    dataset_workspace_id: UUID,
+    thread_id: UUID | None = None,
 ) -> Sequence:
     sequence = Sequence.create(
         sequence_id=sequence_id,
@@ -59,6 +63,7 @@ def _build_sequence_with_two_steps(
             storage_locator="s3://fixtures/messy_orders.csv", file_format="csv"
         ),
         now=NOW,
+        thread_id=thread_id,
     )
 
     step_1_id, table_1_id = uuid4(), uuid4()
@@ -240,3 +245,100 @@ async def test_cross_tenant_isolation_is_enforced_by_rls() -> None:
         invisible = await unit_of_work.sequences.get_sequence(sequence_id)
 
     assert invisible is None
+
+
+@pytest.mark.asyncio
+async def test_thread_id_round_trips_through_a_full_reload() -> None:
+    assert RUNTIME_URL is not None
+    tenant_id = uuid4()
+    await _seed_tenants(tenant_id)
+    thread_id = uuid4()
+
+    sequence_id = uuid4()
+    original = _build_sequence_with_two_steps(
+        tenant_id=tenant_id,
+        sequence_id=sequence_id,
+        dataset_workspace_id=uuid4(),
+        thread_id=thread_id,
+    )
+
+    database = Database(RUNTIME_URL)
+    factory = PostgresSequenceUnitOfWorkFactory(database)
+    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+        await unit_of_work.sequences.add_sequence(original)
+        await unit_of_work.commit()
+
+    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+        reloaded = await unit_of_work.sequences.get_sequence(sequence_id)
+
+    assert reloaded is not None
+    assert reloaded.thread_id == thread_id
+
+
+@pytest.mark.asyncio
+async def test_list_sequences_orders_by_activity_and_isolates_tenants() -> None:
+    assert RUNTIME_URL is not None
+    tenant_id = uuid4()
+    other_tenant_id = uuid4()
+    await _seed_tenants(tenant_id, other_tenant_id)
+    dataset_workspace_id = uuid4()
+
+    older_id, newer_id, foreign_id = uuid4(), uuid4(), uuid4()
+    older = _build_sequence_with_two_steps(
+        tenant_id=tenant_id,
+        sequence_id=older_id,
+        dataset_workspace_id=dataset_workspace_id,
+    )
+    newer = Sequence.create(
+        sequence_id=newer_id,
+        tenant_id=tenant_id,
+        dataset_workspace_id=dataset_workspace_id,
+        raw_table_reference=DatasetTableVersionReference(
+            storage_locator="s3://fixtures/clean_orders.csv", file_format="csv"
+        ),
+        now=datetime(2026, 8, 2, tzinfo=UTC),
+        thread_id=uuid4(),
+    )
+    foreign_tenant_sequence = Sequence.create(
+        sequence_id=foreign_id,
+        tenant_id=other_tenant_id,
+        dataset_workspace_id=uuid4(),
+        raw_table_reference=DatasetTableVersionReference(
+            storage_locator="s3://fixtures/other.csv", file_format="csv"
+        ),
+        now=NOW,
+    )
+
+    database = Database(RUNTIME_URL)
+    factory = PostgresSequenceUnitOfWorkFactory(database)
+    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+        await unit_of_work.sequences.add_sequence(older)
+        for step, table in zip(older.steps, older.prepared_tables, strict=True):
+            await unit_of_work.sequences.add_step(step, table)
+        for run in older.runs:
+            await unit_of_work.sequences.add_run(run)
+        for prepared_table_id in older.final_table_ids:
+            await unit_of_work.sequences.mark_final(
+                sequence_id=older_id,
+                prepared_table_id=prepared_table_id,
+                tenant_id=tenant_id,
+                marked_at=NOW,
+            )
+        await unit_of_work.sequences.add_sequence(newer)
+        await unit_of_work.commit()
+    async with factory(other_tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+        await unit_of_work.sequences.add_sequence(foreign_tenant_sequence)
+        await unit_of_work.commit()
+
+    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+        result = await unit_of_work.sequences.list_sequences(
+            tenant_id=tenant_id, dataset_workspace_id=dataset_workspace_id
+        )
+
+    assert [item.sequence_id for item in result] == [newer_id, older_id]
+    newer_item, older_item = result
+    assert newer_item.origin.value == "manual"
+    assert older_item.origin.value == "chat"
+    assert older_item.step_count == 2
+    assert older_item.final_table_count == 1
+    assert older_item.failed_run_count == 1

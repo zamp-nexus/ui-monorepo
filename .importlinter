@@ -6,6 +6,7 @@ root_packages =
     zentra_domain_sequence
     zentra_application_investigation
     zentra_application_connector
+    zentra_application_sequence
     zentra_adapter_postgres
     zentra_adapter_clickhouse
     zentra_adapter_cube
@@ -44,6 +45,7 @@ type = forbidden
 source_modules =
     zentra_application_investigation
     zentra_application_connector
+    zentra_application_sequence
 forbidden_modules =
     alembic
     anthropic
