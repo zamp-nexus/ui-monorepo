@@ -56,6 +56,7 @@ class StubClient:
         max_tokens: int,
         response_schema: dict[str, Any] | None = None,
         tools: Sequence[Any] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         self.calls += 1
         self.max_tokens_seen.append(max_tokens)

@@ -169,6 +169,24 @@ async def test_ungoverned_member_is_refused_before_any_query_runs() -> None:
 
 
 @pytest.mark.asyncio
+async def test_query_raw_bypasses_governance_for_an_ungoverned_member() -> None:
+    """A member outside the compiled catalog must not be refused here.
+
+    `query_raw` is the escape hatch a tenant that opted out of ADR-003's
+    restriction uses — its whole point is to skip `reject_ungoverned`.
+    """
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+
+    result = await layer.query_raw(
+        SemanticQuery(measures=("commerce_facts.margin",))
+    )
+
+    assert client.caller_queries == [{"measures": ["commerce_facts.margin"]}]
+    assert result.rows == ({"Commerce.refundAmount": "260.00"},)
+
+
+@pytest.mark.asyncio
 async def test_load_raw_bypasses_governance_and_forwards_the_query_verbatim() -> None:
     """A dimension outside the governed catalog must not be refused here.
 

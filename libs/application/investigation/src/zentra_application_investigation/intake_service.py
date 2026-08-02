@@ -29,25 +29,36 @@ class IntakeService:
     Mirrors `LangGraphInvestigationPipeline`: an Agent that reads a semantic
     layer cannot be built once at startup and shared, because the layer
     itself is scoped per (Tenant, Data Connection) and resolved at request
-    time (`ScopedCubeSemanticLayers`). Chat never threads a Data Connection
-    through routing today, so this always resolves the demo warehouse; a
-    real per-tenant Analytical Scope narrows what that layer's `catalog()`
-    returns, not which layer this resolves.
+    time (`ScopedCubeSemanticLayers`). The caller's resolved Data Connection is
+    threaded through here so Intake sees the same catalog the Cube Analyst
+    will later query — routing against a different one than the answer comes
+    from is how "the catalog only has Commerce" gets said about a tenant whose
+    connected source has never had a Commerce cube.
     """
 
     def __init__(
         self,
         *,
         agent_factory: Callable[[SemanticLayerPort], AgentPort],
-        resolve_semantic_layer: Callable[[UUID], Awaitable[SemanticLayerPort]],
+        resolve_semantic_layer: Callable[
+            [UUID, UUID | None], Awaitable[SemanticLayerPort]
+        ],
         new_id: Callable[[], UUID],
     ) -> None:
         self._agent_factory = agent_factory
         self._resolve_semantic_layer = resolve_semantic_layer
         self._new_id = new_id
 
-    async def resolve(self, question: str, *, tenant_id: UUID) -> RoutingResult:
-        semantic_layer = await self._resolve_semantic_layer(tenant_id)
+    async def resolve(
+        self,
+        question: str,
+        *,
+        tenant_id: UUID,
+        data_connection_id: UUID | None = None,
+    ) -> RoutingResult:
+        semantic_layer = await self._resolve_semantic_layer(
+            tenant_id, data_connection_id
+        )
         agent = self._agent_factory(semantic_layer)
         output = await agent.invoke(
             AgentInput(

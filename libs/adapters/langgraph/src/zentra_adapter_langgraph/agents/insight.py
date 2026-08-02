@@ -101,10 +101,36 @@ class InsightAgent:
 
         metrics = [_mapping(metric) for metric in analyst.get("metrics", [])]
         if not metrics:
-            # Drafting from nothing is how a confident, groundless finding
-            # gets written. There is no draft to be had here.
-            raise AbsentEvidenceError(
-                "No validated aggregate is available to draft a finding from"
+            summary = analyst.get("result_summary")
+            if not isinstance(summary, str) or not summary.strip():
+                # Drafting from nothing is how a confident, groundless finding
+                # gets written. There is no draft to be had here.
+                raise AbsentEvidenceError(
+                    "No validated aggregate is available to draft a finding from"
+                )
+            # A catalog/schema question genuinely has no metric to report —
+            # the Analyst already said so by returning none. Relaying its own
+            # validated summary is not drafting a finding from nothing; it is
+            # the answer, with no claim to ground because none was asked for.
+            return validate_agent_output(
+                self,
+                AgentOutput(
+                    fields={
+                        # `headline` is a distinct, short field downstream
+                        # (`VisualizationBriefV1.headline`, max 240 chars) —
+                        # the Analyst's summary is not written to that bound.
+                        "headline": _headline_from(summary),
+                        "summary": summary,
+                        "claims": [],
+                        "contradictions": _preserved_contradictions({}, evaluator),
+                        "root_cause": "unresolved",
+                    },
+                    evidence_refs=_upstream_evidence(analyst, evaluator),
+                    outcome=ConfidenceOutcome(
+                        score=_bounded_confidence({"confidence": 1.0}, evaluator),
+                        calibration_method="insight_bounded_by_evaluator",
+                    ),
+                ),
             )
 
         response = await self._model.complete(
@@ -161,6 +187,27 @@ class InsightAgent:
         )
 
 
+#: Must not exceed `VisualizationBriefV1.headline`'s `max_length` (240) —
+#: duplicated rather than imported, since this package has no dependency on
+#: the domain investigation model that field lives on.
+_HEADLINE_MAX_LENGTH = 240
+
+
+def _headline_from(summary: str) -> str:
+    """A short headline from a summary that was never written to that bound.
+
+    Cuts at a word boundary rather than mid-word, and never invents text the
+    summary did not already say.
+    """
+    stripped = summary.strip()
+    if len(stripped) <= _HEADLINE_MAX_LENGTH:
+        return stripped
+    ellipsis = "…"
+    limit = _HEADLINE_MAX_LENGTH - len(ellipsis)
+    truncated = stripped[:limit].rsplit(" ", 1)[0]
+    return f"{truncated}{ellipsis}"
+
+
 def _mapping(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
@@ -186,7 +233,15 @@ def _validated_claims(
     output — a model can put prose in that field — so it is never echoed. None
     of these messages carry claim text or figures; they reach CI logs.
     """
-    by_name = {str(metric.get("metric")): metric for metric in metrics}
+    # A list per name, not a single entry: a breakdown-by-date question
+    # legitimately reports many points under the same metric name, one per
+    # period, and a dict keyed by name alone would keep only the last one —
+    # silently discarding every earlier day as if the Analyst never reported
+    # it, and refusing a claim that cites one as "ungrounded" even though it
+    # is right there in `metrics`. Observed live against a 30-day breakdown.
+    by_name: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        by_name.setdefault(str(metric.get("metric")), []).append(metric)
     validated: list[dict[str, Any]] = []
 
     for position, raw in enumerate(draft.get("claims", [])):
@@ -216,7 +271,9 @@ def _validated_claims(
             # "refunds were $20 in June" is as observed as "$260 in July" —
             # but the value and the period must be the *same* side. Reporting
             # July's figure under June's label is the one way to be precisely
-            # wrong while every individual token is real.
+            # wrong while every individual token is real. Checked against every
+            # metric reported under this name, not just one: a breakdown-by-date
+            # question reports one entry per period, all sharing the name.
             _require_matching_side(position, metric_name, by_name[metric_name], claim)
 
         validated.append(
@@ -235,38 +292,42 @@ def _validated_claims(
 def _require_matching_side(
     position: int,
     metric_name: str,
-    metric: dict[str, Any],
+    candidates: list[dict[str, Any]],
     claim: dict[str, Any],
 ) -> None:
-    """The claimed value and period must be the same side of the comparison.
+    """The claimed value and period must be the same side of some comparison.
 
     Checking them separately would accept July's figure captioned June, which
     is worse than an obvious invention: every token in it is real.
+
+    `candidates` is every metric reported under this name, not one — a
+    breakdown-by-date question reports many entries sharing a name, one per
+    period, and the claim only has to match one of them.
     """
-    sides = (
-        (str(metric.get("previous_value")), metric.get("previous_label")),
-        (str(metric.get("current_value")), metric.get("current_label")),
-    )
     value = str(claim.get("value"))
     period = claim.get("period")
 
-    # Both sides are tried before anything is refused. A genuinely flat metric
-    # carries the same value on both, and the first side to match by value is
-    # not necessarily the side the claim meant — refusing there would reject a
-    # true claim for citing the period it actually held.
+    # Every side of every candidate is tried before anything is refused. A
+    # genuinely flat metric carries the same value on both its own sides, and
+    # the first side to match by value is not necessarily the side (or the
+    # candidate) the claim meant — refusing there would reject a true claim
+    # for citing the period it actually held.
     matched_value = False
-    labels: list[str] = []
-    for side_value, side_label in sides:
-        if value != side_value:
-            continue
-        matched_value = True
-        if side_label is None:
-            # The aggregate named no period for this side, so the claim cannot
-            # be held to one.
-            return
-        labels.append(str(side_label))
-        if period == side_label:
-            return
+    for metric in candidates:
+        sides = (
+            (str(metric.get("previous_value")), metric.get("previous_label")),
+            (str(metric.get("current_value")), metric.get("current_label")),
+        )
+        for side_value, side_label in sides:
+            if value != side_value:
+                continue
+            matched_value = True
+            if side_label is None:
+                # The aggregate named no period for this side, so the claim
+                # cannot be held to one.
+                return
+            if period == side_label:
+                return
 
     if not matched_value:
         raise UngroundedClaimError(

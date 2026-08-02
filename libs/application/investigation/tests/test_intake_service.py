@@ -64,8 +64,10 @@ class FakeIntakeAgent:
 
 
 def _service(agent: FakeIntakeAgent) -> IntakeService:
-    async def resolve_semantic_layer(tenant_id: UUID) -> SemanticLayerPort:
-        del tenant_id
+    async def resolve_semantic_layer(
+        tenant_id: UUID, data_connection_id: UUID | None
+    ) -> SemanticLayerPort:
+        del tenant_id, data_connection_id
         return FakeSemanticLayer()
 
     def agent_factory(semantic_layer: SemanticLayerPort) -> FakeIntakeAgent:

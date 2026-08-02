@@ -45,12 +45,27 @@ def test_every_free_chain_leads_with_a_schema_verified_provider() -> None:
         )
 
 
-def test_premium_evaluator_starts_on_a_stronger_model_than_the_analyst() -> None:
-    analyst = ROUTING[ModelTier.PREMIUM][AgentRole.CUBE_ANALYST][0]
-    evaluator = ROUTING[ModelTier.PREMIUM][AgentRole.EVALUATOR][0]
+def test_premium_important_roles_lead_with_sonnet() -> None:
+    """Orchestrator and Cube Analyst produce the plan and the actual
+    data-backed figures, so they keep the strongest model."""
+    for role in (AgentRole.ORCHESTRATOR, AgentRole.CUBE_ANALYST):
+        assert ROUTING[ModelTier.PREMIUM][role][0].model == "claude-sonnet-5"
 
-    assert analyst.model == "claude-sonnet-5"
-    assert evaluator.model == "claude-opus-5"
+
+def test_premium_light_roles_lead_with_a_fast_model() -> None:
+    """Intake, Evaluator, and Insight are classification, recheck, and prose
+    over already-validated data — lighter workloads than planning or querying.
+
+    Evaluator in particular used to lead with Opus for a different-model-
+    family independence guarantee; measured live, that made it the single
+    slowest step in the pipeline (an independent recheck, not "reason harder
+    than the Analyst"). A deliberate speed tradeoff moved it to Haiku instead.
+    """
+    for role in (AgentRole.INTAKE, AgentRole.EVALUATOR, AgentRole.INSIGHT):
+        assert (
+            ROUTING[ModelTier.PREMIUM][role][0].model
+            == "claude-haiku-4-5-20251001"
+        )
 
 
 def test_the_canonical_insight_role_routes_on_both_tiers() -> None:

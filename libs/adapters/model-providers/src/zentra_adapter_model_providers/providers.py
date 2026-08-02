@@ -136,6 +136,7 @@ _PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     # 2026-08-31; list price is used so recorded cost never understates.
     "claude-sonnet-5": (Decimal("3.00"), Decimal("15.00")),
     "claude-opus-5": (Decimal("5.00"), Decimal("25.00")),
+    "claude-haiku-4-5-20251001": (Decimal("1.00"), Decimal("5.00")),
     "gpt-5.5": (Decimal("5.00"), Decimal("30.00")),
     # Google's paid list price. Priced rather than zeroed because the same model
     # id costs nothing on a free key and real money on a paid one, and the code

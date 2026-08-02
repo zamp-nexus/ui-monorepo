@@ -101,10 +101,21 @@ _OPENROUTER_FREE = _free(Provider.OPENROUTER, "openrouter/free")
 _SONNET = _paid(Provider.ANTHROPIC, "claude-sonnet-5")
 _OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5")
 _GPT = _paid(Provider.OPENAI, "gpt-5.5")
+# Premium-tier light roles (Intake, Evaluator, Insight) lead on this instead of
+# Sonnet/Opus — a deliberate speed tradeoff. Measured live: Cube Analyst and
+# Evaluator each ran 50-70s per call on a 20-step tool loop, and Evaluator's
+# retry (up to 3 attempts) multiplied that further, with Evaluator alone on
+# Opus — the single slowest model in this table — despite existing only to
+# re-derive a number the Analyst already found, not to reason harder than it.
+# Accepted knowingly: this costs the "different model family" independence
+# the Evaluator's premium chain used to hold, in exchange for the biggest
+# available latency win.
+_HAIKU = _paid(Provider.ANTHROPIC, "claude-haiku-4-5-20251001")
 
-# The Evaluator's chain deliberately starts on a different vendor and model
-# family from the Cube Analyst, so the independent recheck stays independent
-# without costing anything. OpenAI is absent from the free chains: at $4.35
+# On the free tier, the Evaluator's chain still deliberately starts on a
+# different vendor and model family from the Cube Analyst, so the independent
+# recheck stays independent without costing anything — free tenants have no
+# Haiku rung to trade into. OpenAI is absent from the free chains: at $4.35
 # blended it is worse value than falling straight through to Sonnet 5.
 ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
     ModelTier.FREE: {
@@ -158,11 +169,15 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
         ),
     },
     ModelTier.PREMIUM: {
-        AgentRole.INTAKE: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        # Light roles: classification, recheck, and prose-over-already-
+        # validated-data. Fast on purpose — see the `_HAIKU` comment above.
+        AgentRole.INTAKE: (_HAIKU, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        # Important roles: these produce the plan and the actual data-backed
+        # figures, so they keep the strongest model.
         AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.CUBE_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
-        AgentRole.EVALUATOR: (_OPUS, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
-        AgentRole.INSIGHT: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        AgentRole.EVALUATOR: (_HAIKU, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        AgentRole.INSIGHT: (_HAIKU, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
     },
 }
 

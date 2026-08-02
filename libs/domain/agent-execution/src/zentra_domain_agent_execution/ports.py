@@ -21,9 +21,10 @@ from .tools import ToolCall, ToolDefinition, ToolResult
 # ---------------------------------------------------------------------------
 # Semantic layer
 #
-# This is the only port in the system that reaches data. There is deliberately
-# no raw-SQL port anywhere in the tree: ADR-003's "the Cube Analyst structurally
-# cannot see raw tables" holds because no such capability exists to hand it.
+# This is the only port in the system that reaches data. `query()` enforces
+# ADR-003's governed-catalog restriction; `query_raw()` deliberately does not,
+# for tenants/agents that have opted out of it (still tenant-scoped — never
+# cross-tenant).
 # ---------------------------------------------------------------------------
 
 
@@ -145,6 +146,10 @@ class SemanticLayerPort(Protocol):
 
     def query(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
 
+    # Same shape as `query`, but skips the governed-catalog rejection. Only
+    # offered to an Agent whose tenant has opted out of ADR-003's restriction.
+    def query_raw(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
+
 
 # ---------------------------------------------------------------------------
 # Model provider
@@ -206,6 +211,11 @@ class ModelPort(Protocol):
         # Non-empty offers the model these tools and may come back asking for
         # one, which only a caller prepared to run them should do.
         tools: Sequence[ToolDefinition] = (),
+        # Low and fixed rather than left to provider defaults: this is a
+        # trust-first system, and every agent's output is checked against
+        # governed evidence either way, so there is nothing to gain from
+        # sampling variance and a repeatable answer is easier to trust.
+        temperature: float = 0.2,
     ) -> Awaitable[ModelResponse]: ...
 
 

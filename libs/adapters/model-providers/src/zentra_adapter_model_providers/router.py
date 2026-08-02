@@ -60,6 +60,7 @@ class RoutedModelClient:
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
         tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         role = AgentRole(model)
         attempts: list[str] = []
@@ -90,6 +91,7 @@ class RoutedModelClient:
                     messages=messages,
                     response_schema=response_schema,
                     tools=tools,
+                    temperature=temperature,
                 )
             except ProviderAuthError:
                 # Never falls through: a bad key is a configuration mistake, and
@@ -116,6 +118,7 @@ class RoutedModelClient:
         messages: Sequence[ModelMessage],
         response_schema: dict[str, JsonValue] | None,
         tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         """One rung, with a single same-provider retry on a schema violation.
 
@@ -134,6 +137,7 @@ class RoutedModelClient:
                 max_tokens=choice.max_tokens,
                 response_schema=response_schema,
                 tools=tools,
+                temperature=temperature,
             )
             if response_schema is None:
                 return response

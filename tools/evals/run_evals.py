@@ -193,6 +193,9 @@ class ReplaySemanticLayer:
         self._catalog.reject_ungoverned(request)
         return SemanticResult(query=request, rows=tuple(self._rows))
 
+    async def query_raw(self, request: SemanticQuery) -> SemanticResult:
+        return SemanticResult(query=request, rows=tuple(self._rows))
+
 
 class ReplayRegistry:
     def __init__(self, roles: Sequence[str]) -> None:

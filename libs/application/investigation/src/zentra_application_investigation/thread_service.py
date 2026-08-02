@@ -99,7 +99,11 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = await self._intake.resolve(message.content, tenant_id=actor.tenant_id)
+        routing = await self._intake.resolve(
+            message.content,
+            tenant_id=actor.tenant_id,
+            data_connection_id=data_connection_id,
+        )
         title_source = routing.canonical_question or message.content
         thread = InvestigationThread.create(
             thread_id=thread_id,
@@ -181,6 +185,7 @@ class ThreadService:
             routing = await self._intake.resolve(
                 _combined_question_text(existing_messages + (message,)),
                 tenant_id=actor.tenant_id,
+                data_connection_id=data_connection_id,
             )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
@@ -238,7 +243,11 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = await self._intake.resolve(message.content, tenant_id=actor.tenant_id)
+        routing = await self._intake.resolve(
+            message.content,
+            tenant_id=actor.tenant_id,
+            data_connection_id=latest.data_connection_id,
+        )
         normalized = message.content.casefold()
         published_reference = any(
             token in normalized

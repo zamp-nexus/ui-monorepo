@@ -312,3 +312,38 @@ async def test_neither_client_sends_a_tools_key_when_none_are_offered() -> None:
         max_tokens=1000,
     )
     assert "tools" not in openai_inner.request
+
+
+@pytest.mark.asyncio
+async def test_the_openai_compatible_client_defaults_to_a_low_fixed_temperature() -> (
+    None
+):
+    """Low and fixed rather than left to provider defaults — a trust-first
+    system has nothing to gain from sampling variance, and every caller relies
+    on this default rather than passing one explicitly."""
+    model, openai_inner = _openai_client(_openai_response(content="{}", tool_calls=[]))
+    await model.complete(
+        model="openai/gpt-oss-120b",
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+    )
+    assert openai_inner.request["temperature"] == 0.2
+
+
+@pytest.mark.asyncio
+async def test_the_anthropic_client_never_sends_temperature() -> None:
+    """Verified live against claude-sonnet-5: this model generation answers
+    400 "temperature is deprecated for this model" the instant it is
+    included, which took down every Anthropic call and, through it, the
+    entire chain — so it must never be sent, regardless of what is passed."""
+    anthropic_inner = RecordingAnthropic(
+        _anthropic_response(SimpleNamespace(type="text", text="{}"))
+    )
+    await AnthropicModelClient(anthropic_inner).complete(  # type: ignore[arg-type]
+        model="claude-sonnet-5",
+        system="s",
+        messages=[ModelMessage(role="user", content="q")],
+        max_tokens=1000,
+    )
+    assert "temperature" not in anthropic_inner.request

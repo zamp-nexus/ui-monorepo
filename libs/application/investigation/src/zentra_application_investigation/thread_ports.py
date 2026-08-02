@@ -28,7 +28,13 @@ class IntakePort(Protocol):
     reading a scoped catalog instead of a token-overlap check.
     """
 
-    async def resolve(self, question: str, *, tenant_id: UUID) -> RoutingResult: ...
+    async def resolve(
+        self,
+        question: str,
+        *,
+        tenant_id: UUID,
+        data_connection_id: UUID | None = None,
+    ) -> RoutingResult: ...
 
 
 class ThreadRepository(Protocol):

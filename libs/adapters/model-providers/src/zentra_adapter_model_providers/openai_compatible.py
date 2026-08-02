@@ -123,6 +123,7 @@ class OpenAICompatibleModelClient:
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
         tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         name = self._config.provider.value
         wire: list[dict[str, object]] = [{"role": "system", "content": system}]
@@ -131,6 +132,7 @@ class OpenAICompatibleModelClient:
         request: dict[str, object] = {
             "model": model,
             "max_tokens": max_tokens,
+            "temperature": temperature,
             "messages": wire,
         }
         if tools:
