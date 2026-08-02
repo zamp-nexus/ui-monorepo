@@ -13,7 +13,7 @@ a run, because they are the part that must not be model output.
 from __future__ import annotations
 
 import pytest
-from zentra_domain_agent_execution import AgentRole
+from zentra_domain_agent_execution import AgentRole, ConfidenceOutcome
 from zentra_domain_investigation import (
     ConflictStatus,
     GapPriority,
@@ -355,3 +355,66 @@ async def test_a_fanned_out_run_still_completes_every_work_item() -> None:
     # and one Insight.
     assert len(items) == 8
     assert all(item.status is WorkItemStatus.COMPLETED for item in items)
+
+
+# -- completion (Phase 4) -------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_converged_run_records_itself_complete_on_the_board() -> None:
+    """The Board was created and then never updated: its confidence and
+    narrative columns were written once at insert and never again."""
+    loop, _, _ = build_loop(recheck_passed=True)
+
+    await run(loop)
+
+    board = next(iter(board_store(loop)["boards"].values()))
+    assert board.confidence is not None
+    assert board.confidence.threshold == 0.7
+    assert board.narrative.startswith("Complete")
+
+
+@pytest.mark.asyncio
+async def test_an_unconverged_run_says_it_stopped_rather_than_finished() -> None:
+    """Three failed rechecks still produce a Draft Finding — publication
+    policy decides whether it may be shown. What must not happen is the Board
+    presenting that run as a finished investigation."""
+    loop, _, _ = build_loop(recheck_passed=False)
+
+    result = await run(loop)
+
+    board = next(iter(board_store(loop)["boards"].values()))
+    assert result.draft_finding is not None
+    assert "evidence_unvalidated" in board.narrative
+    assert "budget exhausted" in board.narrative
+
+
+@pytest.mark.asyncio
+async def test_the_board_never_records_a_higher_confidence_than_the_finding() -> None:
+    """The Evaluator's score is capped at the Analyst's but not by sample size
+    or by how independent the recheck was. Recording it raw would leave the
+    Board more confident than the Finding built from it."""
+    loop, _, _ = build_loop(recheck_passed=True)
+
+    result = await run(loop)
+
+    board = next(iter(board_store(loop)["boards"].values()))
+    assert isinstance(result.outcome, ConfidenceOutcome)
+    assert board.confidence.score <= result.outcome.score
+
+
+@pytest.mark.asyncio
+async def test_the_narrative_carries_no_evidence() -> None:
+    """It is persisted and shown to operators. Blocker names only."""
+    loop, _, _ = build_loop(
+        recheck_passed=True,
+        tasks=[BY_REGION],
+        measured_values=("260.00", "98000.00"),
+    )
+
+    await run(loop)
+
+    board = next(iter(board_store(loop)["boards"].values()))
+    assert "260.00" not in board.narrative
+    assert "98000.00" not in board.narrative
+    assert "refund" not in board.narrative.lower()
