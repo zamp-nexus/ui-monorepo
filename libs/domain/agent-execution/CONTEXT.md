@@ -9,7 +9,7 @@ A registered autonomous worker that performs one cognitive role through the Agen
 _Avoid_: Bot, participant, human reviewer
 
 **Agent Execution**:
-One bounded invocation of an Agent for one Investigation and Tenant.
+One bounded invocation of an Agent for one Analysis Run and Tenant.
 _Avoid_: Agent run, task process
 
 **Orchestrator Loop**:
@@ -17,8 +17,12 @@ The deterministic application service that stewards an Investigation: observes t
 _Avoid_: Pipeline, graph, controller
 
 **Intake Agent**:
-A registered Agent, canonical role `intake`, that resolves a Thread's question against the Tenant's Analytical Scope — either creating an Investigation and its Board or asking a clarifying question grounded in the scoped catalog. See [[adr/0027-analytical-scope-replaces-scenario-whitelist]].
+A registered Agent, canonical role `intake`, that resolves a Chat Session message against the Tenant's Analytical Scope — creating an Analysis Run and its Workspace, asking a clarifying question grounded in the scoped catalog, or, when the message is not analytical, handing off to the Conversational Agent. Remains the single arbiter for every kind of routing decision — analytical scope, dataset ambiguity, and non-analytical messages alike. See [[adr/0027-analytical-scope-replaces-scenario-whitelist]] and [[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]].
 _Avoid_: Router, classifier
+
+**Conversational Agent**:
+A registered Agent that replies to a non-analytical Chat Session message — the third outcome of Intake's decision, alongside opening an Analysis Run or clarifying. Carries no tools, no data access, and opens no Analysis Run; its execution is not evidence-tracked or cost-attributed the way analytical work is.
+_Avoid_: Generalist Agent, chit-chat handler, fallback Agent
 
 **Insight Agent**:
 A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish. Its canonical role value is `insight`; `insight_root_cause` is a read-only compatibility value that Phase 1 wrote and nothing writes again.

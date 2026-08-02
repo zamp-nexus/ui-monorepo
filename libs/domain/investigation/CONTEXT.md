@@ -1,54 +1,64 @@
-# Investigation
+# Chat & Analysis Run
 
-Investigation owns one traceable attempt to answer a governed business question and the states that make its progress explicit.
+This context's package path (`libs/domain/investigation`) has not yet been
+renamed to match; see [[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]
+for the terminology it now owns: Chat Session, Message, and Analysis Run
+(replacing Investigation Thread, Thread Message, and Investigation). This file
+documents the Analysis Run's internal working state — the part that stays
+hidden behind the Activity Feed unless a User opens it.
 
-Groups and Projects organize the Investigation Thread surface. They are
-Tenant-owned navigation containers, not analytical authority and not nested
-ACL boundaries. Archived containers remain readable and make descendants
-read-only without deleting Investigation history.
+Groups organize the Chat Session surface directly — no Project layer sits
+between them. Groups are Organization-owned navigation containers, not
+analytical authority and not nested ACL boundaries. Archived Groups and
+archived Chat Sessions remain readable and make descendants read-only without
+deleting Analysis Run history.
 
-An Investigation Thread is the linear conversational boundary around immutable
-messages and separately governed Investigations. Draft Threads hold unresolved
-user and router clarification messages without fabricating analytical work.
-Intake activates a Thread only when a question resolves inside the tenant's
-Analytical Scope (see [[adr/0027-analytical-scope-replaces-scenario-whitelist]]);
-an out-of-scope or ambiguous question clarifies instead of fabricating work.
+A Chat Session is the linear conversational boundary around immutable
+Messages and the Analysis Runs those Messages may open. Intake decides, per
+Message, one of three outcomes: the question resolves inside the
+Organization's Analytical Scope and opens an Analysis Run (see
+[[adr/0027-analytical-scope-replaces-scenario-whitelist]]); it's ambiguous or
+out of scope and Intake clarifies instead of fabricating work; or it isn't
+analytical at all, in which case Intake hands off to the Conversational Agent
+for a plain reply with no Analysis Run, no cost tracking, and no evidence.
 
-Once activated, an Investigation accumulates its working memory on an
-Investigation Board rather than passing through a fixed sequence of steps —
-see [[adr/0026-investigation-engine-owns-orchestration]].
-Whether the evidence can actually answer is the Cube Analyst's judgement
-against the tenant's live catalog, not a router's against a fixed list. Draft
-Threads remain readable.
+Once opened, an Analysis Run accumulates its working memory on an Analysis
+Workspace rather than passing through a fixed sequence of steps — see
+[[adr/0026-investigation-engine-owns-orchestration]]. Whether the evidence can
+actually answer is the Cube Analyst's judgement against the Organization's
+live catalog, not a router's against a fixed list.
 
-Follow-ups and retries create new immutable Investigations with linear parent,
-retry-of, and Thread-sequence lineage. Published Findings may create a strict
-Visualization Brief and independently retriable presentation artifact.
+Follow-ups and retries create new immutable Analysis Runs with linear parent,
+retry-of, and Chat-sequence lineage — a related follow-up chains to the run it
+follows rather than merging into it, so cost, evidence, and approval stay
+independently traceable per question even within one long-running Chat
+Session. Published Findings may create a strict Visualization Brief and
+independently retriable presentation artifact.
 
 ## Language
 
-**Investigation Status**:
-The current lifecycle position of an Investigation, including whether it is active, blocked for Human Approval, or terminal.
-_Avoid_: Run state, workflow status
+**Analysis Run Status**:
+The current lifecycle position of an Analysis Run, including whether it is active, blocked for Human Approval, or terminal.
+_Avoid_: Investigation Status, run state, workflow status
 
-**Investigation Board**:
-The durable object one Investigation accumulates its working memory onto — Facts, Hypotheses, Knowledge Gaps, Conflicts, evidence references, and bounded Confidence — read and written by Work Items rather than passed through a fixed sequence of steps.
-_Avoid_: Workspace, state, scratchpad
+**Analysis Workspace**:
+The durable object one Analysis Run accumulates its working memory onto — Facts, Hypotheses, Knowledge Gaps, Conflicts, evidence references, and bounded Confidence — read and written by Work Items rather than passed through a fixed sequence of steps.
+_Avoid_: Investigation Board, workspace, state, scratchpad
 
 **Work Item**:
-One unit of work an Orchestrator Loop assigns to a capability-matched Agent against a gap on the Investigation Board, tracked through pending, running, waiting, blocked, completed, or rejected.
+One unit of work an Orchestrator Loop assigns to a capability-matched Agent against a gap on the Analysis Workspace, tracked through pending, running, waiting, blocked, completed, or rejected.
 _Avoid_: Task, step, node
 
 **Knowledge Gap**:
-Something the Investigation Board does not yet know, carrying a priority an Orchestrator Loop uses to decide what to work on next.
+Something the Analysis Workspace does not yet know, carrying a priority an Orchestrator Loop uses to decide what to work on next.
 _Avoid_: Question, todo, missing data
 
 **Conflict**:
-A contradiction between two pieces of evidence on the Investigation Board that must be resolved or explicitly documented before Insight may proceed.
+A contradiction between two pieces of evidence on the Analysis Workspace that must be resolved or explicitly documented before Insight may proceed.
 _Avoid_: Discrepancy, error, mismatch
 
 **Analytical Scope**:
-The Tenant-configured allowlist of Cube cubes, and optionally members, that Intake and analytical Agents may resolve a question against; narrower than but never wider than `SemanticCatalog.reject_ungoverned`.
+The Organization-configured allowlist of Cube cubes, and optionally members, that Intake and analytical Agents may resolve a question against; narrower than but never wider than `SemanticCatalog.reject_ungoverned`.
 _Avoid_: Scenario, whitelist, permission
 
 **Completion Criteria**:
@@ -56,7 +66,7 @@ The deterministic set of conditions — question answered, no high-priority Know
 _Avoid_: Done, finished, queue empty
 
 **Finding**:
-A published, evidence-backed analytical conclusion produced by an Investigation after deterministic publication policy or any required Human Approval.
+A published, evidence-backed analytical conclusion produced by an Analysis Run after deterministic publication policy or any required Human Approval.
 _Avoid_: Answer, response, insight blob
 
 **Draft Finding**:
@@ -68,7 +78,7 @@ The governed metric, value, and period an observed claim rests on, copied from t
 _Avoid_: Figure, number, data point
 
 **Evidence Citation**:
-A Tenant-authorized reference connecting one substantive Draft Finding claim to its governed metric, query context, producing Agent Execution, validated aggregate result, and Evaluator outcome.
+An Organization-authorized reference connecting one substantive Draft Finding claim to its governed metric, query context, producing Agent Execution, validated aggregate result, and Evaluator outcome.
 _Avoid_: Evidence Reference, opaque artifact pointer, raw source row
 
 **Root Cause Claim**:
@@ -80,7 +90,7 @@ A non-sensitive record that cited evidence and its derived content were erased, 
 _Avoid_: Deleted evidence, placeholder, missing artifact
 
 **Erasure Operation**:
-One durable, retryable request to erase a terminal Investigation's evidence, which reports success only when every governed surface is clear.
+One durable, retryable request to erase a terminal Analysis Run's evidence, which reports success only when every governed surface is clear.
 _Avoid_: Delete job, purge, hard delete
 
 **Evaluation Attempt**:

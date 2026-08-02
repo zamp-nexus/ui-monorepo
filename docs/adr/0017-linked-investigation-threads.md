@@ -2,14 +2,14 @@
 id: adr-0017
 title: Investigation Threads use linear immutable attempts
 type: adr
-status: active
+status: superseded by ADR-0028
 owner: unassigned
 source: repository
 created: 2026-08-01
-updated: 2026-08-01
-reviewed: 2026-08-01
+updated: 2026-08-02
+reviewed: 2026-08-02
 confidence: verified
-implementation: current
+implementation: superseded
 tags: [adr, investigation, threads]
 related: ["[[Investigation Domain]]", "[[Investigation Thread API]]"]
 repo_path: libs/domain/investigation

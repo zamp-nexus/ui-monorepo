@@ -9,7 +9,7 @@ A Tenant-owned analytical input represented by either a Workspace Snapshot or a 
 _Avoid_: Dataset, database, connector
 
 **Data Source Binding**:
-The immutable selection of one Data Source, Semantic Model version, Query Governance Policy version, authorization provenance, and safe fingerprints for an Investigation.
+The immutable selection of one Data Source, Semantic Model version, Query Governance Policy version, authorization provenance, and safe fingerprints for an Analysis Run.
 _Avoid_: Data context, connection selection, source config
 
 **Query Governance Policy**:
