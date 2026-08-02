@@ -2,14 +2,14 @@
 id: adr-0019
 title: The Work Feed is a bounded public event log
 type: adr
-status: active
+status: superseded by ADR-0029
 owner: unassigned
 source: repository
 created: 2026-08-01
-updated: 2026-08-01
-reviewed: 2026-08-01
+updated: 2026-08-02
+reviewed: 2026-08-02
 confidence: verified
-implementation: current
+implementation: superseded
 tags: [adr, sse, events]
 related: ["[[Visualization and Work Feed API]]", "[[Investigation Thread API]]"]
 repo_path: libs/domain/investigation/src/zentra_domain_investigation/work_feed.py
