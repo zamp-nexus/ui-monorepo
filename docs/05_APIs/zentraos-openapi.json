@@ -993,6 +993,33 @@
         "title": "ConnectorJoinSchema",
         "type": "object"
       },
+      "ConnectorSourceTableRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog_version_id": {
+            "minLength": 1,
+            "title": "Catalog Version Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "connector_source_table",
+            "default": "connector_source_table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_table_name": {
+            "minLength": 1,
+            "title": "Source Table Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalog_version_id",
+          "source_table_name"
+        ],
+        "title": "ConnectorSourceTableRequest",
+        "type": "object"
+      },
       "ConnectorTableSchema": {
         "additionalProperties": false,
         "properties": {
@@ -1084,6 +1111,77 @@
           "resolved"
         ],
         "title": "ContradictionResponse",
+        "type": "object"
+      },
+      "CreateSequenceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "raw_table": {
+            "discriminator": {
+              "mapping": {
+                "connector_source_table": "#/components/schemas/ConnectorSourceTableRequest",
+                "dataset_table_version": "#/components/schemas/DatasetTableVersionRequest"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConnectorSourceTableRequest"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetTableVersionRequest"
+              }
+            ],
+            "title": "Raw Table"
+          }
+        },
+        "required": [
+          "project_id",
+          "raw_table",
+          "message"
+        ],
+        "title": "CreateSequenceRequest",
+        "type": "object"
+      },
+      "DatasetTableVersionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "file_format": {
+            "enum": [
+              "csv",
+              "parquet"
+            ],
+            "title": "File Format",
+            "type": "string"
+          },
+          "kind": {
+            "const": "dataset_table_version",
+            "default": "dataset_table_version",
+            "title": "Kind",
+            "type": "string"
+          },
+          "storage_locator": {
+            "minLength": 1,
+            "title": "Storage Locator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "storage_locator",
+          "file_format"
+        ],
+        "title": "DatasetTableVersionRequest",
         "type": "object"
       },
       "DeclareRelationRequest": {
@@ -1374,6 +1472,50 @@
           "confirm_investigation_id"
         ],
         "title": "EvidenceDeletionRequest",
+        "type": "object"
+      },
+      "FailedRunResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Prepared Table Id"
+          },
+          "attempted_at": {
+            "format": "date-time",
+            "title": "Attempted At",
+            "type": "string"
+          },
+          "failure_detail": {
+            "title": "Failure Detail",
+            "type": "string"
+          },
+          "failure_reason": {
+            "title": "Failure Reason",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempted_at",
+          "failure_reason",
+          "failure_detail",
+          "anchor_prepared_table_id"
+        ],
+        "title": "FailedRunResponse",
         "type": "object"
       },
       "FieldProfileResponse": {
@@ -2016,6 +2158,7 @@
         "title": "JoinGraphResponse",
         "type": "object"
       },
+      "JsonValue": {},
       "MetricComparisonResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2086,6 +2229,117 @@
           "name"
         ],
         "title": "OrganizationNameRequest",
+        "type": "object"
+      },
+      "PreparedTablePreviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "is_final": {
+            "title": "Is Final",
+            "type": "boolean"
+          },
+          "prepared_table_id": {
+            "format": "uuid",
+            "title": "Prepared Table Id",
+            "type": "string"
+          },
+          "produced_by": {
+            "$ref": "#/components/schemas/SequenceOperationResponse"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sample_rows": {
+            "title": "Sample Rows",
+            "type": "null"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prepared_table_id",
+          "step_id",
+          "row_count",
+          "columns",
+          "is_final",
+          "created_at",
+          "produced_by"
+        ],
+        "title": "PreparedTablePreviewResponse",
+        "type": "object"
+      },
+      "PreparedTableResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "is_final": {
+            "title": "Is Final",
+            "type": "boolean"
+          },
+          "parent_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Prepared Table Id"
+          },
+          "prepared_table_id": {
+            "format": "uuid",
+            "title": "Prepared Table Id",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prepared_table_id",
+          "step_id",
+          "parent_prepared_table_id",
+          "row_count",
+          "columns",
+          "created_at",
+          "is_final"
+        ],
+        "title": "PreparedTableResponse",
         "type": "object"
       },
       "ProjectPageResponse": {
@@ -2249,6 +2503,25 @@
           "capabilities"
         ],
         "title": "PublicAgent",
+        "type": "object"
+      },
+      "RawTableResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "RawTableResponse",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -2530,6 +2803,238 @@
           "suggestions"
         ],
         "title": "RoutingResponse",
+        "type": "object"
+      },
+      "SequenceGraphResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_workspace_id": {
+            "format": "uuid",
+            "title": "Dataset Workspace Id",
+            "type": "string"
+          },
+          "failed_runs": {
+            "items": {
+              "$ref": "#/components/schemas/FailedRunResponse"
+            },
+            "title": "Failed Runs",
+            "type": "array"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "prepared_tables": {
+            "items": {
+              "$ref": "#/components/schemas/PreparedTableResponse"
+            },
+            "title": "Prepared Tables",
+            "type": "array"
+          },
+          "raw_table": {
+            "$ref": "#/components/schemas/RawTableResponse"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SequenceStepResponse"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence_id",
+          "dataset_workspace_id",
+          "thread_id",
+          "origin",
+          "raw_table",
+          "created_at",
+          "updated_at",
+          "steps",
+          "prepared_tables",
+          "failed_runs"
+        ],
+        "title": "SequenceGraphResponse",
+        "type": "object"
+      },
+      "SequenceListItemResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failed_run_count": {
+            "title": "Failed Run Count",
+            "type": "integer"
+          },
+          "final_table_count": {
+            "title": "Final Table Count",
+            "type": "integer"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "raw_table": {
+            "$ref": "#/components/schemas/RawTableResponse"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence_id",
+          "thread_id",
+          "origin",
+          "raw_table",
+          "step_count",
+          "final_table_count",
+          "failed_run_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SequenceListItemResponse",
+        "type": "object"
+      },
+      "SequenceListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_workspace_id": {
+            "format": "uuid",
+            "title": "Dataset Workspace Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SequenceListItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dataset_workspace_id",
+          "items"
+        ],
+        "title": "SequenceListResponse",
+        "type": "object"
+      },
+      "SequenceOperationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "SequenceOperationResponse",
+        "type": "object"
+      },
+      "SequenceStepResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "input_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Prepared Table Id"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/SequenceOperationResponse"
+          },
+          "produced_table_id": {
+            "format": "uuid",
+            "title": "Produced Table Id",
+            "type": "string"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "operation",
+          "input_prepared_table_id",
+          "produced_table_id",
+          "created_at"
+        ],
+        "title": "SequenceStepResponse",
         "type": "object"
       },
       "SetAgentAccessRequest": {
@@ -2816,6 +3321,68 @@
           "database"
         ],
         "title": "TableResponse",
+        "type": "object"
+      },
+      "TableRowsResponse": {
+        "additionalProperties": false,
+        "description": "A page of raw rows from one Source Table, read straight through Cube.\n\nColumns and rows are pre-shaped server-side, in the catalog's own field\norder, so the frontend never has to reconcile Cube's `\"table.field\"`-keyed\nrow objects against a separately-fetched column list.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "data_source_id": {
+            "format": "uuid",
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data_source_id",
+          "table_name",
+          "columns",
+          "rows",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "TableRowsResponse",
         "type": "object"
       },
       "ThreadActionsResponse": {
@@ -5732,6 +6299,85 @@
         ]
       }
     },
+    "/v1/connector/sources/{data_source_id}/tables/{table_name}/rows": {
+      "get": {
+        "operationId": "browse_table_rows_v1_connector_sources__data_source_id__tables__table_name__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Data Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "title": "Table Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRowsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse Table Rows",
+        "tags": [
+          "connector"
+        ]
+      }
+    },
     "/v1/connector/sources/{data_source_id}/test-connection": {
       "post": {
         "operationId": "test_connection_v1_connector_sources__data_source_id__test_connection_post",
@@ -7380,6 +8026,240 @@
           }
         },
         "summary": "Create Thread"
+      }
+    },
+    "/v1/sequences": {
+      "get": {
+        "operationId": "list_sequences_v1_sequences_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequenceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sequences",
+        "tags": [
+          "sequence"
+        ]
+      },
+      "post": {
+        "operationId": "create_sequence_v1_sequences_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequenceGraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Sequence",
+        "tags": [
+          "sequence"
+        ]
+      }
+    },
+    "/v1/sequences/{sequence_id}": {
+      "get": {
+        "operationId": "get_sequence_v1_sequences__sequence_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequenceGraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Sequence",
+        "tags": [
+          "sequence"
+        ]
+      }
+    },
+    "/v1/sequences/{sequence_id}/prepared-tables/{prepared_table_id}": {
+      "get": {
+        "operationId": "preview_prepared_table_v1_sequences__sequence_id__prepared_tables__prepared_table_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "prepared_table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Prepared Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparedTablePreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Prepared Table",
+        "tags": [
+          "sequence"
+        ]
       }
     },
     "/v1/threads/{thread_id}": {

@@ -57,6 +57,12 @@ sequences = Table(
         nullable=False,
     ),
     Column("dataset_workspace_id", UUID(as_uuid=True), nullable=False),
+    # Nullable, no FK to threads: set at creation by the manual "New Sequence"
+    # flow; left NULL for a future auto-create-from-chat path (Phase 5) until
+    # a thread exists to link. No FK for the same cross-context reason
+    # `dataset_workspace_id` has none — Investigation and Sequence stay free
+    # to evolve independently.
+    Column("thread_id", UUID(as_uuid=True)),
     Column("raw_table_kind", Text, nullable=False),
     Column("raw_table_payload", JSON, nullable=False),
     Column(

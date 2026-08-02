@@ -57,4 +57,15 @@ Semantic Metric; it never models a Raw Table or an intermediate Prepared
 Table directly. The resulting Metric Draft follows the same Human Approval
 path as any other Semantic Model change.
 
+## The Sequence page (Phase 4)
+
+A dedicated frontend page renders a Sequence's graph as a read-only,
+pannable/zoomable React Flow canvas — Raw Table → Sequence Step nodes →
+Final Table(s) — beside the same Investigation Thread chat used to build it.
+It reads through a new [[Sequence API]] and computes its own node layout
+client-side rather than persisting coordinates; see
+[[adr/0023-sequence-graph-layout-is-a-client-concern]]. Manual creation
+(picking a Raw Table from this page) is one of two creation paths — the
+other, auto-creating a Sequence from an unrelated chat, is Phase 5.
+
 Parent: [[Domains MOC]]

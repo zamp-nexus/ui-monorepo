@@ -6,8 +6,13 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
+from zentra_application_sequence import (
+    SequenceListItem,
+    SequenceOrigin,
+    raw_table_label,
+)
 from zentra_domain_agent_execution import SequenceTableReference
 from zentra_domain_sequence import (
     ConnectorSourceTableReference,
@@ -90,6 +95,7 @@ def _sequence_from_row(row: Any) -> Sequence:
         ),
         created_at=value["created_at"],
         updated_at=value["updated_at"],
+        thread_id=value["thread_id"],
     )
 
 
@@ -165,6 +171,7 @@ class PostgresSequenceRepository:
                 sequence_id=sequence.sequence_id,
                 tenant_id=sequence.tenant_id,
                 dataset_workspace_id=sequence.dataset_workspace_id,
+                thread_id=sequence.thread_id,
                 raw_table_kind=raw_table_kind,
                 raw_table_payload=raw_table_payload,
                 created_at=sequence.created_at,
@@ -221,6 +228,81 @@ class PostgresSequenceRepository:
             row.prepared_table_id for row in final_rows
         )
         return sequence
+
+    async def list_sequences(
+        self, *, tenant_id: UUID, dataset_workspace_id: UUID
+    ) -> tuple[SequenceListItem, ...]:
+        """The Dataset Workspace's Sequences, most recently active first.
+
+        Counts are correlated scalar subqueries rather than a join + GROUP BY:
+        three independent one-to-many relations (steps, final markers, failed
+        runs) would each multiply the joined row count, so a join would need
+        its own deduplication anyway. `ix_sequences_workspace_activity`
+        covers the outer ordering.
+        """
+        step_count = (
+            select(func.count())
+            .select_from(sequence_steps)
+            .where(sequence_steps.c.sequence_id == sequences.c.sequence_id)
+            .correlate(sequences)
+            .scalar_subquery()
+        )
+        final_table_count = (
+            select(func.count())
+            .select_from(sequence_final_tables)
+            .where(sequence_final_tables.c.sequence_id == sequences.c.sequence_id)
+            .correlate(sequences)
+            .scalar_subquery()
+        )
+        failed_run_count = (
+            select(func.count())
+            .select_from(sequence_runs)
+            .where(
+                sequence_runs.c.sequence_id == sequences.c.sequence_id,
+                sequence_runs.c.outcome_kind == "failed",
+            )
+            .correlate(sequences)
+            .scalar_subquery()
+        )
+        statement = (
+            select(
+                sequences,
+                step_count.label("step_count"),
+                final_table_count.label("final_table_count"),
+                failed_run_count.label("failed_run_count"),
+            )
+            .where(
+                sequences.c.tenant_id == tenant_id,
+                sequences.c.dataset_workspace_id == dataset_workspace_id,
+            )
+            .order_by(sequences.c.updated_at.desc(), sequences.c.sequence_id.desc())
+        )
+        rows = (await self._connection.execute(statement)).all()
+        items = []
+        for row in rows:
+            value = row._mapping
+            reference = _raw_table_from_row(
+                value["raw_table_kind"], value["raw_table_payload"]
+            )
+            items.append(
+                SequenceListItem(
+                    sequence_id=value["sequence_id"],
+                    thread_id=value["thread_id"],
+                    origin=(
+                        SequenceOrigin.MANUAL
+                        if value["thread_id"] is not None
+                        else SequenceOrigin.CHAT
+                    ),
+                    raw_table=reference,
+                    raw_table_label=raw_table_label(reference),
+                    step_count=value["step_count"],
+                    final_table_count=value["final_table_count"],
+                    failed_run_count=value["failed_run_count"],
+                    created_at=value["created_at"],
+                    updated_at=value["updated_at"],
+                )
+            )
+        return tuple(items)
 
     async def add_step(self, step: SequenceStep, table: PreparedTable) -> None:
         operation_kind, operation_parameters = _operation_to_row(step.operation)
