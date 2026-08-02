@@ -37,7 +37,7 @@ export const C1Answer = ({
   readonly actions: readonly BriefAction[];
   readonly onAction: (actionId: string) => void;
 }) => (
-  <ThemeProvider>
+  <ThemeProvider mode="dark">
     <C1Component
       c1Response={c1Response}
       isStreaming={false}
