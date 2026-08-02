@@ -8,7 +8,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "identity_subjects",
         "tenant_identity_bindings",
         "tenant_memberships",
-        "investigations",
+        "analysis_runs",
         "agent_executions",
         "human_approvals",
         "semantic_metrics",
