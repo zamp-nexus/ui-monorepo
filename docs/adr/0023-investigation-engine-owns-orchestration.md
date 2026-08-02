@@ -25,6 +25,8 @@ code_refs:
   - apps/api/src/zentra_api/pipeline.py
   - apps/api/src/zentra_api/dependencies.py
   - apps/api/src/zentra_api/outcomes.py
+  - apps/api/src/zentra_api/orchestrator_loop.py
+  - libs/domain/investigation/src/zentra_domain_investigation/completion.py
   - libs/domain/investigation/src/zentra_domain_investigation/investigation_board.py
   - libs/domain/investigation/src/zentra_domain_investigation/work_item.py
 ---
@@ -238,3 +240,43 @@ Deliberate limits, so they are not mistaken for oversights:
 `InvestigationBoardRepository` gained `open_conflict` and `settle_conflict`;
 the `board_conflicts` table existed since migration 0020 and had nothing
 writing to it. Crash recovery is still unbuilt.
+
+## Phase 4 status
+
+Implemented. `CompletionCriteria` is formalized in the domain as
+`libs/domain/investigation/.../completion.py`: `assess_completion` grades a
+Board against every criterion — no open HIGH-priority gap, the recheck
+validated, no unsettled Conflict, confidence at or above the Tenant's
+threshold — and reports *all* unmet ones, since a run blocked on three things
+that reports one gets fixed three times. The question the user asked is itself
+a HIGH-priority gap, so "question answered" is that criterion rather than a
+second representation that could disagree with it.
+
+`should_stop` is the point of the phase: the loop stops when the criteria are
+satisfied **or** the budget is exhausted, and the two are distinguishable.
+Stopping is not finishing, and a run that reports the second as the first is
+the confident-wrong-answer failure this system exists to avoid.
+
+**This is not a publication gate.** `evaluate_publication` (ADR-0011) still
+decides whether a Draft Finding may become a Finding, and is untouched. The
+two decisions overlap — both care about the recheck and the threshold — but
+they answer different questions (*may the reader see this?* versus *is there
+more work worth doing?*) and neither is derived from the other.
+
+The loop now writes the Board it previously created and abandoned:
+`set_confidence`, `set_narrative` and `InvestigationBoardRepository.save` had
+zero callers, so `confidence_score`, `confidence_threshold`, `narrative` and
+`updated_at` were written at insert and never again. The recorded score is
+`bounded_outcome`'s, not the Evaluator's raw one — the Evaluator's is capped
+at the Analyst's but not by sample size or by how independent the recheck
+actually was, so recording it would leave the Board more confident than the
+Finding built from it, which is precisely what ADR-0010 forbids. That required
+promoting `_bounded_outcome` to `bounded_outcome` and exporting it, so the loop
+and the service share one number instead of duplicating the bounding.
+
+**Visualization brief co-evolution: verified, not built.** The brief is already
+constructed exactly once at publication — `prepare_published_visualization` is
+called from the auto-publish path and the approve path in `service.py`, and
+nowhere else. That is the once-at-publish behaviour this phase intended to
+adopt first, so there was nothing to change. Refreshing a brief as evidence
+lands remains unbuilt and unneeded until a run can publish before it finishes.

@@ -36,7 +36,7 @@ from zentra_adapter_model_providers import (
     RoutedModelClient,
 )
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
-from zentra_application_investigation import PipelineResult
+from zentra_application_investigation import PipelineResult, bounded_outcome
 from zentra_domain_agent_execution import (
     OUTCOME_ADAPTER,
     AgentExecutionRecord,
@@ -47,11 +47,13 @@ from zentra_domain_agent_execution import (
     AgentPort,
     AgentRegistryPort,
     AgentRole,
+    ConfidenceOutcome,
     ExecutionStatus,
     ExecutionUsage,
     OutcomeSignal,
 )
 from zentra_domain_investigation import (
+    BoardConfidence,
     Conflict,
     ConflictStatus,
     EvidenceReference,
@@ -60,6 +62,7 @@ from zentra_domain_investigation import (
     InvestigationBoard,
     KnowledgeGap,
     WorkItem,
+    assess_completion,
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
@@ -469,7 +472,7 @@ class OrchestratorLoop:
             for source in (measurement.analyst_state, measurement.evaluator_state):
                 evidence_refs.extend(source.get("evidence_refs", []))
 
-        return _pipeline_result(
+        result = _pipeline_result(
             PipelineOutcome(
                 # From the Agent that was evaluated for writing them.
                 headline=insight.headline,
@@ -497,6 +500,67 @@ class OrchestratorLoop:
             investigation_id=investigation_id,
             tenant_id=tenant_id,
         )
+
+        await self._finish_board(
+            board,
+            result,
+            evidence_validated=primary.converged,
+            budget_exhausted=(
+                primary.attempts >= MAX_EVALUATION_ATTEMPTS
+                or len(children) >= self._max_fanout
+            ),
+        )
+        return result
+
+    async def _finish_board(
+        self,
+        board: InvestigationBoard,
+        result: PipelineResult,
+        *,
+        evidence_validated: bool,
+        budget_exhausted: bool,
+    ) -> None:
+        """Record what the Board concluded about itself, and why it stopped.
+
+        The score is `bounded_outcome`'s — the same number the application will
+        publish — rather than the Evaluator's raw one. The Evaluator's is
+        capped at the Analyst's but not by sample size or by how independent
+        the recheck actually was, so recording it here would leave the Board
+        more confident than the Finding built from it. A second, higher number
+        is exactly what ADR-0010 exists to prevent.
+
+        This is not a publication decision. `evaluate_publication` owns that
+        (ADR-0011) and is untouched; this says whether the Investigation is
+        finished, which is a different question with a different answer.
+        """
+        outcome = bounded_outcome(result)
+        threshold = await self._confidence_threshold(board.tenant_id)
+        board.set_confidence(
+            BoardConfidence(
+                score=(
+                    outcome.score if isinstance(outcome, ConfidenceOutcome) else None
+                ),
+                threshold=threshold,
+            ),
+            now=self._now(),
+        )
+        assessment = assess_completion(
+            board,
+            evidence_validated=evidence_validated,
+            budget_exhausted=budget_exhausted,
+        )
+        board.set_narrative(assessment.describe(), now=self._now())
+        async with self._unit_of_work_factory(
+            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            await unit_of_work.investigation_boards.save(board)
+            await unit_of_work.commit()
+
+    async def _confidence_threshold(self, tenant_id: UUID) -> float:
+        async with self._unit_of_work_factory(
+            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+        ) as unit_of_work:
+            return await unit_of_work.policies.confidence_threshold(tenant_id)
 
     # -- the unit that fans out -------------------------------------------
 

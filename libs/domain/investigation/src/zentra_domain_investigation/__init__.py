@@ -7,6 +7,11 @@ from .citation import (
     EvidenceCitation,
     Tombstone,
 )
+from .completion import (
+    CompletionAssessment,
+    CompletionBlocker,
+    assess_completion,
+)
 from .draft_finding import (
     Claim,
     ClaimKind,
@@ -128,6 +133,8 @@ __all__ = [
     "AgentEventPayload",
     "ApprovalEventPayload",
     "BoardConfidence",
+    "CompletionAssessment",
+    "CompletionBlocker",
     "BoardTransitionError",
     "BriefAction",
     "BriefClaim",
@@ -212,6 +219,7 @@ __all__ = [
     "TERMINAL_WORK_ITEM_STATUSES",
     "Group",
     "OrganizationNameError",
+    "assess_completion",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",

@@ -43,7 +43,7 @@ from .ports import (
     TenantPolicyRepository,
     VisualizationRepository,
 )
-from .service import InvestigationService
+from .service import InvestigationService, bounded_outcome
 from .thread_dto import (
     RoutingDisposition,
     RoutingResult,
@@ -120,6 +120,7 @@ __all__ = [
     "PendingApproval",
     "PermissionDeniedError",
     "PipelineResult",
+    "bounded_outcome",
     "Role",
     "RoutingDisposition",
     "RoutingResult",

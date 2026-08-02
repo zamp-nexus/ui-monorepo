@@ -46,6 +46,12 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   silently resolved, and carried to the reader. Fan-out is one level deep and
   capped at three; the cap is a constructor parameter, not yet a per-Tenant
   budget.
+- Completion criteria in the domain (`assess_completion`): the loop stops when
+  every criterion is satisfied *or* the budget is exhausted, never on "the
+  queue emptied" alone, and the Board records which — with the same bounded
+  confidence the Finding carries, never a higher one. Distinct from publication
+  authority, which stays with `evaluate_publication`
+  ([[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]).
 - Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
   replacing the two-scenario keyword whitelist
   ([[adr/0024-analytical-scope-replaces-scenario-whitelist]]); the two

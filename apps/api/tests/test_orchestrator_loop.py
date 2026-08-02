@@ -180,10 +180,16 @@ class FakeWorkItemRepository:
         )
 
 
+class FakePolicies:
+    async def confidence_threshold(self, tenant_id) -> float:
+        return 0.7
+
+
 class FakeUnitOfWork:
     def __init__(self, store: dict) -> None:
         self.investigation_boards = FakeBoardRepository(store)
         self.work_items = FakeWorkItemRepository(store)
+        self.policies = FakePolicies()
 
     async def __aenter__(self) -> FakeUnitOfWork:
         return self

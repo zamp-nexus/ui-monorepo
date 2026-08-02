@@ -434,7 +434,7 @@ class InvestigationService:
         now = self._now()
         expected_version = investigation.version
         investigation.begin_evaluation(now)
-        outcome = _bounded_outcome(result)
+        outcome = bounded_outcome(result)
         decision = _publication_decision(result, outcome, threshold=threshold)
         self._observe_publication(decision)
         # Publication authority lives in the policy, not in a score comparison
@@ -1053,7 +1053,7 @@ def _sample_sizes_diverge(result: PipelineResult) -> bool:
     return high > low * _SAMPLE_DIVERGENCE_FACTOR
 
 
-def _bounded_outcome(result: PipelineResult) -> OutcomeSignal:
+def bounded_outcome(result: PipelineResult) -> OutcomeSignal:
     """Bound the reported confidence by what the evidence and the recheck support.
 
     Two separate ceilings apply to the same number. How independent the recheck
