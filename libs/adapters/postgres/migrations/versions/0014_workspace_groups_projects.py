@@ -1,9 +1,18 @@
-"""Add tenant-scoped organizational Groups and Projects."""
+"""Add tenant-scoped organizational Groups.
+
+Originally added Projects alongside Groups too. Projects were removed from
+the schema entirely by the Chat & Analysis Run cutover (0023,
+chat_analysis_run_cutover) -- ADR-0028 makes Groups own Chat Sessions
+directly, with no Project layer in between. There is no production
+deployment with historical Project data to preserve (ADR-0030), so this
+migration is edited in place rather than left creating a table an import
+away from breaking every fresh `alembic upgrade head` from here forward.
+"""
 
 from alembic import op
 from sqlalchemy import inspect
 
-from zentra_adapter_postgres.schema import projects, workspace_groups
+from zentra_adapter_postgres.schema import workspace_groups
 
 revision = "0014_workspace_groups_projects"
 down_revision = "0013_outbox_investigation_index"
@@ -36,12 +45,8 @@ def upgrade() -> None:
     existing = set(inspect(bind).get_table_names())
     if "workspace_groups" not in existing:
         workspace_groups.create(bind=bind)
-    if "projects" not in existing:
-        projects.create(bind=bind)
     _install_tenant_policy("workspace_groups")
-    _install_tenant_policy("projects")
 
 
 def downgrade() -> None:
-    op.execute("DROP TABLE IF EXISTS projects")
     op.execute("DROP TABLE IF EXISTS workspace_groups")

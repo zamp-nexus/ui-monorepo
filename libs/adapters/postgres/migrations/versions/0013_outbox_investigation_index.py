@@ -13,7 +13,7 @@ down_revision = "0012_erasure_operations"
 branch_labels = None
 depends_on = None
 
-INDEX = "ix_audit_outbox_investigation_created"
+INDEX = "ix_audit_outbox_analysis_run_created"
 
 
 def upgrade() -> None:
@@ -21,7 +21,7 @@ def upgrade() -> None:
         index["name"] for index in inspect(op.get_bind()).get_indexes("audit_outbox")
     }
     if INDEX not in existing:
-        op.create_index(INDEX, "audit_outbox", ["investigation_id", "created_at"])
+        op.create_index(INDEX, "audit_outbox", ["analysis_run_id", "created_at"])
 
 
 def downgrade() -> None:
