@@ -56,7 +56,6 @@ from .schema_sequence import sequence_steps as sequence_steps
 from .schema_sequence import sequences as sequences
 from .schema_threads import investigation_threads as investigation_threads
 from .schema_threads import thread_messages as thread_messages
-from .schema_workspace import projects as projects
 from .schema_workspace import workspace_groups as workspace_groups
 
 
@@ -574,7 +573,6 @@ __all__ = [
     "investigations",
     "metadata",
     "prepared_tables",
-    "projects",
     "relations",
     "semantic_metrics",
     "sequence_final_tables",
