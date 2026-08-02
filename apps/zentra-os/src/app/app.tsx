@@ -21,6 +21,7 @@ import {
 } from './pages/entry-screens';
 import { InvestigationWorkspace } from './pages/investigation/investigation-workspace';
 import { Launcher } from './pages/launcher';
+import { SequenceDemoPage } from './pages/sequence/sequence-demo-page';
 import { AppShell } from './shell/app-shell';
 import type { IdentityContext, ReadinessResponse } from './types';
 
@@ -103,6 +104,7 @@ const AuthenticatedWorkspace = () => {
           element={<ConnectionsPage getToken={getToken} identity={identity.data} />}
         />
         <Route path="/connections/new" element={<ConnectorPicker />} />
+        <Route path="/sequence-demo" element={<SequenceDemoPage />} />
         <Route
           path="/connections/new/:connectorId"
           element={<ConnectorConfig getToken={getToken} identity={identity.data} />}
