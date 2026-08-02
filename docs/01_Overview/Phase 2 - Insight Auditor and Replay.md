@@ -16,7 +16,7 @@ related: ["[[Overview MOC]]", "[[Current Implementation Status]]", "[[adr/0011-c
 depends_on: ["[[Investigation Trust Loop]]", "[[ClickHouse Audit Ledger]]", "[[Forensic Observatory]]"]
 repo_path: .
 code_refs:
-  - libs/adapters/langgraph/src/zentra_adapter_langgraph/graph.py
+  - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py
   - libs/application/investigation/src/zentra_application_investigation/service.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
   - apps/zentra-os/src/app/app.tsx

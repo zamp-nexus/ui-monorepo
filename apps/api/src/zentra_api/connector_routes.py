@@ -13,7 +13,6 @@ disagree with the others.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import contextmanager
 from typing import Annotated
 from uuid import UUID
 
@@ -31,18 +30,8 @@ from fastapi import (
 from zentra_application_connector import (
     AgentAccessView,
     AuthenticatedActor,
-    CatalogVersionNotFoundError,
-    ConflictError,
-    ConnectionFailedError,
-    ConnectorService,
-    DataSourceNotFoundError,
-    HarvestRunNotFoundError,
-    PermissionDeniedError,
-    RelationNotFoundError,
-    Role,
     SourceCredentials,
     SourceFieldDescriptor,
-    UploadRejectedError,
 )
 from zentra_domain_connector import (
     AccessOverrides,
@@ -71,6 +60,7 @@ from .connector_schemas import (
     UpdateCredentialsRequest,
     UploadPreviewResponse,
 )
+from .connector_shared import _actor, _handle, _service
 from .request_context import RequestContext, authenticated_context
 
 router = APIRouter(prefix="/v1/connector", tags=["connector"])
@@ -83,71 +73,6 @@ PREVIEW_ROWS = 20
 #: Streamed in chunks rather than read whole, so a large file does not have to
 #: fit in memory before it is rejected for being too large.
 UPLOAD_CHUNK_BYTES = 1024 * 1024
-
-
-@contextmanager
-def _handle():
-    """Map application failures to status codes, in one place.
-
-    Ordered narrowest first. ``ConnectionFailedError`` carries a typed failure
-    and nothing from the source's own error text, so the 502 body names which
-    field to fix without echoing hostnames or usernames back to the caller.
-    """
-    try:
-        yield
-    except PermissionDeniedError as error:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, str(error)) from error
-    except (
-        DataSourceNotFoundError,
-        RelationNotFoundError,
-        HarvestRunNotFoundError,
-        CatalogVersionNotFoundError,
-    ) as error:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
-    except ConflictError as error:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
-    except ConnectionFailedError as error:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, error.failure.value
-        ) from error
-    except UploadRejectedError as error:
-        detail: dict[str, object] = {"message": str(error)}
-        if error.row is not None:
-            detail["row"] = error.row
-        if error.column is not None:
-            detail["column"] = error.column
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail) from error
-
-
-def _service(request: Request) -> ConnectorService:
-    """The Connector Service, or a 503 saying why there isn't one.
-
-    Absent when `CONNECTOR_CREDENTIAL_KEY` is unset, since without it no
-    credential can be sealed. Answering 503 with the missing setting named beats
-    the `AttributeError` this used to raise: a 500 with no body reads as a bug in
-    the service rather than as configuration nobody supplied.
-    """
-    service = getattr(request.app.state.dependencies, "connector", None)
-    if service is None:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Connector is not configured: CONNECTOR_CREDENTIAL_KEY is not set",
-        )
-    return service
-
-
-def _actor(context: RequestContext) -> AuthenticatedActor:
-    """Re-express the request's actor in the connector's own vocabulary.
-
-    Translated rather than shared: the two application packages each own their
-    role enum, and having one import the other's would couple two contexts that
-    have no reason to move together.
-    """
-    return AuthenticatedActor(
-        user_id=context.actor.user_id,
-        tenant_id=context.actor.tenant_id,
-        role=Role(context.actor.role.value),
-    )
 
 
 def _as_domain(

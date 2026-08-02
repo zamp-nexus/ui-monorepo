@@ -3,6 +3,24 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+from zentra_domain_agent_execution import InvalidSemanticQueryError
+
+#: Cube's message can quote the offending SQL fragment on some errors. The
+#: reason goes back to an Agent as a prompt, and ADR-0003's guarantee is that
+#: an Agent never sees SQL — so it is truncated to the sentence that names the
+#: problem rather than passed through whole.
+MAX_REFUSAL_REASON = 300
+
+
+def _refusal_reason(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return "Cube refused the query."
+    message = payload.get("error") if isinstance(payload, dict) else None
+    if not isinstance(message, str) or not message:
+        return "Cube refused the query."
+    return message.split("\n", maxsplit=1)[0][:MAX_REFUSAL_REASON]
 
 
 class CubeClient:
@@ -39,5 +57,12 @@ class CubeClient:
                 headers=self._headers(),
                 json={"query": query},
             )
+        if response.status_code == httpx.codes.BAD_REQUEST:
+            # Cube's way of saying the query is unanswerable as written — an
+            # unsupported granularity, an operator a dimension does not
+            # implement. That is the caller's mistake and a correctable one, so
+            # it is raised as a refusal rather than left as a transport error
+            # that reads like an outage. Every other status still does.
+            raise InvalidSemanticQueryError(_refusal_reason(response))
         response.raise_for_status()
         return response.json()

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Button, EmptyState, Skeleton } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { TokenSource } from '../../api';
 import type { IdentityContext } from '../../types';
@@ -35,6 +35,7 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
   const [openTable, setOpenTable] = useState<OpenTable | null>(null);
   const canWrite = identity.role !== 'viewer';
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const sources = useQuery({
     queryKey: ['connector-sources'],
@@ -164,6 +165,11 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
             canWrite={canWrite}
             onOpenTable={(table) =>
               setOpenTable({ table, dataSourceId: source.data_source_id })
+            }
+            onBrowseRows={(table) =>
+              navigate(
+                `/datasets/${source.data_source_id}/tables/${encodeURIComponent(table.name)}/rows`,
+              )
             }
           />
         ))}

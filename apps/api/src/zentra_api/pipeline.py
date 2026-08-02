@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4, uuid5
 
-from zentra_adapter_cube import CubeSemanticLayer
-from zentra_adapter_langgraph import (
-    InsightOutcome,
-    InvestigationGraph,
-    ValidatedEvidence,
-)
-from zentra_adapter_model_providers import ModelTier
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
 from zentra_adapter_telemetry import record_insight_execution
 from zentra_application_investigation import PipelineResult
@@ -40,11 +33,7 @@ from zentra_domain_investigation import (
     WorkFeedEventKind,
 )
 
-from .cube_scope import ScopedCubeSemanticLayers
-
-#: Builds a graph for a runtime-scoped semantic layer rather than closing
-#: over one at factory-construction time — see LangGraphInvestigationPipeline.
-GraphFactory = Callable[[CubeSemanticLayer], InvestigationGraph]
+from .outcomes import InsightOutcome, PipelineOutcome, ValidatedEvidence
 
 
 def _provider_of(model: str | None) -> str | None:
@@ -113,15 +102,16 @@ _STARTED_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000001")
 _CAPABILITY_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000002")
 _HANDOFF_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000003")
 _UPDATE_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000004")
+_TOOL_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000005")
 _CAPABILITY_BY_ROLE = {
     AgentRole.ORCHESTRATOR: "plan_investigation",
-    AgentRole.SQL_ANALYST: "query_semantic_metrics",
+    AgentRole.CUBE_ANALYST: "query_semantic_metrics",
     AgentRole.EVALUATOR: "validate_evidence",
     AgentRole.INSIGHT: "draft_finding",
 }
 _PREDECESSOR_BY_ROLE = {
-    AgentRole.SQL_ANALYST: "orchestrator_v1",
-    AgentRole.EVALUATOR: "sql_analyst_v1",
+    AgentRole.CUBE_ANALYST: "orchestrator_v1",
+    AgentRole.EVALUATOR: "cube_analyst_v1",
     AgentRole.INSIGHT: "evaluator_v1",
 }
 
@@ -256,6 +246,35 @@ class PostgresExecutionRecorder:
             # Same transaction as the row itself, so the ledger can never
             # disagree with what was actually persisted.
             await unit_of_work.outbox.enqueue([_audit_event(execution)])
+            # One event per tool the Agent ran, so the chat surface can say
+            # "searched the catalog, queried Cube" rather than showing a
+            # silent gap while an Agent iterates. The tool *name* is safe to
+            # publish; its arguments and results are not, and
+            # `AgentEventPayload` has nowhere to put them.
+            for index, invocation in enumerate(execution.tool_calls):
+                await unit_of_work.work_feed.append_for_investigation(
+                    tenant_id=execution.tenant_id,
+                    investigation_id=execution.investigation_id,
+                    kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
+                    payload=AgentEventPayload(
+                        execution_id=execution.execution_id,
+                        agent_id=execution.agent_id,
+                        role=execution.role.value,
+                        capability_id=invocation.name,
+                        summary=(
+                            f"Used {invocation.name.replace('_', ' ')}."
+                            if invocation.ok
+                            else f"{invocation.name.replace('_', ' ')} was refused."
+                        ),
+                    ),
+                    occurred_at=execution.completed_at,
+                    # Deterministic per (execution, position), like every other
+                    # id here: a redelivered record must not append the same
+                    # tool twice.
+                    event_id=uuid5(
+                        _TOOL_NAMESPACE, f"{execution.execution_id}:{index}"
+                    ),
+                )
             await unit_of_work.work_feed.append_for_investigation(
                 tenant_id=execution.tenant_id,
                 investigation_id=execution.investigation_id,
@@ -344,83 +363,56 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
     )
 
 
-class LangGraphInvestigationPipeline:
-    """Adapts the agent graph's outcome to what the application expects.
+def _pipeline_result(
+    outcome: PipelineOutcome,
+    *,
+    investigation_id: UUID,
+    tenant_id: UUID,
+) -> PipelineResult:
+    """Adapt what the run established to what the application expects.
 
-    Holds one graph *factory* per tier — two at most — rather than a
-    pre-built graph, because the semantic layer a graph's SqlAnalyst/
-    Evaluator hold must be scoped to one (tenant, Data Connection) pair, not
-    shared across every investigation the process ever runs. Building the
-    graph fresh per `run()` call is cheap: its constructors just hold
-    references, and `ScopedCubeSemanticLayers` is what actually caches.
+    The seam a field rename used to slip through: everything else mocks the
+    pipeline, so a renamed field on `PipelineOutcome` still type-checked, still
+    passed every test, and only a live run found it.
     """
-
-    def __init__(
-        self,
-        graph_factories: Mapping[ModelTier, GraphFactory],
-        semantic_layers: ScopedCubeSemanticLayers,
-    ) -> None:
-        self._graph_factories = dict(graph_factories)
-        self._semantic_layers = semantic_layers
-
-    async def run(
-        self,
-        *,
-        investigation_id: UUID,
-        tenant_id: UUID,
-        question: str,
-        model_tier: str = ModelTier.FREE.value,
-        data_connection_id: UUID | None = None,
-    ) -> PipelineResult:
-        semantic_layer = await self._semantic_layers.resolve(
-            tenant_id=tenant_id,
-            data_connection_id=data_connection_id,
-        )
-        graph = self._graph_factories[ModelTier(model_tier)](semantic_layer)
-        outcome = await graph.run(
-            investigation_id=investigation_id,
-            tenant_id=tenant_id,
-            question=question,
-            thread_id=f"{tenant_id}:{investigation_id}",
-        )
-        draft, citations = _draft_with_citations(
-            outcome.insight,
-            outcome.evidence,
-            evaluator_outcome=outcome.outcome,
-            investigation_id=investigation_id,
-            tenant_id=tenant_id,
-        )
-        return PipelineResult(
-            finding=Finding(
-                headline=outcome.headline,
-                summary=outcome.summary,
-                metrics=tuple(
-                    MetricComparison(
-                        metric=str(metric["metric"]),
-                        previous_value=str(metric["previous_value"]),
-                        current_value=str(metric["current_value"]),
-                        unit=str(metric["unit"]),
-                        previous_label=_optional_str(metric.get("previous_label")),
-                        current_label=_optional_str(metric.get("current_label")),
-                    )
-                    for metric in outcome.metrics
-                ),
-                evidence_refs=tuple(
-                    EvidenceReference(reference) for reference in outcome.evidence_refs
-                ),
+    draft, citations = _draft_with_citations(
+        outcome.insight,
+        outcome.evidence,
+        evaluator_outcome=outcome.outcome,
+        investigation_id=investigation_id,
+        tenant_id=tenant_id,
+    )
+    return PipelineResult(
+        finding=Finding(
+            headline=outcome.headline,
+            summary=outcome.summary,
+            metrics=tuple(
+                MetricComparison(
+                    metric=str(metric["metric"]),
+                    previous_value=str(metric["previous_value"]),
+                    current_value=str(metric["current_value"]),
+                    unit=str(metric["unit"]),
+                    previous_label=_optional_str(metric.get("previous_label")),
+                    current_label=_optional_str(metric.get("current_label")),
+                )
+                for metric in outcome.metrics
             ),
-            outcome=outcome.outcome,
-            converged=outcome.converged,
-            contradictions=outcome.contradictions,
-            # The evidence the application needs to bound the confidence: which
-            # models actually served, and how much data each one counted.
-            analyst_model=outcome.analyst_model,
-            evaluator_model=outcome.evaluator_model,
-            analyst_sample_size=outcome.analyst_sample_size,
-            evaluator_sample_size=outcome.evaluator_sample_size,
-            draft_finding=draft,
-            evidence_citations=citations,
-        )
+            evidence_refs=tuple(
+                EvidenceReference(reference) for reference in outcome.evidence_refs
+            ),
+        ),
+        outcome=outcome.outcome,
+        converged=outcome.converged,
+        contradictions=outcome.contradictions,
+        # The evidence the application needs to bound the confidence: which
+        # models actually served, and how much data each one counted.
+        analyst_model=outcome.analyst_model,
+        evaluator_model=outcome.evaluator_model,
+        analyst_sample_size=outcome.analyst_sample_size,
+        evaluator_sample_size=outcome.evaluator_sample_size,
+        draft_finding=draft,
+        evidence_citations=citations,
+    )
 
 
 def _draft_with_citations(

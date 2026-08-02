@@ -26,17 +26,20 @@ interface SourceCatalogProps {
   readonly getToken: TokenSource;
   readonly canWrite: boolean;
   readonly onOpenTable: (table: CatalogTable) => void;
+  readonly onBrowseRows: (table: CatalogTable) => void;
 }
 
 const TableCard = ({
   table,
   canWrite,
   onOpen,
+  onBrowseRows,
   onToggleAgentAccess,
 }: {
   readonly table: CatalogTable;
   readonly canWrite: boolean;
   readonly onOpen: () => void;
+  readonly onBrowseRows: () => void;
   readonly onToggleAgentAccess: (visible: boolean) => void;
 }) => (
   <div className="group flex flex-col items-start rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-primary">
@@ -57,6 +60,17 @@ const TableCard = ({
       <span className="tabular-nums">{(table.fields ?? []).length} cols</span>
       <span className="tabular-nums">{formatBytes(table.size_bytes)}</span>
     </span>
+    <Button
+      intent="secondary"
+      size="sm"
+      className="mt-3 w-full"
+      onClick={(event) => {
+        event.stopPropagation();
+        onBrowseRows();
+      }}
+    >
+      Browse rows
+    </Button>
     <label
       className="mt-3 flex w-full items-center justify-between gap-3 border-t border-border/50 pt-3 text-xs"
       onClick={(event) => event.stopPropagation()}
@@ -98,6 +112,7 @@ export const SourceCatalog = ({
   getToken,
   canWrite,
   onOpenTable,
+  onBrowseRows,
 }: SourceCatalogProps) => {
   const queryClient = useQueryClient();
   const [watching, setWatching] = useState<string | null>(null);
@@ -273,6 +288,7 @@ export const SourceCatalog = ({
                 table={table}
                 canWrite={canWrite}
                 onOpen={() => onOpenTable(table)}
+                onBrowseRows={() => onBrowseRows(table)}
                 onToggleAgentAccess={(visible) =>
                   toggleTableAccess.mutate({ tableName: table.name, visible })
                 }

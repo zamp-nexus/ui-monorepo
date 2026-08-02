@@ -19,12 +19,14 @@ from zentra_domain_investigation import (
     EvidenceCitation,
     EvidenceReference,
     ExecutionJob,
+    ExecutionJobKind,
     Finding,
     HumanApproval,
     Investigation,
     MetricComparison,
     RejectionReason,
     RootCauseState,
+    WorkFeedEventKind,
 )
 
 from zentra_application_investigation import (
@@ -37,7 +39,6 @@ from zentra_application_investigation import (
     PermissionDeniedError,
     PipelineResult,
     Role,
-    UnsupportedScenarioError,
 )
 
 TENANT_ID = UUID("51000000-0000-0000-0000-000000000001")
@@ -292,7 +293,7 @@ async def test_start_returns_running_before_the_agents_have_run() -> None:
 
     detail = await service(unit_of_work).start(
         actor(Role.MEMBER),
-        scenario_key="eu_refund_spike",
+        question="Why did EU refunds increase from June to July 2026?",
     )
 
     assert detail.status == "running"
@@ -313,7 +314,9 @@ async def test_low_confidence_gates_on_a_human_rather_than_publishing() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.42))
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     detail = await application.get(actor(), INVESTIGATION_ID)
 
@@ -329,7 +332,9 @@ async def test_confident_converged_result_completes_without_a_human() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.91))
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     detail = await application.get(actor(), INVESTIGATION_ID)
 
@@ -345,7 +350,9 @@ async def test_unconverged_recheck_gates_even_when_confidence_is_high() -> None:
         pipeline=Pipeline(score=0.95, converged=False),
     )
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     detail = await application.get(actor(), INVESTIGATION_ID)
 
@@ -355,21 +362,25 @@ async def test_unconverged_recheck_gates_even_when_confidence_is_high() -> None:
 
 
 @pytest.mark.asyncio
-async def test_viewer_cannot_start_and_unsupported_scenarios_are_rejected() -> None:
-    unit_of_work = UnitOfWork()
-    application = service(unit_of_work)
+async def test_a_viewer_cannot_start_an_investigation() -> None:
+    """Role is checked before the question is even normalised, so a Viewer
+    cannot learn anything about what would have been accepted."""
+    application = service(UnitOfWork())
 
     with pytest.raises(PermissionDeniedError):
-        await application.start(actor(Role.VIEWER), scenario_key="eu_refund_spike")
-    with pytest.raises(UnsupportedScenarioError):
-        await application.start(actor(), scenario_key="free_form")
+        await application.start(
+            actor(Role.VIEWER),
+            question="Why did EU refunds increase from June to July 2026?",
+        )
 
 
 @pytest.mark.asyncio
 async def test_owner_decision_is_idempotent_and_member_cannot_decide() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work)
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     started = await application.get(actor(), INVESTIGATION_ID)
     assert started.pending_approval is not None
@@ -410,7 +421,9 @@ async def test_invisible_investigation_returns_not_found() -> None:
 
 async def outcome_of(pipeline: Pipeline) -> InvestigationDetail:
     application = service(UnitOfWork(), pipeline=pipeline)
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     return await application.get(actor(), INVESTIGATION_ID)
 
@@ -502,24 +515,35 @@ async def test_a_well_evidenced_independent_result_still_publishes() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_second_scenario_carries_its_own_question() -> None:
-    """The question is looked up from the registry, not a module constant, so
-    each scenario reaches the agents with the wording it was written for."""
+async def test_the_question_asked_is_the_question_recorded() -> None:
+    """Free text reaches the agents verbatim (ADR-0023).
+
+    There is no registry to look a question up in, so the one thing that must
+    hold is that nothing rewrites it on the way through.
+    """
     application = service(UnitOfWork())
+    asked = "Which warehouse absorbed the backlog after the October cutover?"
 
-    detail = await application.start(actor(), scenario_key="na_channel_growth")
+    detail = await application.start(actor(), question=asked)
 
-    assert detail.scenario_key == "na_channel_growth"
-    assert "sales channel" in detail.question
-    assert "North America" in detail.question
+    assert detail.question == asked
+    assert detail.scenario_key is None
 
 
 @pytest.mark.asyncio
-async def test_an_unregistered_scenario_is_still_refused() -> None:
+async def test_a_question_is_normalised_before_it_is_recorded() -> None:
+    """The same normalisation user-authored Thread Messages get.
+
+    A question carrying control characters is refused rather than stored and
+    later rendered, and surrounding whitespace never reaches the agents.
+    """
     application = service(UnitOfWork())
 
-    with pytest.raises(UnsupportedScenarioError):
-        await application.start(actor(), scenario_key="made_up_scenario")
+    detail = await application.start(actor(), question="  Why did refunds rise?  ")
+    assert detail.question == "Why did refunds rise?"
+
+    with pytest.raises(ValueError):
+        await application.start(actor(), question="Why did\x07 refunds rise?")
 
 
 def structured_draft() -> DraftFinding:
@@ -561,7 +585,9 @@ async def test_a_drafted_investigation_stores_the_draft_with_its_state_change() 
     draft = structured_draft()
     application = service(unit_of_work, pipeline=Pipeline(draft_finding=draft))
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
 
     assert unit_of_work.draft_findings.rows[INVESTIGATION_ID] is draft
@@ -576,7 +602,9 @@ async def test_a_refresh_returns_the_stored_draft_without_rerunning_insight() ->
     pipeline = Pipeline(draft_finding=draft)
     application = service(unit_of_work, pipeline=pipeline)
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     runs_after_execute = len(pipeline.calls)
 
@@ -594,7 +622,9 @@ async def test_the_phase_1_path_stores_no_draft_and_stays_readable() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline())
 
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     detail = await application.get(actor(), INVESTIGATION_ID)
 
@@ -653,7 +683,9 @@ def active_citation() -> EvidenceCitation:
 
 async def run_policy(unit_of_work: UnitOfWork, **pipeline: object):
     application = service(unit_of_work, pipeline=Pipeline(**pipeline))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     return await application.get(actor(), INVESTIGATION_ID)
 
@@ -669,6 +701,118 @@ async def test_all_four_conditions_passing_publishes_without_a_human() -> None:
 
     assert detail.status == "completed"
     assert detail.pending_approval is None
+
+
+class WorkFeed:
+    """Records what would have gone to the Work Feed, without a real store."""
+
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    async def append_for_investigation(
+        self,
+        *,
+        tenant_id: UUID,
+        investigation_id: UUID,
+        kind: WorkFeedEventKind,
+        payload: object,
+        occurred_at: datetime,
+        event_id: UUID | None = None,
+    ) -> None:
+        self.events.append(
+            {"investigation_id": investigation_id, "kind": kind, "payload": payload}
+        )
+
+
+class Visualizations:
+    """The visualization repository seam `prepare_published_visualization`
+    needs to exist before it will do anything at all."""
+
+    def __init__(self) -> None:
+        self.rows: dict[UUID, object] = {}
+
+    async def create(
+        self, *, brief_id, brief, renderer_configuration, artifact, actions
+    ) -> None:
+        self.rows[artifact.investigation_id] = artifact
+
+    async def latest_for_investigation(self, investigation_id: UUID) -> object | None:
+        return self.rows.get(investigation_id)
+
+
+class PublishingUnitOfWork(UnitOfWork):
+    """A `UnitOfWork` that also exposes the Work Feed and Visualization
+    repository, so a published Finding's handoff to the Visualization Agent
+    is actually observable rather than silently skipped."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.work_feed = WorkFeed()
+        self.visualizations = Visualizations()
+
+
+@pytest.mark.asyncio
+async def test_auto_publish_hands_the_finding_to_the_visualization_agent_once() -> None:
+    unit_of_work = PublishingUnitOfWork()
+
+    detail = await run_policy(
+        unit_of_work,
+        score=0.91,
+        draft_finding=cited_draft(),
+        evidence_citations=(active_citation(),),
+    )
+
+    assert detail.status == "completed"
+    published = [
+        event
+        for event in unit_of_work.work_feed.events
+        if event["kind"] == WorkFeedEventKind.FINDING_PUBLISHED
+    ]
+    assert len(published) == 1
+    visualization_jobs = [
+        job
+        for job in unit_of_work.jobs.rows.values()
+        if job.job_kind == ExecutionJobKind.VISUALIZATION
+    ]
+    assert len(visualization_jobs) == 1
+
+
+@pytest.mark.asyncio
+async def test_human_approved_publish_hands_finding_to_visualization_agent() -> None:
+    unit_of_work = PublishingUnitOfWork()
+    application = service(
+        unit_of_work,
+        pipeline=Pipeline(
+            score=0.42,
+            draft_finding=cited_draft(),
+            evidence_citations=(active_citation(),),
+        ),
+    )
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
+    await application.execute(actor(), INVESTIGATION_ID)
+
+    await application.decide(
+        actor(),
+        investigation_id=INVESTIGATION_ID,
+        approval_id=APPROVAL_ID,
+        decision=ApprovalDecision.APPROVE,
+        rejection_reason=None,
+    )
+
+    published = [
+        event
+        for event in unit_of_work.work_feed.events
+        if event["kind"] == WorkFeedEventKind.FINDING_PUBLISHED
+    ]
+    assert len(published) == 1
+    visualization_jobs = [
+        job
+        for job in unit_of_work.jobs.rows.values()
+        if job.job_kind == ExecutionJobKind.VISUALIZATION
+    ]
+    assert len(visualization_jobs) == 1
 
 
 def test_an_uncited_draft_fails_closed_rather_than_opening_a_gate() -> None:
@@ -767,7 +911,9 @@ async def test_re_evaluating_cannot_produce_a_conflicting_decision() -> None:
             evidence_citations=(active_citation(),),
         ),
     )
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
 
     # The lifecycle refuses it; which error it raises is the aggregate's
@@ -788,7 +934,9 @@ async def test_a_membership_that_cannot_decide_leaves_a_trace(role: Role) -> Non
     Replay cannot show."""
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.42))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     before = len(unit_of_work.outbox.events)
 
@@ -817,7 +965,9 @@ async def test_a_membership_that_cannot_decide_leaves_a_trace(role: Role) -> Non
 async def test_a_denied_attempt_changes_nothing() -> None:
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.42))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
 
     with pytest.raises(PermissionDeniedError):
@@ -840,7 +990,9 @@ async def test_decisions_appear_in_causal_order() -> None:
     would tell a different story about what happened."""
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.42))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
 
     with pytest.raises(PermissionDeniedError):
@@ -879,7 +1031,9 @@ async def test_no_decision_event_carries_customer_narrative() -> None:
 
     unit_of_work = UnitOfWork()
     application = service(unit_of_work, pipeline=Pipeline(score=0.42))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     await application.decide(
         actor(),
@@ -952,7 +1106,9 @@ class Erasures:
 
 async def completed_investigation(unit_of_work: UnitOfWork):
     application = service(unit_of_work, pipeline=Pipeline(score=0.91))
-    await application.start(actor(), scenario_key="eu_refund_spike")
+    await application.start(
+        actor(), question="Why did EU refunds increase from June to July 2026?"
+    )
     await application.execute(actor(), INVESTIGATION_ID)
     return application
 

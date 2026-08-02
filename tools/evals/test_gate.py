@@ -36,7 +36,7 @@ def test_insight_is_a_required_agent() -> None:
 
 
 def test_the_phase_1_agents_remain_required() -> None:
-    assert {"orchestrator", "sql_analyst", "evaluator"} <= set(AGENT_IDS)
+    assert {"orchestrator", "cube_analyst", "evaluator"} <= set(AGENT_IDS)
 
 
 def test_an_absent_suite_leaves_insight_out_of_the_passing_set() -> None:

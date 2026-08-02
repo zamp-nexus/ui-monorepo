@@ -1,34 +1,50 @@
+import { useState } from 'react';
+
 import { Button } from '@open-zentra/foundation-design-system';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
 import { requestJson, type TokenSource } from '../api';
-import type { IdentityContext, Investigation, Scenario } from '../types';
+import type { CatalogSummary, IdentityContext, Investigation } from '../types';
 
 interface LauncherProps {
   readonly getToken: TokenSource;
   readonly identity: IdentityContext;
 }
 
+/** How many governed members to name before the list stops being orienting. */
+const SHOWN_MEMBERS = 8;
+
+const readable = (member: string): string =>
+  (member.includes('.') ? member.slice(member.indexOf('.') + 1) : member)
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase();
+
 /**
- * The governed questions this tenant may ask, and the only way to start one.
+ * Ask this tenant's data a question.
+ *
+ * This was a fixed list of two governed questions the deployment would answer.
+ * A question is free text now (ADR-0023), so what the page owes the user is no
+ * longer a menu but an orientation: the vocabulary their own data actually
+ * carries, read from `/v1/catalog`.
  */
 export const Launcher = ({ getToken, identity }: LauncherProps) => {
   const navigate = useNavigate();
-  // The catalogue comes from the API rather than living here. The question text
-  // used to be written out in this file and again in the service; a second
-  // scenario would have made that three copies to keep in step.
-  const scenarios = useQuery({
-    queryKey: ['scenarios'],
-    queryFn: () => requestJson<Scenario[]>('/v1/scenarios', getToken),
-    enabled: true,
+  const [question, setQuestion] = useState('');
+
+  const catalog = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => requestJson<CatalogSummary>('/v1/catalog', getToken),
+    staleTime: 5 * 60 * 1000,
   });
+
   const mutation = useMutation({
-    mutationFn: (scenarioKey: string) =>
+    mutationFn: (asked: string) =>
       requestJson<Investigation>('/v1/investigations', getToken, {
         method: 'POST',
-        body: JSON.stringify({ scenario_key: scenarioKey }),
+        body: JSON.stringify({ question: asked }),
       }),
     onSuccess: (investigation) =>
       navigate(`/investigations/${investigation.investigation_id}`, {
@@ -37,62 +53,81 @@ export const Launcher = ({ getToken, identity }: LauncherProps) => {
   });
 
   const isViewer = identity.role === 'viewer';
+  const trimmed = question.trim();
+  const members = [
+    ...(catalog.data?.measures ?? []),
+    ...(catalog.data?.dimensions ?? []),
+  ].slice(0, SHOWN_MEMBERS);
 
   return (
     <section className="px-8 py-10">
       <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
         <span className="text-foreground-muted">Evidence inquiries</span>
-        <span className="text-primary">Governed synthetic scenarios</span>
+        <span className="text-primary">Your governed data</span>
       </div>
 
-      <ul className="mt-10 flex list-none flex-col gap-14 p-0">
-        {(scenarios.data ?? []).map((scenario, index) => (
-          <li className="max-w-4xl" key={scenario.key}>
-            <span
-              className="font-mono text-xs tracking-[0.2em] text-foreground-muted"
-              aria-hidden="true"
-            >
-              {String(index + 1).padStart(2, '0')}
-            </span>
-            <motion.h1
-              className="mt-3 font-serif text-[clamp(2rem,4.4vw,3.5rem)] font-normal leading-[1.02] tracking-[-0.035em]"
-              // Only the card being launched carries the shared-element id:
-              // two elements with one layoutId at the same time cannot animate.
-              layoutId={
-                mutation.variables === scenario.key ? 'investigation-question' : undefined
-              }
-            >
-              {scenario.question}
-            </motion.h1>
+      <form
+        className="mt-10 max-w-4xl"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (trimmed) mutation.mutate(trimmed);
+        }}
+      >
+        <label
+          className="font-mono text-xs tracking-[0.2em] text-foreground-muted"
+          htmlFor="launcher-question"
+        >
+          ASK
+        </label>
+        <motion.textarea
+          id="launcher-question"
+          className="mt-3 w-full resize-none border-0 border-b border-border bg-transparent pb-4 font-serif text-[clamp(1.5rem,3.2vw,2.5rem)] font-normal leading-[1.15] tracking-[-0.035em] outline-none focus:border-primary"
+          layoutId="investigation-question"
+          rows={2}
+          value={question}
+          placeholder="Why did refunds increase last month?"
+          disabled={isViewer || mutation.isPending}
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter asks; Shift+Enter is a newline. A question is usually one
+            // line, and reaching for the button every time gets old.
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              if (trimmed) mutation.mutate(trimmed);
+            }
+          }}
+        />
 
-            <div
-              className="mt-5 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted"
-              aria-label="Scenario constraints"
-            >
-              {[...scenario.facts, 'Governed metrics only'].map((fact) => (
-                <span className="flex items-center gap-2" key={fact}>
-                  <i className="h-1 w-1 rounded-full bg-primary" aria-hidden="true" />
-                  {fact}
-                </span>
-              ))}
-            </div>
+        <Button
+          className="mt-7"
+          size="lg"
+          type="submit"
+          loading={mutation.isPending}
+          disabled={isViewer || mutation.isPending || !trimmed}
+        >
+          {isViewer ? 'Viewer access · read only' : 'Begin evidence trace'}
+        </Button>
+      </form>
 
-            <Button
-              className="mt-7"
-              size="lg"
-              loading={mutation.isPending && mutation.variables === scenario.key}
-              disabled={isViewer || mutation.isPending}
-              onClick={() => mutation.mutate(scenario.key)}
-            >
-              {isViewer ? 'Viewer access · read only' : 'Begin evidence trace'}
-            </Button>
-          </li>
-        ))}
-      </ul>
+      {members.length > 0 ? (
+        <div className="mt-10 max-w-4xl">
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
+            Your data can answer about
+          </span>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
+            {members.map((member) => (
+              <span className="flex items-center gap-2" key={member.name}>
+                <i className="h-1 w-1 rounded-full bg-primary" aria-hidden="true" />
+                {readable(member.name)}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
-      {scenarios.error ? (
+      {catalog.error ? (
         <p className="mt-8 text-sm text-danger" role="alert">
-          {scenarios.error.message}
+          {catalog.error.message}
         </p>
       ) : null}
       {mutation.error ? (

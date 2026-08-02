@@ -7,6 +7,7 @@ from zentra_domain_agent_execution import (
     SemanticCatalog,
     SemanticDimension,
     SemanticFilter,
+    SemanticMeasure,
     SemanticQuery,
     SemanticTimeDimension,
 )
@@ -72,12 +73,10 @@ METRIC_COMPARISON_SCHEMA = _obj(
     }
 )
 
-QUERY_PLAN_SCHEMA = _obj(
-    {
-        "reasoning": {"type": "string"},
-        "query": SEMANTIC_QUERY_SCHEMA,
-    }
-)
+# `QUERY_PLAN_SCHEMA` was the shape of a separate "plan the query" model call.
+# Both agents that made one now reach the semantic layer through a tool, whose
+# arguments are `SEMANTIC_QUERY_SCHEMA` directly, so there is no plan step left
+# to validate (ADR-0024).
 
 # sample_size is extraction, not introspection: reading how many underlying
 # records an aggregate covers is something models do reliably, unlike scoring
@@ -112,6 +111,23 @@ TASK_LEDGER_SCHEMA = _obj(
                 }
             ),
         }
+    }
+)
+
+# Intake's structured decision: whether a message resolves inside the scoped
+# catalog it was given. `normalized_question` and `clarification` are
+# mutually exclusive in practice (one is null depending on `disposition`),
+# nullable rather than split into two schemas so one call always returns one
+# shape.
+INTAKE_SCHEMA = _obj(
+    {
+        "disposition": {
+            "type": "string",
+            "enum": ["resolved", "ambiguous", "unsupported"],
+        },
+        "normalized_question": _nullable({"type": "string"}),
+        "clarification": _nullable({"type": "string"}),
+        "reasoning": {"type": "string"},
     }
 )
 
@@ -200,24 +216,35 @@ def semantic_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
         ) from error
 
 
-def _render_dimension(dimension: SemanticDimension) -> str:
-    """Name, type, and the values it holds where they are few enough to list.
+def render_measure(measure: SemanticMeasure) -> str:
+    line = f"- {measure.name} ({measure.type})"
+    if measure.description:
+        return f"{line} — {measure.description}"
+    return line
+
+
+def render_dimension(dimension: SemanticDimension) -> str:
+    """Name, type, what it means, and the values it holds where few enough.
 
     Without the values an agent can only guess how they are spelled — a filter
     on "North America" against data storing "NA" returns zero rows rather than
     an error, and the agent correctly reports that it found nothing.
+
+    The description matters for the same reason at one level up: across a
+    tenant's own harvested tables, two plausible columns can carry the same
+    name, and choosing the wrong one answers a different question confidently.
     """
     line = f"- {dimension.name} ({dimension.type})"
+    if dimension.description:
+        line = f"{line} — {dimension.description}"
     if dimension.values:
         return f"{line} — one of: {', '.join(dimension.values)}"
     return line
 
 
 def render_catalog(catalog: SemanticCatalog) -> str:
-    measures = "\n".join(
-        f"- {measure.name} ({measure.type})" for measure in catalog.measures
-    )
+    measures = "\n".join(render_measure(measure) for measure in catalog.measures)
     dimensions = "\n".join(
-        _render_dimension(dimension) for dimension in catalog.dimensions
+        render_dimension(dimension) for dimension in catalog.dimensions
     )
     return f"Measures:\n{measures}\n\nDimensions:\n{dimensions}"

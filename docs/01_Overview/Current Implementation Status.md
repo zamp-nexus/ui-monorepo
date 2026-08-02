@@ -29,9 +29,34 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Eight Cube-governed commerce metrics and two deterministic seeds: the
   eight-order EU refund spike and the three-hundred-order NA channel growth.
 - Phase 1A Investigation lifecycle, API, and Forensic Observatory.
-- Phase 1 agent trust loop: Orchestrator, SQL Analyst, and Evaluator as
-  `AgentPort` implementations over a LangGraph graph, with the
-  Evaluator-Optimizer loop exiting hard at three attempts.
+- Phase 1 agent trust loop: SQL Analyst, Evaluator, and Insight as
+  unmodified `AgentPort` implementations, now driven serially by an
+  `OrchestratorLoop` against a durable Postgres `InvestigationBoard` and
+  `WorkItem` queue instead of a compiled LangGraph graph
+  ([[adr/0026-investigation-engine-owns-orchestration]]), with the
+  Evaluator-Optimizer loop still exiting hard at three attempts. The graph,
+  its Postgres checkpointer and the `langgraph` dependency are deleted.
+  Resuming a crashed run from its Board is not yet built.
+- Reactive orchestration: the Orchestrator Agent plans first (refusing the run
+  outright when the registry has not promoted a required role), and the loop
+  accepts its follow-up proposals *by rule* before running them concurrently
+  as child Work Items that name the measurement they came from. Their Facts
+  land on the shared `InvestigationBoard`, where two measurements of one metric
+  over one period that disagree open a Conflict — documented rather than
+  silently resolved, and carried to the reader. Fan-out is one level deep and
+  capped at three; the cap is a constructor parameter, not yet a per-Tenant
+  budget.
+- Completion criteria in the domain (`assess_completion`): the loop stops when
+  every criterion is satisfied *or* the budget is exhausted, never on "the
+  queue emptied" alone, and the Board records which — with the same bounded
+  confidence the Finding carries, never a higher one. Distinct from publication
+  authority, which stays with `evaluate_publication`
+  ([[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]).
+- Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
+  replacing the two-scenario keyword whitelist
+  ([[adr/0027-analytical-scope-replaces-scenario-whitelist]]); the two
+  fixture scenarios below are no longer the only questions chat can resolve,
+  though a real per-Tenant Analytical Scope is not yet configurable.
 - Confidence bounded by evidence before it meets the Tenant threshold — a
   sample-size ceiling and a three-level independence ceiling, with
   `calibration_method` naming whichever bound applied

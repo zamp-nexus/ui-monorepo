@@ -396,7 +396,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
                     execution_id=execution_id,
                     investigation_id=INVESTIGATION,
                     tenant_id=TENANT_A,
-                    agent_id="sql_analyst_v1",
+                    agent_id="cube_analyst_v1",
                     step=1,
                     input={},
                     status="success",

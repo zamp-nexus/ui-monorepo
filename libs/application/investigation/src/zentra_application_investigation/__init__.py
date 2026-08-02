@@ -1,7 +1,6 @@
 """Investigation application services and ports."""
 
 from .dto import (
-    SCENARIOS,
     AuditDelivery,
     AuditReplay,
     AuthenticatedActor,
@@ -12,10 +11,8 @@ from .dto import (
     PermissionDeniedError,
     PipelineResult,
     Role,
-    Scenario,
     ScenarioUnavailableError,
     TimelineEntry,
-    UnsupportedScenarioError,
     UsageSummary,
 )
 from .execution_worker import (
@@ -25,6 +22,7 @@ from .execution_worker import (
     ExecutionJobWorker,
     classify_execution_failure,
 )
+from .intake_service import IntakeService
 from .ports import (
     AgentExecutionRepository,
     AuditOutboxRepository,
@@ -42,7 +40,7 @@ from .ports import (
     TenantPolicyRepository,
     VisualizationRepository,
 )
-from .service import InvestigationService
+from .service import InvestigationService, bounded_outcome
 from .thread_dto import (
     RoutingDisposition,
     RoutingResult,
@@ -57,8 +55,13 @@ from .thread_dto import (
     ThreadSlice,
     ThreadSummary,
 )
-from .thread_ports import ThreadRepository, ThreadUnitOfWork, ThreadUnitOfWorkFactory
-from .thread_routing import deterministic_thread_title, route_governed_question
+from .thread_ports import (
+    IntakePort,
+    ThreadRepository,
+    ThreadUnitOfWork,
+    ThreadUnitOfWorkFactory,
+)
+from .thread_routing import deterministic_thread_title
 from .thread_service import ThreadService
 from .visualization_service import (
     VisualizationActionResult,
@@ -84,7 +87,6 @@ from .workspace_ports import (
 from .workspace_service import OrganizationService
 
 __all__ = [
-    "SCENARIOS",
     "AgentExecutionRepository",
     "AuditDelivery",
     "AuditOutboxRepository",
@@ -102,6 +104,8 @@ __all__ = [
     "ExecutionJobRepository",
     "ExecutionJobWorker",
     "HumanApprovalRepository",
+    "IntakePort",
+    "IntakeService",
     "InvestigationDetail",
     "InvestigationNotFoundError",
     "InvestigationPipeline",
@@ -112,10 +116,10 @@ __all__ = [
     "PendingApproval",
     "PermissionDeniedError",
     "PipelineResult",
+    "bounded_outcome",
     "Role",
     "RoutingDisposition",
     "RoutingResult",
-    "Scenario",
     "ScenarioUnavailableError",
     "TenantPolicyRepository",
     "TimelineEntry",
@@ -133,14 +137,12 @@ __all__ = [
     "ThreadSummary",
     "ThreadUnitOfWork",
     "ThreadUnitOfWorkFactory",
-    "UnsupportedScenarioError",
     "UsageSummary",
     "VisualizationDetail",
     "VisualizationActionResult",
     "VisualizationRepository",
     "VisualizationService",
     "deterministic_thread_title",
-    "route_governed_question",
     "classify_execution_failure",
     "GroupDetail",
     "ProjectDetail",

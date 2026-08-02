@@ -1,10 +1,16 @@
 """Investigation domain."""
 
+from .analytical_scope import AnalyticalScope
 from .citation import (
     CitationFilter,
     CitationState,
     EvidenceCitation,
     Tombstone,
+)
+from .completion import (
+    CompletionAssessment,
+    CompletionBlocker,
+    assess_completion,
 )
 from .draft_finding import (
     Claim,
@@ -29,6 +35,18 @@ from .execution_job import (
     ExecutionJobKind,
     ExecutionJobStatus,
     ExecutionJobTransitionError,
+)
+from .investigation_board import (
+    BoardConfidence,
+    BoardTransitionError,
+    Conflict,
+    ConflictStatus,
+    Fact,
+    GapPriority,
+    Hypothesis,
+    HypothesisStatus,
+    InvestigationBoard,
+    KnowledgeGap,
 )
 from .model import (
     TERMINAL_STATUSES,
@@ -94,6 +112,12 @@ from .work_feed import (
     WorkFeedEventKind,
     WorkFeedPayload,
 )
+from .work_item import (
+    TERMINAL_WORK_ITEM_STATUSES,
+    WorkItem,
+    WorkItemStatus,
+    WorkItemTransitionError,
+)
 from .workspace import (
     MAX_ORGANIZATION_NAME_LENGTH,
     Group,
@@ -103,10 +127,15 @@ from .workspace import (
 )
 
 __all__ = [
+    "AnalyticalScope",
     "ApprovalDecision",
     "ApprovalReason",
     "AgentEventPayload",
     "ApprovalEventPayload",
+    "BoardConfidence",
+    "CompletionAssessment",
+    "CompletionBlocker",
+    "BoardTransitionError",
     "BriefAction",
     "BriefClaim",
     "BriefComparison",
@@ -119,6 +148,8 @@ __all__ = [
     "Claim",
     "ClaimKind",
     "CompletionOutcome",
+    "Conflict",
+    "ConflictStatus",
     "Contradiction",
     "DomainEvent",
     "DraftFinding",
@@ -135,16 +166,22 @@ __all__ = [
     "ExecutionJobKind",
     "ExecutionJobStatus",
     "ExecutionJobTransitionError",
+    "Fact",
     "FailureOutcome",
     "Finding",
     "FindingEventPayload",
+    "GapPriority",
     "HumanApproval",
     "HumanApprovalStatus",
+    "Hypothesis",
+    "HypothesisStatus",
+    "InvestigationBoard",
     "InvestigationThread",
     "Investigation",
     "InvestigationStatus",
     "InvestigationTransitionError",
     "InvestigationEventPayload",
+    "KnowledgeGap",
     "PRESERVED",
     "MetricComparison",
     "MessageEventPayload",
@@ -176,8 +213,13 @@ __all__ = [
     "VisualizationView",
     "WorkFeedEventKind",
     "WorkFeedPayload",
+    "WorkItem",
+    "WorkItemStatus",
+    "WorkItemTransitionError",
+    "TERMINAL_WORK_ITEM_STATUSES",
     "Group",
     "OrganizationNameError",
+    "assess_completion",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",

@@ -38,17 +38,30 @@ from .thread_dto import (
     ThreadNotFoundError,
     ThreadPage,
 )
-from .thread_ports import ThreadUnitOfWork, ThreadUnitOfWorkFactory
-from .thread_routing import (
-    deterministic_thread_title,
-    route_draft_messages,
-    route_governed_question,
-)
+from .thread_ports import IntakePort, ThreadUnitOfWork, ThreadUnitOfWorkFactory
+from .thread_routing import deterministic_thread_title
 from .thread_snapshot import build_thread_detail, require_project, validate_page_size
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
 THREAD_MUTATOR_ROLES = frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER})
+
+_ROUTABLE_KINDS = frozenset(
+    {ThreadMessageKind.USER_QUESTION, ThreadMessageKind.USER_CLARIFICATION}
+)
+
+
+def _combined_question_text(messages: tuple[ThreadMessage, ...]) -> str:
+    """A Draft Thread's user and clarification messages, as one question.
+
+    Intake reasons over text, not tokens, so accumulating a Draft Thread's
+    messages into one passage (rather than merging separately-matched token
+    sets, as the keyword router did) is what lets a later clarification like
+    "In Europe" resolve a question the first message alone could not.
+    """
+    return "\n".join(
+        message.content for message in messages if message.kind in _ROUTABLE_KINDS
+    )
 
 
 class ThreadService:
@@ -56,15 +69,22 @@ class ThreadService:
         self,
         *,
         unit_of_work_factory: ThreadUnitOfWorkFactory,
+        intake: IntakePort,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
+        self._intake = intake
         self._now = now
         self._new_id = new_id
 
     async def create(
-        self, actor: AuthenticatedActor, *, project_id: UUID, content: str
+        self,
+        actor: AuthenticatedActor,
+        *,
+        project_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -79,7 +99,11 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = route_governed_question(message.content)
+        routing = await self._intake.resolve(
+            message.content,
+            tenant_id=actor.tenant_id,
+            data_connection_id=data_connection_id,
+        )
         title_source = routing.canonical_question or message.content
         thread = InvestigationThread.create(
             thread_id=thread_id,
@@ -105,7 +129,13 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             investigation_id, router_messages = await self._apply_routing(
-                unit_of_work, actor, thread, message, routing, now
+                unit_of_work,
+                actor,
+                thread,
+                message,
+                routing,
+                now,
+                data_connection_id=data_connection_id,
             )
             await unit_of_work.organization.record_project_activity(
                 project_id, occurred_at=now
@@ -120,7 +150,12 @@ class ThreadService:
         )
 
     async def append(
-        self, actor: AuthenticatedActor, *, thread_id: UUID, content: str
+        self,
+        actor: AuthenticatedActor,
+        *,
+        thread_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -147,7 +182,11 @@ class ThreadService:
             existing_messages = await unit_of_work.threads.messages_for_thread(
                 thread_id
             )
-            routing = route_draft_messages(existing_messages + (message,))
+            routing = await self._intake.resolve(
+                _combined_question_text(existing_messages + (message,)),
+                tenant_id=actor.tenant_id,
+                data_connection_id=data_connection_id,
+            )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
@@ -162,7 +201,13 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             investigation_id, _ = await self._apply_routing(
-                unit_of_work, actor, thread, message, routing, now
+                unit_of_work,
+                actor,
+                thread,
+                message,
+                routing,
+                now,
+                data_connection_id=data_connection_id,
             )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.organization.record_project_activity(
@@ -198,7 +243,11 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = route_governed_question(message.content)
+        routing = await self._intake.resolve(
+            message.content,
+            tenant_id=actor.tenant_id,
+            data_connection_id=latest.data_connection_id,
+        )
         normalized = message.content.casefold()
         published_reference = any(
             token in normalized
@@ -231,13 +280,11 @@ class ThreadService:
         )
         investigation_id = latest.investigation_id
         if routing.disposition is RoutingDisposition.RESOLVED:
-            assert routing.scenario_key is not None
             assert routing.canonical_question is not None
             follow_up = Investigation.create(
                 investigation_id=self._new_id(),
                 tenant_id=actor.tenant_id,
                 question=routing.canonical_question,
-                scenario_key=routing.scenario_key,
                 now=now,
                 data_connection_id=latest.data_connection_id,
                 thread_id=thread.thread_id,
@@ -407,9 +454,7 @@ class ThreadService:
         limit = validate_page_size(limit, MAX_PAGE_SIZE)
         after = ThreadCursor.decode(cursor) if cursor else None
         async with self._uow(actor) as unit_of_work:
-            require_project(
-                await unit_of_work.organization.get_project(project_id)
-            )
+            require_project(await unit_of_work.organization.get_project(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
                 include_archived=include_archived,
@@ -476,6 +521,7 @@ class ThreadService:
         message: ThreadMessage,
         routing: RoutingResult,
         now: datetime,
+        data_connection_id: UUID | None = None,
     ) -> tuple[UUID | None, tuple[ThreadMessage, ...]]:
         if routing.disposition is not RoutingDisposition.RESOLVED:
             router_messages = self._router_messages(thread, routing, now)
@@ -492,14 +538,16 @@ class ThreadService:
                 event_id=self._new_id(),
             )
             return None, router_messages
-        assert routing.scenario_key is not None
         assert routing.canonical_question is not None
         investigation = Investigation.create(
             investigation_id=self._new_id(),
             tenant_id=actor.tenant_id,
             question=routing.canonical_question,
-            scenario_key=routing.scenario_key,
             now=now,
+            # Which data the question is asked against. Absent means the demo
+            # warehouse, which is right only for a tenant that has connected
+            # nothing — see `active_connection.py`.
+            data_connection_id=data_connection_id,
             thread_id=thread.thread_id,
             thread_sequence=1,
             initiating_message_id=message.message_id,
@@ -521,10 +569,7 @@ class ThreadService:
             tenant_id=actor.tenant_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.ROUTING_RESOLVED,
-            payload=RoutingEventPayload(
-                disposition=routing.disposition.value,
-                scenario_key=routing.scenario_key,
-            ),
+            payload=RoutingEventPayload(disposition=routing.disposition.value),
             occurred_at=now,
             event_id=self._new_id(),
         )

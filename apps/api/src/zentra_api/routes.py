@@ -18,19 +18,23 @@ from zentra_adapter_telemetry import (
     record_citation_resolution,
 )
 from zentra_application_investigation import (
-    SCENARIOS,
     ConflictError,
     InvestigationNotFoundError,
     PermissionDeniedError,
     ScenarioUnavailableError,
-    UnsupportedScenarioError,
 )
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_investigation import Tombstone
 
+from .active_connection import (
+    AmbiguousDataConnectionError,
+    active_data_connection_id,
+)
 from .request_context import RequestContext, authenticated_context
 from .schemas import (
     ApprovalDecisionRequest,
+    CatalogMemberResponse,
+    CatalogSummaryResponse,
     ContextResponse,
     DependencyStatus,
     EvidenceCitationResponse,
@@ -38,7 +42,6 @@ from .schemas import (
     InvestigationCreateRequest,
     InvestigationDetailResponse,
     ReadinessResponse,
-    ScenarioResponse,
     TombstoneResponse,
     VisualizationActionRequest,
     VisualizationActionResponse,
@@ -47,6 +50,23 @@ from .schemas import (
 
 router = APIRouter()
 AuthenticatedRequest = Annotated[RequestContext, Depends(authenticated_context)]
+
+
+async def _active_connection(
+    dependencies: object,
+    actor: object,
+    *,
+    requested: UUID | None = None,
+) -> UUID | None:
+    """The Data Connection a question is asked against, or a 409 to choose."""
+    try:
+        return await active_data_connection_id(
+            dependencies.connector,  # type: ignore[attr-defined]
+            actor,  # type: ignore[arg-type]
+            requested=requested,
+        )
+    except AmbiguousDataConnectionError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @router.get("/health/live")
@@ -106,26 +126,44 @@ async def context(
     )
 
 
-@router.get("/v1/scenarios", response_model=list[ScenarioResponse])
-async def scenarios(
-    # Unused, but the dependency is the point: the catalogue of questions is
-    # behind authentication like everything else.
-    _: AuthenticatedRequest,
-) -> list[ScenarioResponse]:
-    """The governed questions this deployment will answer.
+@router.get("/v1/catalog", response_model=CatalogSummaryResponse)
+async def catalog(
+    request: Request,
+    resolved: AuthenticatedRequest,
+) -> CatalogSummaryResponse:
+    """The governed vocabulary this tenant may ask questions about.
 
-    Served rather than hardcoded in the client so the question text has one
-    home: the launcher renders whatever the API supports, and adding a scenario
-    is a server change alone.
+    Resolved per tenant, so it is the tenant's own catalog and never another's
+    — the whole reason `ScopedCubeSemanticLayers` exists. Measures and
+    dimensions only: no rows, and no physical schema.
     """
-    return [
-        ScenarioResponse(
-            key=scenario.key,
-            question=scenario.question,
-            facts=list(scenario.facts),
-        )
-        for scenario in SCENARIOS.values()
-    ]
+    dependencies = request.app.state.dependencies
+    semantic_layer = await dependencies.semantic_layers.resolve(
+        tenant_id=resolved.actor.tenant_id,
+        # The tenant's own connection, not the demo warehouse. Serving the demo
+        # catalog here would offer a question the Investigation cannot answer.
+        data_connection_id=await _active_connection(dependencies, resolved.actor),
+    )
+    governed = await semantic_layer.catalog()
+    return CatalogSummaryResponse(
+        measures=[
+            CatalogMemberResponse(
+                name=measure.name,
+                type=measure.type,
+                description=measure.description,
+            )
+            for measure in governed.measures
+        ],
+        dimensions=[
+            CatalogMemberResponse(
+                name=dimension.name,
+                type=dimension.type,
+                description=dimension.description,
+                values=list(dimension.values),
+            )
+            for dimension in governed.dimensions
+        ],
+    )
 
 
 @router.get("/v1/agents", response_model=list[PublicAgent])
@@ -143,13 +181,19 @@ async def create_investigation(
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> InvestigationDetailResponse:
-    investigations = request.app.state.dependencies.investigations
+    dependencies = request.app.state.dependencies
     try:
-        detail = await investigations.start(
+        detail = await dependencies.investigations.start(
             resolved.actor,
-            scenario_key=body.scenario_key,
+            question=body.question,
+            data_connection_id=await _active_connection(
+                dependencies, resolved.actor, requested=body.data_connection_id
+            ),
         )
-    except UnsupportedScenarioError as error:
+    except ValueError as error:
+        # Normalisation refused the text — control characters, or nothing left
+        # after stripping. `ValueError` rather than a bespoke type because the
+        # domain's `normalize_message_content` is what raises it.
         raise HTTPException(status_code=422, detail=str(error)) from error
     except PermissionDeniedError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error

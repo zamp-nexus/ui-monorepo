@@ -21,7 +21,7 @@ def write_cassette(directory: Path, *, cost: str) -> None:
 
     directory.mkdir(parents=True, exist_ok=True)
     key = _key(
-        model="sql_analyst",
+        model="cube_analyst",
         system="system",
         messages=MESSAGES,
         response_schema=None,
@@ -29,7 +29,7 @@ def write_cassette(directory: Path, *, cost: str) -> None:
     (directory / f"{key}.json").write_text(
         json.dumps(
             {
-                "requested_model": "sql_analyst",
+                "requested_model": "cube_analyst",
                 "text": '{"answer": "ok"}',
                 "usage": {
                     "input_tokens": 1200,
@@ -45,7 +45,7 @@ def write_cassette(directory: Path, *, cost: str) -> None:
 
 async def replay(directory: Path):
     return await ReplayModelClient(directory).complete(
-        model="sql_analyst",
+        model="cube_analyst",
         system="system",
         messages=MESSAGES,
         max_tokens=4096,
@@ -85,7 +85,7 @@ async def test_an_unrecorded_request_raises_rather_than_reaching_a_provider(
 
     with pytest.raises(UnrecordedRequestError):
         await ReplayModelClient(tmp_path).complete(
-            model="sql_analyst",
+            model="cube_analyst",
             system="a prompt that changed since the recording",
             messages=MESSAGES,
             max_tokens=4096,

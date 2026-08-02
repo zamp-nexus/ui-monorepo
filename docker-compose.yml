@@ -77,7 +77,15 @@ services:
       # this is Cube's Node process calling back into apps/api, a different
       # trust boundary from a tenant's request into Cube.
       CUBE_INTERNAL_API_SECRET: local-cube-internal-secret
-      INTERNAL_API_URL: http://api:8000
+      # Defaults to the host rather than the `api` service, because `api` is in
+      # the `app` profile and a local dev loop normally runs uvicorn on the
+      # host instead. Pointing at `api:8000` there resolves to nothing, the
+      # schema compile fails, and the tenant's tables never become cubes —
+      # while the demo warehouse keeps working, which hides it. Override to
+      # `http://api:8000` when running with `--profile app`.
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://host.docker.internal:8000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "4000:4000"
     depends_on:
@@ -104,6 +112,11 @@ services:
       CUBE_URL: http://cube:4000
       CUBE_API_SECRET: local-cube-secret
       CUBE_INTERNAL_API_SECRET: local-cube-internal-secret
+      # Dev-only, committed like every other secret in this file. Seals
+      # connector source credentials at rest — without it ConnectorService
+      # is never constructed and every connector route, plus Cube's
+      # internal model callback, answers "not configured".
+      CONNECTOR_CREDENTIAL_KEY: 9cae34e4992b93fdcffe049dfa92ca0442f942c24b5c8d3cc0290438bc4746d2
       FRONTEND_ORIGIN: http://localhost:4200
     ports:
       - "8000:8000"

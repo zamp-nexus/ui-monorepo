@@ -52,6 +52,10 @@ class ConnectorFieldModel(BaseModel):
 
     name: str
     cubeType: str  # noqa: N815 - Cube's own model field naming convention
+    #: What the harvest observed about this column. Compiled onto the Cube
+    #: member so it reaches `/meta`, and from there the governed catalog an
+    #: agent reasons over. Never carries sampled values.
+    description: str | None = None
 
 
 class ConnectorTableSchema(BaseModel):
@@ -60,6 +64,7 @@ class ConnectorTableSchema(BaseModel):
     name: str
     sqlTable: str  # noqa: N815
     fields: tuple[ConnectorFieldModel, ...]
+    description: str | None = None
 
 
 class ConnectorJoinSchema(BaseModel):
@@ -123,6 +128,7 @@ async def get_connector_cube_model(
                 fields=tuple(
                     ConnectorFieldModel(**field) for field in table.fields
                 ),
+                description=table.description,
             )
             for table in model.tables
         ),

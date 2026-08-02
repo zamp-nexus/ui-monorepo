@@ -100,6 +100,13 @@ class ModelChoice:
     # Free tiers meter tokens per minute far more tightly than Anthropic, so
     # the ceiling belongs to the rung rather than being global.
     max_tokens: int
+    # Whether this rung can be handed tools. A property of the model, not the
+    # provider: `openrouter/free` resolves to whatever is free today, and the
+    # NIM catalogue mixes tool-capable and text-only models behind one base
+    # URL. Default False so a rung is opted in deliberately, after being
+    # checked — the same discipline the strict-json_schema notes in
+    # `routing.py` already record.
+    supports_tools: bool = False
 
     @property
     def trains_on_input(self) -> bool:
@@ -129,6 +136,7 @@ _PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     # 2026-08-31; list price is used so recorded cost never understates.
     "claude-sonnet-5": (Decimal("3.00"), Decimal("15.00")),
     "claude-opus-5": (Decimal("5.00"), Decimal("25.00")),
+    "claude-haiku-4-5-20251001": (Decimal("1.00"), Decimal("5.00")),
     "gpt-5.5": (Decimal("5.00"), Decimal("30.00")),
     # Google's paid list price. Priced rather than zeroed because the same model
     # id costs nothing on a free key and real money on a paid one, and the code
