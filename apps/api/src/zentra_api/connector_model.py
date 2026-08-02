@@ -6,13 +6,12 @@ bespoke runtime gate: everything here reads only what `ConnectorService`
 already exposes as confirmed, and nothing here can see a proposed or
 rejected Relation.
 
-`ConnectorService` has no production wiring yet (its four repository ports
-have no adapter implementation anywhere in this repo) — this is a
-pre-existing gap, unrelated to Cube, discovered while building this. Every
-function here accepts `ConnectorService | None` and raises
-`ConnectorNotConfiguredError` when it is absent, so a caller fails loudly
-with a clear reason instead of an AttributeError deep in an unrelated
-method.
+`ConnectorService`'s four repository ports now have real Postgres adapter
+implementations, wired in `dependencies.py`. It is still `None` whenever
+`CONNECTOR_CREDENTIAL_KEY` is unset, since without it no credential can be
+sealed — every function here accepts `ConnectorService | None` and raises
+`ConnectorNotConfiguredError` in that case, so a caller fails loudly with a
+clear reason instead of an `AttributeError` deep in an unrelated method.
 
 `data_connection_id` here is deliberately the ADR-0012 vocabulary — Cube's
 JWT claims and `Investigation.data_connection_id` use the same name — but
