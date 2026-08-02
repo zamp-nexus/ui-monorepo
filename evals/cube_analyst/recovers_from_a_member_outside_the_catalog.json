@@ -1,6 +1,6 @@
 {
-  "name": "clamps_confidence_above_one",
-  "agent": "sql_analyst",
+  "name": "recovers_from_a_member_outside_the_catalog",
+  "agent": "cube_analyst",
   "catalog": {
     "measures": [
       {
@@ -51,6 +51,17 @@
       "reasoning": "Compare governed EU refunds month over month.",
       "query": {
         "measures": [
+          "commerce_facts.margin"
+        ],
+        "dimensions": [],
+        "time_dimensions": [],
+        "filters": []
+      }
+    },
+    {
+      "reasoning": "Compare governed EU refunds month over month.",
+      "query": {
+        "measures": [
           "Commerce.refundAmount"
         ],
         "dimensions": [],
@@ -64,15 +75,7 @@
             ]
           }
         ],
-        "filters": [
-          {
-            "member": "Commerce.region",
-            "operator": "equals",
-            "values": [
-              "EU"
-            ]
-          }
-        ]
+        "filters": []
       }
     },
     {
@@ -85,13 +88,18 @@
           "unit": "USD"
         }
       ],
-      "confidence": 1.7,
+      "confidence": 0.9,
       "sample_size": 240
     }
   ],
   "expect": {
     "outcome_kind": "confidence",
-    "max_score": 1.0,
-    "min_score": 1.0
+    "evidence_refs": 1,
+    "field_present": [
+      "query",
+      "result_summary",
+      "metrics",
+      "rows"
+    ]
   }
 }

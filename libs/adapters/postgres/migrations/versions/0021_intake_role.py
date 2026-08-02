@@ -1,9 +1,15 @@
-"""Accept the new `intake` canonical role (ADR-0024).
+"""Accept the new `intake` canonical role (ADR-0027).
 
 Mirrors `0005_canonical_insight_role.py`'s expand step: role vocabularies are
 enforced by a `CHECK` derived from `CANONICAL_ROLES` at the time each table
 was created, so a new role needs its own migration widening that `CHECK`
 rather than a rewrite of the migration that first installed it.
+
+`_PRIOR_ROLES` names `cube_analyst`, not `sql_analyst`: this migration and
+`0018_cube_analyst_role.py` are independent expand steps on parallel branches
+that both narrow this same `CHECK`, merged by `0022_merge_heads.py` with no
+guaranteed order between them. Whichever runs second must not exclude a role
+the other already added, so both list the role under its current name.
 """
 
 from alembic import op
@@ -19,7 +25,7 @@ _PRIOR_ROLES = (
     "data_quality",
     "data_preparation",
     "semantic_modeling",
-    "sql_analyst",
+    "cube_analyst",
     "evaluator",
     "statistician",
     "insight",

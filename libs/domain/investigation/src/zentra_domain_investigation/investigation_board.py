@@ -1,6 +1,6 @@
 """The durable object an Investigation accumulates its working memory onto.
 
-See ADR-0023. Distinct from `workspace.py`'s `Group`/`Project` — those are
+See ADR-0026. Distinct from `workspace.py`'s `Group`/`Project` — those are
 Tenant-visible navigation containers with no analytical content; the
 Investigation Board is the shared canvas Work Items read and write for one
 Investigation. The Orchestrator Loop decides what happens next by reading

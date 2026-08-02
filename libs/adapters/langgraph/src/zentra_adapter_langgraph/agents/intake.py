@@ -40,7 +40,7 @@ DESCRIPTOR = AgentDescriptor(
 class IntakeAgent:
     """Resolves a Thread's message against the Tenant's Analytical Scope.
 
-    Replaces the two-scenario keyword whitelist (ADR-0024): `semantic_layer`
+    Replaces the two-scenario keyword whitelist (ADR-0027): `semantic_layer`
     is expected to already be narrowed to the Tenant's Analytical Scope, so
     Intake can only ever resolve or refuse using exactly what the Tenant
     configured, never the full governed catalog.

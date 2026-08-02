@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { requestJson, type TokenSource } from '../../api';
-import type { IdentityContext, Scenario, ThreadEvent } from '../../types';
+import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { AgentProgress } from './agent-progress';
 import { AnswerRow } from './answer-row';
 import { appendMessage, createThread, getThread, listAgents, listThreads } from './api';
@@ -11,7 +11,7 @@ import { ChatComposer } from './chat-composer';
 import { ChatEmptyState } from './chat-empty-state';
 import { ChatHistory } from './chat-history';
 import { ChatMessageRow } from './chat-message-row';
-import { suggestionsFromScenarios } from './chat-suggestions';
+import { suggestionsFromCatalog } from './chat-suggestions';
 import { InvestigationControls } from './investigation-controls';
 import { latestInvestigation, toTimeline } from './to-chat-message';
 import { useActiveProject } from './use-active-project';
@@ -65,9 +65,9 @@ export const ChatPage = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  const scenarios = useQuery({
-    queryKey: ['scenarios'],
-    queryFn: () => requestJson<readonly Scenario[]>('/v1/scenarios', getToken),
+  const catalog = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => requestJson<CatalogSummary>('/v1/catalog', getToken),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -165,7 +165,7 @@ export const ChatPage = ({
           {timeline.length === 0 ? (
             <ChatEmptyState
               greetingName={identity.email.split('@')[0]}
-              suggestions={suggestionsFromScenarios(scenarios.data ?? [])}
+              suggestions={suggestionsFromCatalog(catalog.data ?? null)}
               onChoose={setDraft}
             />
           ) : (

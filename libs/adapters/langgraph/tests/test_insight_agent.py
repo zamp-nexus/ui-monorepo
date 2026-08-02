@@ -1,7 +1,7 @@
 """The Insight Agent's refusals, and what its error messages may carry.
 
 Already a standalone test when it lived in `test_graph_insight.py` — it built
-the agent directly and never touched the graph — so ADR-0023's deletion moved
+the agent directly and never touched the graph — so ADR-0026's deletion moved
 the file it sat in, not the test. Insight's behaviour inside the loop is
 covered by `apps/api/tests/test_loop_insight.py`.
 """

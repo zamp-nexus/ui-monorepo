@@ -1,11 +1,12 @@
 export type {
+  CatalogMember,
+  CatalogSummary,
   DependencyStatus,
   IdentityContext,
   Investigation,
   MetricComparison,
   ReadinessResponse,
   RejectionReason,
-  Scenario,
 } from './investigation';
 
 export type { ChatMessage, ChatRole, ChatSuggestion } from './chat';

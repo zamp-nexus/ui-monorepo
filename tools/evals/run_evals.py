@@ -30,10 +30,10 @@ from typing import Any
 from uuid import UUID
 
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     OrchestratorAgent,
-    SqlAnalystAgent,
 )
 from zentra_domain_agent_execution import (
     AgentInput,
@@ -47,6 +47,7 @@ from zentra_domain_agent_execution import (
     SemanticMeasure,
     SemanticQuery,
     SemanticResult,
+    ToolCall,
 )
 
 EVALS_ROOT = Path(__file__).resolve().parents[2] / "evals"
@@ -58,7 +59,7 @@ TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 # ungatable by omission.
 AGENT_IDS = {
     "orchestrator": "orchestrator_v1",
-    "sql_analyst": "sql_analyst_v1",
+    "cube_analyst": "cube_analyst_v1",
     "evaluator": "evaluator_v1",
     "insight": "insight_v1",
 }
@@ -123,18 +124,56 @@ class ReplayModel:
         self._index = 0
 
     async def complete(self, **kwargs: Any) -> ModelResponse:
+        # The closing turn — schema enforced, tools withdrawn — asks the agent
+        # to restate what it just said as the declared object. It is a reshaping
+        # of the previous response, not a new decision, so it replays that
+        # response rather than consuming another the case would have to pin.
+        closing = (
+            kwargs.get("response_schema") is not None
+            and not kwargs.get("tools")
+            and self._index > 0
+        )
+        if closing:
+            payload = self._responses[self._index - 1]
+            return self._respond(payload, kwargs)
+
         if self._index >= len(self._responses):
             raise AssertionError("Agent made more model calls than the case pins")
         payload = self._responses[self._index]
         self._index += 1
+        return self._respond(payload, kwargs)
+
+    def _respond(self, payload: Any, kwargs: dict[str, Any]) -> ModelResponse:
+        usage = ExecutionUsage(
+            input_tokens=100,
+            output_tokens=20,
+            cost_usd=Decimal("0.001"),
+            model=str(kwargs["model"]),
+        )
+
+        # A pinned response carrying a `query` is the agent choosing what to
+        # run. Agents that reach data do that by calling a tool now, so it is
+        # replayed as one — the case still pins the query the model chose,
+        # which is what the case is actually about, rather than the wire shape
+        # that happens to carry it.
+        if isinstance(payload, dict) and "query" in payload and kwargs.get("tools"):
+            return ModelResponse(
+                text="",
+                tool_calls=(
+                    ToolCall(
+                        call_id=f"call_{self._index}",
+                        name="semantic_query",
+                        arguments=payload["query"],
+                    ),
+                ),
+                stop_reason="tool_use",
+                usage=usage,
+                fallbacks=self._fallbacks,
+            )
+
         return ModelResponse(
             text=json.dumps(payload) if isinstance(payload, dict) else str(payload),
-            usage=ExecutionUsage(
-                input_tokens=100,
-                output_tokens=20,
-                cost_usd=Decimal("0.001"),
-                model=str(kwargs["model"]),
-            ),
+            usage=usage,
             fallbacks=self._fallbacks,
         )
 
@@ -196,8 +235,8 @@ def _build_agent(case: dict[str, Any]) -> Any:
         # make the case weaker than the agent.
         return InsightAgent(model=model)
     layer = ReplaySemanticLayer(case["catalog"], case.get("rows", []))
-    if agent == "sql_analyst":
-        return SqlAnalystAgent(model=model, semantic_layer=layer)
+    if agent == "cube_analyst":
+        return CubeAnalystAgent(model=model, semantic_layer=layer)
     if agent == "evaluator":
         return EvaluatorAgent(model=model, semantic_layer=layer)
     raise ValueError(f"Unknown agent in case: {agent}")

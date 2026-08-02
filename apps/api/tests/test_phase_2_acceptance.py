@@ -229,6 +229,7 @@ class _Harness:
 
 
 AUTH = {"Authorization": "Bearer t"}
+QUESTION = "Why did EU refunds increase from June to July 2026?"
 
 
 def _result(*, score: float = 0.91, converged: bool = True, **extra) -> PipelineResult:
@@ -243,7 +244,7 @@ def _result(*, score: float = 0.91, converged: bool = True, **extra) -> Pipeline
 async def _run(harness: _Harness, client: TestClient) -> dict:
     """Create an Investigation and execute it, returning the detail body."""
     created = client.post(
-        "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+        "/v1/investigations", json={"question": QUESTION}, headers=AUTH
     )
     assert created.status_code == 201, created.text
     identifier = created.json()["investigation_id"]
@@ -274,7 +275,7 @@ async def test_a_fully_evidenced_investigation_publishes_automatically(
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         assert created.status_code == 201, created.text
         detail = client.get(
@@ -312,26 +313,37 @@ async def test_a_viewer_cannot_create_an_investigation(bound_tenant) -> None:
     harness = _Harness(_result(), role="viewer")
     with harness as client:
         refused = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         assert refused.status_code == 403
     await harness.aclose()
 
 
 @pytest.mark.asyncio
-async def test_an_unknown_scenario_is_refused_without_echoing_the_input(
+async def test_a_refused_question_is_never_echoed_back(
     bound_tenant,
 ) -> None:
-    """Criterion 12, the sanitized-error half."""
+    """Criterion 12, the sanitized-error half.
+
+    A question is free text now (ADR-0023), so the rejected value is
+    attacker-controlled in a way a scenario key never was. FastAPI's default
+    validation handler puts that value in `input`; the one installed in
+    `main.py` does not.
+    """
     harness = _Harness(_result())
+    payload = "<script>alert(1)</script>"
     with harness as client:
-        refused = client.post(
-            "/v1/investigations",
-            json={"scenario_key": "<script>alert(1)</script>"},
-            headers=AUTH,
-        )
-        assert refused.status_code in {400, 422}
-        assert "<script>" not in refused.text
+        for body in (
+            # Over the length ceiling, refused by the request model.
+            {"question": payload * 400},
+            # Empty after normalisation, refused by the request model.
+            {"question": "   "},
+            # A field that no longer exists, refused as unknown.
+            {"scenario_key": payload},
+        ):
+            refused = client.post("/v1/investigations", json=body, headers=AUTH)
+            assert refused.status_code in {400, 422}
+            assert "<script>" not in refused.text
     await harness.aclose()
 
 
@@ -360,7 +372,7 @@ async def test_reading_an_investigation_twice_returns_the_same_state(
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
         # Creation queues durable execution, so reads must not take ownership
@@ -382,7 +394,7 @@ async def test_authentication_is_required_everywhere_it_matters(
     harness = _Harness(_result())
     with harness as client:
         for method, path in (
-            ("get", "/v1/scenarios"),
+            ("get", "/v1/catalog"),
             ("post", "/v1/investigations"),
             ("get", f"/v1/investigations/{uuid4()}"),
             ("post", f"/v1/investigations/{uuid4()}/evidence-deletion"),
@@ -481,17 +493,17 @@ def test_insight_is_the_only_role_that_may_produce_a_draft() -> None:
     author one, "which Agent said this?" would have more than one answer and
     Replay attribution would be a guess rather than a record.
     """
+    from zentra_adapter_langgraph.agents.cube_analyst import (
+        DESCRIPTOR as CUBE_ANALYST,
+    )
     from zentra_adapter_langgraph.agents.evaluator import DESCRIPTOR as EVALUATOR
     from zentra_adapter_langgraph.agents.insight import DESCRIPTOR as INSIGHT
     from zentra_adapter_langgraph.agents.orchestrator import (
         DESCRIPTOR as ORCHESTRATOR,
     )
-    from zentra_adapter_langgraph.agents.sql_analyst import (
-        DESCRIPTOR as SQL_ANALYST,
-    )
 
     authoring = {"claims", "headline"}
-    others = (ORCHESTRATOR, SQL_ANALYST, EVALUATOR)
+    others = (ORCHESTRATOR, CUBE_ANALYST, EVALUATOR)
     assert INSIGHT.output_fields & authoring, (
         "Insight no longer authors the Draft Finding"
     )
@@ -513,7 +525,7 @@ async def test_a_legacy_investigation_stays_readable(bound_tenant) -> None:
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
         detail = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
@@ -537,7 +549,7 @@ async def test_deletion_is_refused_on_a_live_investigation(bound_tenant) -> None
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
         refused = client.post(
@@ -560,7 +572,7 @@ async def test_deletion_requires_naming_the_investigation(bound_tenant) -> None:
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"scenario_key": "eu_refund_spike"}, headers=AUTH
+            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
         )
         identifier = created.json()["investigation_id"]
         refused = client.post(

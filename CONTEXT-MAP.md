@@ -33,7 +33,7 @@
 - **Trust & Verification → Connector**: confirming an inferred Relation is a governance decision in the same family as a Human Approval — it grants agents permission to act on something that could otherwise be wrong.
 - **Data Source → Investigation**: each Investigation binds one eligible Workspace Snapshot or Data Connection plus exact model and policy versions.
 - **Data Source → Semantic Modeling**: profiles and metadata may propose relationships and metrics; Tenant approval governs them.
-- **Agent Execution → Data Source**: SQL Analyst proposes a Governed Query Plan; deterministic policy authorizes and executes it.
+- **Agent Execution → Data Source**: the Cube Analyst proposes a Governed Query Plan; deterministic policy authorizes and executes it.
 - **Connector → Sequence**: a Source Table may seed a Sequence's raw input; a Sequence never reads a Source Field the Connector has not harvested.
 - **Data Source → Sequence**: a Dataset Table Version may seed a Sequence's raw input; the Dataset Workspace owns every Sequence built over its tables.
 - **Sequence → Agent Execution**: the Data Steward Agent proposes and executes each Sequence Step as one Agent Execution; the graph, not any single execution, is the durable record.

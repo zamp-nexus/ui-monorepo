@@ -1,6 +1,6 @@
 """When an Investigation is finished — and when it has merely stopped.
 
-ADR-0023 Phase 4. An Orchestrator Loop whose queue has emptied has not
+ADR-0026 Phase 4. An Orchestrator Loop whose queue has emptied has not
 established that the question is answered; it has established that it ran out
 of things it happened to schedule. Those are different claims, and a product
 that reports the second as the first is the confident-wrong-answer failure this

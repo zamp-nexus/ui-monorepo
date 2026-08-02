@@ -49,18 +49,43 @@ class ContextResponse(BaseModel):
     role: str
 
 
-class ScenarioResponse(BaseModel):
+class CatalogMemberResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    key: str
-    question: str
-    facts: list[str]
+    name: str
+    type: str
+    description: str | None = None
+    #: Only for dimensions, and only where the dimension holds few enough values
+    #: to enumerate. Empty means unconstrained, not empty.
+    values: list[str] = Field(default_factory=list)
+
+
+class CatalogSummaryResponse(BaseModel):
+    """What this tenant can actually be asked about.
+
+    Replaces the fixed list of governed scenarios (ADR-0023). A client that has
+    to offer the user a starting question needs the tenant's own vocabulary,
+    and this is the same governed catalog the Cube Analyst reasons over — so a
+    suggestion the UI makes is one the agent can genuinely answer.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    measures: list[CatalogMemberResponse]
+    dimensions: list[CatalogMemberResponse]
 
 
 class InvestigationCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    scenario_key: str
+    #: Free text (ADR-0023). Bounded here so an oversized body is refused at the
+    #: edge; the application normalises and re-validates it, since the Thread
+    #: path reaches the same service without passing through this model.
+    question: str = Field(min_length=1, max_length=4000)
+    #: Which Data Connection to ask it against. Omitted resolves to the
+    #: tenant's only connection, or the demo warehouse when it has none; a
+    #: tenant with several is asked to choose rather than guessed at.
+    data_connection_id: UUID | None = None
 
 
 class VisualizationResponse(BaseModel):
@@ -386,7 +411,8 @@ class InvestigationDetailResponse(BaseModel):
 
     investigation_id: UUID
     canonical_question: str
-    scenario_key: str
+    #: Present only on Investigations started before free-text questions.
+    scenario_key: str | None
     status: str
     version: int
     evaluation_attempts: int

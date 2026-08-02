@@ -1,6 +1,6 @@
 """Investigation Board and Work Item: the Investigation Engine's durable
-working memory and work queue (ADR-0023), plus the Analytical Scope an
-Intake Agent resolves a question against (ADR-0024).
+working memory and work queue (ADR-0026), plus the Analytical Scope an
+Intake Agent resolves a question against (ADR-0027).
 
 `role`'s CHECK is generated from the current `CANONICAL_ROLES`, the same
 pattern `agent_registry.role` uses (`schema.py`) — correct for this table's

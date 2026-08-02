@@ -65,14 +65,49 @@ async def test_catalog_exposes_governed_members_and_is_cached() -> None:
         "Commerce.orderedAt",
         "Commerce.region",
     }
-    # Discovered once and cached with the catalog: an agent that cannot see how
-    # a value is spelled filters on "North America" and silently gets nothing.
+    # Names and types only — no value probing here. Against a real tenant
+    # catalog of hundreds of dimensions, discovering every string dimension's
+    # values eagerly meant hundreds of sequential round trips before a single
+    # question could be read. `values_for` is where discovery actually happens.
     region = next(d for d in catalog.dimensions if d.name == "Commerce.region")
-    assert region.values == ("EU", "NA")
+    assert region.values == ()
     time_dimension = next(
         d for d in catalog.dimensions if d.name == "Commerce.orderedAt"
     )
     assert time_dimension.values == ()
+
+
+@pytest.mark.asyncio
+async def test_values_for_discovers_a_string_dimensions_values_once() -> None:
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    catalog = await layer.catalog()
+    region = next(d for d in catalog.dimensions if d.name == "Commerce.region")
+
+    discovered = await layer.values_for(region)
+    cached = await layer.values_for(discovered)
+
+    # A caller that cannot see how a value is spelled filters on "North
+    # America" and silently gets nothing.
+    assert discovered.values == ("EU", "NA")
+    assert cached.values == ("EU", "NA")
+    assert len(client.caller_queries) == 0
+    assert len(client.queries) == 1
+
+
+@pytest.mark.asyncio
+async def test_values_for_does_not_probe_a_non_string_dimension() -> None:
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    catalog = await layer.catalog()
+    time_dimension = next(
+        d for d in catalog.dimensions if d.name == "Commerce.orderedAt"
+    )
+
+    result = await layer.values_for(time_dimension)
+
+    assert result.values == ()
+    assert client.queries == []
 
 
 @pytest.mark.asyncio

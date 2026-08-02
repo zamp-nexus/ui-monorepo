@@ -1,7 +1,7 @@
 """What the real Agents do when the Orchestrator Loop drives them.
 
 Ported from `libs/adapters/langgraph/tests/test_graph.py`, which asserted the
-same things through `InvestigationGraph`. ADR-0023 replaced the mechanism; the
+same things through `InvestigationGraph`. ADR-0026 replaced the mechanism; the
 Agents and the properties below are unchanged, so the tests moved rather than
 went away.
 """
@@ -62,7 +62,7 @@ async def test_converged_run_produces_a_confidence_capped_by_the_recheck() -> No
     # Analyze, evaluate, draft. There is no planning execution any more: the
     # loop owns sequencing, so nothing asks a model what to do next.
     assert [record.role for record in recorder.records] == [
-        AgentRole.SQL_ANALYST,
+        AgentRole.CUBE_ANALYST,
         AgentRole.EVALUATOR,
         AgentRole.INSIGHT,
     ]
@@ -104,7 +104,7 @@ async def test_result_rows_never_leave_the_execution_record() -> None:
 
     await run(loop)
 
-    analyst = next(r for r in recorder.records if r.role is AgentRole.SQL_ANALYST)
+    analyst = next(r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST)
     assert analyst.output is not None
     assert analyst.output["rows"] == [{"Commerce.refundAmount": "260.00"}]
     # The Agent downstream of it is handed the state object; rows are absent.
@@ -135,7 +135,7 @@ async def test_the_retried_analyst_is_told_what_the_recheck_disagreed_with() -> 
     retries = [
         record
         for record in recorder.records
-        if record.role is AgentRole.SQL_ANALYST and "previous_issues" in record.input
+        if record.role is AgentRole.CUBE_ANALYST and "previous_issues" in record.input
     ]
     assert len(retries) == MAX_EVALUATION_ATTEMPTS - 1
     assert retries[0].input["previous_issues"] == ["Figures disagree."]
@@ -147,7 +147,7 @@ async def test_executions_carry_token_and_cost_attribution() -> None:
 
     await run(loop)
 
-    analyst = next(r for r in recorder.records if r.role is AgentRole.SQL_ANALYST)
+    analyst = next(r for r in recorder.records if r.role is AgentRole.CUBE_ANALYST)
     assert analyst.usage.input_tokens == 200
     assert analyst.usage.output_tokens == 40
     assert analyst.usage.cost_usd > 0

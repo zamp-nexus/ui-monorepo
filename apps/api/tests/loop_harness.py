@@ -8,7 +8,7 @@ between them.
 
 It replaces the harness that lived in `libs/adapters/langgraph/tests/
 test_graph.py`. Those tests exercised the same four Agents through
-`InvestigationGraph`; ADR-0023 deleted the graph, not the Agents, so the
+`InvestigationGraph`; ADR-0026 deleted the graph, not the Agents, so the
 coverage moved here rather than out.
 """
 
@@ -22,15 +22,14 @@ from typing import Any
 from uuid import UUID
 
 from zentra_adapter_langgraph import (
+    CubeAnalystAgent,
     EvaluatorAgent,
     InsightAgent,
     OrchestratorAgent,
-    SqlAnalystAgent,
 )
 from zentra_adapter_langgraph.schemas import (
     ANALYSIS_SCHEMA,
     DRAFT_FINDING_SCHEMA,
-    QUERY_PLAN_SCHEMA,
     RECHECK_SCHEMA,
     TASK_LEDGER_SCHEMA,
 )
@@ -48,6 +47,7 @@ from zentra_domain_agent_execution import (
     SemanticMeasure,
     SemanticQuery,
     SemanticResult,
+    ToolCall,
 )
 
 from zentra_api.orchestrator_loop import OrchestratorLoop, StepAgents
@@ -96,7 +96,7 @@ METRICS = [
 # asserting on real model identities rather than on role keys.
 ROLE_MODELS = {
     "orchestrator": "gemini/gemini-3-flash",
-    "sql_analyst": "cerebras/zai-glm-4.7",
+    "cube_analyst": "cerebras/zai-glm-4.7",
     "evaluator": "groq/openai/gpt-oss-120b",
     # Deliberately distinct from every other role, so a test asserting Insight's
     # attribution cannot pass by picking up another agent's model.
@@ -154,8 +154,52 @@ class ScriptedModel:
         messages: Sequence[ModelMessage],
         max_tokens: int,
         response_schema: dict[str, Any] | None = None,
+        tools: Sequence[Any] = (),
     ) -> ModelResponse:
         self.calls += 1
+
+        # The Cube Analyst and Evaluator reach data through a tool now, not a
+        # structured planning call. One round: call `semantic_query`, then
+        # answer. Detected from the conversation rather than a counter, since
+        # the Evaluator loop invokes the Analyst afresh on every attempt, each
+        # with its own tool instance — a retry has to query again exactly as a
+        # real model would.
+        if tools and not any(message.tool_results for message in messages):
+            return ModelResponse(
+                text="",
+                tool_calls=(
+                    ToolCall(
+                        call_id=f"call_{self.calls}",
+                        name="semantic_query",
+                        arguments=QUERY_PLAN["query"],
+                    ),
+                ),
+                stop_reason="tool_use",
+                usage=ExecutionUsage(
+                    input_tokens=50,
+                    output_tokens=10,
+                    cost_usd=Decimal("0.0005"),
+                    model=ROLE_MODELS[model],
+                ),
+                fallbacks=self._fallbacks,
+            )
+
+        # A tool-loop turn carries no schema: the Agent has finished calling
+        # tools and its prose is the answer, which the runtime then asks it to
+        # restate as the declared object on a closing schema-bearing call.
+        if response_schema is None:
+            return ModelResponse(
+                text="The governed result is ready to report.",
+                stop_reason="stop",
+                usage=ExecutionUsage(
+                    input_tokens=50,
+                    output_tokens=10,
+                    cost_usd=Decimal("0.0005"),
+                    model=ROLE_MODELS[model],
+                ),
+                fallbacks=self._fallbacks,
+            )
+
         payload = self._payload(response_schema)
         return ModelResponse(
             text=json.dumps(payload),
@@ -171,8 +215,6 @@ class ScriptedModel:
     def _payload(self, schema: dict[str, Any] | None) -> dict[str, Any]:
         if schema == TASK_LEDGER_SCHEMA:
             return {"tasks": self._tasks}
-        if schema == QUERY_PLAN_SCHEMA:
-            return QUERY_PLAN
         if schema == ANALYSIS_SCHEMA:
             index = min(self._analyses, len(self._measured_values) - 1)
             failed = self._analyses == self._failing_analysis
@@ -339,7 +381,7 @@ class StubRegistry:
         )
 
 
-PROMOTED = (AgentRole.SQL_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT)
+PROMOTED = (AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT)
 
 
 def build_loop(
@@ -376,7 +418,7 @@ def build_loop(
 
     def build(_semantic_layer: object) -> StepAgents:
         return StepAgents(
-            sql_analyst=SqlAnalystAgent(model=model, semantic_layer=layer),
+            cube_analyst=CubeAnalystAgent(model=model, semantic_layer=layer),
             evaluator=EvaluatorAgent(model=model, semantic_layer=layer),
             insight=insight if insight is not None else InsightAgent(model=model),
             planner=(

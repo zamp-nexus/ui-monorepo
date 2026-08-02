@@ -59,7 +59,6 @@ def new_investigation() -> Investigation:
         investigation_id=INVESTIGATION_ID,
         tenant_id=TENANT_ID,
         question="Why did EU refunds increase from June to July 2026?",
-        scenario_key="eu_refund_spike",
         now=NOW,
     )
 
@@ -82,7 +81,6 @@ def test_thread_link_must_be_complete_with_a_positive_sequence(
             investigation_id=INVESTIGATION_ID,
             tenant_id=TENANT_ID,
             question="Why did EU refunds increase?",
-            scenario_key="eu_refund_spike",
             now=NOW,
             thread_id=thread_id,
             thread_sequence=thread_sequence,

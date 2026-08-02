@@ -34,7 +34,7 @@ question.
    held open for the length of the pipeline.
 3. The Orchestrator Loop opens an `InvestigationBoard` with the question as
    its seed Knowledge Gap, and drives each step below as a persisted
-   `WorkItem` — see [[adr/0023-investigation-engine-owns-orchestration]]. It
+   `WorkItem` — see [[adr/0026-investigation-engine-owns-orchestration]]. It
    checks for a requested cancellation between Work Items, which is the only
    place a run can stop without abandoning an announced Agent Execution. The
    Orchestrator Agent plans first: it refuses the whole run if the registry

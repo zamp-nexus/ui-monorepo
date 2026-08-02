@@ -58,7 +58,7 @@
       "outcome": {
         "kind": "confidence",
         "score": 0.55,
-        "calibration_method": "sql_analyst_self_reported"
+        "calibration_method": "cube_analyst_self_reported"
       }
     }
   },

@@ -102,15 +102,16 @@ _STARTED_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000001")
 _CAPABILITY_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000002")
 _HANDOFF_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000003")
 _UPDATE_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000004")
+_TOOL_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000005")
 _CAPABILITY_BY_ROLE = {
     AgentRole.ORCHESTRATOR: "plan_investigation",
-    AgentRole.SQL_ANALYST: "query_semantic_metrics",
+    AgentRole.CUBE_ANALYST: "query_semantic_metrics",
     AgentRole.EVALUATOR: "validate_evidence",
     AgentRole.INSIGHT: "draft_finding",
 }
 _PREDECESSOR_BY_ROLE = {
-    AgentRole.SQL_ANALYST: "orchestrator_v1",
-    AgentRole.EVALUATOR: "sql_analyst_v1",
+    AgentRole.CUBE_ANALYST: "orchestrator_v1",
+    AgentRole.EVALUATOR: "cube_analyst_v1",
     AgentRole.INSIGHT: "evaluator_v1",
 }
 
@@ -245,6 +246,35 @@ class PostgresExecutionRecorder:
             # Same transaction as the row itself, so the ledger can never
             # disagree with what was actually persisted.
             await unit_of_work.outbox.enqueue([_audit_event(execution)])
+            # One event per tool the Agent ran, so the chat surface can say
+            # "searched the catalog, queried Cube" rather than showing a
+            # silent gap while an Agent iterates. The tool *name* is safe to
+            # publish; its arguments and results are not, and
+            # `AgentEventPayload` has nowhere to put them.
+            for index, invocation in enumerate(execution.tool_calls):
+                await unit_of_work.work_feed.append_for_investigation(
+                    tenant_id=execution.tenant_id,
+                    investigation_id=execution.investigation_id,
+                    kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
+                    payload=AgentEventPayload(
+                        execution_id=execution.execution_id,
+                        agent_id=execution.agent_id,
+                        role=execution.role.value,
+                        capability_id=invocation.name,
+                        summary=(
+                            f"Used {invocation.name.replace('_', ' ')}."
+                            if invocation.ok
+                            else f"{invocation.name.replace('_', ' ')} was refused."
+                        ),
+                    ),
+                    occurred_at=execution.completed_at,
+                    # Deterministic per (execution, position), like every other
+                    # id here: a redelivered record must not append the same
+                    # tool twice.
+                    event_id=uuid5(
+                        _TOOL_NAMESPACE, f"{execution.execution_id}:{index}"
+                    ),
+                )
             await unit_of_work.work_feed.append_for_investigation(
                 tenant_id=execution.tenant_id,
                 investigation_id=execution.investigation_id,

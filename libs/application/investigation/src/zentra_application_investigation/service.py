@@ -38,10 +38,10 @@ from zentra_domain_investigation import (
     WorkFeedEventKind,
     confidence_ceiling,
     evaluate_publication,
+    normalize_message_content,
 )
 
 from .dto import (
-    SCENARIOS,
     AuditDelivery,
     AuthenticatedActor,
     ConflictError,
@@ -53,7 +53,6 @@ from .dto import (
     Role,
     ScenarioUnavailableError,
     TimelineEntry,
-    UnsupportedScenarioError,
     UsageSummary,
 )
 from .ports import (
@@ -93,28 +92,23 @@ class InvestigationService:
         self,
         actor: AuthenticatedActor,
         *,
-        scenario_key: str,
+        question: str,
         data_connection_id: UUID | None = None,
     ) -> InvestigationDetail:
         """Register the investigation and return. The agents run afterwards, so
         the caller is not held open for the length of the pipeline."""
         self._require_create_role(actor)
-        scenario = SCENARIOS.get(scenario_key)
-        if scenario is None:
-            raise UnsupportedScenarioError(
-                # The key is deliberately not echoed. It is caller-controlled
-                # text, and an error that reflects it hands an attacker a way to
-                # put content of their choosing into a response the product
-                # vouches for. The caller already knows what it sent.
-                "Unsupported investigation scenario"
-            )
+        # The same normalisation every user-authored Thread Message gets: NFKC,
+        # control characters refused, length capped. A question is free text now
+        # (ADR-0023), so it needs the validator that already exists for free
+        # text rather than a second rule that can disagree with it.
+        question = normalize_message_content(question)
 
         now = self._now()
         investigation = Investigation.create(
             investigation_id=self._new_id(),
             tenant_id=actor.tenant_id,
-            question=scenario.question,
-            scenario_key=scenario_key,
+            question=question,
             now=now,
             data_connection_id=data_connection_id,
         )
@@ -344,7 +338,6 @@ class InvestigationService:
                 investigation_id=self._new_id(),
                 tenant_id=actor.tenant_id,
                 question=original.question,
-                scenario_key=original.scenario_key,
                 now=now,
                 data_connection_id=original.data_connection_id,
                 thread_id=original.thread_id,

@@ -311,50 +311,50 @@ def test_cursor_rejects_a_timezone_naive_timestamp() -> None:
 
 
 @pytest.mark.asyncio
-async def test_unsupported_first_message_persists_draft_and_clarification_only() -> (
-    None
-):
+async def test_a_resolved_first_message_activates_the_thread_and_queues_work() -> None:
+    """A question Intake resolves reaches an active Thread and a queued
+    Investigation in one step — no separate confirmation round."""
     value = repository()
 
     detail = await service(value).create(
-        actor(), project_id=PROJECT_ID, content="How is the business doing?"
+        actor(),
+        project_id=PROJECT_ID,
+        content="Why did EU refunds increase from June to July 2026?",
     )
 
-    assert detail.status is ThreadStatus.DRAFT
-    assert [message.kind.value for message in detail.messages] == [
-        "user_question",
-        "router_clarification",
-    ]
-    assert detail.investigation_id is None
-    assert value.investigations == {}
-    assert value.enqueued_events == 0
+    assert detail.status is ThreadStatus.ACTIVE
+    assert [message.kind.value for message in detail.messages] == ["user_question"]
+    assert detail.investigation_id is not None
+    investigation = value.investigations[detail.investigation_id]
+    assert (
+        investigation.question
+        == "Why did EU refunds increase from June to July 2026?"
+    )
+    assert len(value.jobs) == 1
     assert value.commits == 1
 
 
 @pytest.mark.asyncio
-async def test_later_clarification_resolves_without_losing_prior_messages() -> None:
+async def test_the_first_message_is_the_investigation_initiating_message() -> None:
+    """A Thread reaches its Investigation in one step when Intake resolves the
+    first message — no separate draft-then-clarify round."""
     value = repository()
     threads = service(value)
-    draft = await threads.create(
+
+    thread = await threads.create(
         actor(),
         project_id=PROJECT_ID,
-        content="Why did refunds increase from June to July?",
+        content="Why did EU refunds increase from June to July?",
     )
 
-    resolved = await threads.append(
-        actor(),
-        thread_id=draft.thread_id,
-        content="In Europe",
-    )
-
-    assert resolved.status is ThreadStatus.ACTIVE
-    assert resolved.investigation_id is not None
-    assert len(resolved.messages) == 3
-    investigation = value.investigations[resolved.investigation_id]
-    assert investigation.thread_id == draft.thread_id
-    assert investigation.initiating_message_id == resolved.messages[-1].message_id
+    assert thread.status is ThreadStatus.ACTIVE
+    assert thread.investigation_id is not None
+    assert len(thread.messages) == 1
+    investigation = value.investigations[thread.investigation_id]
+    assert investigation.thread_id == thread.thread_id
+    assert investigation.initiating_message_id == thread.messages[0].message_id
+    # `investigation.created` and `investigation.started`, enqueued together.
     assert value.enqueued_events == 2
-    assert len(value.jobs) == 1
     job = next(iter(value.jobs.values()))
     assert job.investigation_id == investigation.investigation_id
 
@@ -402,19 +402,22 @@ async def test_viewer_is_read_only_and_missing_thread_is_nondisclosing() -> None
 
 
 @pytest.mark.asyncio
-async def test_only_draft_threads_can_be_deleted() -> None:
+async def test_a_thread_carrying_analytical_work_cannot_be_deleted() -> None:
+    """Deletion is now unreachable for new Threads, and deliberately so.
+
+    Every first message queues an Investigation, so every new Thread carries
+    audited agent work from the moment it exists — and work that reached the
+    ledger must be archived, never made to vanish. The endpoint stays for
+    Draft Threads created before ADR-0023; archive is the path for the rest.
+    """
     value = repository()
     threads = service(value)
-    draft = await threads.create(
-        actor(), project_id=PROJECT_ID, content="What changed?"
-    )
-    active = await threads.create(
+    thread = await threads.create(
         actor(),
         project_id=PROJECT_ID,
         content="Why did EU refunds increase from June to July?",
     )
 
-    await threads.delete(actor(), draft.thread_id)
-    assert draft.thread_id not in value.threads
     with pytest.raises(ThreadConflictError):
-        await threads.delete(actor(), active.thread_id)
+        await threads.delete(actor(), thread.thread_id)
+    assert thread.thread_id in value.threads

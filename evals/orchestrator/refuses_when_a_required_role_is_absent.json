@@ -2,7 +2,7 @@
   "name": "refuses_when_a_required_role_is_absent",
   "agent": "orchestrator",
   "enabled_roles": [
-    "sql_analyst"
+    "cube_analyst"
   ],
   "state": {
     "question": "Why did EU refunds increase from June to July 2026?"
@@ -11,7 +11,7 @@
     {
       "tasks": [
         {
-          "role": "sql_analyst",
+          "role": "cube_analyst",
           "objective": "Quantify the movement."
         },
         {

@@ -15,6 +15,8 @@ def _free(
     provider: Provider,
     model: str,
     max_tokens: int = _FREE_MAX_TOKENS,
+    *,
+    supports_tools: bool = False,
 ) -> ModelChoice:
     """A free rung. The default is Groq's constraint, not everyone's.
 
@@ -23,11 +25,23 @@ def _free(
     Nemotron ran out of room analysing a 300-order result and the run failed
     with every other rung deliberately withheld.
     """
-    return ModelChoice(provider=provider, model=model, max_tokens=max_tokens)
+    return ModelChoice(
+        provider=provider,
+        model=model,
+        max_tokens=max_tokens,
+        supports_tools=supports_tools,
+    )
 
 
-def _paid(provider: Provider, model: str) -> ModelChoice:
-    return ModelChoice(provider=provider, model=model, max_tokens=_PAID_MAX_TOKENS)
+def _paid(
+    provider: Provider, model: str, *, supports_tools: bool = True
+) -> ModelChoice:
+    return ModelChoice(
+        provider=provider,
+        model=model,
+        max_tokens=_PAID_MAX_TOKENS,
+        supports_tools=supports_tools,
+    )
 
 
 # Ordered by measured Artificial Analysis Intelligence Index v4.1, not vendor
@@ -35,6 +49,15 @@ def _paid(provider: Provider, model: str) -> ModelChoice:
 # gpt-oss-120b 24; Opus 5 61 > GPT-5.5 55 > Sonnet 5 53. Sonnet 5 still leads
 # the premium workhorse chain because it reaches 96% of GPT-5.5's score at
 # roughly a third of the blended price.
+# `supports_tools` is False despite Gemini supporting tools natively. Verified
+# live on 2026-08-02: through the OpenAI-compatible endpoint it accepts the
+# first tool turn and then rejects the transcript on the second with
+# "Function call is missing a thought_signature in functionCall parts". Gemini 3
+# requires its own opaque signature echoed back on every assistant tool turn,
+# which the OpenAI wire format has nowhere to carry.
+#
+# It stays first on every chain for the one-shot structured calls, where it is
+# the highest-Index free rung and works perfectly.
 _GEMINI_FLASH = _free(Provider.GEMINI, "gemini-3.6-flash")
 
 # Verified 2026-07-29 against the live NIM endpoint: it honours strict
@@ -49,6 +72,7 @@ _NVIDIA_NEMOTRON = _free(
     Provider.NVIDIA,
     "nvidia/nemotron-3-ultra-550b-a55b",
     max_tokens=_PAID_MAX_TOKENS,
+    supports_tools=True,
 )
 
 # Ranks below Groq everywhere despite the higher Index score. Verified live on
@@ -56,9 +80,22 @@ _NVIDIA_NEMOTRON = _free(
 # to it is a guaranteed wasted round trip. Cerebras also deprecates this model
 # on 2026-08-17. Kept as a late rung so a working key still helps, but nothing
 # depends on it — fallback would hide its death rather than surface it.
+#
+# `supports_tools` stays False for that same reason: the 402 means tool support
+# has never been *observed* on this account, which is not the same as having
+# been found absent, and claiming it would be a guess.
 _CEREBRAS_GLM = _free(Provider.CEREBRAS, "zai-glm-4.7")
 
-_GROQ_OSS = _free(Provider.GROQ, "openai/gpt-oss-120b")
+_GROQ_OSS = _free(Provider.GROQ, "openai/gpt-oss-120b", supports_tools=True)
+
+# An alias, not a model: it resolves to whatever is free today — a live run
+# landed on `nvidia/nemotron-nano-9b-v2:free`. No single answer about its tool
+# support stays true, so it does not claim any.
+#
+# Neither this nor Cerebras is a dead rung. Both still serve the one-shot
+# structured calls the Orchestrator and Insight make; they are skipped only
+# when tools are actually requested, and the skip is recorded in `fallbacks`
+# like every other.
 _OPENROUTER_FREE = _free(Provider.OPENROUTER, "openrouter/free")
 
 _SONNET = _paid(Provider.ANTHROPIC, "claude-sonnet-5")
@@ -66,7 +103,7 @@ _OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5")
 _GPT = _paid(Provider.OPENAI, "gpt-5.5")
 
 # The Evaluator's chain deliberately starts on a different vendor and model
-# family from the SQL Analyst, so the independent recheck stays independent
+# family from the Cube Analyst, so the independent recheck stays independent
 # without costing anything. OpenAI is absent from the free chains: at $4.35
 # blended it is worse value than falling straight through to Sonnet 5.
 ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
@@ -90,7 +127,7 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
             _OPENROUTER_FREE,
             _SONNET,
         ),
-        AgentRole.SQL_ANALYST: (
+        AgentRole.CUBE_ANALYST: (
             _GEMINI_FLASH,
             _NVIDIA_NEMOTRON,
             _GROQ_OSS,
@@ -123,7 +160,7 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
     ModelTier.PREMIUM: {
         AgentRole.INTAKE: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
-        AgentRole.SQL_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
+        AgentRole.CUBE_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.EVALUATOR: (_OPUS, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.INSIGHT: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
     },
