@@ -31,7 +31,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "workspace_groups",
         "chat_sessions",
         "messages",
-        "thread_events",
+        "activity_events",
         "execution_jobs",
         "visualization_briefs",
         "visualization_artifacts",

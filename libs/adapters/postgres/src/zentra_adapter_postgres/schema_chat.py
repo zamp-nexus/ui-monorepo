@@ -16,30 +16,32 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from ._metadata import metadata
 
-thread_events = Table(
-    "thread_events",
+activity_events = Table(
+    "activity_events",
     metadata,
     Column("event_id", UUID(as_uuid=True), primary_key=True),
     Column("tenant_id", UUID(as_uuid=True), nullable=False),
-    Column("thread_id", UUID(as_uuid=True), nullable=False),
+    Column("chat_session_id", UUID(as_uuid=True), nullable=False),
     Column("sequence", Integer, nullable=False),
     Column("kind", String(64), nullable=False),
     Column("payload", JSON, nullable=False),
     Column("occurred_at", TIMESTAMP(timezone=True), nullable=False),
     ForeignKeyConstraint(
-        ("thread_id", "tenant_id"),
-        ("investigation_threads.thread_id", "investigation_threads.tenant_id"),
-        name="fk_thread_events_thread_tenant",
+        ("chat_session_id", "tenant_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
+        name="fk_activity_events_chat_session_tenant",
         ondelete="CASCADE",
     ),
-    UniqueConstraint("thread_id", "sequence", name="uq_thread_events_sequence"),
-    CheckConstraint("sequence >= 1", name="ck_thread_events_sequence"),
+    UniqueConstraint(
+        "chat_session_id", "sequence", name="uq_activity_events_sequence"
+    ),
+    CheckConstraint("sequence >= 1", name="ck_activity_events_sequence"),
 )
 Index(
-    "ix_thread_events_tenant_thread_sequence",
-    thread_events.c.tenant_id,
-    thread_events.c.thread_id,
-    thread_events.c.sequence,
+    "ix_activity_events_tenant_chat_session_sequence",
+    activity_events.c.tenant_id,
+    activity_events.c.chat_session_id,
+    activity_events.c.sequence,
 )
 
 
@@ -48,21 +50,21 @@ visualization_briefs = Table(
     metadata,
     Column("brief_id", UUID(as_uuid=True), primary_key=True),
     Column("tenant_id", UUID(as_uuid=True), nullable=False),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("schema_version", String(16), nullable=False),
     Column("content", JSON),
     Column("content_hash", String(64), nullable=False),
     Column("renderer_configuration", String(200), nullable=False),
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_visualization_briefs_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_visualization_briefs_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     UniqueConstraint(
         "tenant_id",
-        "investigation_id",
+        "analysis_run_id",
         "schema_version",
         "content_hash",
         "renderer_configuration",
@@ -79,7 +81,7 @@ visualization_artifacts = Table(
     metadata,
     Column("visualization_id", UUID(as_uuid=True), primary_key=True),
     Column("tenant_id", UUID(as_uuid=True), nullable=False),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column(
         "brief_id",
         UUID(as_uuid=True),
@@ -108,9 +110,9 @@ visualization_artifacts = Table(
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_visualization_artifacts_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_visualization_artifacts_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
@@ -148,8 +150,8 @@ visualization_actions = Table(
     Column("action_id", UUID(as_uuid=True), primary_key=True),
     Column("tenant_id", UUID(as_uuid=True), nullable=False),
     Column("visualization_id", UUID(as_uuid=True), nullable=False),
-    Column("thread_id", UUID(as_uuid=True), nullable=False),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("chat_session_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("kind", String(32), nullable=False),
     Column("label", String(80), nullable=False),
     Column("citation_id", UUID(as_uuid=True)),
@@ -168,15 +170,15 @@ visualization_actions = Table(
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("thread_id", "tenant_id"),
-        ("investigation_threads.thread_id", "investigation_threads.tenant_id"),
-        name="fk_visualization_actions_thread_tenant",
+        ("chat_session_id", "tenant_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
+        name="fk_visualization_actions_chat_session_tenant",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_visualization_actions_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_visualization_actions_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     CheckConstraint(
