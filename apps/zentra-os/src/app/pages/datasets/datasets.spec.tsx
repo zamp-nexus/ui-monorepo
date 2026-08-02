@@ -1,7 +1,7 @@
 /// <reference types="vitest/globals" />
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import type { IdentityContext } from '../../types';
 
@@ -86,7 +86,16 @@ const renderPage = () => {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
-        <DatasetsPage getToken={getToken} identity={identity} />
+        <Routes>
+          <Route
+            path="/"
+            element={<DatasetsPage getToken={getToken} identity={identity} />}
+          />
+          <Route
+            path="/datasets/:dataSourceId/tables/:tableName/rows"
+            element={<p>rows page reached</p>}
+          />
+        </Routes>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -116,6 +125,21 @@ describe('Datasets', () => {
     expect(await screen.findByText('purchase_completed')).toBeTruthy();
     expect(screen.getByText(/7,054 rows/)).toBeTruthy();
     expect(screen.getByText(/2 cols/)).toBeTruthy();
+  });
+
+  it('browses rows for a table, without opening the schema modal', async () => {
+    route({
+      '/catalog': { body: CATALOG },
+      '/v1/connector/sources': { body: [SOURCE] },
+    });
+
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: /browse rows/i }),
+    );
+
+    expect(await screen.findByText('rows page reached')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeFalsy();
   });
 
   it('opens a table and shows every column with its declared type', async () => {

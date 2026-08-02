@@ -1,6 +1,11 @@
 import { requestJson, type TokenSource } from '../../api';
 
-import type { AgentAccessResponse, CatalogResponse, HarvestResponse } from './types';
+import type {
+  AgentAccessResponse,
+  CatalogResponse,
+  HarvestResponse,
+  TableRowsResponse,
+} from './types';
 
 /**
  * The latest catalog for a source.
@@ -50,6 +55,25 @@ export const setTableAgentAccess = (
     `/v1/connector/sources/${dataSourceId}/tables/${encodeURIComponent(tableName)}/agent-access`,
     getToken,
     { method: 'PATCH', body: JSON.stringify({ agent_visible: agentVisible }) },
+  );
+
+/**
+ * One page of a Source Table's raw rows.
+ *
+ * 404/503 both mean "not ready yet" here — a table can 404 (not harvested, or
+ * renamed since) or 503 (Cube hasn't generated/can't reach its cube yet), and
+ * the reader is told the same thing either way; see `rows-page.tsx`.
+ */
+export const getTableRows = (
+  getToken: TokenSource,
+  dataSourceId: string,
+  tableName: string,
+  page: number,
+) =>
+  requestJson<TableRowsResponse>(
+    `/v1/connector/sources/${dataSourceId}/tables/${encodeURIComponent(tableName)}` +
+      `/rows?page=${page}`,
+    getToken,
   );
 
 /** Hide or reveal one field from the agent system. */

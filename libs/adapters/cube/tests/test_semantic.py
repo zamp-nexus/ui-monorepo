@@ -131,3 +131,25 @@ async def test_ungoverned_member_is_refused_before_any_query_runs() -> None:
         await layer.query(SemanticQuery(measures=("commerce_facts.margin",)))
 
     assert client.caller_queries == []
+
+
+@pytest.mark.asyncio
+async def test_load_raw_bypasses_governance_and_forwards_the_query_verbatim() -> None:
+    """A dimension outside the governed catalog must not be refused here.
+
+    `load_raw` is the escape hatch a raw row-browse route uses — its whole
+    point is to skip `reject_ungoverned` for a caller that already trusts its
+    own dimension list.
+    """
+    client = StubCubeClient()
+    layer = CubeSemanticLayer(client)
+    query = {
+        "dimensions": ["orders_raw.status"],
+        "limit": 50,
+        "offset": 0,
+        "total": True,
+    }
+
+    await layer.load_raw(query)
+
+    assert client.queries == [query]

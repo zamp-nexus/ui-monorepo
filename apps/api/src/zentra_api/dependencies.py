@@ -110,6 +110,10 @@ class AppDependencies:
     #: AttributeError — whenever this is unset.
     worker_task: asyncio.Task[None] | None = None
     connector: ConnectorService | None = None
+    #: Exposed so routes that need a raw, tenant-scoped Cube query (bypassing
+    #: `CubeSemanticLayer.query()`'s governed-metrics gate) can reach one —
+    #: `connector_rows_routes.py` is the only current caller.
+    cube_semantic_layers: ScopedCubeSemanticLayers | None = None
 
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
@@ -265,6 +269,7 @@ class AppDependencies:
             registry=registry,
             visualizations=visualizations,
             connector=connector,
+            cube_semantic_layers=semantic_layers,
         )
 
     async def start(self) -> None:

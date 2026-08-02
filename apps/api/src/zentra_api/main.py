@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from zentra_adapter_telemetry import TelemetrySettings, configure_telemetry
 
 from .connector_routes import router as connector_router
+from .connector_rows_routes import router as connector_rows_router
 from .dependencies import AppDependencies
 from .internal_cube_routes import router as internal_cube_router
 from .routes import router
@@ -65,6 +66,7 @@ def create_app(
     )
     api.include_router(router)
     api.include_router(connector_router)
+    api.include_router(connector_rows_router)
     api.include_router(workspace_router)
     api.include_router(internal_cube_router)
     api.include_router(thread_router)
