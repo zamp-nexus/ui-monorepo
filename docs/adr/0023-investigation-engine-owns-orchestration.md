@@ -184,3 +184,57 @@ Agents through the graph became 21 in `apps/api/tests/test_loop_agents.py` and
 model and semantic layer) plus 8 standalone agent tests in the adapter. The
 exceptions are the two LangGraph checkpointer-resume tests and
 `test_checkpoints.py`, which tested the capability this ADR removes.
+
+## Phase 3 status
+
+Implemented, including the reactive planning Phase 2 deferred. The loop lives
+in `apps/api/src/zentra_api/orchestrator_loop.py` — split out of `pipeline.py`,
+which crossed the 600-line limit — and now runs:
+
+1. **Plan.** `OrchestratorAgent` proposes follow-up measurements. This runs
+   *first*, before anything is measured, because it is also the registry's
+   capability gate: a deployment that must refuse should refuse before it
+   spends, not after the Analyst and its recheck have run.
+2. **Measure.** The primary question, through the unchanged
+   ≤`MAX_EVALUATION_ATTEMPTS` Evaluator-Optimizer loop, now extracted as
+   `_measure` so it is reusable.
+3. **Fan out.** Accepted follow-ups run concurrently as child Work Items whose
+   `parent_work_item_id` and `depends_on` name the measurement they came from
+   — the emergent graph, grown by the Board rather than drawn in advance.
+   Each earns its own Evaluator recheck; evidence nobody rechecked is not
+   evidence this product cites.
+4. **Merge.** Facts land on the shared Board. Two measurements of the same
+   metric over the same period that disagree open a `Conflict`
+   (`InvestigationBoard.contradicted_by`); the same values are corroboration,
+   not a conflict.
+5. **Settle.** Every Conflict is *documented*, never resolved — the loop has
+   no evidence to say which measurement was right, and a third query would be
+   a third opinion, not an arbiter. `_require_settled_conflicts` then fails
+   closed before Insight, guarding a path that does not exist yet (a Phase 4
+   loop deferring a Conflict to a human).
+
+Acceptance is rule-based, per this ADR's Decision: `_accept` takes a proposal
+only if its role has a runtime that can measure, it carries an objective, and
+that objective is new; the cap applies last so junk arriving first cannot
+consume a slot. The registry gate Phase 2 recorded as unenforced is enforced
+again — `dependencies.py` passes the registry into `build_agents_factory`.
+
+Deliberate limits, so they are not mistaken for oversights:
+
+- **Insight still drafts from the primary measurement alone.** Feeding it N
+  analysts would change `InsightAgent`'s schema, and this phase does not
+  modify agent contracts. A follow-up that disagrees therefore reaches the
+  reader as a documented Conflict on the outcome's contradictions, not as
+  something Insight reasoned about.
+- **A failing follow-up does not fail the run.** Its Work Item is REJECTED and
+  its Agent Execution recorded, so Replay shows it, and its Knowledge Gap
+  stays *open* — the honest record that something here is still unanswered.
+- **Fan-out is one level deep.** Children do not themselves fan out.
+- **The cap is a constructor parameter** (`MAX_FANOUT_WORK_ITEMS = 3`), not a
+  per-Tenant budget. There is no budget field on `tenants` to extend, and
+  inventing a schema before anyone has said what a Tenant's analytical budget
+  is would be guessing. This is the seam that change lands on.
+
+`InvestigationBoardRepository` gained `open_conflict` and `settle_conflict`;
+the `board_conflicts` table existed since migration 0020 and had nothing
+writing to it. Crash recovery is still unbuilt.

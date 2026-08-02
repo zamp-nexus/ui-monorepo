@@ -35,9 +35,17 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
   `WorkItem` queue instead of a compiled LangGraph graph
   ([[adr/0023-investigation-engine-owns-orchestration]]), with the
   Evaluator-Optimizer loop still exiting hard at three attempts. The graph,
-  its Postgres checkpointer and the `langgraph` dependency are deleted; the
-  loop is not yet reactive, and resuming a crashed run from its Board is not
-  yet built.
+  its Postgres checkpointer and the `langgraph` dependency are deleted.
+  Resuming a crashed run from its Board is not yet built.
+- Reactive orchestration: the Orchestrator Agent plans first (refusing the run
+  outright when the registry has not promoted a required role), and the loop
+  accepts its follow-up proposals *by rule* before running them concurrently
+  as child Work Items that name the measurement they came from. Their Facts
+  land on the shared `InvestigationBoard`, where two measurements of one metric
+  over one period that disagree open a Conflict — documented rather than
+  silently resolved, and carried to the reader. Fan-out is one level deep and
+  capped at three; the cap is a constructor parameter, not yet a per-Tenant
+  budget.
 - Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
   replacing the two-scenario keyword whitelist
   ([[adr/0024-analytical-scope-replaces-scenario-whitelist]]); the two

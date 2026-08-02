@@ -55,11 +55,8 @@ from .audit_delivery import AuditDeliveryCoordinator
 from .auth import ClerkJwtVerifier
 from .connector_model import relation_fingerprint
 from .cube_scope import ScopedCubeSemanticLayers
-from .pipeline import (
-    OrchestratorLoop,
-    PostgresExecutionRecorder,
-    build_agents_factory,
-)
+from .orchestrator_loop import OrchestratorLoop, build_agents_factory
+from .pipeline import PostgresExecutionRecorder
 from .registry import PostgresAgentRegistry
 from .settings import Settings
 
@@ -149,8 +146,14 @@ class AppDependencies:
         # ADR-0023: the Investigation Engine's Board and Work Item queue
         # are the platform controller. There is no graph to build any more —
         # the loop holds the Agents directly.
+        #
+        # The registry is what makes the planner fail closed: it refuses the
+        # run outright when a required role has no enabled, eval-passing agent,
+        # rather than fanning out to a capability nobody promoted.
         agents_factories = {
-            tier: build_agents_factory(tier=tier, models=models, breaker=breaker)
+            tier: build_agents_factory(
+                tier=tier, models=models, breaker=breaker, registry=registry
+            )
             for tier in ModelTier
         }
 

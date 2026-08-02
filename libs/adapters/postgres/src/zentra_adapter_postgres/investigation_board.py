@@ -7,6 +7,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_domain_agent_execution import AgentRole
 from zentra_domain_investigation import (
+    Conflict,
     EvidenceReference,
     Fact,
     InvestigationBoard,
@@ -15,7 +16,13 @@ from zentra_domain_investigation import (
     WorkItemStatus,
 )
 
-from .schema import board_facts, board_gaps, investigation_boards, work_items
+from .schema import (
+    board_conflicts,
+    board_facts,
+    board_gaps,
+    investigation_boards,
+    work_items,
+)
 
 
 class PostgresInvestigationBoardRepository:
@@ -92,6 +99,30 @@ class PostgresInvestigationBoardRepository:
                 producing_work_item_id=fact.producing_work_item_id,
                 evidence_refs=[ref.value for ref in fact.evidence_refs],
             )
+        )
+
+    async def open_conflict(
+        self, board_id: UUID, tenant_id: UUID, conflict: Conflict
+    ) -> None:
+        await self._connection.execute(
+            insert(board_conflicts).values(
+                conflict_id=conflict.conflict_id,
+                board_id=board_id,
+                tenant_id=tenant_id,
+                description=conflict.description,
+                status=conflict.status.value,
+                resolution=conflict.resolution,
+            )
+        )
+
+    async def settle_conflict(self, tenant_id: UUID, conflict: Conflict) -> None:
+        await self._connection.execute(
+            update(board_conflicts)
+            .where(
+                board_conflicts.c.conflict_id == conflict.conflict_id,
+                board_conflicts.c.tenant_id == tenant_id,
+            )
+            .values(status=conflict.status.value, resolution=conflict.resolution)
         )
 
 
