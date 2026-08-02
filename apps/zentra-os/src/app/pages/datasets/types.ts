@@ -102,3 +102,14 @@ export const TERMINAL_PHASES: readonly HarvestPhase[] = [
 
 export const isTerminal = (phase: HarvestPhase): boolean =>
   TERMINAL_PHASES.includes(phase);
+
+/** One page of a Source Table's raw rows, read straight through Cube. */
+export interface TableRowsResponse {
+  readonly data_source_id: string;
+  readonly table_name: string;
+  readonly columns: readonly string[];
+  readonly rows: readonly (string | null)[][];
+  readonly total: number;
+  readonly page: number;
+  readonly page_size: number;
+}
