@@ -36,6 +36,10 @@ from .draft_finding import (
 )
 from .erasure import PostgresErasureRepository
 from .execution_job import PostgresExecutionJobRepository
+from .investigation_board import (
+    PostgresInvestigationBoardRepository,
+    PostgresWorkItemRepository,
+)
 from .schema import (
     agent_executions,
     audit_outbox,
@@ -607,6 +611,8 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
         )
         self.work_feed = PostgresWorkFeedRepository(connection)
         self.visualizations = PostgresVisualizationRepository(connection)
+        self.investigation_boards = PostgresInvestigationBoardRepository(connection)
+        self.work_items = PostgresWorkItemRepository(connection)
         self.should_commit = False
 
     async def commit(self) -> None:

@@ -12,6 +12,14 @@ _Avoid_: Bot, participant, human reviewer
 One bounded invocation of an Agent for one Investigation and Tenant.
 _Avoid_: Agent run, task process
 
+**Orchestrator Loop**:
+The deterministic application service that stewards an Investigation: observes the Investigation Board, matches open Knowledge Gaps to registered Agent capabilities, assigns Work Items, merges returned artifacts, and decides Completion Criteria. Not an Agent and never owns a conclusion — it may consult the Orchestrator Agent for planning proposals, but acceptance and completion are rule-based. See [[adr/0023-investigation-engine-owns-orchestration]].
+_Avoid_: Pipeline, graph, controller
+
+**Intake Agent**:
+A registered Agent, canonical role `intake`, that resolves a Thread's question against the Tenant's Analytical Scope — either creating an Investigation and its Board or asking a clarifying question grounded in the scoped catalog. See [[adr/0024-analytical-scope-replaces-scenario-whitelist]].
+_Avoid_: Router, classifier
+
 **Insight Agent**:
 A registered Agent that turns validated upstream evidence into a Draft Finding without claiming causality the evidence cannot establish. Its canonical role value is `insight`; `insight_root_cause` is a read-only compatibility value that Phase 1 wrote and nothing writes again.
 _Avoid_: Root-Cause Agent, Finding writer, synthesis step

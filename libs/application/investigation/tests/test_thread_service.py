@@ -24,6 +24,7 @@ from zentra_application_investigation import (
 )
 from zentra_application_investigation.thread_dto import (
     RoutingDisposition,
+    RoutingResult,
     ThreadConflictError,
     ThreadCursor,
     ThreadCursorError,
@@ -31,10 +32,7 @@ from zentra_application_investigation.thread_dto import (
     ThreadSlice,
     ThreadSummary,
 )
-from zentra_application_investigation.thread_routing import (
-    deterministic_thread_title,
-    route_governed_question,
-)
+from zentra_application_investigation.thread_routing import deterministic_thread_title
 from zentra_application_investigation.thread_service import ThreadService
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
@@ -224,6 +222,36 @@ class UnitOfWorkFactory:
         return UnitOfWork(self.repository)
 
 
+class FakeIntake:
+    """Resolves exactly what the EU refund fixture question needs.
+
+    A trimmed stand-in for an LLM-based Intake Agent: RESOLVED only when the
+    text mentions both a refund and Europe, so a bare first message can stay
+    unresolved until a later clarification ("In Europe") completes it —
+    exercising the same "resolves without losing prior messages" path a real
+    Intake Agent must support.
+    """
+
+    async def resolve(self, question: str, *, tenant_id: UUID) -> RoutingResult:
+        del tenant_id
+        normalized = question.casefold()
+        if "refund" in normalized and ("eu" in normalized or "europe" in normalized):
+            return RoutingResult(
+                disposition=RoutingDisposition.RESOLVED,
+                scenario_key="fake_eu_refund",
+                canonical_question=question.strip(),
+                clarification=None,
+                suggestions=(),
+            )
+        return RoutingResult(
+            disposition=RoutingDisposition.UNSUPPORTED,
+            scenario_key=None,
+            canonical_question=None,
+            clarification="I could not map that message to a governed question.",
+            suggestions=(),
+        )
+
+
 def actor(role: Role = Role.MEMBER) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=uuid4(),
@@ -255,46 +283,10 @@ def repository() -> Repository:
 def service(value: Repository) -> ThreadService:
     return ThreadService(
         unit_of_work_factory=UnitOfWorkFactory(value),
+        intake=FakeIntake(),
         now=lambda: NOW,
         new_id=uuid4,
     )
-
-
-@pytest.mark.parametrize(
-    ("question", "scenario_key"),
-    [
-        (
-            "Why did EU refunds increase from June to July 2026?",
-            "eu_refund_spike",
-        ),
-        (
-            "Explain European refund changes between June and July",
-            "eu_refund_spike",
-        ),
-        (
-            "Which North America sales channel drove revenue from Oct to Nov?",
-            "na_channel_growth",
-        ),
-    ],
-)
-def test_router_resolves_exact_questions_and_paraphrases(
-    question: str, scenario_key: str
-) -> None:
-    result = route_governed_question(question)
-
-    assert result.disposition is RoutingDisposition.RESOLVED
-    assert result.scenario_key == scenario_key
-
-
-def test_router_refuses_ambiguity_and_scenario_key_injection() -> None:
-    ambiguous = route_governed_question(
-        "EU refunds June July and North America channel revenue October November"
-    )
-    injected = route_governed_question("eu_refund_spike")
-
-    assert ambiguous.disposition is RoutingDisposition.AMBIGUOUS
-    assert injected.disposition is RoutingDisposition.UNSUPPORTED
-    assert len(injected.suggestions) == 2
 
 
 def test_title_is_deterministic_and_bounded_without_a_model() -> None:

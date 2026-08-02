@@ -29,9 +29,17 @@ code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
 - Eight Cube-governed commerce metrics and two deterministic seeds: the
   eight-order EU refund spike and the three-hundred-order NA channel growth.
 - Phase 1A Investigation lifecycle, API, and Forensic Observatory.
-- Phase 1 agent trust loop: Orchestrator, SQL Analyst, and Evaluator as
-  `AgentPort` implementations over a LangGraph graph, with the
-  Evaluator-Optimizer loop exiting hard at three attempts.
+- Phase 1 agent trust loop: SQL Analyst, Evaluator, and Insight as
+  unmodified `AgentPort` implementations, now driven serially by an
+  `OrchestratorLoop` against a durable Postgres `InvestigationBoard` and
+  `WorkItem` queue instead of a compiled LangGraph graph
+  ([[adr/0023-investigation-engine-owns-orchestration]]), with the
+  Evaluator-Optimizer loop still exiting hard at three attempts.
+- Chat routing through an `IntakeAgent` reading a Tenant's governed catalog,
+  replacing the two-scenario keyword whitelist
+  ([[adr/0024-analytical-scope-replaces-scenario-whitelist]]); the two
+  fixture scenarios below are no longer the only questions chat can resolve,
+  though a real per-Tenant Analytical Scope is not yet configurable.
 - Confidence bounded by evidence before it meets the Tenant threshold — a
   sample-size ceiling and a three-level independence ceiling, with
   `calibration_method` naming whichever bound applied

@@ -11,6 +11,7 @@ from pydantic.types import JsonValue
 
 
 class AgentRole(StrEnum):
+    INTAKE = "intake"
     ORCHESTRATOR = "orchestrator"
     DATA_INTAKE = "data_intake"
     DATA_QUALITY = "data_quality"

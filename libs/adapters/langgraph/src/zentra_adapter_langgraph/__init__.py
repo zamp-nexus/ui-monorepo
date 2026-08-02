@@ -7,6 +7,7 @@ from .agents.insight import (
     UngroundedClaimError,
     UnsupportedCausalClaimError,
 )
+from .agents.intake import IntakeAgent
 from .agents.orchestrator import NoEnabledAgentError, OrchestratorAgent
 from .agents.sql_analyst import SqlAnalystAgent
 from .checkpoints import PostgresCheckpointStore
@@ -23,6 +24,7 @@ __all__ = [
     "EvaluatorAgent",
     "InsightAgent",
     "InsightOutcome",
+    "IntakeAgent",
     "InvestigationGraph",
     "MalformedAgentResponseError",
     "NoEnabledAgentError",

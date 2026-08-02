@@ -39,6 +39,8 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0020-thesys-terminal-presentation]]
 - [[adr/0021-visualization-brief-factual-separation]]
 - [[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]] (amends 0012)
+- [[adr/0023-investigation-engine-owns-orchestration]] (amends 0011, 0018)
+- [[adr/0024-analytical-scope-replaces-scenario-whitelist]] (amends Investigation Domain routing invariant)
 
 ## Governance
 

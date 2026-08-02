@@ -95,6 +95,7 @@
       },
       "AgentRole": {
         "enum": [
+          "intake",
           "orchestrator",
           "data_intake",
           "data_quality",

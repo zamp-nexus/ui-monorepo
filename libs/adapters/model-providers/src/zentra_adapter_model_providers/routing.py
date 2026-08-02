@@ -71,6 +71,17 @@ _GPT = _paid(Provider.OPENAI, "gpt-5.5")
 # blended it is worse value than falling straight through to Sonnet 5.
 ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
     ModelTier.FREE: {
+        # Intake classifies a question against a scoped catalog before any
+        # Investigation exists — the same light workload shape as planning,
+        # so it inherits the Orchestrator's chain rather than getting its own.
+        AgentRole.INTAKE: (
+            _GEMINI_FLASH,
+            _NVIDIA_NEMOTRON,
+            _GROQ_OSS,
+            _CEREBRAS_GLM,
+            _OPENROUTER_FREE,
+            _SONNET,
+        ),
         AgentRole.ORCHESTRATOR: (
             _GEMINI_FLASH,
             _NVIDIA_NEMOTRON,
@@ -110,6 +121,7 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
         ),
     },
     ModelTier.PREMIUM: {
+        AgentRole.INTAKE: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.ORCHESTRATOR: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.SQL_ANALYST: (_SONNET, _GPT, _GROQ_OSS, _CEREBRAS_GLM),
         AgentRole.EVALUATOR: (_OPUS, _GPT, _GROQ_OSS, _CEREBRAS_GLM),

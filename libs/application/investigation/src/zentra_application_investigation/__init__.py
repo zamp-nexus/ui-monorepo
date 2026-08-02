@@ -25,6 +25,7 @@ from .execution_worker import (
     ExecutionJobWorker,
     classify_execution_failure,
 )
+from .intake_service import IntakeService
 from .ports import (
     AgentExecutionRepository,
     AuditOutboxRepository,
@@ -57,8 +58,13 @@ from .thread_dto import (
     ThreadSlice,
     ThreadSummary,
 )
-from .thread_ports import ThreadRepository, ThreadUnitOfWork, ThreadUnitOfWorkFactory
-from .thread_routing import deterministic_thread_title, route_governed_question
+from .thread_ports import (
+    IntakePort,
+    ThreadRepository,
+    ThreadUnitOfWork,
+    ThreadUnitOfWorkFactory,
+)
+from .thread_routing import deterministic_thread_title
 from .thread_service import ThreadService
 from .visualization_service import (
     VisualizationActionResult,
@@ -102,6 +108,8 @@ __all__ = [
     "ExecutionJobRepository",
     "ExecutionJobWorker",
     "HumanApprovalRepository",
+    "IntakePort",
+    "IntakeService",
     "InvestigationDetail",
     "InvestigationNotFoundError",
     "InvestigationPipeline",
@@ -140,7 +148,6 @@ __all__ = [
     "VisualizationRepository",
     "VisualizationService",
     "deterministic_thread_title",
-    "route_governed_question",
     "classify_execution_failure",
     "GroupDetail",
     "ProjectDetail",

@@ -20,8 +20,11 @@ from zentra_domain_investigation import (
     ErasureOperation,
     EvidenceCitation,
     ExecutionJob,
+    Fact,
     HumanApproval,
     Investigation,
+    InvestigationBoard,
+    KnowledgeGap,
     ThreadEvent,
     Tombstone,
     VisualizationActionMapping,
@@ -29,6 +32,7 @@ from zentra_domain_investigation import (
     VisualizationBriefV1,
     WorkFeedEventKind,
     WorkFeedPayload,
+    WorkItem,
 )
 
 from .dto import PipelineResult, TimelineEntry, UsageSummary
@@ -248,6 +252,32 @@ class WorkFeedRepository(Protocol):
     async def latest_sequence(self, thread_id: UUID) -> int: ...
 
 
+class InvestigationBoardRepository(Protocol):
+    async def create(self, board: InvestigationBoard) -> None: ...
+
+    async def save(self, board: InvestigationBoard) -> None: ...
+
+    async def open_gap(
+        self, board_id: UUID, tenant_id: UUID, gap: KnowledgeGap
+    ) -> None: ...
+
+    async def resolve_gap(self, gap_id: UUID, tenant_id: UUID) -> None: ...
+
+    async def record_fact(
+        self, board_id: UUID, tenant_id: UUID, fact: Fact
+    ) -> None: ...
+
+
+class WorkItemRepository(Protocol):
+    async def add(self, item: WorkItem) -> None: ...
+
+    async def save(self, item: WorkItem) -> None: ...
+
+    async def list_for_investigation(
+        self, investigation_id: UUID, tenant_id: UUID
+    ) -> tuple[WorkItem, ...]: ...
+
+
 class InvestigationUnitOfWork(Protocol):
     investigations: InvestigationRepository
     approvals: HumanApprovalRepository
@@ -260,6 +290,8 @@ class InvestigationUnitOfWork(Protocol):
     outbox: AuditOutboxRepository
     work_feed: WorkFeedRepository
     visualizations: VisualizationRepository
+    investigation_boards: InvestigationBoardRepository
+    work_items: WorkItemRepository
 
     async def commit(self) -> None: ...
 
