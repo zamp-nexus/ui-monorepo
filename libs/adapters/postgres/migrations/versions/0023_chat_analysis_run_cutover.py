@@ -134,6 +134,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Deliberately does not raise NotImplementedError, even though this is a
+    # one-way destructive cutover with nothing meaningful to restore (see
+    # ADR-0030): `test_sequence_migration.py` (pre-existing, untouched by
+    # this cutover) downgrades to "0018_merge_heads" to exercise the
+    # unrelated `sequences` tables, and that walk passes through this
+    # revision. Raising here would break that test's ability to reach 0018
+    # at all, for a table family this cutover never touches.
+    #
     # Only drops the tables genuinely renamed at the table level (Chat
     # Session, Message, Analysis Run, Activity Feed, Analysis Workspace) --
     # those did not exist under these names before this revision, so no
