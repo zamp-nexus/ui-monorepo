@@ -26,25 +26,25 @@ def _indexes(table: str) -> set[str]:
 
 def upgrade() -> None:
     bind = op.get_bind()
-    investigation_columns = _columns("investigations")
+    investigation_columns = _columns("analysis_runs")
 
     if (
         "resolved_at" in investigation_columns
         and "finished_at" not in investigation_columns
     ):
-        op.alter_column("investigations", "resolved_at", new_column_name="finished_at")
+        op.alter_column("analysis_runs", "resolved_at", new_column_name="finished_at")
         investigation_columns.remove("resolved_at")
         investigation_columns.add("finished_at")
     if "scenario_key" not in investigation_columns:
-        op.add_column("investigations", Column("scenario_key", String(64)))
+        op.add_column("analysis_runs", Column("scenario_key", String(64)))
     if "version" not in investigation_columns:
         op.add_column(
-            "investigations",
+            "analysis_runs",
             Column("version", Integer, nullable=False, server_default="1"),
         )
     if "evaluation_attempts" not in investigation_columns:
         op.add_column(
-            "investigations",
+            "analysis_runs",
             Column(
                 "evaluation_attempts",
                 Integer,
@@ -54,7 +54,7 @@ def upgrade() -> None:
         )
     if "updated_at" not in investigation_columns:
         op.add_column(
-            "investigations",
+            "analysis_runs",
             Column(
                 "updated_at",
                 TIMESTAMP(timezone=True),
@@ -64,17 +64,17 @@ def upgrade() -> None:
         )
     if "finished_at" not in investigation_columns:
         op.add_column(
-            "investigations",
+            "analysis_runs",
             Column("finished_at", TIMESTAMP(timezone=True)),
         )
 
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS "
-        "ck_investigations_status"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS "
+        "ck_analysis_runs_status"
     )
     op.execute(
         """
-        UPDATE investigations
+        UPDATE analysis_runs
         SET status = CASE status
           WHEN 'in_progress' THEN 'running'
           WHEN 'pending_review' THEN 'awaiting_approval'
@@ -85,26 +85,26 @@ def upgrade() -> None:
         """
     )
     op.create_check_constraint(
-        "ck_investigations_status",
-        "investigations",
+        "ck_analysis_runs_status",
+        "analysis_runs",
         "status IN ('pending', 'running', 'evaluating', 'awaiting_approval', "
         "'completed', 'rejected', 'failed', 'cancelled')",
     )
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS ck_investigations_version"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS ck_analysis_runs_version"
     )
     op.create_check_constraint(
-        "ck_investigations_version",
-        "investigations",
+        "ck_analysis_runs_version",
+        "analysis_runs",
         "version >= 1",
     )
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS "
-        "ck_investigations_evaluation_attempts"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS "
+        "ck_analysis_runs_evaluation_attempts"
     )
     op.create_check_constraint(
-        "ck_investigations_evaluation_attempts",
-        "investigations",
+        "ck_analysis_runs_evaluation_attempts",
+        "analysis_runs",
         "evaluation_attempts >= 0 AND evaluation_attempts <= 3",
     )
 
@@ -129,7 +129,7 @@ def upgrade() -> None:
         op.create_index(
             "uq_human_approvals_one_pending",
             "human_approvals",
-            ["tenant_id", "investigation_id"],
+            ["tenant_id", "analysis_run_id"],
             unique=True,
             postgresql_where=text("status = 'pending'"),
         )
@@ -168,12 +168,12 @@ def downgrade() -> None:
         op.drop_column("human_approvals", "decision_reason")
 
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS "
-        "ck_investigations_status"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS "
+        "ck_analysis_runs_status"
     )
     op.execute(
         """
-        UPDATE investigations
+        UPDATE analysis_runs
         SET status = CASE status
           WHEN 'pending' THEN 'in_progress'
           WHEN 'running' THEN 'in_progress'
@@ -188,19 +188,19 @@ def downgrade() -> None:
         """
     )
     op.create_check_constraint(
-        "ck_investigations_status",
-        "investigations",
+        "ck_analysis_runs_status",
+        "analysis_runs",
         "status IN ('in_progress', 'pending_review', 'resolved', 'cost_limited')",
     )
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS ck_investigations_version"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS ck_analysis_runs_version"
     )
     op.execute(
-        "ALTER TABLE investigations DROP CONSTRAINT IF EXISTS "
-        "ck_investigations_evaluation_attempts"
+        "ALTER TABLE analysis_runs DROP CONSTRAINT IF EXISTS "
+        "ck_analysis_runs_evaluation_attempts"
     )
     for column in ("updated_at", "evaluation_attempts", "version", "scenario_key"):
-        if column in _columns("investigations"):
-            op.drop_column("investigations", column)
-    if "finished_at" in _columns("investigations"):
-        op.alter_column("investigations", "finished_at", new_column_name="resolved_at")
+        if column in _columns("analysis_runs"):
+            op.drop_column("analysis_runs", column)
+    if "finished_at" in _columns("analysis_runs"):
+        op.alter_column("analysis_runs", "finished_at", new_column_name="resolved_at")

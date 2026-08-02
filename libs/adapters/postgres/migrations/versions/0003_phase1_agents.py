@@ -45,7 +45,7 @@ def upgrade() -> None:
     # `state` is json, not jsonb, so every operator below needs an explicit cast.
     op.execute(
         """
-        UPDATE investigations
+        UPDATE analysis_runs
         SET state = (
           (state::jsonb - 'validation') || jsonb_build_object(
             'outcome',
@@ -59,7 +59,7 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        UPDATE investigations
+        UPDATE analysis_runs
         SET state = (
           (state::jsonb - 'validation')
             || jsonb_build_object('outcome', 'null'::jsonb)
@@ -74,7 +74,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(
         """
-        UPDATE investigations
+        UPDATE analysis_runs
         SET state = (
           (state::jsonb - 'outcome') || jsonb_build_object(
             'validation', state::jsonb -> 'outcome'

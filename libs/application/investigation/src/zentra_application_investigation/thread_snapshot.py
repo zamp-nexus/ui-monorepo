@@ -4,10 +4,10 @@ from uuid import UUID
 
 from zentra_domain_investigation import (
     TERMINAL_STATUSES,
+    Group,
     Investigation,
     InvestigationStatus,
     InvestigationThread,
-    Project,
     ThreadMessage,
     ThreadStatus,
 )
@@ -25,10 +25,14 @@ THREAD_MUTATOR_ROLES = frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER})
 EMPTY_USAGE = UsageSummary()
 
 
-def require_project(project: Project | None) -> Project:
-    if project is None:
-        raise ThreadNotFoundError("Project was not found")
-    return project
+def require_group(group: Group | None) -> Group:
+    # Groups own Chat Sessions directly now -- there is no Project layer
+    # between them (ADR-0028). `project_id` on Thread/InvestigationThread
+    # still names the parameter (that rename is deferred), but the value it
+    # carries identifies a Group.
+    if group is None:
+        raise ThreadNotFoundError("Group was not found")
+    return group
 
 
 def validate_page_size(limit: int, maximum: int) -> int:
