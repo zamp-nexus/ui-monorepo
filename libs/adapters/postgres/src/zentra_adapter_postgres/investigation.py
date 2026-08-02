@@ -42,9 +42,9 @@ from .investigation_board import (
 )
 from .schema import (
     agent_executions,
+    analysis_runs,
     audit_outbox,
     human_approvals,
-    investigations,
     tenant_identity_bindings,
     tenants,
 )
@@ -152,7 +152,7 @@ def _investigation_from_row(row: Any) -> Investigation:
     )
     data_connection_value = state.get("data_connection_id")
     return Investigation(
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         tenant_id=row.tenant_id,
         question=row.question,
         scenario_key=row.scenario_key,
@@ -161,11 +161,11 @@ def _investigation_from_row(row: Any) -> Investigation:
         evaluation_attempts=row.evaluation_attempts,
         created_at=row.created_at,
         updated_at=row.updated_at,
-        thread_id=row.thread_id,
-        thread_sequence=row.thread_sequence,
+        thread_id=row.chat_session_id,
+        thread_sequence=row.chat_sequence,
         initiating_message_id=row.initiating_message_id,
-        parent_investigation_id=row.parent_investigation_id,
-        retry_of_investigation_id=row.retry_of_investigation_id,
+        parent_investigation_id=row.parent_analysis_run_id,
+        retry_of_investigation_id=row.retry_of_analysis_run_id,
         finished_at=row.finished_at,
         finding=finding,
         outcome=outcome,
@@ -184,18 +184,18 @@ class PostgresInvestigationRepository:
 
     async def add(self, investigation: Investigation) -> None:
         await self._connection.execute(
-            insert(investigations).values(
-                investigation_id=investigation.investigation_id,
+            insert(analysis_runs).values(
+                analysis_run_id=investigation.investigation_id,
                 tenant_id=investigation.tenant_id,
                 question=investigation.question,
                 status=investigation.status.value,
                 state=_state_to_json(investigation),
                 scenario_key=investigation.scenario_key,
-                thread_id=investigation.thread_id,
-                thread_sequence=investigation.thread_sequence,
+                chat_session_id=investigation.thread_id,
+                chat_sequence=investigation.thread_sequence,
                 initiating_message_id=investigation.initiating_message_id,
-                parent_investigation_id=investigation.parent_investigation_id,
-                retry_of_investigation_id=investigation.retry_of_investigation_id,
+                parent_analysis_run_id=investigation.parent_investigation_id,
+                retry_of_analysis_run_id=investigation.retry_of_investigation_id,
                 version=investigation.version,
                 evaluation_attempts=investigation.evaluation_attempts,
                 created_at=investigation.created_at,
@@ -210,8 +210,8 @@ class PostgresInvestigationRepository:
         *,
         for_update: bool = False,
     ) -> Investigation | None:
-        query = select(investigations).where(
-            investigations.c.investigation_id == investigation_id
+        query = select(analysis_runs).where(
+            analysis_runs.c.analysis_run_id == investigation_id
         )
         if for_update:
             query = query.with_for_update()
@@ -225,9 +225,9 @@ class PostgresInvestigationRepository:
         for_update: bool = False,
     ) -> Investigation | None:
         query = (
-            select(investigations)
-            .where(investigations.c.thread_id == thread_id)
-            .order_by(investigations.c.thread_sequence.desc())
+            select(analysis_runs)
+            .where(analysis_runs.c.chat_session_id == thread_id)
+            .order_by(analysis_runs.c.chat_sequence.desc())
             .limit(1)
         )
         if for_update:
@@ -238,9 +238,9 @@ class PostgresInvestigationRepository:
     async def all_for_thread(self, thread_id: UUID) -> tuple[Investigation, ...]:
         rows = (
             await self._connection.execute(
-                select(investigations)
-                .where(investigations.c.thread_id == thread_id)
-                .order_by(investigations.c.thread_sequence)
+                select(analysis_runs)
+                .where(analysis_runs.c.chat_session_id == thread_id)
+                .order_by(analysis_runs.c.chat_sequence)
             )
         ).all()
         return tuple(_investigation_from_row(row) for row in rows)
@@ -252,10 +252,10 @@ class PostgresInvestigationRepository:
         expected_version: int,
     ) -> None:
         result = await self._connection.execute(
-            update(investigations)
+            update(analysis_runs)
             .where(
-                investigations.c.investigation_id == investigation.investigation_id,
-                investigations.c.version == expected_version,
+                analysis_runs.c.analysis_run_id == investigation.investigation_id,
+                analysis_runs.c.version == expected_version,
             )
             .values(
                 status=investigation.status.value,
@@ -280,7 +280,7 @@ class PostgresHumanApprovalRepository:
         await self._connection.execute(
             insert(human_approvals).values(
                 approval_id=approval.approval_id,
-                investigation_id=approval.investigation_id,
+                analysis_run_id=approval.investigation_id,
                 tenant_id=approval.tenant_id,
                 reason=approval.reason.value,
                 failed_conditions=[c.value for c in approval.failed_conditions],
@@ -297,7 +297,7 @@ class PostgresHumanApprovalRepository:
         for_update: bool = False,
     ) -> HumanApproval | None:
         query = select(human_approvals).where(
-            human_approvals.c.investigation_id == investigation_id
+            human_approvals.c.analysis_run_id == investigation_id
         )
         if approval_id is not None:
             query = query.where(human_approvals.c.approval_id == approval_id)
@@ -309,7 +309,7 @@ class PostgresHumanApprovalRepository:
             return None
         return HumanApproval(
             approval_id=row.approval_id,
-            investigation_id=row.investigation_id,
+            investigation_id=row.analysis_run_id,
             tenant_id=row.tenant_id,
             reason=ApprovalReason(row.reason),
             failed_conditions=tuple(
@@ -390,13 +390,13 @@ class PostgresAuditOutboxRepository:
         # otherwise both read the same maximum and both stamp it, which is the
         # collision this floor exists to prevent.
         await self._connection.execute(
-            select(investigations.c.investigation_id)
-            .where(investigations.c.investigation_id == investigation_id)
+            select(analysis_runs.c.analysis_run_id)
+            .where(analysis_runs.c.analysis_run_id == investigation_id)
             .with_for_update()
         )
         latest = await self._connection.scalar(
             select(func.max(audit_outbox.c.created_at)).where(
-                audit_outbox.c.investigation_id == investigation_id
+                audit_outbox.c.analysis_run_id == investigation_id
             )
         )
         rows = []
@@ -412,7 +412,7 @@ class PostgresAuditOutboxRepository:
                 {
                     "event_id": event.event_id,
                     "tenant_id": event.tenant_id,
-                    "investigation_id": event.investigation_id,
+                    "analysis_run_id": event.investigation_id,
                     "payload": {
                         "trace_id": str(self._trace_id),
                         "span_id": str(self._span_id),
@@ -438,7 +438,7 @@ class PostgresAuditOutboxRepository:
     ) -> tuple[OutboxRecord, ...]:
         query = select(audit_outbox).where(audit_outbox.c.dispatched_at.is_(None))
         if investigation_id is not None:
-            query = query.where(audit_outbox.c.investigation_id == investigation_id)
+            query = query.where(audit_outbox.c.analysis_run_id == investigation_id)
         query = query.order_by(
             audit_outbox.c.created_at,
             audit_outbox.c.event_id,
@@ -448,7 +448,7 @@ class PostgresAuditOutboxRepository:
             OutboxRecord(
                 event_id=row.event_id,
                 tenant_id=row.tenant_id,
-                investigation_id=row.investigation_id,
+                investigation_id=row.analysis_run_id,
                 payload=row.payload,
                 attempts=row.attempts,
                 created_at=row.created_at,
@@ -464,7 +464,7 @@ class PostgresAuditOutboxRepository:
         rows = (
             await self._connection.execute(
                 select(audit_outbox)
-                .where(audit_outbox.c.investigation_id == investigation_id)
+                .where(audit_outbox.c.analysis_run_id == investigation_id)
                 .order_by(audit_outbox.c.created_at, audit_outbox.c.event_id)
             )
         ).all()
@@ -472,7 +472,7 @@ class PostgresAuditOutboxRepository:
             OutboxRecord(
                 event_id=row.event_id,
                 tenant_id=row.tenant_id,
-                investigation_id=row.investigation_id,
+                investigation_id=row.analysis_run_id,
                 payload=row.payload,
                 attempts=row.attempts,
                 created_at=row.created_at,
@@ -514,7 +514,7 @@ class PostgresAgentExecutionRepository:
         await self._connection.execute(
             insert(agent_executions).values(
                 execution_id=execution.execution_id,
-                investigation_id=execution.investigation_id,
+                analysis_run_id=execution.investigation_id,
                 tenant_id=execution.tenant_id,
                 agent_id=execution.agent_id,
                 role=execution.role.value,
@@ -556,7 +556,7 @@ class PostgresAgentExecutionRepository:
                     func.coalesce(func.sum(agent_executions.c.output_tokens), 0),
                     func.coalesce(func.sum(agent_executions.c.cost_usd), 0),
                     func.coalesce(func.sum(agent_executions.c.latency_ms), 0),
-                ).where(agent_executions.c.investigation_id == investigation_id)
+                ).where(agent_executions.c.analysis_run_id == investigation_id)
             )
         ).one()
         return UsageSummary(

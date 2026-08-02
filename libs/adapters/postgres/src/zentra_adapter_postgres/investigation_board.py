@@ -17,10 +17,10 @@ from zentra_domain_investigation import (
 )
 
 from .schema import (
+    analysis_workspaces,
     board_conflicts,
     board_facts,
     board_gaps,
-    investigation_boards,
     work_items,
 )
 
@@ -31,10 +31,10 @@ class PostgresInvestigationBoardRepository:
 
     async def create(self, board: InvestigationBoard) -> None:
         await self._connection.execute(
-            insert(investigation_boards).values(
-                board_id=board.board_id,
+            insert(analysis_workspaces).values(
+                workspace_id=board.board_id,
                 tenant_id=board.tenant_id,
-                investigation_id=board.investigation_id,
+                analysis_run_id=board.investigation_id,
                 narrative=board.narrative,
                 confidence_score=(
                     board.confidence.score if board.confidence else None
@@ -49,10 +49,10 @@ class PostgresInvestigationBoardRepository:
 
     async def save(self, board: InvestigationBoard) -> None:
         await self._connection.execute(
-            update(investigation_boards)
+            update(analysis_workspaces)
             .where(
-                investigation_boards.c.board_id == board.board_id,
-                investigation_boards.c.tenant_id == board.tenant_id,
+                analysis_workspaces.c.workspace_id == board.board_id,
+                analysis_workspaces.c.tenant_id == board.tenant_id,
             )
             .values(
                 narrative=board.narrative,
@@ -72,7 +72,7 @@ class PostgresInvestigationBoardRepository:
         await self._connection.execute(
             insert(board_gaps).values(
                 gap_id=gap.gap_id,
-                board_id=board_id,
+                workspace_id=board_id,
                 tenant_id=tenant_id,
                 description=gap.description,
                 priority=gap.priority.value,
@@ -91,7 +91,7 @@ class PostgresInvestigationBoardRepository:
         await self._connection.execute(
             insert(board_facts).values(
                 fact_id=fact.fact_id,
-                board_id=board_id,
+                workspace_id=board_id,
                 tenant_id=tenant_id,
                 metric=fact.metric,
                 value=fact.value,
@@ -107,7 +107,7 @@ class PostgresInvestigationBoardRepository:
         await self._connection.execute(
             insert(board_conflicts).values(
                 conflict_id=conflict.conflict_id,
-                board_id=board_id,
+                workspace_id=board_id,
                 tenant_id=tenant_id,
                 description=conflict.description,
                 status=conflict.status.value,
@@ -129,7 +129,7 @@ class PostgresInvestigationBoardRepository:
 def _work_item_from_row(row: Any) -> WorkItem:
     return WorkItem(
         work_item_id=row.work_item_id,
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         tenant_id=row.tenant_id,
         role=AgentRole(row.role),
         objective=row.objective,
@@ -154,7 +154,7 @@ class PostgresWorkItemRepository:
             insert(work_items).values(
                 work_item_id=item.work_item_id,
                 tenant_id=item.tenant_id,
-                investigation_id=item.investigation_id,
+                analysis_run_id=item.investigation_id,
                 role=item.role.value,
                 objective=item.objective,
                 status=item.status.value,
@@ -189,7 +189,7 @@ class PostgresWorkItemRepository:
             await self._connection.execute(
                 select(work_items)
                 .where(
-                    work_items.c.investigation_id == investigation_id,
+                    work_items.c.analysis_run_id == investigation_id,
                     work_items.c.tenant_id == tenant_id,
                 )
                 .order_by(work_items.c.created_at)

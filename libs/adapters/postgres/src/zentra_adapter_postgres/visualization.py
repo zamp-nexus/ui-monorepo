@@ -26,7 +26,7 @@ def _artifact(row: Any) -> VisualizationArtifact:
     return VisualizationArtifact(
         visualization_id=row.visualization_id,
         tenant_id=row.tenant_id,
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         brief_id=row.brief_id,
         status=VisualizationArtifactStatus(row.status),
         renderer_kind=row.renderer_kind,
@@ -53,8 +53,8 @@ def _action(row: Any) -> VisualizationActionMapping:
         action_id=row.action_id,
         tenant_id=row.tenant_id,
         visualization_id=row.visualization_id,
-        thread_id=row.thread_id,
-        investigation_id=row.investigation_id,
+        thread_id=row.chat_session_id,
+        investigation_id=row.analysis_run_id,
         kind=VisualizationActionKind(row.kind),
         label=row.label,
         citation_id=row.citation_id,
@@ -82,7 +82,7 @@ class PostgresVisualizationRepository:
             insert(visualization_briefs).values(
                 brief_id=brief_id,
                 tenant_id=artifact.tenant_id,
-                investigation_id=artifact.investigation_id,
+                analysis_run_id=artifact.investigation_id,
                 schema_version=brief.schema_version,
                 content=brief.model_dump(mode="json"),
                 content_hash=brief.content_hash(
@@ -96,7 +96,7 @@ class PostgresVisualizationRepository:
             insert(visualization_artifacts).values(
                 visualization_id=artifact.visualization_id,
                 tenant_id=artifact.tenant_id,
-                investigation_id=artifact.investigation_id,
+                analysis_run_id=artifact.investigation_id,
                 brief_id=brief_id,
                 status=artifact.status.value,
                 renderer_kind=artifact.renderer_kind,
@@ -111,7 +111,11 @@ class PostgresVisualizationRepository:
                 insert(visualization_actions),
                 [
                     {
-                        **value.model_dump(mode="python"),
+                        **value.model_dump(
+                            mode="python", exclude={"thread_id", "investigation_id"}
+                        ),
+                        "chat_session_id": value.thread_id,
+                        "analysis_run_id": value.investigation_id,
                         "kind": value.kind.value,
                         "single_use": int(value.single_use),
                         "created_at": artifact.created_at,
@@ -127,7 +131,7 @@ class PostgresVisualizationRepository:
             insert(visualization_artifacts).values(
                 visualization_id=artifact.visualization_id,
                 tenant_id=artifact.tenant_id,
-                investigation_id=artifact.investigation_id,
+                analysis_run_id=artifact.investigation_id,
                 brief_id=artifact.brief_id,
                 status=artifact.status.value,
                 renderer_kind=artifact.renderer_kind,
@@ -165,7 +169,7 @@ class PostgresVisualizationRepository:
         row = (
             await self._connection.execute(
                 select(visualization_artifacts)
-                .where(visualization_artifacts.c.investigation_id == investigation_id)
+                .where(visualization_artifacts.c.analysis_run_id == investigation_id)
                 .order_by(
                     visualization_artifacts.c.retry_ordinal.desc(),
                     visualization_artifacts.c.created_at.desc(),
@@ -228,7 +232,7 @@ class PostgresVisualizationRepository:
 
     async def erase(self, investigation_id: UUID, *, category: str, now: Any) -> None:
         artifact_ids = select(visualization_artifacts.c.visualization_id).where(
-            visualization_artifacts.c.investigation_id == investigation_id
+            visualization_artifacts.c.analysis_run_id == investigation_id
         )
         await self._connection.execute(
             delete(visualization_actions).where(
@@ -237,12 +241,12 @@ class PostgresVisualizationRepository:
         )
         await self._connection.execute(
             update(visualization_briefs)
-            .where(visualization_briefs.c.investigation_id == investigation_id)
+            .where(visualization_briefs.c.analysis_run_id == investigation_id)
             .values(content=None)
         )
         await self._connection.execute(
             update(visualization_artifacts)
-            .where(visualization_artifacts.c.investigation_id == investigation_id)
+            .where(visualization_artifacts.c.analysis_run_id == investigation_id)
             .values(
                 c1_response=None,
                 status=case(
