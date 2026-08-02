@@ -17,13 +17,27 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [tailwindcss(), react()],
   resolve: {
-    // Browser journeys run against a real API, a real JWKS and real RLS; the
-    // one thing they cannot have is a real Clerk session. Swapping the identity
-    // provider here — and only in `e2e` mode — keeps the bypass out of every
-    // build that is not a test run. A provider added inside foundation-auth
-    // would ship instead, and a shipped auth bypass is one somebody reaches.
-    alias:
-      mode === 'e2e'
+    alias: [
+      // @thesysai/genui-sdk's installed version stopped exporting this
+      // subpath in its package.json `exports` map, even though the file is
+      // still physically shipped in `dist/`. Aliasing straight to the file
+      // bypasses the export-map restriction rather than the file itself.
+      {
+        find: '@thesysai/genui-sdk/dist/genui-sdk.css',
+        replacement: fileURLToPath(
+          new URL(
+            './node_modules/@thesysai/genui-sdk/dist/genui-sdk.css',
+            import.meta.url,
+          ),
+        ),
+      },
+      // Browser journeys run against a real API, a real JWKS and real RLS;
+      // the one thing they cannot have is a real Clerk session. Swapping the
+      // identity provider here — and only in `e2e` mode — keeps the bypass
+      // out of every build that is not a test run. A provider added inside
+      // foundation-auth would ship instead, and a shipped auth bypass is one
+      // somebody reaches.
+      ...(mode === 'e2e'
         ? // Exact matches, not prefixes. An object alias matches on prefix and
           // takes the first hit, so a bare `@open-zentra/foundation-auth` entry
           // would rewrite `.../foundation-auth/clerk` into
@@ -40,7 +54,8 @@ export default defineConfig(({ mode }) => ({
               new URL('./src/e2e/auth-stub.tsx', import.meta.url),
             ),
           }))
-        : [],
+        : []),
+    ],
   },
   // DuckDB-WASM contains WASM + workers that shouldn't be pre-bundled
   optimizeDeps: {
