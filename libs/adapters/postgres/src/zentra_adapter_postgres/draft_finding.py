@@ -57,7 +57,7 @@ class PostgresDraftFindingRepository:
         await self._connection.execute(
             insert(draft_findings).values(
                 draft_finding_id=draft.draft_finding_id,
-                investigation_id=draft.investigation_id,
+                analysis_run_id=draft.investigation_id,
                 tenant_id=draft.tenant_id,
                 version=draft.version,
                 produced_by_execution_id=draft.produced_by_execution_id,
@@ -124,7 +124,7 @@ class PostgresDraftFindingRepository:
         row = (
             await self._connection.execute(
                 select(draft_findings)
-                .where(draft_findings.c.investigation_id == investigation_id)
+                .where(draft_findings.c.analysis_run_id == investigation_id)
                 .order_by(draft_findings.c.version.desc())
                 .limit(1)
             )
@@ -165,7 +165,7 @@ class PostgresDraftFindingRepository:
         return DraftFinding(
             draft_finding_id=row.draft_finding_id,
             tenant_id=row.tenant_id,
-            investigation_id=row.investigation_id,
+            investigation_id=row.analysis_run_id,
             version=row.version,
             created_at=row.created_at,
             produced_by_execution_id=row.produced_by_execution_id,
@@ -218,7 +218,7 @@ class PostgresEvidenceCitationRepository:
             [
                 {
                     "citation_id": citation.citation_id,
-                    "investigation_id": citation.investigation_id,
+                    "analysis_run_id": citation.investigation_id,
                     "tenant_id": citation.tenant_id,
                     "metric": citation.metric,
                     "filters": [
@@ -264,7 +264,7 @@ class PostgresEvidenceCitationRepository:
             await self._connection.execute(
                 _resolvable().where(
                     evidence_citations.c.citation_id == citation_id,
-                    evidence_citations.c.investigation_id == investigation_id,
+                    evidence_citations.c.analysis_run_id == investigation_id,
                 )
             )
         ).one_or_none()
@@ -303,7 +303,7 @@ class PostgresEvidenceCitationRepository:
                     erasure_operations.c.completed_at,
                 )
                 .where(
-                    erasure_operations.c.investigation_id == investigation_id,
+                    erasure_operations.c.analysis_run_id == investigation_id,
                     erasure_operations.c.completed_at.isnot(None),
                 )
                 .order_by(erasure_operations.c.completed_at.desc())
@@ -325,7 +325,7 @@ class PostgresEvidenceCitationRepository:
         rows = (
             await self._connection.execute(
                 _resolvable().where(
-                    evidence_citations.c.investigation_id == investigation_id
+                    evidence_citations.c.analysis_run_id == investigation_id
                 )
             )
         ).all()
@@ -367,7 +367,7 @@ def _citation_from_row(row: Any) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=row.citation_id,
         tenant_id=row.tenant_id,
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         metric=row.metric,
         filters=tuple(
             CitationFilter(
