@@ -232,8 +232,14 @@ class FakeIntake:
     Intake Agent must support.
     """
 
-    async def resolve(self, question: str, *, tenant_id: UUID) -> RoutingResult:
-        del tenant_id
+    async def resolve(
+        self,
+        question: str,
+        *,
+        tenant_id: UUID,
+        data_connection_id: UUID | None = None,
+    ) -> RoutingResult:
+        del tenant_id, data_connection_id
         normalized = question.casefold()
         if "refund" in normalized and ("eu" in normalized or "europe" in normalized):
             return RoutingResult(

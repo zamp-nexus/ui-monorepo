@@ -42,7 +42,16 @@ from .tools import ToolRegistry
 #: the Evaluator loop. A model that keeps calling tools without converging is
 #: not making progress, and silently returning its last partial answer would
 #: publish a conclusion nobody decided to draw.
-MAX_STEPS = 12
+#:
+#: 12 was tuned against the demo warehouse's one small Commerce cube. A real
+#: tenant's harvested catalog is two orders of magnitude bigger — hundreds of
+#: members across many tables — and genuinely needs more search-then-query
+#: turns to converge; that is more exploration, not less progress.
+#:
+#: 20 still wasn't enough headroom for a real breakdown-by-date question —
+#: observed live hitting the cap on a 30-point time series that had converged
+#: fine on an earlier run, i.e. model-call variance rather than a fixed need.
+MAX_STEPS = 30
 
 #: Asked once the Agent stops calling tools, to convert its prose into the
 #: declared object. Deliberately says nothing about content: the Agent has

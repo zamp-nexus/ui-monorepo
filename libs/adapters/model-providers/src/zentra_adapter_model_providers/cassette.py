@@ -76,6 +76,7 @@ class RecordingModelClient:
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
         tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         response = await self._inner.complete(
             model=model,
@@ -84,6 +85,7 @@ class RecordingModelClient:
             max_tokens=max_tokens,
             response_schema=response_schema,
             tools=tools,
+            temperature=temperature,
         )
         key = _key(
             model=model,
@@ -131,6 +133,7 @@ class ReplayModelClient:
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
         tools: Sequence[ToolDefinition] = (),
+        temperature: float = 0.2,
     ) -> ModelResponse:
         key = _key(
             model=model,

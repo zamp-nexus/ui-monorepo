@@ -195,9 +195,7 @@ class AppDependencies:
             new_id=uuid4,
         )
         # Free tier: Intake is a light classification call, not the deep
-        # analysis a tenant's paid tier buys. Chat never threads a Data
-        # Connection through routing, so this always resolves the demo
-        # warehouse's semantic layer, scoped per Tenant.
+        # analysis a tenant's paid tier buys.
         intake_model = RoutedModelClient(
             tier=ModelTier.FREE,
             clients=models.as_dict(),
@@ -208,10 +206,10 @@ class AppDependencies:
             return IntakeAgent(model=intake_model, semantic_layer=semantic_layer)
 
         async def _resolve_intake_semantic_layer(
-            tenant_id: UUID,
+            tenant_id: UUID, data_connection_id: UUID | None
         ) -> SemanticLayerPort:
             return await semantic_layers.resolve(
-                tenant_id=tenant_id, data_connection_id=None
+                tenant_id=tenant_id, data_connection_id=data_connection_id
             )
 
         threads = ThreadService(

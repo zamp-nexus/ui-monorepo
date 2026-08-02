@@ -94,9 +94,10 @@ MAX_LISTED_VALUES = 25
 
 
 class CubeSemanticLayer:
-    """Reads governed metrics through Cube. Raw tables are unreachable here,
-    except through `load_raw`, for call sites documented as bypassing
-    governance on purpose."""
+    """Reads metrics through Cube.
+
+    `query()` enforces the governed-catalog restriction; `query_raw()` and
+    `load_raw()` do not, for tenants/agents that have opted out of it."""
 
     def __init__(self, client: CubeMetaLoader) -> None:
         self._client = client
@@ -153,6 +154,20 @@ class CubeSemanticLayer:
     async def query(self, request: SemanticQuery) -> SemanticResult:
         catalog = await self.catalog()
         catalog.reject_ungoverned(request)
+        payload = await self._client.load(_to_cube_query(request))
+        return SemanticResult(
+            query=request,
+            rows=tuple(payload.get("data", [])),
+        )
+
+    async def query_raw(self, request: SemanticQuery) -> SemanticResult:
+        """Like `query`, but skips `reject_ungoverned`.
+
+        For tenants that have opted out of the governed-catalog restriction:
+        any member Cube has compiled is queryable, not only ones a caller
+        already knows to be governed. Still scoped by this layer's own
+        tenant/Data Connection security context — never cross-tenant.
+        """
         payload = await self._client.load(_to_cube_query(request))
         return SemanticResult(
             query=request,

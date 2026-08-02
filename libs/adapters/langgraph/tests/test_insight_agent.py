@@ -124,3 +124,155 @@ async def test_a_refusal_never_carries_the_content_it_refused(payload: object) -
     assert "pricing change" not in message.lower()
     # An unrecognised metric name is model output too — it can carry prose.
     assert "invented_pricing_driver" not in message
+
+
+@pytest.mark.asyncio
+async def test_no_metrics_with_a_summary_drafts_an_informational_finding() -> None:
+    """A catalog/schema question has no aggregate to draft a metric claim from,
+    but the Analyst's own validated summary is not nothing — relaying it is
+    the answer, not a fabricated finding.
+    """
+    agent = InsightAgent(model=OneShotModel({}))  # never called; no metrics path
+
+    output = await agent.invoke(
+        AgentInput(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            state={
+                "question": "What tables are available in the catalog?",
+                "analyst": {
+                    "metrics": [],
+                    "result_summary": "8 datasets are available: application_started, "
+                    "auth_completed, ...",
+                    "evidence_refs": ["artifact://execution/1"],
+                },
+                "evaluator": {
+                    "recheck_passed": True,
+                    "issues": [],
+                    "outcome": {
+                        "kind": "confidence",
+                        "score": 0.7,
+                        "calibration_method": "evaluator_independent_recheck",
+                    },
+                },
+            },
+        )
+    )
+
+    assert output.fields["summary"].startswith("8 datasets are available")
+    assert output.fields["headline"] == output.fields["summary"]
+    assert output.fields["claims"] == []
+    assert output.fields["root_cause"] == "unresolved"
+    # Bounded by the Evaluator's score, never above it.
+    assert output.outcome.score == 0.7
+
+
+@pytest.mark.asyncio
+async def test_a_long_summary_yields_a_headline_within_the_brief_bound() -> None:
+    """`VisualizationBriefV1.headline` caps at 240 chars; the Analyst's own
+    summary text was never written to that bound, so relaying it verbatim into
+    both fields is how this 500s downstream — observed live.
+    """
+    agent = InsightAgent(model=OneShotModel({}))
+    long_summary = (
+        "The catalog lists 8 tables: application_started, auth_completed, "
+        "destination_card_clicked, document_uploaded, landing_page_scrolled, "
+        "pay_now_clicked, purchase_completed, and search_typed, totaling 356 "
+        "members across dimensions and measures; no metrics are reported "
+        "because this is a schema question, not a data query."
+    )
+    assert len(long_summary) > 240
+
+    output = await agent.invoke(
+        AgentInput(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            state={
+                "question": "What tables are available in the catalog?",
+                "analyst": {
+                    "metrics": [],
+                    "result_summary": long_summary,
+                    "evidence_refs": [],
+                },
+                "evaluator": {"recheck_passed": True, "issues": []},
+            },
+        )
+    )
+
+    assert len(output.fields["headline"]) <= 240
+    assert output.fields["summary"] == long_summary
+    assert long_summary.startswith(output.fields["headline"].rstrip("…"))
+
+
+@pytest.mark.asyncio
+async def test_no_metrics_and_no_summary_still_refuses() -> None:
+    agent = InsightAgent(model=OneShotModel({}))
+
+    with pytest.raises(Exception, match="No validated aggregate"):  # noqa: PT011
+        await agent.invoke(
+            AgentInput(
+                investigation_id=INVESTIGATION_ID,
+                tenant_id=TENANT_ID,
+                state={
+                    "question": QUESTION,
+                    "analyst": {"metrics": [], "result_summary": ""},
+                    "evaluator": {"recheck_passed": True, "issues": []},
+                },
+            )
+        )
+
+
+@pytest.mark.asyncio
+async def test_a_claim_citing_an_earlier_point_in_a_breakdown_is_not_ungrounded() -> (
+    None
+):
+    """A breakdown-by-date question reports many points under one metric name,
+    one per day — observed live with 30 `"Started applications"` entries for a
+    June daily count. Indexing them by name alone kept only the last one
+    (June 30), so a claim about any earlier day was refused as citing a value
+    "the validated aggregate does not carry" even though it plainly did.
+    """
+    daily = [
+        {
+            "metric": "Started applications",
+            "previous_value": "N/A",
+            "previous_label": None,
+            "current_value": str(1000 + day),
+            "current_label": f"June {day}, 2026",
+            "unit": "count",
+        }
+        for day in range(1, 31)
+    ]
+    draft = {
+        "headline": "Started applications rose through June.",
+        "summary": "Daily started-application counts trended upward in June 2026.",
+        "claims": [
+            {
+                "kind": "observed",
+                "text": "797 applications started on June 3, 2026.",
+                "metric": "Started applications",
+                "value": "1003",
+                "period": "June 3, 2026",
+            }
+        ],
+        "contradictions": [],
+        "root_cause_resolved": False,
+        "confidence": 0.9,
+    }
+    agent = InsightAgent(model=OneShotModel(draft))
+
+    output = await agent.invoke(
+        AgentInput(
+            investigation_id=INVESTIGATION_ID,
+            tenant_id=TENANT_ID,
+            state={
+                "question": "What is the count of started applications by date "
+                "for the last month?",
+                "analyst": {"metrics": daily, "result_summary": "", "evidence_refs": []},
+                "evaluator": {"recheck_passed": True, "issues": []},
+            },
+        )
+    )
+
+    assert output.fields["claims"][0]["value"] == "1003"
+    assert output.fields["claims"][0]["period"] == "June 3, 2026"

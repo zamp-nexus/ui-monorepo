@@ -1,9 +1,10 @@
 """The tools an Agent may be granted, and the registry that gates them.
 
-Every tool here reaches data through `SemanticLayerPort` and nothing else. That
-is the whole design: the loop gives an Agent iteration — look at the catalog,
-narrow, query, look again — not reach. There is no raw-table port in the tree
-for a tool to wrap, so no tool here could offer one.
+Every tool here reaches data through `SemanticLayerPort` and nothing else.
+`semantic_query` enforces the governed-catalog restriction (ADR-003);
+`raw_query` deliberately does not, for a tenant that has opted out of it —
+still scoped to that tenant's own Data Connection through Cube, never
+cross-tenant.
 
 `AgentDescriptor.tool_permissions` is the gate. A tool outside a descriptor's
 permissions is never offered to the model *and* is refused if named anyway,
@@ -236,6 +237,67 @@ class SemanticQueryTool:
                     "against the ones the catalog lists for that dimension."
                 ),
             )
+        head = rows[:MAX_QUERY_ROWS]
+        body = "\n".join(str(row) for row in head)
+        if len(rows) > MAX_QUERY_ROWS:
+            body += (
+                f"\n({len(rows) - MAX_QUERY_ROWS} more rows withheld — "
+                "aggregate further or add a limit.)"
+            )
+        return ToolResult(call_id="", content=body)
+
+
+class RawQueryTool:
+    """Run one query with no governed-catalog restriction and return its rows.
+
+    Same shape as `SemanticQueryTool`, calling `SemanticLayerPort.query_raw`
+    instead of `query`: any member Cube has compiled — not only ones already
+    known to be governed — is queryable. Only offered to an Agent whose
+    tenant has opted out of ADR-003's restriction. Still tenant-scoped: this
+    reaches the same Cube security context as every other tool here, never
+    another tenant's data.
+    """
+
+    name = "raw_query"
+
+    def __init__(self, semantic_layer: SemanticLayerPort) -> None:
+        self._semantic_layer = semantic_layer
+        self.last_query: SemanticQuery | None = None
+        self.last_rows: tuple[dict[str, JsonValue], ...] = ()
+
+    @property
+    def definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name=self.name,
+            description=(
+                "Run a query against any table, column, or measure this "
+                "tenant's connected sources expose — not limited to the "
+                "governed catalog. Use semantic_catalog_search first to see "
+                "what is available, by name."
+            ),
+            input_schema=SEMANTIC_QUERY_SCHEMA,
+        )
+
+    @property
+    def scope(self) -> ToolScope:
+        return ToolScope(tool_name=self.name, access=ToolAccess.READ)
+
+    async def invoke(self, arguments: dict[str, JsonValue]) -> ToolResult:
+        try:
+            query = semantic_query_from_json(dict(arguments))
+        except MalformedAgentResponseError as error:
+            return _refusal(str(error))
+
+        try:
+            result = await self._semantic_layer.query_raw(query)
+        except InvalidSemanticQueryError as error:
+            return _refusal(str(error))
+
+        self.last_query = query
+        self.last_rows = result.rows
+        rows = list(result.rows)
+        if not rows:
+            return ToolResult(call_id="", content="The query returned no rows.")
         head = rows[:MAX_QUERY_ROWS]
         body = "\n".join(str(row) for row in head)
         if len(rows) > MAX_QUERY_ROWS:

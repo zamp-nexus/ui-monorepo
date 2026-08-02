@@ -20,6 +20,7 @@ from ..runtime import AgentRuntime
 from ..schemas import ANALYSIS_SCHEMA
 from ..skills import SkillRegistry
 from ..tools import (
+    RawQueryTool,
     SemanticCatalogSearchTool,
     SemanticQueryTool,
     ToolRegistry,
@@ -31,12 +32,13 @@ DESCRIPTOR = AgentDescriptor(
     agent_id=AGENT_ID,
     role=AgentRole.CUBE_ANALYST,
     # Every capability this agent holds, and all of them reach data through
-    # the semantic layer. There is no raw-table port in the tree to be granted
-    # one, which is what makes ADR-0003 structural rather than a rule: the loop
-    # buys iteration, not reach.
+    # the semantic layer. `raw_query` skips ADR-0003's governed-catalog
+    # restriction — granted here because this deployment has opted out of it —
+    # but still only ever reaches this tenant's own Data Connection.
     tool_permissions=(
         ToolScope(tool_name="semantic_catalog_search", access=ToolAccess.READ),
         ToolScope(tool_name="semantic_query", access=ToolAccess.READ),
+        ToolScope(tool_name="raw_query", access=ToolAccess.READ),
     ),
     context_budget_tokens=MAX_TOKENS,
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
@@ -81,13 +83,18 @@ class CubeAnalystAgent:
         previous_issues = agent_input.state.get("previous_issues") or []
 
         # Built per invocation, never per agent. The Evaluator loop can run
-        # this Agent three times over one Investigation, and `query_tool`
-        # remembers the last query it ran — shared across attempts, attempt two
-        # would cite attempt one's query if the retry never got as far as
+        # this Agent three times over one Investigation, and each tool
+        # remembers the last query it ran — shared across attempts, attempt
+        # two would cite attempt one's query if the retry never got as far as
         # querying.
         query_tool = SemanticQueryTool(self._semantic_layer)
+        raw_query_tool = RawQueryTool(self._semantic_layer)
         registry = ToolRegistry(
-            (SemanticCatalogSearchTool(self._semantic_layer), query_tool)
+            (
+                SemanticCatalogSearchTool(self._semantic_layer),
+                query_tool,
+                raw_query_tool,
+            )
         )
         runtime = AgentRuntime(
             model=self._model,
@@ -120,13 +127,17 @@ class CubeAnalystAgent:
             reports_figures = bool(answer.get("metrics")) or bool(
                 answer.get("sample_size")
             )
-            if reports_figures and query_tool.last_query is None:
+            ran_a_query = (
+                query_tool.last_query is not None
+                or raw_query_tool.last_query is not None
+            )
+            if reports_figures and not ran_a_query:
                 return (
-                    "You reported figures without running semantic_query, so "
-                    "they rest on no data. Either run the query those figures "
-                    "come from, or answer with no metrics and a sample_size "
-                    "of 0 if the question is about the catalog rather than "
-                    "the data."
+                    "You reported figures without running semantic_query or "
+                    "raw_query, so they rest on no data. Either run the query "
+                    "those figures come from, or answer with no metrics and a "
+                    "sample_size of 0 if the question is about the catalog "
+                    "rather than the data."
                 )
             return None
 
@@ -138,6 +149,11 @@ class CubeAnalystAgent:
             accept=_figures_rest_on_a_query,
         )
         analysis = result.output
+        # Whichever tool actually ran the query this Citation must name. Both
+        # cannot run "first" in a way that matters here — an invocation reaches
+        # for one or the other, never a meaningful mix — so the one that has a
+        # last_query at all is the one that answered.
+        ran_tool = raw_query_tool if raw_query_tool.last_query is not None else query_tool
 
         return validate_agent_output(
             self,
@@ -146,15 +162,15 @@ class CubeAnalystAgent:
                     # From the tool, not from the model's own account of it.
                     # A Citation has to name the query that actually ran.
                     "query": (
-                        query_tool.last_query.model_dump(mode="json")
-                        if query_tool.last_query is not None
+                        ran_tool.last_query.model_dump(mode="json")
+                        if ran_tool.last_query is not None
                         else {}
                     ),
                     "reasoning": str(analysis.get("result_summary", "")),
                     "result_summary": analysis["result_summary"],
                     "metrics": analysis["metrics"],
                     "sample_size": int(analysis["sample_size"]),
-                    "rows": list(query_tool.last_rows),
+                    "rows": list(ran_tool.last_rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
                 outcome=ConfidenceOutcome(

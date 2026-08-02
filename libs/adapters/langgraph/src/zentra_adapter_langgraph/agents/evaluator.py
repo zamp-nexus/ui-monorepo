@@ -21,7 +21,12 @@ from ..prompts import EVALUATOR_SYSTEM
 from ..runtime import AgentRuntime
 from ..schemas import RECHECK_SCHEMA
 from ..skills import SkillRegistry
-from ..tools import SemanticCatalogSearchTool, SemanticQueryTool, ToolRegistry
+from ..tools import (
+    RawQueryTool,
+    SemanticCatalogSearchTool,
+    SemanticQueryTool,
+    ToolRegistry,
+)
 
 AGENT_ID = "evaluator_v1"
 
@@ -31,6 +36,7 @@ DESCRIPTOR = AgentDescriptor(
     tool_permissions=(
         ToolScope(tool_name="semantic_catalog_search", access=ToolAccess.READ),
         ToolScope(tool_name="semantic_query", access=ToolAccess.READ),
+        ToolScope(tool_name="raw_query", access=ToolAccess.READ),
     ),
     context_budget_tokens=MAX_TOKENS,
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
@@ -83,8 +89,13 @@ class EvaluatorAgent:
         # Per invocation, so a retry's recheck cites its own query. Same
         # reasoning as the Analyst's.
         query_tool = SemanticQueryTool(self._semantic_layer)
+        raw_query_tool = RawQueryTool(self._semantic_layer)
         registry = ToolRegistry(
-            (SemanticCatalogSearchTool(self._semantic_layer), query_tool)
+            (
+                SemanticCatalogSearchTool(self._semantic_layer),
+                query_tool,
+                raw_query_tool,
+            )
         )
         runtime = AgentRuntime(
             model=self._model,
@@ -102,11 +113,11 @@ class EvaluatorAgent:
             """
             if not analyst.get("metrics"):
                 return None
-            if query_tool.last_query is None:
+            if query_tool.last_query is None and raw_query_tool.last_query is None:
                 return (
-                    "You have not run semantic_query yet, so you have checked "
-                    "nothing. Build your own query, run it, and compare your "
-                    "figures against the analyst's."
+                    "You have not run raw_query or semantic_query yet, so you "
+                    "have checked nothing. Build your own query, run it, and "
+                    "compare your figures against the analyst's."
                 )
             return None
 
@@ -142,20 +153,23 @@ class EvaluatorAgent:
         if not passed:
             score = min(score, 0.49)
 
+        # Whichever tool actually ran the query this Citation must name.
+        ran_tool = raw_query_tool if raw_query_tool.last_query is not None else query_tool
+
         return validate_agent_output(
             self,
             AgentOutput(
                 fields={
                     "query": (
-                        query_tool.last_query.model_dump(mode="json")
-                        if query_tool.last_query is not None
+                        ran_tool.last_query.model_dump(mode="json")
+                        if ran_tool.last_query is not None
                         else {}
                     ),
                     "recheck_passed": passed,
                     "discrepancy_pct": discrepancy,
                     "issues": recheck.get("issues", []),
                     "sample_size": int(recheck["sample_size"]),
-                    "rows": list(query_tool.last_rows),
+                    "rows": list(ran_tool.last_rows),
                 },
                 evidence_refs=(f"artifact://execution/{execution_id}",),
                 outcome=ConfidenceOutcome(

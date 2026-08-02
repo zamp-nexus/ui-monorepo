@@ -83,7 +83,14 @@ class AnthropicModelClient:
         max_tokens: int,
         response_schema: dict[str, JsonValue] | None = None,
         tools: Sequence[ToolDefinition] = (),
+        # Accepted for ModelPort conformance, but deliberately never sent:
+        # verified live against claude-sonnet-5, this whole model generation
+        # answers 400 "temperature is deprecated for this model" the instant
+        # it is included, which took down every Anthropic call and, through
+        # it, the entire chain. Anthropic no longer takes this knob.
+        temperature: float = 0.2,
     ) -> ModelResponse:
+        del temperature
         request: dict[str, object] = {
             "model": model,
             "max_tokens": max_tokens,
