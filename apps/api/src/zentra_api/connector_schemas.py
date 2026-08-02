@@ -477,3 +477,22 @@ class CatalogDiffResponse(BaseModel):
     added_fields: int
     removed_fields: int
     type_changed_fields: int
+
+
+class TableRowsResponse(BaseModel):
+    """A page of raw rows from one Source Table, read straight through Cube.
+
+    Columns and rows are pre-shaped server-side, in the catalog's own field
+    order, so the frontend never has to reconcile Cube's `"table.field"`-keyed
+    row objects against a separately-fetched column list.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    data_source_id: UUID
+    table_name: str
+    columns: list[str]
+    rows: list[list[str | None]]
+    total: int
+    page: int
+    page_size: int

@@ -26,6 +26,10 @@ _Avoid_: Dataset, entity
 One harvested column within a Source Table. Raw surface area, never a governed business measure.
 _Avoid_: Column, attribute, metric
 
+**Row Browse**:
+A paginated, unfiltered read of a Source Table's own rows, straight through Cube as raw dimensions — never a governed query, and never persisted or cached beyond the page requested.
+_Avoid_: Preview, sample, query
+
 **Field Identity**:
 What makes a Source Field the same field across Catalog Versions — its name, its type, and its parent table together.
 _Avoid_: Field id, key

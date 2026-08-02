@@ -94,7 +94,9 @@ MAX_LISTED_VALUES = 25
 
 
 class CubeSemanticLayer:
-    """Reads governed metrics through Cube. Raw tables are unreachable here."""
+    """Reads governed metrics through Cube. Raw tables are unreachable here,
+    except through `load_raw`, for call sites documented as bypassing
+    governance on purpose."""
 
     def __init__(self, client: CubeMetaLoader) -> None:
         self._client = client
@@ -156,3 +158,13 @@ class CubeSemanticLayer:
             query=request,
             rows=tuple(payload.get("data", [])),
         )
+
+    async def load_raw(self, query: dict[str, Any]) -> dict[str, Any]:
+        """Call Cube's `/load` with a hand-built query, skipping `reject_ungoverned`.
+
+        For call sites that build their own query from data they already
+        trust — never from caller input — and have their own documented
+        reason `query()`'s governance gate does not apply. Everything else
+        must keep using `query()`.
+        """
+        return await self._client.load(query)

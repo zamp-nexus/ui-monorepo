@@ -112,6 +112,11 @@ services:
       CUBE_URL: http://cube:4000
       CUBE_API_SECRET: local-cube-secret
       CUBE_INTERNAL_API_SECRET: local-cube-internal-secret
+      # Dev-only, committed like every other secret in this file. Seals
+      # connector source credentials at rest — without it ConnectorService
+      # is never constructed and every connector route, plus Cube's
+      # internal model callback, answers "not configured".
+      CONNECTOR_CREDENTIAL_KEY: 9cae34e4992b93fdcffe049dfa92ca0442f942c24b5c8d3cc0290438bc4746d2
       FRONTEND_ORIGIN: http://localhost:4200
     ports:
       - "8000:8000"
