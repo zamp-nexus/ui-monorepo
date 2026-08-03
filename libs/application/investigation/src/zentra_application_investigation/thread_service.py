@@ -166,6 +166,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             await self._require_writable_project(unit_of_work, thread.project_id)
             if thread.status is ThreadStatus.ARCHIVED:
                 raise ThreadConflictError("Archived Threads cannot accept messages")
@@ -349,6 +350,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             messages = await unit_of_work.threads.messages_for_thread(thread_id)
             investigation_id = await unit_of_work.threads.investigation_id_for_thread(
                 thread_id
@@ -463,6 +465,7 @@ class ThreadService:
             require_group(await unit_of_work.organization.get_group(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
+                viewer_id=actor.user_id,
                 include_archived=include_archived,
                 limit=limit,
                 after=after,
@@ -486,6 +489,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             investigation_id = await unit_of_work.threads.investigation_id_for_thread(
                 thread_id
             )
@@ -506,6 +510,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             if restore:
                 await self._require_writable_project(unit_of_work, thread.project_id)
                 thread.restore(now)
@@ -670,6 +675,23 @@ class ThreadService:
         group = require_group(await unit_of_work.organization.get_group(project_id))
         if group.archived_at is not None:
             raise ThreadConflictError("Archived Groups cannot accept Thread messages")
+
+    async def _require_visible(
+        self, unit_of_work: ThreadUnitOfWork, actor: AuthenticatedActor, thread_id: UUID
+    ) -> None:
+        # Application-layer filter, not a second RLS policy (ADR-0033): every
+        # existing RLS policy in this codebase is tenant-scoped only, and a
+        # `created_by`-scoped policy would need a second session variable set
+        # on every connection for the sake of one table. Raises the same
+        # error a nonexistent or cross-Tenant Thread would -- a private
+        # Thread another User cannot see should look identical to one that
+        # does not exist, not confirm its existence via a different error.
+        visibility = await unit_of_work.threads.visibility_and_creator(thread_id)
+        if visibility is None:
+            return
+        session_visibility, created_by = visibility
+        if session_visibility == "private" and created_by != actor.user_id:
+            raise ThreadNotFoundError("Thread was not found")
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
