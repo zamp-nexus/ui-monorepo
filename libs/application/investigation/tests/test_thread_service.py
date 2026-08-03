@@ -562,16 +562,16 @@ async def test_a_private_thread_is_invisible_to_a_non_creator() -> None:
     detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
     _make_private(value, detail.thread_id, creator)
 
-    with pytest.raises(ThreadNotFoundError):
-        await threads.get(other_member, detail.thread_id)
-    with pytest.raises(ThreadNotFoundError):
-        await threads.append(other_member, thread_id=detail.thread_id, content="Hi")
-    with pytest.raises(ThreadNotFoundError):
-        await threads.archive(other_member, detail.thread_id)
-    with pytest.raises(ThreadNotFoundError):
-        await threads.restore(other_member, detail.thread_id)
-    with pytest.raises(ThreadNotFoundError):
-        await threads.delete(other_member, detail.thread_id)
+    operations = (
+        threads.get(other_member, detail.thread_id),
+        threads.append(other_member, thread_id=detail.thread_id, content="Hi"),
+        threads.archive(other_member, detail.thread_id),
+        threads.restore(other_member, detail.thread_id),
+        threads.delete(other_member, detail.thread_id),
+    )
+    for operation in operations:
+        with pytest.raises(ThreadNotFoundError):
+            await operation
 
 
 @pytest.mark.asyncio
