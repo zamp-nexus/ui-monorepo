@@ -37,6 +37,7 @@ from zentra_adapter_postgres import (
     PostgresThreadUnitOfWorkFactory,
 )
 from zentra_adapter_telemetry import (
+    record_agent_execution,
     record_evidence_deletion,
     record_publication_decision,
 )
@@ -249,6 +250,7 @@ class AppDependencies:
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
             continuation=threads,
+            agent_execution_observer=record_agent_execution,
         )
         connector = (
             ConnectorService(

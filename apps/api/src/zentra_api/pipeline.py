@@ -131,7 +131,9 @@ def _optional_str(value: object) -> str | None:
     return text or None
 
 
-def _record_agent_telemetry(execution: AgentExecutionRecord, skills: SkillRegistry) -> None:
+def _record_agent_telemetry(
+    execution: AgentExecutionRecord, skills: SkillRegistry
+) -> None:
     """Extend telemetry beyond Insight, at the same call site and for the same
     reason: the finished record already exists here, so telemetry cannot
     disagree with what was persisted about the same step."""

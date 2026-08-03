@@ -15,6 +15,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from zentra_adapter_telemetry import (
     correlate_investigation,
+    correlate_thread,
     record_citation_resolution,
 )
 from zentra_application_investigation import (
@@ -348,6 +349,8 @@ async def execute_visualization_action(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    if result.thread_id is not None:
+        correlate_thread(result.thread_id)
     return VisualizationActionResponse(
         kind=result.kind,
         citation_id=result.citation_id,
