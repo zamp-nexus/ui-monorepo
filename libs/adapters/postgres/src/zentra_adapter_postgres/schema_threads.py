@@ -32,10 +32,9 @@ chat_sessions = Table(
         nullable=False,
     ),
     Column("group_id", UUID(as_uuid=True), nullable=False),
-    # Nullable for now: the current Thread aggregate (its rename to Chat
-    # Session is deferred, per ADR-0028) has no creator field to supply
-    # this from. Tightened to NOT NULL once the application layer wires
-    # Chat Session creation to an authenticated User (ADR-0033).
+    # Nullable rather than NOT NULL: ThreadService.create now always passes
+    # the authenticated actor through (ADR-0033), but rows created before
+    # that wiring existed have no creator to backfill.
     Column(
         "created_by",
         UUID(as_uuid=True),

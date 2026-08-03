@@ -29,6 +29,7 @@ from zentra_adapter_postgres.schema import (
     data_sources,
     messages,
     tenants,
+    users,
 )
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
@@ -85,6 +86,7 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
     assert RUNTIME_URL is not None
     tenant_id = uuid4()
     other_tenant_id = uuid4()
+    owner = actor(tenant_id)
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
@@ -93,6 +95,10 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
                 {"tenant_id": tenant_id, "name": "Thread Tenant"},
                 {"tenant_id": other_tenant_id, "name": "Other Tenant"},
             ],
+        )
+        await connection.execute(
+            insert(users),
+            {"user_id": owner.user_id, "email": "thread-owner@example.com"},
         )
 
     database = Database(RUNTIME_URL)
@@ -112,7 +118,6 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
         now=now,
         new_id=uuid4,
     )
-    owner = actor(tenant_id)
     group = await organization.create_group(owner, name="Finance")
 
     draft = await threads.create(
@@ -143,6 +148,9 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
                 tenants.c.tenant_id.in_((tenant_id, other_tenant_id))
             )
         )
+        await connection.execute(
+            users.delete().where(users.c.user_id == owner.user_id)
+        )
     await owner_engine.dispose()
 
 
@@ -153,6 +161,7 @@ async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> 
     tenant_id = uuid4()
     other_tenant_id = uuid4()
     data_source_id = uuid4()
+    owner = actor(tenant_id)
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
@@ -161,6 +170,10 @@ async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> 
                 {"tenant_id": tenant_id, "name": "Dataset Default Tenant"},
                 {"tenant_id": other_tenant_id, "name": "Other Dataset Default Tenant"},
             ],
+        )
+        await connection.execute(
+            insert(users),
+            {"user_id": owner.user_id, "email": "dataset-default-owner@example.com"},
         )
         await connection.execute(
             insert(data_sources),
@@ -190,7 +203,6 @@ async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> 
         now=now,
         new_id=uuid4,
     )
-    owner = actor(tenant_id)
     group = await organization.create_group(owner, name="Finance")
     draft = await threads.create(
         owner, project_id=group.group_id, content="How is the business doing?"
@@ -224,5 +236,8 @@ async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> 
             tenants.delete().where(
                 tenants.c.tenant_id.in_((tenant_id, other_tenant_id))
             )
+        )
+        await connection.execute(
+            users.delete().where(users.c.user_id == owner.user_id)
         )
     await owner_engine.dispose()

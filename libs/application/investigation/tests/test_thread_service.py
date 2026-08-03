@@ -51,10 +51,10 @@ class Repository:
         self.enqueued_events = 0
         self.feed_events: dict[UUID, list[object]] = {}
         self.commits = 0
-        # `InvestigationThread` (the domain object) carries neither field --
-        # both are raw `chat_sessions` columns not yet modeled there, exactly
-        # as the real Postgres adapter stores them. Defaults match the
-        # schema's own defaults (`visibility` "shared", `created_by` unset).
+        # `visibility` is a raw `chat_sessions` column the domain object
+        # doesn't model; defaults to match the schema's own default
+        # ("shared"). `created_by` does live on `InvestigationThread` and is
+        # mirrored from there, exactly as the real Postgres adapter does.
         self.visibility: dict[UUID, str] = {}
         self.created_by: dict[UUID, UUID | None] = {}
 
@@ -63,7 +63,7 @@ class Repository:
         self.messages[thread.thread_id] = []
         self.feed_events[thread.thread_id] = []
         self.visibility.setdefault(thread.thread_id, "shared")
-        self.created_by.setdefault(thread.thread_id, None)
+        self.created_by[thread.thread_id] = thread.created_by
 
     async def visibility_and_creator(
         self, thread_id: UUID
@@ -546,11 +546,24 @@ async def test_a_follow_up_after_not_analytical_starts_its_own_investigation() -
     assert investigation.parent_investigation_id is None
 
 
-def _make_private(
-    value: Repository, thread_id: UUID, creator: AuthenticatedActor
-) -> None:
+def _make_private(value: Repository, thread_id: UUID) -> None:
+    """Flips visibility only -- `created_by` is already set by `create()`.
+
+    No shipped path lets a caller create a private Chat Session directly, so
+    this is still a test-only shortcut for reaching that state -- but it no
+    longer forges `created_by`, which `add_thread` now populates for real.
+    """
     value.visibility[thread_id] = "private"
-    value.created_by[thread_id] = creator.user_id
+
+
+@pytest.mark.asyncio
+async def test_creating_a_thread_records_its_creator() -> None:
+    value = repository()
+    creator = actor()
+    threads = service(value)
+    detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
+
+    assert value.created_by[detail.thread_id] == creator.user_id
 
 
 @pytest.mark.asyncio
@@ -560,7 +573,7 @@ async def test_a_private_thread_is_invisible_to_a_non_creator() -> None:
     other_member = actor()
     threads = service(value)
     detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
-    _make_private(value, detail.thread_id, creator)
+    _make_private(value, detail.thread_id)
 
     operations = (
         threads.get(other_member, detail.thread_id),
@@ -580,7 +593,7 @@ async def test_a_private_threads_creator_retains_full_access() -> None:
     creator = actor()
     threads = service(value)
     detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
-    _make_private(value, detail.thread_id, creator)
+    _make_private(value, detail.thread_id)
 
     read_back = await threads.get(creator, detail.thread_id)
     assert read_back.thread_id == detail.thread_id
@@ -595,7 +608,7 @@ async def test_a_private_thread_is_excluded_from_another_users_list() -> None:
     other_member = actor()
     threads = service(value)
     private = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
-    _make_private(value, private.thread_id, creator)
+    _make_private(value, private.thread_id)
     shared = await threads.create(
         creator, project_id=GROUP_ID, content="Why did EU refunds increase?"
     )
