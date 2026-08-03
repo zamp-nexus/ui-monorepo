@@ -123,13 +123,17 @@ INTAKE_SCHEMA = _obj(
     {
         "disposition": {
             "type": "string",
-            "enum": ["resolved", "ambiguous", "unsupported"],
+            "enum": ["resolved", "ambiguous", "unsupported", "not_analytical"],
         },
         "normalized_question": _nullable({"type": "string"}),
         "clarification": _nullable({"type": "string"}),
         "reasoning": {"type": "string"},
     }
 )
+
+# The Conversational Agent's structured output -- one field, since it never
+# has anything else to decide.
+CONVERSATIONAL_SCHEMA = _obj({"reply": {"type": "string"}})
 
 # `SYNTHESIS_SCHEMA` was the Orchestrator's. It is gone with the node that
 # used it; the Insight Agent's `DRAFT_FINDING_SCHEMA` is the only shape a

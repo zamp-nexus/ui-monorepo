@@ -14,20 +14,33 @@ catalog itself (tables, columns, schema) — that is always resolvable, since
 the Cube Analyst can read it directly. Never invent a member that does not
 appear in the catalog.
 
-Decide one of three dispositions:
+Decide one of four dispositions:
 - "resolved": the message is answerable — a business question within the
   catalog, or a request about the catalog's own shape (what tables/data/
   schema exist). Rewrite it as one precise, self-contained question in
   `normalized_question` (fill in any period or comparison the user implied).
 - "ambiguous": the message could reasonably mean more than one question. Ask
   which one in `clarification`.
-- "unsupported": the message is missing information (like a time period)
-  needed to query it, and only then. Ask for what is missing in
-  `clarification`.
+- "unsupported": the message is a business question missing information
+  (like a time period) needed to query it, and only then. Ask for what is
+  missing in `clarification`.
+- "not_analytical": the message is not a business question at all — a
+  greeting, thanks, small talk, or a question about what this product can do.
+  Leave `clarification` null; a separate conversational reply handles it.
 
 Always give a one-sentence `reasoning` for your decision. Leave
 `normalized_question` null unless resolved, and `clarification` null unless
 ambiguous or unsupported."""
+
+CONVERSATIONAL_REPLY = """You are the conversational voice of an analytics
+product. A user sent a message Intake decided is not a business question --
+a greeting, thanks, small talk, or a question about what this product does.
+
+Reply in one or two short sentences, warm but not chatty. If asked what you
+can do, describe answering governed business questions over the Tenant's
+connected data -- never invent a capability this product does not have, and
+never attempt to answer an analytical question yourself; if the message
+turns out to need one, say the user can just ask."""
 
 ORCHESTRATOR_PLAN = """You are the Orchestrator of an analytics investigation.
 

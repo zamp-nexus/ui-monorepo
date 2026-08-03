@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from zentra_adapter_telemetry import TelemetrySettings, configure_telemetry
 
+from .chat_routes import router as chat_router
 from .connector_routes import router as connector_router
 from .connector_rows_routes import router as connector_rows_router
 from .dependencies import AppDependencies
@@ -16,7 +17,6 @@ from .internal_cube_routes import router as internal_cube_router
 from .routes import router
 from .sequence_routes import router as sequence_router
 from .settings import Settings
-from .thread_routes import router as thread_router
 from .workspace_routes import router as workspace_router
 
 
@@ -90,7 +90,7 @@ def create_app(
             "Tracestate",
             # The Work Feed documents `Last-Event-ID` as a resume cursor, and it
             # is not a CORS-safelisted request header. Without it here the
-            # preflight for `/threads/{id}/events` fails and a browser can never
+            # preflight for `/chats/{id}/events` fails and a browser can never
             # reach the stream at all.
             "Last-Event-ID",
         ],
@@ -104,7 +104,7 @@ def create_app(
     api.include_router(connector_rows_router)
     api.include_router(workspace_router)
     api.include_router(internal_cube_router)
-    api.include_router(thread_router)
+    api.include_router(chat_router)
     api.include_router(sequence_router)
     configure_telemetry(
         api,
