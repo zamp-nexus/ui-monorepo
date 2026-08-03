@@ -26,7 +26,7 @@ from .schemas import (
 )
 
 
-class ThreadMessageRequest(BaseModel):
+class ChatMessageRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
@@ -220,7 +220,7 @@ class ThreadInvestigationResponse(BaseModel):
         )
 
 
-class ThreadResponse(BaseModel):
+class ChatResponse(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
@@ -309,7 +309,7 @@ class ThreadResponse(BaseModel):
     actions: ThreadActionsResponse
 
     @classmethod
-    def from_detail(cls, detail: ThreadDetail) -> ThreadResponse:
+    def from_detail(cls, detail: ThreadDetail) -> ChatResponse:
         return cls(
             thread_id=detail.thread_id,
             project_id=detail.project_id,
@@ -370,14 +370,14 @@ class ThreadSummaryResponse(BaseModel):
         )
 
 
-class ThreadPageResponse(BaseModel):
+class ChatPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[ThreadSummaryResponse]
     next_cursor: str | None
 
     @classmethod
-    def from_detail(cls, detail: ThreadPage) -> ThreadPageResponse:
+    def from_detail(cls, detail: ThreadPage) -> ChatPageResponse:
         return cls(
             items=[ThreadSummaryResponse.from_detail(item) for item in detail.items],
             next_cursor=detail.next_cursor,

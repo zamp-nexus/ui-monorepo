@@ -17,7 +17,7 @@ from zentra_adapter_clickhouse import (
     ClickHouseSourceConnector,
 )
 from zentra_adapter_cube import CubeClient
-from zentra_adapter_langgraph import IntakeAgent
+from zentra_adapter_langgraph import ConversationalAgent, IntakeAgent
 from zentra_adapter_model_providers import (
     ModelTier,
     ProviderCircuitBreaker,
@@ -44,6 +44,7 @@ from zentra_adapter_telemetry import (
 from zentra_adapter_thesys import ThesysC1Client
 from zentra_application_connector import ConnectorService
 from zentra_application_investigation import (
+    ConversationalService,
     ExecutionJobWorker,
     IntakeService,
     InvestigationService,
@@ -221,11 +222,18 @@ class AppDependencies:
                 tenant_id=tenant_id, data_connection_id=data_connection_id
             )
 
+        def _build_conversational_agent() -> ConversationalAgent:
+            return ConversationalAgent(model=intake_model)
+
         threads = ThreadService(
             unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
             intake=IntakeService(
                 agent_factory=_build_intake_agent,
                 resolve_semantic_layer=_resolve_intake_semantic_layer,
+                new_id=uuid4,
+            ),
+            conversational=ConversationalService(
+                agent_factory=_build_conversational_agent,
                 new_id=uuid4,
             ),
             now=lambda: datetime.now(UTC),

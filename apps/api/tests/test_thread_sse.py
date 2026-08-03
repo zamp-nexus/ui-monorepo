@@ -11,7 +11,7 @@ from zentra_domain_investigation import (
     WorkFeedEventKind,
 )
 
-from zentra_api.thread_routes import stream_thread_events
+from zentra_api.chat_routes import stream_chat_events
 
 THREAD_ID = UUID("10000000-0000-0000-0000-000000000001")
 
@@ -63,7 +63,7 @@ def _event(sequence: int) -> ThreadEvent:
 async def test_sse_resumes_after_last_event_id_and_emits_decimal_sequence() -> None:
     threads = Threads((_event(4), _event(5)))
     request = Request(threads, last_event_id="4")
-    response = await stream_thread_events(
+    response = await stream_chat_events(
         THREAD_ID,
         request,  # type: ignore[arg-type]
         SimpleNamespace(actor=object()),  # type: ignore[arg-type]

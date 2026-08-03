@@ -41,6 +41,11 @@ class RoutingDisposition(StrEnum):
     # written before that carry them and must stay readable.
     AMBIGUOUS = "ambiguous"
     UNSUPPORTED = "unsupported"
+    # A message that is not a business question at all -- a greeting, thanks,
+    # or "what can you do" -- rather than one Intake could not resolve.
+    # Routed to the Conversational Agent instead of a router-clarification
+    # message (ADR-0033's `assistant_reply` kind).
+    NOT_ANALYTICAL = "not_analytical"
 
 
 @dataclass(frozen=True, slots=True)

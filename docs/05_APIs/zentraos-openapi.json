@@ -111,7 +111,8 @@
           "forecaster",
           "visualization",
           "executive_report_writer",
-          "knowledge"
+          "knowledge",
+          "conversational"
         ],
         "title": "AgentRole",
         "type": "string"
@@ -693,6 +694,204 @@
           "dimensions"
         ],
         "title": "CatalogSummaryResponse",
+        "type": "object"
+      },
+      "ChatMessageRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "message": "Why did EU refunds increase from June to July 2026?"
+          }
+        ],
+        "properties": {
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatMessageRequest",
+        "type": "object"
+      },
+      "ChatPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadSummaryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ChatPageResponse",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "actions": {
+              "can_append_message": true,
+              "can_archive": true,
+              "can_cancel": false,
+              "can_delete": true,
+              "can_restore": false,
+              "can_retry": false
+            },
+            "created_at": "2026-08-01T09:00:00Z",
+            "latest_activity_at": "2026-08-01T09:00:00Z",
+            "messages": [
+              {
+                "authored_by_user": true,
+                "content": "How is the business doing?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "user_question",
+                "message_id": "44000000-0000-0000-0000-000000000001"
+              },
+              {
+                "authored_by_user": false,
+                "content": "I could not map that message to a governed question. Please choose or rephrase one supported question.\n- Why did EU refunds increase from June to July 2026?\n- Which sales channel accounted for the increase in North America revenue from October to November 2026?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "router_clarification",
+                "message_id": "44000000-0000-0000-0000-000000000002"
+              }
+            ],
+            "project_id": "42000000-0000-0000-0000-000000000001",
+            "routing": {
+              "clarification": "I could not map that message to a governed question. Please choose or rephrase one supported question.",
+              "disposition": "unsupported",
+              "suggestions": [
+                "Why did EU refunds increase from June to July 2026?",
+                "Which sales channel accounted for the increase in North America revenue from October to November 2026?"
+              ]
+            },
+            "status": "draft",
+            "thread_id": "43000000-0000-0000-0000-000000000001",
+            "title": "How is the business doing?",
+            "updated_at": "2026-08-01T09:00:00Z",
+            "usage": {
+              "input_tokens": 0,
+              "latency_ms": 0,
+              "output_tokens": 0,
+              "total_cost_usd": "0"
+            }
+          }
+        ],
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/ThreadActionsResponse"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_cursor": {
+            "default": 0,
+            "title": "Event Cursor",
+            "type": "integer"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "investigations": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadInvestigationResponse"
+            },
+            "title": "Investigations",
+            "type": "array"
+          },
+          "latest_activity_at": {
+            "format": "date-time",
+            "title": "Latest Activity At",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "routing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageResponse"
+          }
+        },
+        "required": [
+          "thread_id",
+          "project_id",
+          "title",
+          "status",
+          "created_at",
+          "updated_at",
+          "latest_activity_at",
+          "messages",
+          "usage",
+          "actions"
+        ],
+        "title": "ChatResponse",
         "type": "object"
       },
       "CitationFilterResponse": {
@@ -3535,27 +3734,6 @@
         "title": "ThreadInvestigationResponse",
         "type": "object"
       },
-      "ThreadMessageRequest": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "message": "Why did EU refunds increase from June to July 2026?"
-          }
-        ],
-        "properties": {
-          "message": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "ThreadMessageRequest",
-        "type": "object"
-      },
       "ThreadMessageResponse": {
         "additionalProperties": false,
         "properties": {
@@ -3590,183 +3768,6 @@
           "authored_by_user"
         ],
         "title": "ThreadMessageResponse",
-        "type": "object"
-      },
-      "ThreadPageResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadSummaryResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Cursor"
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
-        "title": "ThreadPageResponse",
-        "type": "object"
-      },
-      "ThreadResponse": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "actions": {
-              "can_append_message": true,
-              "can_archive": true,
-              "can_cancel": false,
-              "can_delete": true,
-              "can_restore": false,
-              "can_retry": false
-            },
-            "created_at": "2026-08-01T09:00:00Z",
-            "latest_activity_at": "2026-08-01T09:00:00Z",
-            "messages": [
-              {
-                "authored_by_user": true,
-                "content": "How is the business doing?",
-                "created_at": "2026-08-01T09:00:00Z",
-                "kind": "user_question",
-                "message_id": "44000000-0000-0000-0000-000000000001"
-              },
-              {
-                "authored_by_user": false,
-                "content": "I could not map that message to a governed question. Please choose or rephrase one supported question.\n- Why did EU refunds increase from June to July 2026?\n- Which sales channel accounted for the increase in North America revenue from October to November 2026?",
-                "created_at": "2026-08-01T09:00:00Z",
-                "kind": "router_clarification",
-                "message_id": "44000000-0000-0000-0000-000000000002"
-              }
-            ],
-            "project_id": "42000000-0000-0000-0000-000000000001",
-            "routing": {
-              "clarification": "I could not map that message to a governed question. Please choose or rephrase one supported question.",
-              "disposition": "unsupported",
-              "suggestions": [
-                "Why did EU refunds increase from June to July 2026?",
-                "Which sales channel accounted for the increase in North America revenue from October to November 2026?"
-              ]
-            },
-            "status": "draft",
-            "thread_id": "43000000-0000-0000-0000-000000000001",
-            "title": "How is the business doing?",
-            "updated_at": "2026-08-01T09:00:00Z",
-            "usage": {
-              "input_tokens": 0,
-              "latency_ms": 0,
-              "output_tokens": 0,
-              "total_cost_usd": "0"
-            }
-          }
-        ],
-        "properties": {
-          "actions": {
-            "$ref": "#/components/schemas/ThreadActionsResponse"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "event_cursor": {
-            "default": 0,
-            "title": "Event Cursor",
-            "type": "integer"
-          },
-          "investigation_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Investigation Id"
-          },
-          "investigations": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadInvestigationResponse"
-            },
-            "title": "Investigations",
-            "type": "array"
-          },
-          "latest_activity_at": {
-            "format": "date-time",
-            "title": "Latest Activity At",
-            "type": "string"
-          },
-          "messages": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadMessageResponse"
-            },
-            "title": "Messages",
-            "type": "array"
-          },
-          "project_id": {
-            "format": "uuid",
-            "title": "Project Id",
-            "type": "string"
-          },
-          "routing": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RoutingResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "thread_id": {
-            "format": "uuid",
-            "title": "Thread Id",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          },
-          "usage": {
-            "$ref": "#/components/schemas/UsageResponse"
-          }
-        },
-        "required": [
-          "thread_id",
-          "project_id",
-          "title",
-          "status",
-          "created_at",
-          "updated_at",
-          "latest_activity_at",
-          "messages",
-          "usage",
-          "actions"
-        ],
-        "title": "ThreadResponse",
         "type": "object"
       },
       "ThreadSummaryResponse": {
@@ -4829,6 +4830,356 @@
           }
         },
         "summary": "Catalog"
+      }
+    },
+    "/v1/chats/{chat_id}": {
+      "delete": {
+        "operationId": "delete_chat_v1_chats__chat_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Chat"
+      },
+      "get": {
+        "operationId": "get_chat_v1_chats__chat_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chat"
+      }
+    },
+    "/v1/chats/{chat_id}/archive": {
+      "post": {
+        "operationId": "archive_chat_v1_chats__chat_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive Chat"
+      }
+    },
+    "/v1/chats/{chat_id}/events": {
+      "get": {
+        "operationId": "stream_chat_events_v1_chats__chat_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Chat Events"
+      }
+    },
+    "/v1/chats/{chat_id}/messages": {
+      "post": {
+        "operationId": "append_chat_message_v1_chats__chat_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Append Chat Message"
+      }
+    },
+    "/v1/chats/{chat_id}/restore": {
+      "post": {
+        "operationId": "restore_chat_v1_chats__chat_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore Chat"
       }
     },
     "/v1/connector/catalog-versions/{catalog_version_id}": {
@@ -6824,6 +7175,164 @@
         "summary": "Archive Group"
       }
     },
+    "/v1/groups/{group_id}/chats": {
+      "get": {
+        "operationId": "list_chats_v1_groups__group_id__chats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Chats"
+      },
+      "post": {
+        "operationId": "create_chat_v1_groups__group_id__chats_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Chat"
+      }
+    },
     "/v1/groups/{group_id}/restore": {
       "post": {
         "operationId": "restore_group_v1_groups__group_id__restore_post",
@@ -7378,164 +7887,6 @@
         "summary": "Investigation Visualization"
       }
     },
-    "/v1/projects/{project_id}/threads": {
-      "get": {
-        "operationId": "list_threads_v1_projects__project_id__threads_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Project Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "cursor",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
-            }
-          },
-          {
-            "in": "query",
-            "name": "include_archived",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Include Archived",
-              "type": "boolean"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadPageResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "List Threads"
-      },
-      "post": {
-        "operationId": "create_thread_v1_projects__project_id__threads_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Project Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ThreadMessageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Thread"
-      }
-    },
     "/v1/sequences": {
       "get": {
         "operationId": "list_sequences_v1_sequences_get",
@@ -7768,356 +8119,6 @@
         "tags": [
           "sequence"
         ]
-      }
-    },
-    "/v1/threads/{thread_id}": {
-      "delete": {
-        "operationId": "delete_thread_v1_threads__thread_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Delete Thread"
-      },
-      "get": {
-        "operationId": "get_thread_v1_threads__thread_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Thread"
-      }
-    },
-    "/v1/threads/{thread_id}/archive": {
-      "post": {
-        "operationId": "archive_thread_v1_threads__thread_id__archive_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Archive Thread"
-      }
-    },
-    "/v1/threads/{thread_id}/events": {
-      "get": {
-        "operationId": "stream_thread_events_v1_threads__thread_id__events_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "after",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "text/event-stream": {}
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Stream Thread Events"
-      }
-    },
-    "/v1/threads/{thread_id}/messages": {
-      "post": {
-        "operationId": "append_thread_message_v1_threads__thread_id__messages_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ThreadMessageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Append Thread Message"
-      }
-    },
-    "/v1/threads/{thread_id}/restore": {
-      "post": {
-        "operationId": "restore_thread_v1_threads__thread_id__restore_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "thread_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Thread Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Restore Thread"
       }
     },
     "/v1/visualizations/{visualization_id}": {
