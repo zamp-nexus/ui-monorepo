@@ -21,6 +21,10 @@ class ThreadMessageKind(StrEnum):
     USER_CLARIFICATION = "user_clarification"
     ROUTER_CLARIFICATION = "router_clarification"
     SAFE_SYSTEM = "safe_system"
+    # A Conversational Agent's reply to a non-analytical message (ADR-0033).
+    # No Analysis Run backs it -- `author_id` is None, same as a router
+    # clarification.
+    ASSISTANT_REPLY = "assistant_reply"
 
 
 class ThreadMessageError(ValueError):

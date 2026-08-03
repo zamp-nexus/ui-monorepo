@@ -37,6 +37,12 @@ class IntakePort(Protocol):
     ) -> RoutingResult: ...
 
 
+class ConversationalPort(Protocol):
+    """Replies to a non-analytical message (ADR-0033)."""
+
+    async def reply(self, message: str, *, tenant_id: UUID) -> str: ...
+
+
 class ThreadRepository(Protocol):
     async def add_thread(self, thread: InvestigationThread) -> None: ...
 
@@ -58,12 +64,17 @@ class ThreadRepository(Protocol):
         self,
         *,
         project_id: UUID,
+        viewer_id: UUID,
         include_archived: bool,
         limit: int,
         after: ThreadCursor | None,
     ) -> ThreadSlice: ...
 
     async def investigation_id_for_thread(self, thread_id: UUID) -> UUID | None: ...
+
+    async def visibility_and_creator(
+        self, thread_id: UUID
+    ) -> tuple[str, UUID | None] | None: ...
 
 
 class ThreadUnitOfWork(Protocol):

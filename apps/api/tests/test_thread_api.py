@@ -15,7 +15,7 @@ from zentra_application_investigation import (
 )
 from zentra_domain_investigation import ThreadMessageKind, ThreadStatus
 
-from zentra_api.thread_schemas import ThreadResponse
+from zentra_api.thread_schemas import ChatResponse
 
 from .test_api import client
 
@@ -127,20 +127,20 @@ def test_thread_lifecycle_contracts_are_backend_owned(monkeypatch) -> None:
 
     with client(threads=threads) as test_client:
         created = test_client.post(
-            f"/v1/projects/{PROJECT_ID}/threads",
+            f"/v1/groups/{PROJECT_ID}/chats",
             headers=AUTH,
             json={"message": "How is the business doing?"},
         )
-        listed = test_client.get(f"/v1/projects/{PROJECT_ID}/threads", headers=AUTH)
-        fetched = test_client.get(f"/v1/threads/{THREAD_ID}", headers=AUTH)
+        listed = test_client.get(f"/v1/groups/{PROJECT_ID}/chats", headers=AUTH)
+        fetched = test_client.get(f"/v1/chats/{THREAD_ID}", headers=AUTH)
         appended = test_client.post(
-            f"/v1/threads/{THREAD_ID}/messages",
+            f"/v1/chats/{THREAD_ID}/messages",
             headers=AUTH,
             json={"message": "EU refunds from June to July"},
         )
-        archived = test_client.post(f"/v1/threads/{THREAD_ID}/archive", headers=AUTH)
-        restored = test_client.post(f"/v1/threads/{THREAD_ID}/restore", headers=AUTH)
-        deleted = test_client.delete(f"/v1/threads/{THREAD_ID}", headers=AUTH)
+        archived = test_client.post(f"/v1/chats/{THREAD_ID}/archive", headers=AUTH)
+        restored = test_client.post(f"/v1/chats/{THREAD_ID}/restore", headers=AUTH)
+        deleted = test_client.delete(f"/v1/chats/{THREAD_ID}", headers=AUTH)
 
     assert created.status_code == 201
     assert created.json()["routing"]["disposition"] == "unsupported"
@@ -159,7 +159,7 @@ def test_thread_requests_forbid_extra_fields(monkeypatch) -> None:
 
     with client(threads=ThreadStub()) as test_client:
         response = test_client.post(
-            f"/v1/projects/{PROJECT_ID}/threads",
+            f"/v1/groups/{PROJECT_ID}/chats",
             headers=AUTH,
             json={"message": "Question", "scenario_key": "eu_refund_spike"},
         )
@@ -178,7 +178,7 @@ def test_thread_conflicts_have_stable_codes(monkeypatch) -> None:
 
     with client(threads=RefusingThreads()) as test_client:
         response = test_client.post(
-            f"/v1/threads/{THREAD_ID}/messages",
+            f"/v1/chats/{THREAD_ID}/messages",
             headers=AUTH,
             json={"message": "Another question"},
         )
@@ -193,14 +193,14 @@ def test_openapi_exposes_thread_operations() -> None:
         paths = openapi["paths"]
 
     assert {
-        "/v1/projects/{project_id}/threads",
-        "/v1/threads/{thread_id}",
-        "/v1/threads/{thread_id}/messages",
-        "/v1/threads/{thread_id}/archive",
-        "/v1/threads/{thread_id}/restore",
+        "/v1/groups/{group_id}/chats",
+        "/v1/chats/{chat_id}",
+        "/v1/chats/{chat_id}/messages",
+        "/v1/chats/{chat_id}/archive",
+        "/v1/chats/{chat_id}/restore",
     } <= set(paths)
-    assert "delete" in paths["/v1/threads/{thread_id}"]
-    example = openapi["components"]["schemas"]["ThreadResponse"]["examples"][0]
-    assert ThreadResponse.model_validate(example).messages[1].kind == (
+    assert "delete" in paths["/v1/chats/{chat_id}"]
+    example = openapi["components"]["schemas"]["ChatResponse"]["examples"][0]
+    assert ChatResponse.model_validate(example).messages[1].kind == (
         ThreadMessageKind.ROUTER_CLARIFICATION.value
     )
