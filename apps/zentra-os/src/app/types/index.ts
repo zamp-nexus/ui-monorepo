@@ -33,7 +33,6 @@ export type {
   InvestigationStatus,
   MessageEventPayload,
   Page,
-  Project,
   ResolvedCitation,
   RoutingEventPayload,
   Thread,
