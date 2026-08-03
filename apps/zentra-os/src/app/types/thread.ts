@@ -36,9 +36,10 @@ export interface Page<T> {
 /**
  * The server has no notion of an author "role" — it reports who wrote the
  * message and what kind of message it is, and those are different questions.
- * `kind` is a bare string because the vocabulary grows server-side; the two
- * values the surface renders differently are `user_question` and
- * `router_clarification`.
+ * `kind` is a bare string because the vocabulary grows server-side; the
+ * values the surface renders differently are `user_question`,
+ * `router_clarification`, and `assistant_reply` (a Conversational Agent's
+ * reply to a non-analytical message, ADR-0033 -- no Analysis Run behind it).
  */
 export interface ThreadMessage {
   readonly message_id: string;
