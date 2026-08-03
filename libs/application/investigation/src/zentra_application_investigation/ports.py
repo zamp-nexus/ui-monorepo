@@ -359,6 +359,33 @@ class ErasureObserver(Protocol):
     ) -> None: ...
 
 
+class AgentExecutionObserver(Protocol):
+    """Somewhere to report how an Agent execution went, for an Agent outside
+    the Insight/pipeline recording path that still needs it — the Data
+    Visualization Agent here.
+
+    A port for the same reason as `PublicationObserver`: the application may
+    not import an adapter, and an operator's dashboard is a different
+    obligation from the Tenant's own Replay record.
+    """
+
+    def __call__(
+        self,
+        *,
+        role: str,
+        agent_id: str,
+        model: str | None,
+        provider: str | None,
+        fallback_count: int,
+        input_tokens: int,
+        output_tokens: int,
+        cost_usd: str,
+        duration_ms: int,
+        status: str,
+        error_category: str | None = None,
+    ) -> None: ...
+
+
 class AuditWriter(Protocol):
     async def flush(self, *, tenant_id: UUID, investigation_id: UUID) -> bool: ...
 

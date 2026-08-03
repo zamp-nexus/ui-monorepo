@@ -4,8 +4,14 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4, uuid5
 
+from zentra_adapter_langgraph import SkillRegistry
 from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
-from zentra_adapter_telemetry import record_insight_execution
+from zentra_adapter_telemetry import (
+    record_agent_execution,
+    record_insight_execution,
+    record_skill_activation,
+    record_tool_call,
+)
 from zentra_application_investigation import PipelineResult
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
@@ -125,6 +131,39 @@ def _optional_str(value: object) -> str | None:
     return text or None
 
 
+def _record_agent_telemetry(
+    execution: AgentExecutionRecord, skills: SkillRegistry
+) -> None:
+    """Extend telemetry beyond Insight, at the same call site and for the same
+    reason: the finished record already exists here, so telemetry cannot
+    disagree with what was persisted about the same step."""
+    if execution.role in (AgentRole.INTAKE, AgentRole.CUBE_ANALYST):
+        record_agent_execution(
+            role=execution.role.value,
+            agent_id=execution.agent_id,
+            model=execution.usage.model,
+            provider=_provider_of(execution.usage.model),
+            fallback_count=len(execution.fallbacks),
+            input_tokens=execution.usage.input_tokens,
+            output_tokens=execution.usage.output_tokens,
+            cost_usd=str(execution.usage.cost_usd),
+            duration_ms=execution.latency_ms,
+            status=execution.status.value,
+            error_category=_error_category(execution.errors),
+        )
+    for invocation in execution.tool_calls:
+        record_tool_call(
+            role=execution.role.value,
+            tool_name=invocation.name,
+            status="success" if invocation.ok else "failure",
+            latency_ms=invocation.latency_ms,
+        )
+    record_skill_activation(
+        role=execution.role.value,
+        skill_names=tuple(skill.name for skill in skills.for_role(execution.role)),
+    )
+
+
 class PostgresExecutionRecorder:
     """Commits each agent execution as it finishes.
 
@@ -135,8 +174,11 @@ class PostgresExecutionRecorder:
     def __init__(
         self,
         unit_of_work_factory: PostgresInvestigationUnitOfWorkFactory,
+        *,
+        skills: SkillRegistry | None = None,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
+        self._skills = skills or SkillRegistry.from_directory()
 
     async def cancellation_checkpoint(
         self, tenant_id: UUID, investigation_id: UUID
@@ -233,6 +275,7 @@ class PostgresExecutionRecorder:
                 status=execution.status.value,
                 error_category=_error_category(execution.errors),
             )
+        _record_agent_telemetry(execution, self._skills)
         # Before the transaction opens. The role travels into the audit
         # ledger's metadata, and Audit Entries are immutable — a legacy value
         # written there could never be corrected.

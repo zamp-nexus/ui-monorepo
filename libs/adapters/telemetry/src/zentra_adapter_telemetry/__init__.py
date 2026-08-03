@@ -7,11 +7,15 @@ from .tracing import (
     configure_telemetry,
     correlate_investigation,
     correlate_tenant,
+    correlate_thread,
     current_trace_ids,
+    record_agent_execution,
     record_citation_resolution,
     record_evidence_deletion,
     record_insight_execution,
     record_publication_decision,
+    record_skill_activation,
+    record_tool_call,
 )
 
 __all__ = [
@@ -21,9 +25,13 @@ __all__ = [
     "configure_telemetry",
     "correlate_investigation",
     "correlate_tenant",
+    "correlate_thread",
     "current_trace_ids",
+    "record_agent_execution",
     "record_citation_resolution",
     "record_evidence_deletion",
     "record_insight_execution",
     "record_publication_decision",
+    "record_skill_activation",
+    "record_tool_call",
 ]

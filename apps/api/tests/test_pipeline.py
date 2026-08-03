@@ -258,6 +258,144 @@ class ExplodingUnitOfWorkFactory:
         raise AssertionError("A legacy role reached the transaction")
 
 
+class _RecordingUnitOfWork:
+    """Enough of the real unit of work for `record()` to run to completion,
+    without a real Postgres transaction behind it."""
+
+    async def __aenter__(self) -> _RecordingUnitOfWork:
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+    async def commit(self) -> None:
+        return None
+
+    @property
+    def agent_executions(self) -> _RecordingUnitOfWork:
+        return self
+
+    async def add(self, execution: AgentExecutionRecord) -> None:
+        return None
+
+    @property
+    def outbox(self) -> _RecordingUnitOfWork:
+        return self
+
+    async def enqueue(self, events: object) -> None:
+        return None
+
+    @property
+    def work_feed(self) -> _RecordingUnitOfWork:
+        return self
+
+    async def append_for_investigation(self, **kwargs: object) -> None:
+        return None
+
+
+class _RecordingFactory:
+    def __init__(self) -> None:
+        self.uow = _RecordingUnitOfWork()
+
+    def __call__(self, *_: object) -> _RecordingUnitOfWork:
+        return self.uow
+
+
+@pytest.mark.asyncio
+async def test_intake_and_cube_analyst_executions_are_recorded_as_agent_telemetry(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "zentra_api.pipeline.record_agent_execution",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    recorder = PostgresExecutionRecorder(_RecordingFactory())
+
+    await recorder.record(execution(AgentRole.INTAKE))
+    await recorder.record(execution(AgentRole.CUBE_ANALYST))
+
+    assert [call["role"] for call in calls] == ["intake", "cube_analyst"]
+
+
+@pytest.mark.asyncio
+async def test_insight_executions_do_not_double_report_as_generic_agent_telemetry(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "zentra_api.pipeline.record_agent_execution",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    recorder = PostgresExecutionRecorder(_RecordingFactory())
+
+    await recorder.record(execution(AgentRole.INSIGHT))
+
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_every_tool_call_is_recorded(monkeypatch) -> None:
+    from zentra_domain_agent_execution import ToolInvocation
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "zentra_api.pipeline.record_tool_call",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    recorder = PostgresExecutionRecorder(_RecordingFactory())
+    with_tools = execution(AgentRole.CUBE_ANALYST).model_copy(
+        update={
+            "tool_calls": (
+                ToolInvocation(name="semantic_catalog_search", latency_ms=80, ok=True),
+                ToolInvocation(name="semantic_query", latency_ms=340, ok=False),
+            )
+        }
+    )
+
+    await recorder.record(with_tools)
+
+    assert [(call["tool_name"], call["status"]) for call in calls] == [
+        ("semantic_catalog_search", "success"),
+        ("semantic_query", "failure"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_skill_activation_is_recorded_for_a_role_that_has_skills(
+    monkeypatch,
+) -> None:
+    from zentra_adapter_langgraph import Skill, SkillRegistry
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "zentra_api.pipeline.record_skill_activation",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    skills = SkillRegistry(
+        [
+            Skill(
+                name="sample-size-discipline",
+                applies_to=frozenset({AgentRole.CUBE_ANALYST}),
+                instructions="Report a sample size only if a query ran.",
+            )
+        ]
+    )
+    recorder = PostgresExecutionRecorder(_RecordingFactory(), skills=skills)
+
+    await recorder.record(execution(AgentRole.CUBE_ANALYST))
+    await recorder.record(execution(AgentRole.INTAKE))
+
+    # `_record_agent_telemetry` calls the recorder for every role — it is
+    # `record_skill_activation` itself that stays silent for a role with no
+    # skills applied, and that no-op is covered where the function lives
+    # (`test_an_execution_with_no_skills_writes_no_skill_attribute`).
+    assert calls == [
+        {"role": "cube_analyst", "skill_names": ("sample-size-discipline",)},
+        {"role": "intake", "skill_names": ()},
+    ]
+
+
 @pytest.mark.asyncio
 async def test_the_recorder_refuses_to_write_the_legacy_insight_role() -> None:
     """The role travels into the audit ledger's metadata, and Audit Entries are
