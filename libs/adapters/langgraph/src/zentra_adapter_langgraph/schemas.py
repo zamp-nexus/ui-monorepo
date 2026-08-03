@@ -123,7 +123,7 @@ INTAKE_SCHEMA = _obj(
     {
         "disposition": {
             "type": "string",
-            "enum": ["resolved", "ambiguous", "unsupported"],
+            "enum": ["resolved", "ambiguous", "unsupported", "not_analytical"],
         },
         "normalized_question": _nullable({"type": "string"}),
         "clarification": _nullable({"type": "string"}),

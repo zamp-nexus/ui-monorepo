@@ -85,6 +85,14 @@ class IntakeService:
             )
 
         clarification = fields.get("clarification")
+        if disposition == "not_analytical":
+            return RoutingResult(
+                disposition=RoutingDisposition.NOT_ANALYTICAL,
+                scenario_key=None,
+                canonical_question=None,
+                clarification=None,
+                suggestions=(),
+            )
         return RoutingResult(
             disposition=(
                 RoutingDisposition.AMBIGUOUS
