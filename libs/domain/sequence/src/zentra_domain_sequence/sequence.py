@@ -96,6 +96,9 @@ class Sequence:
     raw_table_reference: RawTableReference
     created_at: datetime
     updated_at: datetime
+    # None for a Sequence Phase 5 auto-creates from an unrelated chat with no
+    # thread of its own yet; set at creation for the manual "New Sequence" flow.
+    thread_id: UUID | None = None
     steps: tuple[SequenceStep, ...] = field(default_factory=tuple)
     prepared_tables: tuple[PreparedTable, ...] = field(default_factory=tuple)
     runs: tuple[SequenceRun, ...] = field(default_factory=tuple)
@@ -110,6 +113,7 @@ class Sequence:
         dataset_workspace_id: UUID,
         raw_table_reference: RawTableReference,
         now: datetime,
+        thread_id: UUID | None = None,
     ) -> Sequence:
         return cls(
             sequence_id=sequence_id,
@@ -118,6 +122,7 @@ class Sequence:
             raw_table_reference=raw_table_reference,
             created_at=now,
             updated_at=now,
+            thread_id=thread_id,
         )
 
     def _prepared_table_ids(self) -> frozenset[UUID]:

@@ -23,6 +23,7 @@ repo_path: apps/api/src/zentra_api/routes.py
 - [[Workspace Organization API]]
 - [[Investigation Thread API]]
 - [[Visualization and Work Feed API]]
+- [[Sequence API]]
 
 The route declarations and Pydantic response models are authoritative. There is
 There is no streaming, agent-management, or general replay API in the current

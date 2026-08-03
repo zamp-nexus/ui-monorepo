@@ -24,6 +24,7 @@ indent-width = 4
 
 [tool.uv.sources]
 zentra-application-connector = { workspace = true }
+zentra-application-sequence = { workspace = true }
 zentra-domain-connector = { workspace = true }
 zentra-adapter-clickhouse = { workspace = true }
 zentra-adapter-cube = { workspace = true }
@@ -32,6 +33,7 @@ zentra-adapter-model-providers = { workspace = true }
 zentra-adapter-postgres = { workspace = true }
 zentra-adapter-telemetry = { workspace = true }
 zentra-domain-agent-execution = { workspace = true }
+zentra-domain-sequence = { workspace = true }
 zentra-application-investigation = { workspace = true }
 zentra-domain-investigation = { workspace = true }
 zentra-adapter-thesys = { workspace = true }
@@ -58,8 +60,10 @@ dependencies = [
  "zentra-adapter-thesys",
  "zentra-application-connector",
  "zentra-application-investigation",
+ "zentra-application-sequence",
  "zentra-domain-agent-execution",
  "zentra-domain-investigation",
+ "zentra-domain-sequence",
 ]
 
 [build-system]

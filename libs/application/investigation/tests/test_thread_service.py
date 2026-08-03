@@ -12,7 +12,6 @@ from zentra_domain_investigation import (
     Group,
     Investigation,
     InvestigationThread,
-    Project,
     ThreadMessage,
     ThreadStatus,
 )
@@ -38,13 +37,11 @@ from zentra_application_investigation.thread_service import ThreadService
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
 TENANT_ID = UUID("20000000-0000-0000-0000-000000000002")
 GROUP_ID = UUID("41000000-0000-0000-0000-000000000001")
-PROJECT_ID = UUID("42000000-0000-0000-0000-000000000001")
 
 
 class Repository:
     def __init__(self) -> None:
         self.groups: dict[UUID, Group] = {}
-        self.projects: dict[UUID, Project] = {}
         self.threads: dict[UUID, InvestigationThread] = {}
         self.messages: dict[UUID, list[ThreadMessage]] = {}
         self.investigations: dict[UUID, Investigation] = {}
@@ -181,16 +178,6 @@ class Repository:
     ) -> Group | None:
         return self.groups.get(group_id)
 
-    async def get_project(
-        self, project_id: UUID, *, for_update: bool = False
-    ) -> Project | None:
-        return self.projects.get(project_id)
-
-    async def record_project_activity(
-        self, project_id: UUID, *, occurred_at: datetime
-    ) -> None:
-        self.projects[project_id].record_activity(occurred_at)
-
 
 class UnitOfWork:
     def __init__(self, repository: Repository) -> None:
@@ -276,13 +263,6 @@ def repository() -> Repository:
         name="Finance",
         now=NOW,
     )
-    value.projects[PROJECT_ID] = Project.create(
-        project_id=PROJECT_ID,
-        tenant_id=TENANT_ID,
-        group_id=GROUP_ID,
-        name="Forecast",
-        now=NOW,
-    )
     return value
 
 
@@ -324,7 +304,7 @@ async def test_a_resolved_first_message_activates_the_thread_and_queues_work() -
 
     detail = await service(value).create(
         actor(),
-        project_id=PROJECT_ID,
+        project_id=GROUP_ID,
         content="Why did EU refunds increase from June to July 2026?",
     )
 
@@ -349,7 +329,7 @@ async def test_the_first_message_is_the_investigation_initiating_message() -> No
 
     thread = await threads.create(
         actor(),
-        project_id=PROJECT_ID,
+        project_id=GROUP_ID,
         content="Why did EU refunds increase from June to July?",
     )
 
@@ -371,7 +351,7 @@ async def test_active_and_archived_threads_reject_new_messages() -> None:
     threads = service(value)
     active = await threads.create(
         actor(),
-        project_id=PROJECT_ID,
+        project_id=GROUP_ID,
         content="Why did EU refunds increase from June to July?",
     )
 
@@ -390,7 +370,7 @@ async def test_archived_parent_rejects_thread_creation() -> None:
 
     with pytest.raises(ThreadConflictError):
         await service(value).create(
-            actor(), project_id=PROJECT_ID, content="What changed?"
+            actor(), project_id=GROUP_ID, content="What changed?"
         )
 
 
@@ -401,7 +381,7 @@ async def test_viewer_is_read_only_and_missing_thread_is_nondisclosing() -> None
 
     with pytest.raises(PermissionDeniedError):
         await threads.create(
-            actor(Role.VIEWER), project_id=PROJECT_ID, content="What changed?"
+            actor(Role.VIEWER), project_id=GROUP_ID, content="What changed?"
         )
     with pytest.raises(ThreadNotFoundError):
         await threads.get(actor(Role.VIEWER), uuid4())
@@ -420,7 +400,7 @@ async def test_a_thread_carrying_analytical_work_cannot_be_deleted() -> None:
     threads = service(value)
     thread = await threads.create(
         actor(),
-        project_id=PROJECT_ID,
+        project_id=GROUP_ID,
         content="Why did EU refunds increase from June to July?",
     )
 

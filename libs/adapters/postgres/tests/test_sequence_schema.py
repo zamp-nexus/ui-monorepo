@@ -111,3 +111,7 @@ def test_prepared_tables_row_count_cannot_be_negative() -> None:
         if isinstance(constraint, CheckConstraint)
     }
     assert "ck_prepared_tables_row_count" in check_names
+
+
+def test_sequences_carries_a_nullable_thread_link() -> None:
+    assert sequences.c.thread_id.nullable is True
