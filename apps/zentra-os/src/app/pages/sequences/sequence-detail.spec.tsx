@@ -166,7 +166,7 @@ const route = (
     if (url.includes(`/v1/sequences/${SEQUENCE_ID}`)) {
       return { ok: true, status: 200, json: async () => graph } as Response;
     }
-    if (url.includes(`/v1/threads/${THREAD_ID}`)) {
+    if (url.includes(`/v1/chats/${THREAD_ID}`)) {
       return { ok: true, status: 200, json: async () => THREAD } as Response;
     }
     const key = Object.keys(overrides).find((fragment) => url.includes(fragment));
@@ -309,7 +309,7 @@ describe('SequenceDetailPage', () => {
       if (url.includes(`/v1/sequences/${SEQUENCE_ID}`)) {
         return { ok: true, status: 200, json: async () => servedGraph } as Response;
       }
-      if (url.includes(`/v1/threads/${THREAD_ID}`)) {
+      if (url.includes(`/v1/chats/${THREAD_ID}`)) {
         return { ok: true, status: 200, json: async () => THREAD } as Response;
       }
       throw new Error(`unhandled request: ${url}`);
