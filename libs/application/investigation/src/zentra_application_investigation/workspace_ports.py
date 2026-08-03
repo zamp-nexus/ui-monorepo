@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager
-from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from zentra_domain_investigation import Group, Project
+from zentra_domain_investigation import Group
 
 from .workspace_dto import OrganizationCursor, OrganizationSlice
 
@@ -26,27 +25,6 @@ class OrganizationRepository(Protocol):
         limit: int,
         after: OrganizationCursor | None,
     ) -> OrganizationSlice[Group]: ...
-
-    async def add_project(self, project: Project) -> None: ...
-
-    async def get_project(
-        self, project_id: UUID, *, for_update: bool = False
-    ) -> Project | None: ...
-
-    async def save_project(self, project: Project) -> None: ...
-
-    async def list_projects(
-        self,
-        *,
-        group_id: UUID,
-        include_archived: bool,
-        limit: int,
-        after: OrganizationCursor | None,
-    ) -> OrganizationSlice[Project]: ...
-
-    async def record_project_activity(
-        self, project_id: UUID, *, occurred_at: datetime
-    ) -> None: ...
 
 
 class OrganizationUnitOfWork(Protocol):

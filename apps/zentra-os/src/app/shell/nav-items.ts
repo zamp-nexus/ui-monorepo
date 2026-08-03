@@ -18,6 +18,7 @@ export const navItems: readonly NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
   { label: 'Investigations', to: '/', icon: 'search', matches: ['/investigations'] },
   { label: 'Datasets', to: '/datasets', icon: 'database' },
+  { label: 'Sequences', to: '/sequences', icon: 'columns' },
   { label: 'Chat', to: '/chat', icon: 'message_square' },
   { label: 'Connections', to: '/connections', icon: 'network' },
   { label: 'Settings', to: '/settings', icon: 'settings' },

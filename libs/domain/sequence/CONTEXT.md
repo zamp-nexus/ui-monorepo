@@ -8,6 +8,10 @@ Sequence owns the versioned graph of typed transform steps that turns a Tenant's
 A Dataset Workspace-owned, reusable graph of Sequence Steps that starts from one Raw Table and produces one or more Final Tables. Many Chat Sessions may reference the same Sequence's Final Tables.
 _Avoid_: Pipeline, workflow, ETL job
 
+**Dataset Workspace**:
+The Tenant-scoped collection a Sequence belongs to. Data Source (Phase 3, not yet built) will own this as a persisted entity; until then its id is derived deterministically from the Tenant's own id (one Dataset Workspace per Tenant), so the Sequence page can list "this workspace's Sequences" without a schema dependency on a context that does not exist yet. Swap the derivation for a real foreign key once Data Source lands — nothing else about Sequence needs to change.
+_Avoid_: Project, workspace (bare)
+
 **Raw Table**:
 The unmodified input to a Sequence — either a Connector Source Table or a Data Source Dataset Table Version. A Sequence never mutates its Raw Table.
 _Avoid_: Source, input file
@@ -45,3 +49,5 @@ The Data Steward Agent and Semantic Modeler Agent are [Agent Execution](../agent
 A Final Table is the only thing the Semantic Modeler Agent may turn into a [Semantic Metric](../CONTEXT.md); it never models a Raw Table or an intermediate Prepared Table directly. The resulting Metric Draft follows the same Human Approval path as any other Semantic Model change — Sequence adds no second approval mechanism.
 
 The chat that builds a Sequence is an ordinary [Chat Session](../investigation/CONTEXT.md) scoped to that Sequence rather than to a governed question; a Sequence started automatically mid-Analysis-Run is the same object as one started from the Sequence page, not a separate draft kind.
+
+The Sequence page (a frontend React Flow canvas plus its read/create API) renders a Sequence's graph purely from this persisted state — it introduces no client-side state that could drift from what actually happened, and computes its own node layout rather than persisting coordinates. See `docs/05_APIs/Sequence API.md` and `docs/adr/0023-sequence-graph-layout-is-a-client-concern.md`.

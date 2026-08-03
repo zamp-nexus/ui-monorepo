@@ -66,18 +66,6 @@ class GroupDetail:
 
 
 @dataclass(frozen=True, slots=True)
-class ProjectDetail:
-    project_id: UUID
-    group_id: UUID
-    name: str
-    created_at: datetime
-    updated_at: datetime
-    latest_activity_at: datetime
-    archived_at: datetime | None
-    can_manage: bool
-
-
-@dataclass(frozen=True, slots=True)
 class OrganizationPage[T]:
     items: tuple[T, ...]
     next_cursor: str | None

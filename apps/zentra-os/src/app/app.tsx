@@ -22,6 +22,8 @@ import {
 } from './pages/entry-screens';
 import { InvestigationWorkspace } from './pages/investigation/investigation-workspace';
 import { Launcher } from './pages/launcher';
+import { SequenceDetailPage } from './pages/sequences/sequence-detail-page';
+import { SequencesPage } from './pages/sequences/sequences-page';
 import { AppShell } from './shell/app-shell';
 import type { IdentityContext, ReadinessResponse } from './types';
 
@@ -90,6 +92,14 @@ const AuthenticatedWorkspace = () => {
         <Route
           path="/datasets"
           element={<DatasetsPage getToken={getToken} identity={identity.data} />}
+        />
+        <Route
+          path="/sequences"
+          element={<SequencesPage getToken={getToken} identity={identity.data} />}
+        />
+        <Route
+          path="/sequences/:sequenceId"
+          element={<SequenceDetailPage getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/datasets/:dataSourceId/tables/:tableName/rows"
