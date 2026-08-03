@@ -41,6 +41,18 @@ def test_thread_message_and_title_bounds_are_database_invariants() -> None:
     assert "ck_messages_kind" in checks
 
 
+def test_chat_sessions_have_a_nullable_default_data_connection() -> None:
+    session_foreign_keys = {
+        tuple(element.target_fullname for element in constraint.elements)
+        for constraint in chat_sessions.foreign_key_constraints
+    }
+
+    assert chat_sessions.c.default_data_connection_id.nullable is True
+    assert (
+        "data_sources.data_source_id",
+    ) in session_foreign_keys
+
+
 def test_investigations_link_to_one_message_and_sequence_in_a_thread() -> None:
     uniques = {
         constraint.name

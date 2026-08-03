@@ -42,6 +42,10 @@ def test_thread_migration_is_additive_and_messages_are_not_updatable() -> None:
         assert {"chat_sessions", "messages"} <= set(
             inspector.get_table_names()
         )
+        chat_session_columns = {
+            column["name"] for column in inspector.get_columns("chat_sessions")
+        }
+        assert "default_data_connection_id" in chat_session_columns
         analysis_run_columns = {
             column["name"] for column in inspector.get_columns("analysis_runs")
         }
