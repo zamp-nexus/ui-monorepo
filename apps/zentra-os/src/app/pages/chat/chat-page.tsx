@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { IconButton } from '@open-zentra/foundation-design-system';
+import { Icon } from '@open-zentra/foundation-icons';
+
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
-import { AgentProgress } from './agent-progress';
+import { ActivityInspector } from './activity-inspector';
 import { AnswerRow } from './answer-row';
 import { appendMessage, createChat, getChat, listAgents, listChats } from './api';
 import { ChatComposer } from './chat-composer';
@@ -40,6 +43,7 @@ export const ChatPage = ({
   const queryClient = useQueryClient();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(NEW_THREAD);
   const [draft, setDraft] = useState('');
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const group = useActiveGroup(getToken);
@@ -153,9 +157,18 @@ export const ChatPage = ({
 
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-border px-6 py-5">
-          <h1 className="font-serif text-2xl font-normal tracking-[-0.03em]">
+          <h1 className="min-w-0 flex-1 font-serif text-2xl font-normal tracking-[-0.03em]">
             {thread?.title ?? 'Chat'}
           </h1>
+          <IconButton
+            aria-label={inspectorOpen ? 'Close activity panel' : 'Open activity panel'}
+            aria-pressed={inspectorOpen}
+            intent="ghost"
+            size="sm"
+            onClick={() => setInspectorOpen((value) => !value)}
+          >
+            <Icon name="sidebar" size="sm" />
+          </IconButton>
           <p className="w-full text-sm text-foreground-muted">
             Ask a governed question and follow the evidence trace it produces.
           </p>
@@ -188,8 +201,6 @@ export const ChatPage = ({
                 ),
               )}
 
-              <AgentProgress events={feed.events} status={feed.status} agents={agents.data ?? []} />
-
               {thread && investigation ? (
                 <InvestigationControls
                   getToken={getToken}
@@ -216,6 +227,14 @@ export const ChatPage = ({
           disabled={send.isPending || !canSend}
         />
       </section>
+
+      <ActivityInspector
+        events={feed.events}
+        status={feed.status}
+        agents={agents.data ?? []}
+        open={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
+      />
     </div>
   );
 };
