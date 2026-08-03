@@ -274,6 +274,43 @@ describe('toTimeline', () => {
     expect(timeline.some((entry) => entry.kind === 'answer')).toBe(false);
   });
 
+  it('never gives a non-analytical question an answer, and does not skew later pairings', () => {
+    // Regression: a "hello" followed by a real question used to consume the
+    // wrong Investigation, off by one, because only `router_clarification`
+    // was recognized as "this question got no Investigation" -- not
+    // `assistant_reply` (ADR-0033's Conversational Agent output).
+    const withGreeting = thread({
+      messages: [
+        {
+          message_id: 'm-1',
+          kind: 'user_question',
+          content: 'Hello!',
+          created_at: '2026-08-01T09:00:00Z',
+          authored_by_user: true,
+        },
+        {
+          message_id: 'm-2',
+          kind: 'assistant_reply',
+          content: 'Hi there!',
+          created_at: '2026-08-01T09:00:01Z',
+          authored_by_user: false,
+        },
+        {
+          message_id: 'm-3',
+          kind: 'user_question',
+          content: 'Why did EU refunds increase?',
+          created_at: '2026-08-01T09:00:02Z',
+          authored_by_user: true,
+        },
+      ],
+      routing: null,
+      investigations: investigations('i-1'),
+    });
+
+    const timeline = toTimeline(withGreeting);
+    expect(timeline.map((entry) => entry.id)).toEqual(['m-1', 'm-2', 'm-3', 'i-1']);
+  });
+
   it('keeps each answer beside the question that produced it', () => {
     const followUp = thread({
       messages: [
