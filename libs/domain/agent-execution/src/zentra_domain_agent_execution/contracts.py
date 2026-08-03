@@ -28,6 +28,7 @@ class AgentRole(StrEnum):
     VISUALIZATION = "visualization"
     EXECUTIVE_REPORT_WRITER = "executive_report_writer"
     KNOWLEDGE = "knowledge"
+    CONVERSATIONAL = "conversational"
 
 
 # Read-compatibility only, each mapped to the role that replaced it.

@@ -111,7 +111,8 @@
           "forecaster",
           "visualization",
           "executive_report_writer",
-          "knowledge"
+          "knowledge",
+          "conversational"
         ],
         "title": "AgentRole",
         "type": "string"

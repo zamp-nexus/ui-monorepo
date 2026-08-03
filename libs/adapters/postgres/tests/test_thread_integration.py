@@ -63,6 +63,12 @@ class _UnresolvedIntake:
         )
 
 
+class _FakeConversational:
+    async def reply(self, message: str, *, tenant_id) -> str:
+        del message, tenant_id
+        return "Thanks for reaching out!"
+
+
 def actor(tenant_id, *, role: Role = Role.OWNER) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=uuid4(),
@@ -102,6 +108,7 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
     threads = ThreadService(
         unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
         intake=_UnresolvedIntake(),
+        conversational=_FakeConversational(),
         now=now,
         new_id=uuid4,
     )
@@ -179,6 +186,7 @@ async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> 
     threads = ThreadService(
         unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
         intake=_UnresolvedIntake(),
+        conversational=_FakeConversational(),
         now=now,
         new_id=uuid4,
     )

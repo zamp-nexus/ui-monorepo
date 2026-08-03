@@ -8,11 +8,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from zentra_domain_investigation import (
+    TERMINAL_STATUSES,
     ExecutionJob,
     Group,
     Investigation,
     InvestigationThread,
     ThreadMessage,
+    ThreadMessageKind,
     ThreadStatus,
 )
 
@@ -228,6 +230,14 @@ class FakeIntake:
     ) -> RoutingResult:
         del tenant_id, data_connection_id
         normalized = question.casefold()
+        if "hello" in normalized or "thanks" in normalized:
+            return RoutingResult(
+                disposition=RoutingDisposition.NOT_ANALYTICAL,
+                scenario_key=None,
+                canonical_question=None,
+                clarification=None,
+                suggestions=(),
+            )
         if "refund" in normalized and ("eu" in normalized or "europe" in normalized):
             return RoutingResult(
                 disposition=RoutingDisposition.RESOLVED,
@@ -243,6 +253,12 @@ class FakeIntake:
             clarification="I could not map that message to a governed question.",
             suggestions=(),
         )
+
+
+class FakeConversational:
+    async def reply(self, message: str, *, tenant_id: UUID) -> str:
+        del message, tenant_id
+        return "Thanks for reaching out!"
 
 
 def actor(role: Role = Role.MEMBER) -> AuthenticatedActor:
@@ -270,6 +286,7 @@ def service(value: Repository) -> ThreadService:
     return ThreadService(
         unit_of_work_factory=UnitOfWorkFactory(value),
         intake=FakeIntake(),
+        conversational=FakeConversational(),
         now=lambda: NOW,
         new_id=uuid4,
     )
@@ -346,7 +363,7 @@ async def test_the_first_message_is_the_investigation_initiating_message() -> No
 
 
 @pytest.mark.asyncio
-async def test_active_and_archived_threads_reject_new_messages() -> None:
+async def test_an_archived_thread_rejects_new_messages() -> None:
     value = repository()
     threads = service(value)
     active = await threads.create(
@@ -354,9 +371,6 @@ async def test_active_and_archived_threads_reject_new_messages() -> None:
         project_id=GROUP_ID,
         content="Why did EU refunds increase from June to July?",
     )
-
-    with pytest.raises(ThreadConflictError):
-        await threads.append(actor(), thread_id=active.thread_id, content="More")
 
     await threads.archive(actor(), active.thread_id)
     with pytest.raises(ThreadConflictError):
@@ -407,3 +421,90 @@ async def test_a_thread_carrying_analytical_work_cannot_be_deleted() -> None:
     with pytest.raises(ThreadConflictError):
         await threads.delete(actor(), thread.thread_id)
     assert thread.thread_id in value.threads
+
+
+@pytest.mark.asyncio
+async def test_a_not_analytical_message_gets_an_assistant_reply_no_investigation() -> (
+    None
+):
+    value = repository()
+
+    detail = await service(value).create(
+        actor(), project_id=GROUP_ID, content="Hello there!"
+    )
+
+    assert detail.investigation_id is None
+    assert len(value.investigations) == 0
+    assert len(value.jobs) == 0
+    assert [message.kind for message in detail.messages] == [
+        ThreadMessageKind.USER_QUESTION,
+        ThreadMessageKind.ASSISTANT_REPLY,
+    ]
+    assert detail.messages[1].content == "Thanks for reaching out!"
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_not_analytical_also_gets_an_assistant_reply() -> None:
+    value = repository()
+    threads = service(value)
+    detail = await threads.create(
+        actor(),
+        project_id=GROUP_ID,
+        content="Why did EU refunds increase from June to July 2026?",
+    )
+    assert detail.investigation_id is not None
+    first_investigation_id = detail.investigation_id
+
+    follow_up = await threads.append(
+        actor(), thread_id=detail.thread_id, content="Thanks, that's helpful!"
+    )
+
+    assert follow_up.investigation_id == first_investigation_id
+    assert [message.kind for message in follow_up.messages][-1] == (
+        ThreadMessageKind.ASSISTANT_REPLY
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_is_accepted_while_the_prior_run_is_still_active() -> None:
+    value = repository()
+    threads = service(value)
+    detail = await threads.create(
+        actor(),
+        project_id=GROUP_ID,
+        content="Why did EU refunds increase from June to July 2026?",
+    )
+    assert detail.investigation_id is not None
+    first_investigation = value.investigations[detail.investigation_id]
+    assert first_investigation.status not in TERMINAL_STATUSES
+
+    follow_up = await threads.append(
+        actor(),
+        thread_id=detail.thread_id,
+        content="What about refunds in Europe specifically?",
+    )
+
+    assert follow_up.investigation_id is not None
+    assert follow_up.investigation_id != detail.investigation_id
+    second_investigation = value.investigations[follow_up.investigation_id]
+    assert second_investigation.parent_investigation_id == detail.investigation_id
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_after_not_analytical_starts_its_own_investigation() -> None:
+    """A Thread whose only prior activity was a Conversational Agent reply has
+    no Investigation to chain from -- the follow-up must still work."""
+    value = repository()
+    threads = service(value)
+    detail = await threads.create(actor(), project_id=GROUP_ID, content="Hello!")
+    assert detail.investigation_id is None
+
+    follow_up = await threads.append(
+        actor(),
+        thread_id=detail.thread_id,
+        content="Why did EU refunds increase from June to July 2026?",
+    )
+
+    assert follow_up.investigation_id is not None
+    investigation = value.investigations[follow_up.investigation_id]
+    assert investigation.parent_investigation_id is None

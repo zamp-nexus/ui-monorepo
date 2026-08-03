@@ -37,6 +37,12 @@ class IntakePort(Protocol):
     ) -> RoutingResult: ...
 
 
+class ConversationalPort(Protocol):
+    """Replies to a non-analytical message (ADR-0033)."""
+
+    async def reply(self, message: str, *, tenant_id: UUID) -> str: ...
+
+
 class ThreadRepository(Protocol):
     async def add_thread(self, thread: InvestigationThread) -> None: ...
 

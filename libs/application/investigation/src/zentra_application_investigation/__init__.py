@@ -1,5 +1,6 @@
 """Investigation application services and ports."""
 
+from .conversational_service import ConversationalService
 from .dto import (
     AuditDelivery,
     AuditReplay,
@@ -56,6 +57,7 @@ from .thread_dto import (
     ThreadSummary,
 )
 from .thread_ports import (
+    ConversationalPort,
     IntakePort,
     ThreadRepository,
     ThreadUnitOfWork,
@@ -94,6 +96,8 @@ __all__ = [
     "AuditWriter",
     "AuthenticatedActor",
     "ConflictError",
+    "ConversationalPort",
+    "ConversationalService",
     "DraftFindingRepository",
     "ErasureRepository",
     "EvidenceCitationRepository",

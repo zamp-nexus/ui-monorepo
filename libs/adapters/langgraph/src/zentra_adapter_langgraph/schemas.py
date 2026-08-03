@@ -131,6 +131,10 @@ INTAKE_SCHEMA = _obj(
     }
 )
 
+# The Conversational Agent's structured output -- one field, since it never
+# has anything else to decide.
+CONVERSATIONAL_SCHEMA = _obj({"reply": {"type": "string"}})
+
 # `SYNTHESIS_SCHEMA` was the Orchestrator's. It is gone with the node that
 # used it; the Insight Agent's `DRAFT_FINDING_SCHEMA` is the only shape a
 # conclusion now takes.
