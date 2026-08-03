@@ -609,3 +609,22 @@ async def test_a_private_thread_is_excluded_from_another_users_list() -> None:
     assert shared.thread_id in creator_ids
     assert private.thread_id not in other_ids
     assert shared.thread_id in other_ids
+
+
+@pytest.mark.asyncio
+async def test_can_append_message_stays_true_while_the_investigation_runs() -> None:
+    """Regression: `can_append_message` must agree with `append()`'s own
+    behavior. The follow-up hard block was removed from `append()` itself,
+    but this flag kept requiring the latest Investigation to be terminal --
+    a client honoring it would never actually exercise the unblocked path."""
+    value = repository()
+    threads = service(value)
+    detail = await threads.create(
+        actor(),
+        project_id=GROUP_ID,
+        content="Why did EU refunds increase from June to July 2026?",
+    )
+
+    assert detail.investigation_id is not None
+    assert value.investigations[detail.investigation_id].status not in TERMINAL_STATUSES
+    assert detail.can_append_message is True
