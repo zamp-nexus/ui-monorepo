@@ -3,7 +3,7 @@
  *
  * Every affordance here is gated on a flag the server put in the snapshot —
  * `can_cancel`, `can_retry`, `can_decide`. None of it is derived from the
- * Investigation's status or the reader's role. A client that worked out for
+ * Analysis Run's status or the reader's role. A client that worked out for
  * itself when cancelling was legal would be a second copy of a rule that only
  * one place is allowed to own.
  *
@@ -142,7 +142,7 @@ export const InvestigationControls = ({
             disabled={cancel.isPending || cancel.isSuccess}
             onClick={() => cancel.mutate()}
           >
-            {cancel.isSuccess ? 'Stopping…' : 'Stop this investigation'}
+            {cancel.isSuccess ? 'Stopping…' : 'Stop this analysis'}
           </Button>
         ) : null}
         {thread.actions.can_retry ? (
