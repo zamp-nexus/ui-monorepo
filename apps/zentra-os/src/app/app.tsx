@@ -74,7 +74,11 @@ const AuthenticatedWorkspace = () => {
   return (
     <AppShell identity={identity.data} readiness={readiness.data}>
       <Routes>
-        <Route path="/" element={<Launcher getToken={getToken} identity={identity.data} />} />
+        <Route path="/" element={<ChatPage getToken={getToken} identity={identity.data} />} />
+        <Route
+          path="/investigations"
+          element={<Launcher getToken={getToken} identity={identity.data} />}
+        />
         <Route
           path="/investigations/:id"
           element={<InvestigationWorkspace getToken={getToken} />}
@@ -106,10 +110,6 @@ const AuthenticatedWorkspace = () => {
           element={<RowsPage getToken={getToken} identity={identity.data} />}
         />
         <Route path="/cube-schema" element={<CubeSchemaPage getToken={getToken} />} />
-        <Route
-          path="/chat"
-          element={<ChatPage getToken={getToken} identity={identity.data} />}
-        />
         <Route
           path="/connections"
           element={<ConnectionsPage getToken={getToken} identity={identity.data} />}
