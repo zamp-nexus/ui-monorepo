@@ -54,6 +54,7 @@ def _thread_from_row(row: Any) -> InvestigationThread:
         updated_at=value["updated_at"],
         latest_activity_at=value["latest_activity_at"],
         archived_at=value["archived_at"],
+        created_by=value["created_by"],
     )
 
 
@@ -88,6 +89,7 @@ class PostgresThreadRepository:
                 updated_at=thread.updated_at,
                 latest_activity_at=thread.latest_activity_at,
                 archived_at=thread.archived_at,
+                created_by=thread.created_by,
             )
         )
 

@@ -118,6 +118,7 @@ class ThreadService:
             initiating_message_id=message_id,
             title=deterministic_thread_title(title_source),
             now=now,
+            created_by=actor.user_id,
         )
         async with self._uow(actor) as unit_of_work:
             await self._require_writable_project(unit_of_work, project_id)

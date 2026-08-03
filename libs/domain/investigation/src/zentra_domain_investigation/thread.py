@@ -98,6 +98,7 @@ class InvestigationThread:
     latest_activity_at: datetime
     archived_at: datetime | None = None
     archived_from_status: ThreadStatus | None = None
+    created_by: UUID | None = None
 
     @classmethod
     def create(
@@ -109,6 +110,7 @@ class InvestigationThread:
         initiating_message_id: UUID,
         title: str,
         now: datetime,
+        created_by: UUID | None = None,
     ) -> InvestigationThread:
         normalized_title = " ".join(title.split()).strip()
         if not normalized_title or len(normalized_title) > MAX_THREAD_TITLE_LENGTH:
@@ -123,6 +125,7 @@ class InvestigationThread:
             created_at=now,
             updated_at=now,
             latest_activity_at=now,
+            created_by=created_by,
         )
 
     def activate(self, now: datetime) -> None:
