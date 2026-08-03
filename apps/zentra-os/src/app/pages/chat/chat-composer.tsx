@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 
-import { Button, IconButton } from '@open-zentra/foundation-design-system';
+import { Badge, Button, IconButton } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
+
+import { parseComposerCommands } from './composer-commands';
 
 interface ChatComposerProps {
   readonly onSend: (message: string) => void;
@@ -17,13 +19,19 @@ interface ChatComposerProps {
  * Enter sends and Shift+Enter breaks the line — the convention a chat surface
  * is judged by. The attachment controls are drawn but disabled: they say what
  * is coming without pretending to work.
+ *
+ * `#dataset`, `@user`, and `/skill` (ADR-0032) are parsed live and shown as
+ * chips; the stripped text, not the raw draft, is what gets sent -- these are
+ * metadata on the message, not part of the question itself.
  */
 export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatComposerProps) => {
   const [rows, setRows] = useState(1);
+  const parsed = useMemo(() => parseComposerCommands(draft), [draft]);
+  const hasCommands = Boolean(parsed.datasetHint || parsed.mentions.length > 0 || parsed.skillHint);
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
-    const message = draft.trim();
+    const message = parsed.text;
     if (!message || disabled) return;
     onSend(message);
     setRows(1);
@@ -43,6 +51,35 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
       aria-label="Send a message"
     >
       <div className="flex flex-col gap-3 rounded-sm border border-border bg-background p-3 focus-within:border-primary">
+        {hasCommands ? (
+          <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+            {parsed.datasetHint ? (
+              <Badge intent="info" size="sm">
+                #{parsed.datasetHint}
+              </Badge>
+            ) : null}
+            {parsed.mentions.map((mention) => (
+              <Badge
+                key={mention}
+                intent="secondary"
+                size="sm"
+                title="Mentions have no effect yet -- there is no notification system to send them to."
+              >
+                @{mention}
+              </Badge>
+            ))}
+            {parsed.skillHint ? (
+              <Badge
+                intent="secondary"
+                size="sm"
+                title="This names a capability directly, but Intake still validates it against your Analytical Scope -- it's a hint, not a bypass."
+              >
+                /{parsed.skillHint}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+
         <label className="sr-only" htmlFor="chat-message">
           Message
         </label>
@@ -78,7 +115,7 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
             className="ml-auto"
             type="submit"
             size="sm"
-            disabled={disabled || draft.trim().length === 0}
+            disabled={disabled || parsed.text.length === 0}
             end={<Icon name="send" size="sm" />}
           >
             Send
