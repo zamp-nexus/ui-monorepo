@@ -155,3 +155,22 @@ async def test_ambiguous_and_unsupported_dispositions_carry_a_clarification() ->
     assert ambiguous_result.clarification == "Do you mean EU or North America?"
     assert unsupported_result.disposition is RoutingDisposition.UNSUPPORTED
     assert unsupported_result.clarification is not None
+
+
+@pytest.mark.asyncio
+async def test_not_analytical_disposition_carries_no_clarification() -> None:
+    agent = FakeIntakeAgent(
+        {
+            "disposition": "not_analytical",
+            "normalized_question": None,
+            "clarification": None,
+            "reasoning": "Just a greeting.",
+        }
+    )
+
+    result = await _service(agent).resolve("hi there", tenant_id=TENANT_ID)
+
+    assert result.disposition is RoutingDisposition.NOT_ANALYTICAL
+    assert result.clarification is None
+    assert result.scenario_key is None
+    assert result.canonical_question is None
