@@ -77,13 +77,12 @@ def build_thread_detail(
         ),
         investigation_id=investigation_id,
         routing=routing,
-        can_append_message=(
-            can_mutate
-            and (
-                thread.status is ThreadStatus.DRAFT
-                or (thread.status is ThreadStatus.ACTIVE and latest_terminal)
-            )
-        ),
+        # A follow-up is always accepted regardless of the latest
+        # Investigation's status -- the composer is never blocked by an
+        # in-flight Analysis Run (ADR-0028's follow-up-hard-block removal).
+        # Draft or Active are the only statuses `append()` actually accepts;
+        # Archived is refused there and `can_append_message` must agree.
+        can_append_message=can_mutate and not is_archived,
         can_archive=can_mutate and not is_archived,
         can_restore=can_mutate and is_archived,
         can_delete=(
