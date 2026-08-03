@@ -64,12 +64,17 @@ class ThreadRepository(Protocol):
         self,
         *,
         project_id: UUID,
+        viewer_id: UUID,
         include_archived: bool,
         limit: int,
         after: ThreadCursor | None,
     ) -> ThreadSlice: ...
 
     async def investigation_id_for_thread(self, thread_id: UUID) -> UUID | None: ...
+
+    async def visibility_and_creator(
+        self, thread_id: UUID
+    ) -> tuple[str, UUID | None] | None: ...
 
 
 class ThreadUnitOfWork(Protocol):

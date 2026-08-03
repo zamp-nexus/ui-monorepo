@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, tuple_, update
+from sqlalchemy import delete, insert, or_, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_application_investigation import (
     ThreadCursor,
@@ -156,6 +156,7 @@ class PostgresThreadRepository:
         self,
         *,
         project_id: UUID,
+        viewer_id: UUID,
         include_archived: bool,
         limit: int,
         after: ThreadCursor | None,
@@ -172,6 +173,14 @@ class PostgresThreadRepository:
             latest_investigation.label("investigation_id"),
         ).where(
             chat_sessions.c.group_id == project_id,
+            # A private Chat Session is invisible to every Group member
+            # except its creator, in listings too -- filtered here, not
+            # post-fetch, so pagination stays correct (a post-fetch filter
+            # would produce short pages or gaps once private sessions exist).
+            or_(
+                chat_sessions.c.visibility != "private",
+                chat_sessions.c.created_by == viewer_id,
+            ),
         )
         if not include_archived:
             statement = statement.where(
@@ -218,6 +227,15 @@ class PostgresThreadRepository:
             .limit(1)
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
+
+    async def visibility_and_creator(
+        self, thread_id: UUID
+    ) -> tuple[str, UUID | None] | None:
+        statement = select(
+            chat_sessions.c.visibility, chat_sessions.c.created_by
+        ).where(chat_sessions.c.chat_session_id == thread_id)
+        row = (await self._connection.execute(statement)).one_or_none()
+        return (row.visibility, row.created_by) if row else None
 
     async def default_data_connection_id(self, thread_id: UUID) -> UUID | None:
         statement = select(chat_sessions.c.default_data_connection_id).where(

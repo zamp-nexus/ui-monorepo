@@ -51,11 +51,26 @@ class Repository:
         self.enqueued_events = 0
         self.feed_events: dict[UUID, list[object]] = {}
         self.commits = 0
+        # `InvestigationThread` (the domain object) carries neither field --
+        # both are raw `chat_sessions` columns not yet modeled there, exactly
+        # as the real Postgres adapter stores them. Defaults match the
+        # schema's own defaults (`visibility` "shared", `created_by` unset).
+        self.visibility: dict[UUID, str] = {}
+        self.created_by: dict[UUID, UUID | None] = {}
 
     async def add_thread(self, thread: InvestigationThread) -> None:
         self.threads[thread.thread_id] = thread
         self.messages[thread.thread_id] = []
         self.feed_events[thread.thread_id] = []
+        self.visibility.setdefault(thread.thread_id, "shared")
+        self.created_by.setdefault(thread.thread_id, None)
+
+    async def visibility_and_creator(
+        self, thread_id: UUID
+    ) -> tuple[str, UUID | None] | None:
+        if thread_id not in self.threads:
+            return None
+        return self.visibility[thread_id], self.created_by[thread_id]
 
     async def get_thread(
         self, thread_id: UUID, *, for_update: bool = False
@@ -79,17 +94,26 @@ class Repository:
         self,
         *,
         project_id: UUID,
+        viewer_id: UUID,
         include_archived: bool,
         limit: int,
         after: ThreadCursor | None,
     ) -> ThreadSlice:
         del after
+
+        def visible(thread: InvestigationThread) -> bool:
+            return (
+                self.visibility[thread.thread_id] != "private"
+                or self.created_by[thread.thread_id] == viewer_id
+            )
+
         threads = sorted(
             (
                 thread
                 for thread in self.threads.values()
                 if thread.project_id == project_id
                 and (include_archived or thread.status is not ThreadStatus.ARCHIVED)
+                and visible(thread)
             ),
             key=lambda value: (value.latest_activity_at, value.thread_id),
             reverse=True,
@@ -145,6 +169,18 @@ class Repository:
             reverse=True,
         )
         return values[0] if values else None
+
+    async def all_for_thread(self, thread_id: UUID) -> tuple[Investigation, ...]:
+        return tuple(
+            sorted(
+                (
+                    value
+                    for value in self.investigations.values()
+                    if value.thread_id == thread_id
+                ),
+                key=lambda value: value.thread_sequence or 0,
+            )
+        )
 
     async def save(
         self, investigation: Investigation, *, expected_version: int
@@ -508,3 +544,68 @@ async def test_a_follow_up_after_not_analytical_starts_its_own_investigation() -
     assert follow_up.investigation_id is not None
     investigation = value.investigations[follow_up.investigation_id]
     assert investigation.parent_investigation_id is None
+
+
+def _make_private(
+    value: Repository, thread_id: UUID, creator: AuthenticatedActor
+) -> None:
+    value.visibility[thread_id] = "private"
+    value.created_by[thread_id] = creator.user_id
+
+
+@pytest.mark.asyncio
+async def test_a_private_thread_is_invisible_to_a_non_creator() -> None:
+    value = repository()
+    creator = actor()
+    other_member = actor()
+    threads = service(value)
+    detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
+    _make_private(value, detail.thread_id, creator)
+
+    with pytest.raises(ThreadNotFoundError):
+        await threads.get(other_member, detail.thread_id)
+    with pytest.raises(ThreadNotFoundError):
+        await threads.append(other_member, thread_id=detail.thread_id, content="Hi")
+    with pytest.raises(ThreadNotFoundError):
+        await threads.archive(other_member, detail.thread_id)
+    with pytest.raises(ThreadNotFoundError):
+        await threads.restore(other_member, detail.thread_id)
+    with pytest.raises(ThreadNotFoundError):
+        await threads.delete(other_member, detail.thread_id)
+
+
+@pytest.mark.asyncio
+async def test_a_private_threads_creator_retains_full_access() -> None:
+    value = repository()
+    creator = actor()
+    threads = service(value)
+    detail = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
+    _make_private(value, detail.thread_id, creator)
+
+    read_back = await threads.get(creator, detail.thread_id)
+    assert read_back.thread_id == detail.thread_id
+    follow_up = await threads.append(creator, thread_id=detail.thread_id, content="Hi")
+    assert follow_up.thread_id == detail.thread_id
+
+
+@pytest.mark.asyncio
+async def test_a_private_thread_is_excluded_from_another_users_list() -> None:
+    value = repository()
+    creator = actor()
+    other_member = actor()
+    threads = service(value)
+    private = await threads.create(creator, project_id=GROUP_ID, content="Hello!")
+    _make_private(value, private.thread_id, creator)
+    shared = await threads.create(
+        creator, project_id=GROUP_ID, content="Why did EU refunds increase?"
+    )
+
+    creator_page = await threads.list(creator, project_id=GROUP_ID)
+    other_page = await threads.list(other_member, project_id=GROUP_ID)
+
+    creator_ids = {item.thread_id for item in creator_page.items}
+    other_ids = {item.thread_id for item in other_page.items}
+    assert private.thread_id in creator_ids
+    assert shared.thread_id in creator_ids
+    assert private.thread_id not in other_ids
+    assert shared.thread_id in other_ids
