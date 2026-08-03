@@ -36,9 +36,9 @@ draft_findings = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -86,15 +86,15 @@ draft_findings = Table(
     ),
     CheckConstraint("version >= 1", name="ck_draft_findings_version"),
     UniqueConstraint(
-        "investigation_id",
+        "analysis_run_id",
         "version",
-        name="uq_draft_findings_investigation_version",
+        name="uq_draft_findings_analysis_run_version",
     ),
 )
 Index(
-    "ix_draft_findings_tenant_investigation",
+    "ix_draft_findings_tenant_analysis_run",
     draft_findings.c.tenant_id,
-    draft_findings.c.investigation_id,
+    draft_findings.c.analysis_run_id,
     draft_findings.c.version,
 )
 
@@ -165,9 +165,9 @@ evidence_citations = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -204,16 +204,16 @@ evidence_citations = Table(
     # One measurement per metric-and-period, so two claims about the same
     # figure share it rather than holding copies that can drift.
     UniqueConstraint(
-        "investigation_id",
+        "analysis_run_id",
         "metric",
         "period",
         name="uq_evidence_citations_measurement",
     ),
 )
 Index(
-    "ix_evidence_citations_tenant_investigation",
+    "ix_evidence_citations_tenant_analysis_run",
     evidence_citations.c.tenant_id,
-    evidence_citations.c.investigation_id,
+    evidence_citations.c.analysis_run_id,
 )
 
 # Many-to-many on purpose: a claim can rest on several measurements, and one
@@ -265,9 +265,9 @@ erasure_operations = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "investigation_id",
+        "analysis_run_id",
         UUID(as_uuid=True),
-        ForeignKey("investigations.investigation_id", ondelete="CASCADE"),
+        ForeignKey("analysis_runs.analysis_run_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -309,7 +309,7 @@ erasure_operations = Table(
     ),
     CheckConstraint("attempts >= 0", name="ck_erasure_operations_attempts"),
     UniqueConstraint(
-        "investigation_id",
+        "analysis_run_id",
         "category",
         name="uq_erasure_operations_request",
     ),

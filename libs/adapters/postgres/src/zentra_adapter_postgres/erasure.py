@@ -45,11 +45,11 @@ from zentra_domain_investigation import (
 
 from .schema import (
     agent_executions,
+    analysis_runs,
     draft_finding_claims,
     draft_findings,
     erasure_operations,
     evidence_citations,
-    investigations,
 )
 
 TERMINAL = frozenset(status.value for status in TERMINAL_STATUSES)
@@ -87,8 +87,8 @@ class PostgresErasureRepository:
         with an answer already.
         """
         status = await self._connection.scalar(
-            select(investigations.c.status).where(
-                investigations.c.investigation_id == investigation_id
+            select(analysis_runs.c.status).where(
+                analysis_runs.c.analysis_run_id == investigation_id
             )
         )
         if status is None:
@@ -103,7 +103,7 @@ class PostgresErasureRepository:
             postgres_insert(erasure_operations)
             .values(
                 erasure_id=erasure_id,
-                investigation_id=investigation_id,
+                analysis_run_id=investigation_id,
                 tenant_id=tenant_id,
                 category=category.value,
                 progress=ErasureProgress.REQUESTED.value,
@@ -152,8 +152,8 @@ class PostgresErasureRepository:
         # this Investigation blocks rather than committing content after the
         # erasing UPDATE has already passed over its table.
         await self._connection.execute(
-            select(investigations.c.investigation_id)
-            .where(investigations.c.investigation_id == investigation_id)
+            select(analysis_runs.c.analysis_run_id)
+            .where(analysis_runs.c.analysis_run_id == investigation_id)
             .with_for_update()
         )
 
@@ -203,7 +203,7 @@ class PostgresErasureRepository:
         if surface is EvidenceSurface.AGENT_EXECUTION_INPUT:
             await self._connection.execute(
                 update(agent_executions)
-                .where(agent_executions.c.investigation_id == investigation_id)
+                .where(agent_executions.c.analysis_run_id == investigation_id)
                 .values(input={})
             )
         elif surface is EvidenceSurface.AGENT_EXECUTION_OUTPUT:
@@ -212,20 +212,20 @@ class PostgresErasureRepository:
                 # `null()`, not `None`: on a JSON column SQLAlchemy turns a
                 # Python `None` into the JSON value `null`, which is a stored
                 # document rather than an absent one.
-                .where(agent_executions.c.investigation_id == investigation_id)
+                .where(agent_executions.c.analysis_run_id == investigation_id)
                 .values(output=null())
             )
         elif surface is EvidenceSurface.INVESTIGATION_FINDING:
             # The narrative and its metric values go; the lifecycle, outcome
             # and publication decision in the same JSON stay.
             await self._connection.execute(
-                update(investigations)
-                .where(investigations.c.investigation_id == investigation_id)
+                update(analysis_runs)
+                .where(analysis_runs.c.analysis_run_id == investigation_id)
                 # `state` is `json`, not `jsonb`, so the key removal needs
                 # an explicit round trip through `jsonb` and back.
                 .values(
                     state=cast(
-                        cast(investigations.c.state, JSONB).op("-")("finding"),
+                        cast(analysis_runs.c.state, JSONB).op("-")("finding"),
                         JSON,
                     )
                 )
@@ -233,7 +233,7 @@ class PostgresErasureRepository:
         elif surface is EvidenceSurface.DRAFT_FINDING_NARRATIVE:
             await self._connection.execute(
                 update(draft_findings)
-                .where(draft_findings.c.investigation_id == investigation_id)
+                .where(draft_findings.c.analysis_run_id == investigation_id)
                 .values(headline=ERASED, summary=ERASED)
             )
         elif surface is EvidenceSurface.DRAFT_FINDING_CLAIMS:
@@ -242,7 +242,7 @@ class PostgresErasureRepository:
                 .where(
                     draft_finding_claims.c.draft_finding_id.in_(
                         select(draft_findings.c.draft_finding_id).where(
-                            draft_findings.c.investigation_id == investigation_id
+                            draft_findings.c.analysis_run_id == investigation_id
                         )
                     )
                 )
@@ -259,7 +259,7 @@ class PostgresErasureRepository:
         elif surface is EvidenceSurface.CITATION_AGGREGATE:
             await self._connection.execute(
                 update(evidence_citations)
-                .where(evidence_citations.c.investigation_id == investigation_id)
+                .where(evidence_citations.c.analysis_run_id == investigation_id)
                 # Tombstoned, not deleted: a claim must still resolve to
                 # something that explains its own absence.
                 #
@@ -279,7 +279,7 @@ class PostgresErasureRepository:
         elif surface is EvidenceSurface.DRAFT_FINDING_CONTRADICTIONS:
             await self._connection.execute(
                 update(draft_findings)
-                .where(draft_findings.c.investigation_id == investigation_id)
+                .where(draft_findings.c.analysis_run_id == investigation_id)
                 .values(contradictions=[])
             )
         elif surface is EvidenceSurface.AGENT_EXECUTION_OUTCOME:
@@ -288,20 +288,20 @@ class PostgresErasureRepository:
             # — a `ValidationOutcome` carries the Evaluator's issues verbatim.
             await self._connection.execute(
                 update(agent_executions)
-                .where(agent_executions.c.investigation_id == investigation_id)
+                .where(agent_executions.c.analysis_run_id == investigation_id)
                 .values(outcome=null())
             )
         elif surface is EvidenceSurface.INVESTIGATION_FAILURE_MESSAGE:
             # The code stays and explains the terminal state; the message is
             # `str(error)` and can quote the erased value back.
             await self._connection.execute(
-                update(investigations)
-                .where(investigations.c.investigation_id == investigation_id)
+                update(analysis_runs)
+                .where(analysis_runs.c.analysis_run_id == investigation_id)
                 .values(
                     # `#-` takes a `text[]` path, not a jsonb value, so the
                     # literal has to say which it is.
                     state=cast(
-                        cast(investigations.c.state, JSONB).op("#-")(
+                        cast(analysis_runs.c.state, JSONB).op("#-")(
                             literal(["failure", "message"], ARRAY(Text))
                         ),
                         JSON,
@@ -316,7 +316,7 @@ class PostgresErasureRepository:
     ) -> tuple[EvidenceSurface, ...]:
         """Which surfaces still hold something, after erasing them all."""
         draft_ids = select(draft_findings.c.draft_finding_id).where(
-            draft_findings.c.investigation_id == investigation_id
+            draft_findings.c.analysis_run_id == investigation_id
         )
         checks: tuple[tuple[EvidenceSurface, object], ...] = (
             (
@@ -324,7 +324,7 @@ class PostgresErasureRepository:
                 select(func.count())
                 .select_from(agent_executions)
                 .where(
-                    agent_executions.c.investigation_id == investigation_id,
+                    agent_executions.c.analysis_run_id == investigation_id,
                     cast(agent_executions.c.input, Text) != "{}",
                 ),
             ),
@@ -333,7 +333,7 @@ class PostgresErasureRepository:
                 select(func.count())
                 .select_from(agent_executions)
                 .where(
-                    agent_executions.c.investigation_id == investigation_id,
+                    agent_executions.c.analysis_run_id == investigation_id,
                     agent_executions.c.output.isnot(None),
                 ),
             ),
@@ -342,20 +342,20 @@ class PostgresErasureRepository:
                 select(func.count())
                 .select_from(agent_executions)
                 .where(
-                    agent_executions.c.investigation_id == investigation_id,
+                    agent_executions.c.analysis_run_id == investigation_id,
                     agent_executions.c.outcome.isnot(None),
                 ),
             ),
             (
                 EvidenceSurface.INVESTIGATION_FINDING,
                 select(func.count())
-                .select_from(investigations)
+                .select_from(analysis_runs)
                 .where(
-                    investigations.c.investigation_id == investigation_id,
+                    analysis_runs.c.analysis_run_id == investigation_id,
                     # `jsonb_exists` rather than the `?` operator: `?` is the
                     # driver's own placeholder and does not survive the round
                     # trip.
-                    func.jsonb_exists(cast(investigations.c.state, JSONB), "finding"),
+                    func.jsonb_exists(cast(analysis_runs.c.state, JSONB), "finding"),
                 ),
             ),
             (
@@ -363,7 +363,7 @@ class PostgresErasureRepository:
                 select(func.count())
                 .select_from(draft_findings)
                 .where(
-                    draft_findings.c.investigation_id == investigation_id,
+                    draft_findings.c.analysis_run_id == investigation_id,
                     (draft_findings.c.headline != ERASED)
                     | (draft_findings.c.summary != ERASED),
                 ),
@@ -383,7 +383,7 @@ class PostgresErasureRepository:
                 select(func.count())
                 .select_from(evidence_citations)
                 .where(
-                    evidence_citations.c.investigation_id == investigation_id,
+                    evidence_citations.c.analysis_run_id == investigation_id,
                     evidence_citations.c.aggregate_value != ERASED,
                 ),
             ),
@@ -402,7 +402,7 @@ class PostgresErasureRepository:
         row = (
             await self._connection.execute(
                 select(erasure_operations).where(
-                    erasure_operations.c.investigation_id == investigation_id,
+                    erasure_operations.c.analysis_run_id == investigation_id,
                     erasure_operations.c.category == category.value,
                 )
             )
@@ -434,7 +434,7 @@ class PostgresErasureRepository:
         await self._connection.execute(
             update(erasure_operations)
             .where(
-                erasure_operations.c.investigation_id == investigation_id,
+                erasure_operations.c.analysis_run_id == investigation_id,
                 erasure_operations.c.category == category.value,
                 # Never un-complete a finished erasure. Content that is gone
                 # does not come back because a later call failed.
@@ -452,7 +452,7 @@ def _operation_from_row(row: object) -> ErasureOperation:
     return ErasureOperation(
         erasure_id=row.erasure_id,
         tenant_id=row.tenant_id,
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         category=DeletionCategory(row.category),
         progress=ErasureProgress(row.progress),
         requested_at=row.requested_at,

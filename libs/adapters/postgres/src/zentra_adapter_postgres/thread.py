@@ -31,7 +31,7 @@ from .investigation import (
     PostgresHumanApprovalRepository,
     PostgresInvestigationRepository,
 )
-from .schema import investigation_threads, investigations, thread_messages
+from .schema import analysis_runs, chat_sessions, messages
 from .work_feed import PostgresWorkFeedRepository
 from .workspace import PostgresOrganizationRepository
 
@@ -39,9 +39,9 @@ from .workspace import PostgresOrganizationRepository
 def _thread_from_row(row: Any) -> InvestigationThread:
     value = row._mapping
     return InvestigationThread(
-        thread_id=value["thread_id"],
+        thread_id=value["chat_session_id"],
         tenant_id=value["tenant_id"],
-        project_id=value["project_id"],
+        project_id=value["group_id"],
         initiating_message_id=value["initiating_message_id"],
         title=value["title"],
         status=ThreadStatus(value["status"]),
@@ -61,7 +61,7 @@ def _message_from_row(row: Any) -> ThreadMessage:
     value = row._mapping
     return ThreadMessage(
         message_id=value["message_id"],
-        thread_id=value["thread_id"],
+        thread_id=value["chat_session_id"],
         tenant_id=value["tenant_id"],
         author_id=value["author_id"],
         kind=ThreadMessageKind(value["kind"]),
@@ -76,10 +76,10 @@ class PostgresThreadRepository:
 
     async def add_thread(self, thread: InvestigationThread) -> None:
         await self._connection.execute(
-            insert(investigation_threads).values(
-                thread_id=thread.thread_id,
+            insert(chat_sessions).values(
+                chat_session_id=thread.thread_id,
                 tenant_id=thread.tenant_id,
-                project_id=thread.project_id,
+                group_id=thread.project_id,
                 initiating_message_id=thread.initiating_message_id,
                 title=thread.title,
                 status=thread.status.value,
@@ -94,8 +94,8 @@ class PostgresThreadRepository:
     async def get_thread(
         self, thread_id: UUID, *, for_update: bool = False
     ) -> InvestigationThread | None:
-        statement = select(investigation_threads).where(
-            investigation_threads.c.thread_id == thread_id
+        statement = select(chat_sessions).where(
+            chat_sessions.c.chat_session_id == thread_id
         )
         if for_update:
             statement = statement.with_for_update()
@@ -104,8 +104,8 @@ class PostgresThreadRepository:
 
     async def save_thread(self, thread: InvestigationThread) -> None:
         await self._connection.execute(
-            update(investigation_threads)
-            .where(investigation_threads.c.thread_id == thread.thread_id)
+            update(chat_sessions)
+            .where(chat_sessions.c.chat_session_id == thread.thread_id)
             .values(
                 title=thread.title,
                 status=thread.status.value,
@@ -122,16 +122,16 @@ class PostgresThreadRepository:
 
     async def delete_thread(self, thread_id: UUID) -> None:
         await self._connection.execute(
-            delete(investigation_threads).where(
-                investigation_threads.c.thread_id == thread_id
+            delete(chat_sessions).where(
+                chat_sessions.c.chat_session_id == thread_id
             )
         )
 
     async def add_message(self, message: ThreadMessage) -> None:
         await self._connection.execute(
-            insert(thread_messages).values(
+            insert(messages).values(
                 message_id=message.message_id,
-                thread_id=message.thread_id,
+                chat_session_id=message.thread_id,
                 tenant_id=message.tenant_id,
                 author_id=message.author_id,
                 kind=message.kind.value,
@@ -142,11 +142,11 @@ class PostgresThreadRepository:
 
     async def messages_for_thread(self, thread_id: UUID) -> tuple[ThreadMessage, ...]:
         statement = (
-            select(thread_messages)
-            .where(thread_messages.c.thread_id == thread_id)
+            select(messages)
+            .where(messages.c.chat_session_id == thread_id)
             .order_by(
-                thread_messages.c.created_at,
-                thread_messages.c.message_id,
+                messages.c.created_at,
+                messages.c.message_id,
             )
         )
         rows = (await self._connection.execute(statement)).all()
@@ -161,39 +161,39 @@ class PostgresThreadRepository:
         after: ThreadCursor | None,
     ) -> ThreadSlice:
         latest_investigation = (
-            select(investigations.c.investigation_id)
-            .where(investigations.c.thread_id == investigation_threads.c.thread_id)
-            .order_by(investigations.c.thread_sequence.desc())
+            select(analysis_runs.c.analysis_run_id)
+            .where(analysis_runs.c.chat_session_id == chat_sessions.c.chat_session_id)
+            .order_by(analysis_runs.c.chat_sequence.desc())
             .limit(1)
             .scalar_subquery()
         )
         statement = select(
-            investigation_threads,
+            chat_sessions,
             latest_investigation.label("investigation_id"),
         ).where(
-            investigation_threads.c.project_id == project_id,
+            chat_sessions.c.group_id == project_id,
         )
         if not include_archived:
             statement = statement.where(
-                investigation_threads.c.status != ThreadStatus.ARCHIVED.value
+                chat_sessions.c.status != ThreadStatus.ARCHIVED.value
             )
         if after is not None:
             statement = statement.where(
                 tuple_(
-                    investigation_threads.c.latest_activity_at,
-                    investigation_threads.c.thread_id,
+                    chat_sessions.c.latest_activity_at,
+                    chat_sessions.c.chat_session_id,
                 )
                 < tuple_(after.activity_at, after.thread_id)
             )
         statement = statement.order_by(
-            investigation_threads.c.latest_activity_at.desc(),
-            investigation_threads.c.thread_id.desc(),
+            chat_sessions.c.latest_activity_at.desc(),
+            chat_sessions.c.chat_session_id.desc(),
         ).limit(limit + 1)
         rows = (await self._connection.execute(statement)).all()
         summaries = tuple(
             ThreadSummary(
-                thread_id=row.thread_id,
-                project_id=row.project_id,
+                thread_id=row.chat_session_id,
+                project_id=row.group_id,
                 title=row.title,
                 status=ThreadStatus(row.status),
                 latest_activity_at=row.latest_activity_at,
@@ -212,9 +212,9 @@ class PostgresThreadRepository:
 
     async def investigation_id_for_thread(self, thread_id: UUID) -> UUID | None:
         statement = (
-            select(investigations.c.investigation_id)
-            .where(investigations.c.thread_id == thread_id)
-            .order_by(investigations.c.thread_sequence.desc())
+            select(analysis_runs.c.analysis_run_id)
+            .where(analysis_runs.c.chat_session_id == thread_id)
+            .order_by(analysis_runs.c.chat_sequence.desc())
             .limit(1)
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()

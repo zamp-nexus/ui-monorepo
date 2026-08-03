@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,14 +13,12 @@ from zentra_application_investigation import (
     OrganizationNameConflictError,
     OrganizationSlice,
 )
-from zentra_domain_investigation import Group, Project
+from zentra_domain_investigation import Group
 
 from .database import Database, set_tenant_context
-from .schema import projects, workspace_groups
+from .schema import workspace_groups
 
-_NAME_CONSTRAINTS = frozenset(
-    {"uq_workspace_groups_tenant_name", "uq_projects_group_name"}
-)
+_NAME_CONSTRAINTS = frozenset({"uq_workspace_groups_tenant_name"})
 
 
 def _translate_integrity(error: IntegrityError) -> None:
@@ -42,21 +39,6 @@ def _group_from_row(row: Any) -> Group:
         normalized_name=value["normalized_name"],
         created_at=value["created_at"],
         updated_at=value["updated_at"],
-        archived_at=value["archived_at"],
-    )
-
-
-def _project_from_row(row: Any) -> Project:
-    value = row._mapping
-    return Project(
-        project_id=value["project_id"],
-        tenant_id=value["tenant_id"],
-        group_id=value["group_id"],
-        name=value["name"],
-        normalized_name=value["normalized_name"],
-        created_at=value["created_at"],
-        updated_at=value["updated_at"],
-        latest_activity_at=value["latest_activity_at"],
         archived_at=value["archived_at"],
     )
 
@@ -133,88 +115,6 @@ class PostgresOrganizationRepository:
         last = visible[-1]
         return OrganizationSlice(
             visible, OrganizationCursor(last.updated_at, last.group_id)
-        )
-
-    async def add_project(self, project: Project) -> None:
-        try:
-            await self._connection.execute(
-                insert(projects).values(
-                    project_id=project.project_id,
-                    tenant_id=project.tenant_id,
-                    group_id=project.group_id,
-                    name=project.name,
-                    normalized_name=project.normalized_name,
-                    created_at=project.created_at,
-                    updated_at=project.updated_at,
-                    latest_activity_at=project.latest_activity_at,
-                    archived_at=project.archived_at,
-                )
-            )
-        except IntegrityError as error:
-            _translate_integrity(error)
-
-    async def get_project(
-        self, project_id: UUID, *, for_update: bool = False
-    ) -> Project | None:
-        statement = select(projects).where(projects.c.project_id == project_id)
-        if for_update:
-            statement = statement.with_for_update()
-        row = (await self._connection.execute(statement)).first()
-        return _project_from_row(row) if row is not None else None
-
-    async def save_project(self, project: Project) -> None:
-        try:
-            await self._connection.execute(
-                update(projects)
-                .where(projects.c.project_id == project.project_id)
-                .values(
-                    name=project.name,
-                    normalized_name=project.normalized_name,
-                    updated_at=project.updated_at,
-                    archived_at=project.archived_at,
-                )
-            )
-        except IntegrityError as error:
-            _translate_integrity(error)
-
-    async def list_projects(
-        self,
-        *,
-        group_id: UUID,
-        include_archived: bool,
-        limit: int,
-        after: OrganizationCursor | None,
-    ) -> OrganizationSlice[Project]:
-        statement = select(projects).where(projects.c.group_id == group_id)
-        if not include_archived:
-            statement = statement.where(projects.c.archived_at.is_(None))
-        if after is not None:
-            statement = statement.where(
-                tuple_(projects.c.latest_activity_at, projects.c.project_id)
-                < tuple_(after.sort_at, after.resource_id)
-            )
-        statement = statement.order_by(
-            projects.c.latest_activity_at.desc(), projects.c.project_id.desc()
-        ).limit(limit + 1)
-        rows = (await self._connection.execute(statement)).all()
-        project_values = tuple(_project_from_row(row) for row in rows)
-        if len(project_values) <= limit:
-            return OrganizationSlice(project_values, None)
-        visible = project_values[:limit]
-        last = visible[-1]
-        return OrganizationSlice(
-            visible,
-            OrganizationCursor(last.latest_activity_at, last.project_id),
-        )
-
-    async def record_project_activity(
-        self, project_id: UUID, *, occurred_at: datetime
-    ) -> None:
-        await self._connection.execute(
-            update(projects)
-            .where(projects.c.project_id == project_id)
-            .where(projects.c.latest_activity_at < occurred_at)
-            .values(latest_activity_at=occurred_at)
         )
 
 

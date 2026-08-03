@@ -35,9 +35,9 @@ from zentra_adapter_postgres.draft_finding import (
 )
 from zentra_adapter_postgres.schema import (
     agent_executions,
+    analysis_runs,
     draft_findings,
     evidence_citations,
-    investigations,
     tenants,
 )
 
@@ -71,9 +71,9 @@ async def seed() -> None:
             .on_conflict_do_nothing()
         )
         await connection.execute(
-            postgres_insert(investigations)
+            postgres_insert(analysis_runs)
             .values(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=INVESTIGATION,
                 tenant_id=TENANT_A,
                 question="Why did EU refunds increase?",
                 status="completed",
@@ -88,12 +88,12 @@ async def cleanup() -> None:
     async with owner.begin() as connection:
         await connection.execute(
             draft_findings.delete().where(
-                draft_findings.c.investigation_id == INVESTIGATION
+                draft_findings.c.analysis_run_id == INVESTIGATION
             )
         )
         await connection.execute(
             evidence_citations.delete().where(
-                evidence_citations.c.investigation_id == INVESTIGATION
+                evidence_citations.c.analysis_run_id == INVESTIGATION
             )
         )
     await owner.dispose()
@@ -394,7 +394,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
                 postgres_insert(agent_executions)
                 .values(
                     execution_id=execution_id,
-                    investigation_id=INVESTIGATION,
+                    analysis_run_id=INVESTIGATION,
                     tenant_id=TENANT_A,
                     agent_id="cube_analyst_v1",
                     step=1,

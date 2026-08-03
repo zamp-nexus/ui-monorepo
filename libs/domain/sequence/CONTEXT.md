@@ -5,7 +5,7 @@ Sequence owns the versioned graph of typed transform steps that turns a Tenant's
 ## Language
 
 **Sequence**:
-A Dataset Workspace-owned, reusable graph of Sequence Steps that starts from one Raw Table and produces one or more Final Tables. Many Investigation Threads may reference the same Sequence's Final Tables.
+A Dataset Workspace-owned, reusable graph of Sequence Steps that starts from one Raw Table and produces one or more Final Tables. Many Chat Sessions may reference the same Sequence's Final Tables.
 _Avoid_: Pipeline, workflow, ETL job
 
 **Dataset Workspace**:
@@ -33,7 +33,7 @@ One execution of a single Sequence Step against chDB, recorded as an Agent Execu
 _Avoid_: Job run, execution log
 
 **Data Steward Agent**:
-A registered Agent that builds a Sequence incrementally: proposes and executes one Sequence Step at a time from a typed operation catalog, in response to conversation in the Sequence's Investigation Thread, never accepting agent-authored SQL or code as a transform.
+A registered Agent that builds a Sequence incrementally: proposes and executes one Sequence Step at a time from a typed operation catalog, in response to conversation in the Sequence's Chat Session, never accepting agent-authored SQL or code as a transform.
 _Avoid_: ETL agent, cleaning bot, prep agent
 
 **Semantic Modeler Agent**:
@@ -48,6 +48,6 @@ The Data Steward Agent and Semantic Modeler Agent are [Agent Execution](../agent
 
 A Final Table is the only thing the Semantic Modeler Agent may turn into a [Semantic Metric](../CONTEXT.md); it never models a Raw Table or an intermediate Prepared Table directly. The resulting Metric Draft follows the same Human Approval path as any other Semantic Model change — Sequence adds no second approval mechanism.
 
-The chat that builds a Sequence is an ordinary [Investigation Thread](../investigation/CONTEXT.md) scoped to that Sequence rather than to a governed question; a Sequence started automatically mid-Investigation is the same object as one started from the Sequence page, not a separate draft kind.
+The chat that builds a Sequence is an ordinary [Chat Session](../investigation/CONTEXT.md) scoped to that Sequence rather than to a governed question; a Sequence started automatically mid-Analysis-Run is the same object as one started from the Sequence page, not a separate draft kind.
 
 The Sequence page (a frontend React Flow canvas plus its read/create API) renders a Sequence's graph purely from this persisted state — it introduces no client-side state that could drift from what actually happened, and computes its own node layout rather than persisting coordinates. See `docs/05_APIs/Sequence API.md` and `docs/adr/0023-sequence-graph-layout-is-a-client-concern.md`.

@@ -65,7 +65,6 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     )
 
     group = await service.create_group(actor, name="Finance Operations")
-    await service.create_project(actor, group_id=group.group_id, name="Forecast")
     with pytest.raises(OrganizationNameConflictError):
         await service.create_group(actor, name="  FINANCE   OPERATIONS ")
     with pytest.raises(OrganizationNotFoundError):

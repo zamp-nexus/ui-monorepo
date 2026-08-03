@@ -77,7 +77,6 @@ from .workspace_dto import (
     OrganizationNotFoundError,
     OrganizationPage,
     OrganizationSlice,
-    ProjectDetail,
 )
 from .workspace_ports import (
     OrganizationRepository,
@@ -145,7 +144,6 @@ __all__ = [
     "deterministic_thread_title",
     "classify_execution_failure",
     "GroupDetail",
-    "ProjectDetail",
     "OrganizationConflictError",
     "OrganizationCursor",
     "OrganizationCursorError",

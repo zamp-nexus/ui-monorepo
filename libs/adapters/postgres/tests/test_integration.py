@@ -16,8 +16,8 @@ from zentra_adapter_postgres.database import set_tenant_context
 from zentra_adapter_postgres.schema import (
     agent_executions,
     agent_registry,
+    analysis_runs,
     identity_subjects,
-    investigations,
     tenant_identity_bindings,
     tenant_memberships,
     tenants,
@@ -100,9 +100,9 @@ async def seed(owner_url: str) -> None:
             .on_conflict_do_nothing()
         )
         await connection.execute(
-            postgres_insert(investigations)
+            postgres_insert(analysis_runs)
             .values(
-                investigation_id=INVESTIGATION_ID,
+                analysis_run_id=INVESTIGATION_ID,
                 tenant_id=TENANT_A,
                 question="Integration fixture",
                 status="running",
@@ -163,7 +163,7 @@ async def test_rls_identity_and_constraints() -> None:
         async with owner.begin() as connection:
             await connection.execute(
                 insert(agent_executions).values(
-                    investigation_id=INVESTIGATION_ID,
+                    analysis_run_id=INVESTIGATION_ID,
                     tenant_id=TENANT_A,
                     agent_id="deterministic-validator",
                     step=0,
