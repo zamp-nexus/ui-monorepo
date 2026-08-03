@@ -24,17 +24,6 @@ export interface Group {
   readonly can_manage: boolean;
 }
 
-export interface Project {
-  readonly project_id: string;
-  readonly group_id: string;
-  readonly name: string;
-  readonly created_at: string;
-  readonly updated_at: string;
-  readonly latest_activity_at: string;
-  readonly archived_at: string | null;
-  readonly can_manage: boolean;
-}
-
 export interface Page<T> {
   readonly items: readonly T[];
   readonly next_cursor: string | null;
@@ -60,11 +49,13 @@ export interface ThreadMessage {
 }
 
 /**
- * What this actor may do to this Thread right now.
+ * What this actor may do to this Chat Session right now.
  *
- * Read, never computed. The lifecycle rule that a follow-up is legal only once
- * the latest Investigation is terminal lives on the server; a client that
- * re-derived it would be a second rule that can disagree with the first.
+ * Read, never computed. `can_append_message` no longer depends on the latest
+ * Investigation's status -- a follow-up is legal any time the Chat Session
+ * isn't archived (ADR-0028) -- but the principle stays: the server is the
+ * one place that decides, and a client that re-derived it would be a second
+ * rule that can disagree with the first.
  */
 export interface ThreadActions {
   readonly can_append_message: boolean;
@@ -76,7 +67,7 @@ export interface ThreadActions {
 }
 
 export interface ThreadRouting {
-  readonly disposition: 'resolved' | 'unsupported' | 'ambiguous' | string;
+  readonly disposition: 'resolved' | 'unsupported' | 'ambiguous' | 'not_analytical' | string;
   readonly scenario_key: string | null;
   readonly canonical_question: string | null;
   readonly clarification: string | null;

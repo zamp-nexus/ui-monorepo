@@ -37,17 +37,6 @@ const GROUP = {
   can_manage: true,
 };
 
-const PROJECT = {
-  project_id: '42000000-0000-0000-0000-000000000001',
-  group_id: GROUP.group_id,
-  name: 'General',
-  created_at: '2026-08-01T09:00:00Z',
-  updated_at: '2026-08-01T09:00:00Z',
-  latest_activity_at: '2026-08-01T09:00:00Z',
-  archived_at: null,
-  can_manage: true,
-};
-
 const USAGE = {
   input_tokens: 0,
   output_tokens: 0,
@@ -66,7 +55,7 @@ const ACTIONS = {
 
 const clarifiedThread: Thread = {
   thread_id: '43000000-0000-0000-0000-000000000001',
-  project_id: PROJECT.project_id,
+  project_id: GROUP.group_id,
   title: 'How is the business doing?',
   status: 'draft',
   created_at: '2026-08-01T09:00:00Z',
@@ -105,7 +94,7 @@ const clarifiedThread: Thread = {
 /**
  * Answer each endpoint by URL, so ordering between them cannot matter.
  *
- * Keyed by method as well as path, because `/projects/{id}/threads` lists on
+ * Keyed by method as well as path, because `/groups/{id}/chats` lists on
  * GET and creates on POST, and those return different shapes.
  */
 const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
@@ -113,7 +102,7 @@ const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
     const url = String(input);
     const method = (init?.method ?? 'GET').toUpperCase();
     const key = Object.keys(handlers)
-      // Longest fragment wins, so '/threads' cannot shadow '/threads/{id}'.
+      // Longest fragment wins, so '/chats' cannot shadow '/chats/{id}'.
       .sort((a, b) => b.length - a.length)
       .find((fragment) => {
         const [wanted, path] = fragment.includes(' ') ? fragment.split(' ') : [method, fragment];
@@ -132,9 +121,6 @@ const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
 
 const baseRoutes = {
   '/v1/groups': { body: { items: [GROUP], next_cursor: null } },
-  [`/v1/groups/${GROUP.group_id}/projects`]: {
-    body: { items: [PROJECT], next_cursor: null },
-  },
   '/v1/agents': { body: [] },
   '/v1/catalog': {
     body: {
@@ -151,7 +137,7 @@ const baseRoutes = {
       ],
     },
   },
-  [`GET /v1/projects/${PROJECT.project_id}/threads`]: {
+  [`GET /v1/groups/${GROUP.group_id}/chats`]: {
     body: { items: [], next_cursor: null },
   },
 };
@@ -199,8 +185,8 @@ describe('Chat', () => {
   it('creates a thread from the first message and renders the snapshot', async () => {
     route({
       ...baseRoutes,
-      [`POST /v1/projects/${PROJECT.project_id}/threads`]: { body: clarifiedThread },
-      [`/v1/threads/${clarifiedThread.thread_id}`]: { body: clarifiedThread },
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: clarifiedThread },
+      [`/v1/chats/${clarifiedThread.thread_id}`]: { body: clarifiedThread },
     });
     renderPage();
 
@@ -214,8 +200,8 @@ describe('Chat', () => {
   it('offers the supported questions when the router could not resolve one', async () => {
     route({
       ...baseRoutes,
-      [`POST /v1/projects/${PROJECT.project_id}/threads`]: { body: clarifiedThread },
-      [`/v1/threads/${clarifiedThread.thread_id}`]: { body: clarifiedThread },
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: clarifiedThread },
+      [`/v1/chats/${clarifiedThread.thread_id}`]: { body: clarifiedThread },
     });
     renderPage();
 
@@ -235,8 +221,8 @@ describe('Chat', () => {
     };
     route({
       ...baseRoutes,
-      [`POST /v1/projects/${PROJECT.project_id}/threads`]: { body: running },
-      [`/v1/threads/${running.thread_id}`]: { body: running },
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: running },
+      [`/v1/chats/${running.thread_id}`]: { body: running },
     });
     renderPage();
 
@@ -382,8 +368,8 @@ describe('the brief a reader falls back to', () => {
     };
     route({
       ...baseRoutes,
-      [`POST /v1/projects/${PROJECT.project_id}/threads`]: { body: answered },
-      [`/v1/threads/${answered.thread_id}`]: { body: answered },
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: answered },
+      [`/v1/chats/${answered.thread_id}`]: { body: answered },
       '/visualization': {
         body: {
           visualization_id: 'v-1',

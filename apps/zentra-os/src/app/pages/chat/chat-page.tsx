@@ -6,7 +6,7 @@ import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { AgentProgress } from './agent-progress';
 import { AnswerRow } from './answer-row';
-import { appendMessage, createThread, getThread, listAgents, listThreads } from './api';
+import { appendMessage, createChat, getChat, listAgents, listChats } from './api';
 import { ChatComposer } from './chat-composer';
 import { ChatEmptyState } from './chat-empty-state';
 import { ChatHistory } from './chat-history';
@@ -14,7 +14,7 @@ import { ChatMessageRow } from './chat-message-row';
 import { suggestionsFromCatalog } from './chat-suggestions';
 import { InvestigationControls } from './investigation-controls';
 import { latestInvestigation, toTimeline } from './to-chat-message';
-import { useActiveProject } from './use-active-project';
+import { useActiveGroup } from './use-active-group';
 import { useThreadEvents } from './use-thread-events';
 
 /** The composer is open but no Thread exists yet — the first message makes one. */
@@ -42,20 +42,20 @@ export const ChatPage = ({
   const [draft, setDraft] = useState('');
   const endOfThread = useRef<HTMLDivElement>(null);
 
-  const project = useActiveProject(getToken);
-  const projectId = project.data ?? null;
+  const group = useActiveGroup(getToken);
+  const groupId = group.data ?? null;
 
   const history = useInfiniteQuery({
-    queryKey: ['threads', projectId],
-    queryFn: ({ pageParam }) => listThreads(getToken, projectId as string, pageParam),
+    queryKey: ['threads', groupId],
+    queryFn: ({ pageParam }) => listChats(getToken, groupId as string, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.next_cursor,
-    enabled: Boolean(projectId),
+    enabled: Boolean(groupId),
   });
 
   const snapshot = useQuery({
     queryKey: ['thread', activeThreadId],
-    queryFn: () => getThread(getToken, activeThreadId as string),
+    queryFn: () => getChat(getToken, activeThreadId as string),
     enabled: Boolean(activeThreadId),
   });
 
@@ -99,11 +99,11 @@ export const ChatPage = ({
     mutationFn: (content: string) =>
       activeThreadId
         ? appendMessage(getToken, activeThreadId, content)
-        : createThread(getToken, projectId as string, content),
+        : createChat(getToken, groupId as string, content),
     onSuccess: (created) => {
       setActiveThreadId(created.thread_id);
       queryClient.setQueryData(['thread', created.thread_id], created);
-      void queryClient.invalidateQueries({ queryKey: ['threads', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['threads', groupId] });
     },
   });
 
@@ -122,13 +122,13 @@ export const ChatPage = ({
   const investigation = thread ? latestInvestigation(thread) : null;
   // Before a Thread exists there is nothing to forbid; afterwards the server
   // says when a follow-up is legal, and it is the only thing that says so.
-  const canSend = thread ? thread.actions.can_append_message : Boolean(projectId);
+  const canSend = thread ? thread.actions.can_append_message : Boolean(groupId);
 
-  if (project.error) {
+  if (group.error) {
     return (
       <section className="flex h-full items-center justify-center px-6">
         <p className="max-w-md text-sm text-foreground-muted" role="alert">
-          {project.error.message}
+          {group.error.message}
         </p>
       </section>
     );

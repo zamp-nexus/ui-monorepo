@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { TokenSource } from '../../api';
 import { latestCatalog } from '../datasets/api';
-import { useActiveProject } from '../chat/use-active-project';
+import { useActiveGroup } from '../chat/use-active-group';
 import { listSources } from '../connections/api';
 
 import { createSequence } from './api';
@@ -27,7 +27,7 @@ interface NewSequenceModalProps {
 export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const project = useActiveProject(getToken);
+  const group = useActiveGroup(getToken);
   // Empty string, not `null`, means "nothing picked yet" — Select is
   // controlled from its first render either way, and Base UI warns if a
   // component switches from uncontrolled (`value={undefined}`) to
@@ -58,11 +58,14 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!project.data || !catalog.data || !tableName) {
+      if (!group.data || !catalog.data || !tableName) {
         throw new Error('A source table and message are required.');
       }
       return createSequence(getToken, {
-        project_id: project.data,
+        // `project_id` names the field on the wire (the Sequence API's own
+        // rename is deferred, matching ThreadService.create()'s own
+        // parameter) -- the value it carries is a Group id (ADR-0028).
+        project_id: group.data,
         raw_table: {
           kind: 'connector_source_table',
           catalog_version_id: catalog.data.catalog_version_id,
@@ -164,9 +167,9 @@ export const NewSequenceModal = ({ open, getToken, onClose }: NewSequenceModalPr
               {create.error.message}
             </Alert>
           ) : null}
-          {project.error ? (
-            <Alert intent="error" role="alert" title="Could not resolve a Project">
-              {project.error.message}
+          {group.error ? (
+            <Alert intent="error" role="alert" title="Could not resolve a workspace">
+              {group.error.message}
             </Alert>
           ) : null}
 
