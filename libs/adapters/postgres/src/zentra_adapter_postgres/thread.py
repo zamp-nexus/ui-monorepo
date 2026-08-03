@@ -219,6 +219,21 @@ class PostgresThreadRepository:
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
 
+    async def default_data_connection_id(self, thread_id: UUID) -> UUID | None:
+        statement = select(chat_sessions.c.default_data_connection_id).where(
+            chat_sessions.c.chat_session_id == thread_id
+        )
+        return (await self._connection.execute(statement)).scalar_one_or_none()
+
+    async def set_default_data_connection_id(
+        self, thread_id: UUID, data_connection_id: UUID | None
+    ) -> None:
+        await self._connection.execute(
+            update(chat_sessions)
+            .where(chat_sessions.c.chat_session_id == thread_id)
+            .values(default_data_connection_id=data_connection_id)
+        )
+
 
 class PostgresThreadUnitOfWork:
     def __init__(

@@ -26,6 +26,7 @@ from zentra_adapter_postgres import (
 )
 from zentra_adapter_postgres.schema import (
     chat_sessions,
+    data_sources,
     messages,
     tenants,
 )
@@ -130,6 +131,87 @@ async def test_thread_and_first_message_are_atomic_and_tenant_scoped() -> None:
     await threads.delete(owner, draft.thread_id)
     await database.close()
     async with owner_engine.begin() as connection:
+        await connection.execute(
+            tenants.delete().where(
+                tenants.c.tenant_id.in_((tenant_id, other_tenant_id))
+            )
+        )
+    await owner_engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_default_data_connection_id_round_trips_and_is_tenant_scoped() -> None:
+    assert OWNER_URL is not None
+    assert RUNTIME_URL is not None
+    tenant_id = uuid4()
+    other_tenant_id = uuid4()
+    data_source_id = uuid4()
+    owner_engine = create_async_engine(OWNER_URL)
+    async with owner_engine.begin() as connection:
+        await connection.execute(
+            insert(tenants),
+            [
+                {"tenant_id": tenant_id, "name": "Dataset Default Tenant"},
+                {"tenant_id": other_tenant_id, "name": "Other Dataset Default Tenant"},
+            ],
+        )
+        await connection.execute(
+            insert(data_sources),
+            {
+                "data_source_id": data_source_id,
+                "tenant_id": tenant_id,
+                "name": "Production",
+                "kind": "uploaded",
+                "health": "unverified",
+            },
+        )
+
+    database = Database(RUNTIME_URL)
+
+    def now() -> datetime:
+        return datetime.now(UTC)
+
+    organization = OrganizationService(
+        unit_of_work_factory=PostgresOrganizationUnitOfWorkFactory(database),
+        now=now,
+        new_id=uuid4,
+    )
+    threads = ThreadService(
+        unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
+        intake=_UnresolvedIntake(),
+        now=now,
+        new_id=uuid4,
+    )
+    owner = actor(tenant_id)
+    group = await organization.create_group(owner, name="Finance")
+    draft = await threads.create(
+        owner, project_id=group.group_id, content="How is the business doing?"
+    )
+
+    uow_factory = PostgresThreadUnitOfWorkFactory(database)
+
+    async with uow_factory(tenant_id, uuid4(), uuid4()) as uow:
+        assert await uow.threads.default_data_connection_id(draft.thread_id) is None
+        await uow.threads.set_default_data_connection_id(
+            draft.thread_id, data_source_id
+        )
+        await uow.commit()
+
+    async with uow_factory(tenant_id, uuid4(), uuid4()) as uow:
+        assert (
+            await uow.threads.default_data_connection_id(draft.thread_id)
+            == data_source_id
+        )
+
+    async with uow_factory(other_tenant_id, uuid4(), uuid4()) as uow:
+        assert await uow.threads.default_data_connection_id(draft.thread_id) is None
+
+    await threads.delete(owner, draft.thread_id)
+    await database.close()
+    async with owner_engine.begin() as connection:
+        await connection.execute(
+            data_sources.delete().where(data_sources.c.data_source_id == data_source_id)
+        )
         await connection.execute(
             tenants.delete().where(
                 tenants.c.tenant_id.in_((tenant_id, other_tenant_id))
