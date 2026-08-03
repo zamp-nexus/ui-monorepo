@@ -11,7 +11,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from .metrics import configure_metrics, dimensions, instruments
+from .metrics import configure_metrics, dimensions, instruments, parse_headers
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +33,8 @@ SAFE_ATTRIBUTES: frozenset[str] = frozenset(
     {
         "zentra.tenant_id",
         "zentra.investigation_id",
+        # Chat Session correlation (paired with zentra.investigation_id)
+        "zentra.thread_id",
         # Insight execution
         "zentra.insight.agent_id",
         "zentra.insight.model",
@@ -57,6 +59,28 @@ SAFE_ATTRIBUTES: frozenset[str] = frozenset(
         "zentra.deletion.attempts",
         "zentra.deletion.duration_ms",
         "zentra.deletion.failure_category",
+        # Generic Agent execution: Intake, Cube Analyst, Data Visualization.
+        # Insight keeps its own zentra.insight.* recorder above — its shape
+        # predates this one and nothing about it needed to change.
+        "zentra.agent.role",
+        "zentra.agent.agent_id",
+        "zentra.agent.model",
+        "zentra.agent.provider",
+        "zentra.agent.fallback_count",
+        "zentra.agent.input_tokens",
+        "zentra.agent.output_tokens",
+        "zentra.agent.cost_usd",
+        "zentra.agent.duration_ms",
+        "zentra.agent.status",
+        "zentra.agent.error_category",
+        # Tool calls, across every Agent that holds one
+        "zentra.tool.role",
+        "zentra.tool.name",
+        "zentra.tool.status",
+        "zentra.tool.latency_ms",
+        # Skill activations
+        "zentra.skill.role",
+        "zentra.skill.names",
     }
 )
 
@@ -202,6 +226,95 @@ def record_evidence_deletion(
     meters.deletion_operations.add(1, dims)
 
 
+def record_agent_execution(
+    *,
+    role: str,
+    agent_id: str,
+    model: str | None,
+    provider: str | None,
+    fallback_count: int,
+    input_tokens: int,
+    output_tokens: int,
+    cost_usd: str,
+    duration_ms: int,
+    status: str,
+    error_category: str | None = None,
+) -> None:
+    """What a governed Agent step other than Insight cost and how it went.
+
+    Intake, Cube Analyst and the Data Visualization Agent share this one
+    recorder rather than each getting a bespoke `record_insight_execution`-
+    shaped function: the fields they report are identical, and a third or
+    fourth near-duplicate would only be a third or fourth place the allowlist
+    could drift from what is actually written. `role` names which one ran.
+    """
+    _record(
+        {
+            "zentra.agent.role": role,
+            "zentra.agent.agent_id": agent_id,
+            "zentra.agent.model": model,
+            "zentra.agent.provider": provider,
+            "zentra.agent.fallback_count": fallback_count,
+            "zentra.agent.input_tokens": input_tokens,
+            "zentra.agent.output_tokens": output_tokens,
+            "zentra.agent.cost_usd": cost_usd,
+            "zentra.agent.duration_ms": duration_ms,
+            "zentra.agent.status": status,
+            "zentra.agent.error_category": error_category,
+        }
+    )
+    dims = dimensions(role=role, status=status, provider=provider, model=model)
+    meters = instruments()
+    meters.agent_duration.record(duration_ms, dims)
+    meters.agent_cost.record(float(cost_usd), dims)
+    meters.agent_tokens.record(input_tokens + output_tokens, dims)
+    if fallback_count:
+        meters.agent_fallbacks.add(fallback_count, dims)
+
+
+def record_tool_call(
+    *, role: str, tool_name: str, status: str, latency_ms: int
+) -> None:
+    """That a tool ran, which one, and how it went. Never its arguments or
+    results — `ToolInvocation` already withholds those (ADR-0006), and this
+    recorder only ever sees what that type carries.
+    """
+    _record(
+        {
+            "zentra.tool.role": role,
+            "zentra.tool.name": tool_name,
+            "zentra.tool.status": status,
+            "zentra.tool.latency_ms": latency_ms,
+        }
+    )
+    instruments().tool_calls.add(
+        1, dimensions(role=role, tool_name=tool_name, status=status)
+    )
+
+
+def record_skill_activation(*, role: str, skill_names: tuple[str, ...]) -> None:
+    """Which Skills were appended to a role's system prompt for this execution.
+
+    Skills are static per role rather than chosen per call
+    (`SkillRegistry.apply`), so this reports the role's configuration at the
+    moment it ran — the only way an operator or Langfuse could otherwise learn
+    it is the system prompt itself, which this codebase deliberately never
+    exports. Writes nothing for a role with no skills applied, the same
+    "nothing to say" discipline the other recorders already follow.
+    """
+    if not skill_names:
+        return
+    _record(
+        {
+            "zentra.skill.role": role,
+            "zentra.skill.names": ",".join(skill_names),
+        }
+    )
+    meters = instruments()
+    for name in skill_names:
+        meters.skill_activations.add(1, dimensions(role=role, skill_name=name))
+
+
 def correlate_investigation(investigation_id: UUID) -> None:
     """Internal identifier only, so a trace can be followed to its work.
 
@@ -210,6 +323,14 @@ def correlate_investigation(investigation_id: UUID) -> None:
     trace.get_current_span().set_attribute(
         "zentra.investigation_id", str(investigation_id)
     )
+
+
+def correlate_thread(thread_id: UUID) -> None:
+    """Internal identifier only, so a trace can be followed to its Chat
+    Session. Mirrors `correlate_investigation`: never the message content,
+    which is a Tenant's own words.
+    """
+    trace.get_current_span().set_attribute("zentra.thread_id", str(thread_id))
 
 
 def current_trace_ids() -> tuple[UUID, UUID]:
@@ -226,7 +347,7 @@ def configure_telemetry(app: FastAPI, settings: TelemetrySettings) -> None:
         )
         exporter = OTLPSpanExporter(
             endpoint=settings.otlp_endpoint,
-            headers=settings.otlp_headers,
+            headers=parse_headers(settings.otlp_headers),
         )
         provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)

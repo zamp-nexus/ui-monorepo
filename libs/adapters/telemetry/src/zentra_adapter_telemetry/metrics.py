@@ -38,6 +38,9 @@ SAFE_DIMENSIONS: frozenset[str] = frozenset(
         "progress",
         "failure_category",
         "error_category",
+        "role",
+        "tool_name",
+        "skill_name",
     }
 )
 
@@ -118,6 +121,38 @@ class _Instruments:
             unit="{operation}",
             description="Evidence erasures, by progress state",
         )
+        self.agent_duration = meter.create_histogram(
+            "zentra.agent.duration",
+            unit="ms",
+            description="Wall time of one Intake, Cube Analyst, or Data "
+            "Visualization Agent execution",
+        )
+        self.agent_cost = meter.create_histogram(
+            "zentra.agent.cost",
+            unit="USD",
+            description="Provider cost of one such Agent execution",
+        )
+        self.agent_tokens = meter.create_histogram(
+            "zentra.agent.tokens",
+            unit="{token}",
+            description="Tokens consumed by one such Agent execution",
+        )
+        self.agent_fallbacks = meter.create_counter(
+            "zentra.agent.fallbacks",
+            unit="{rung}",
+            description="Fallback rungs descended before such an execution "
+            "succeeded",
+        )
+        self.tool_calls = meter.create_counter(
+            "zentra.tool.calls",
+            unit="{call}",
+            description="Tool calls an Agent made, by tool and outcome",
+        )
+        self.skill_activations = meter.create_counter(
+            "zentra.skill.activations",
+            unit="{activation}",
+            description="Skills applied to an Agent execution's system prompt",
+        )
 
 
 _instruments: _Instruments | None = None
@@ -155,7 +190,7 @@ def configure_metrics(
         return
     exporter = OTLPMetricExporter(
         endpoint=f"{otlp_endpoint.rstrip('/')}/v1/metrics",
-        headers=_parse_headers(otlp_headers),
+        headers=parse_headers(otlp_headers),
     )
     provider = MeterProvider(
         resource=Resource.create({"service.name": service_name}),
@@ -165,7 +200,13 @@ def configure_metrics(
     reset_instruments()
 
 
-def _parse_headers(raw: str | None) -> dict[str, str] | None:
+def parse_headers(raw: str | None) -> dict[str, str] | None:
+    """`key=value,key=value` into a dict the OTLP exporters can use directly.
+
+    Public because `configure_telemetry` in `tracing.py` needs the same
+    parsing for the trace exporter — a private name imported across modules
+    is a private name in title only.
+    """
     if not raw:
         return None
     pairs = (item.split("=", maxsplit=1) for item in raw.split(",") if "=" in item)
