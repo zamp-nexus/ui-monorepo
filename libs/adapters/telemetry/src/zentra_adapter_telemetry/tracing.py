@@ -272,7 +272,9 @@ def record_agent_execution(
         meters.agent_fallbacks.add(fallback_count, dims)
 
 
-def record_tool_call(*, role: str, tool_name: str, status: str, latency_ms: int) -> None:
+def record_tool_call(
+    *, role: str, tool_name: str, status: str, latency_ms: int
+) -> None:
     """That a tool ran, which one, and how it went. Never its arguments or
     results — `ToolInvocation` already withholds those (ADR-0006), and this
     recorder only ever sees what that type carries.

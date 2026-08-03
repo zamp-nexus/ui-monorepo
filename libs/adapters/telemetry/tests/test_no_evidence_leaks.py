@@ -161,9 +161,14 @@ def _emit_everything() -> None:
         error_category=None,
     )
     record_tool_call(
-        role="cube_analyst", tool_name="semantic_query", status="success", latency_ms=340
+        role="cube_analyst",
+        tool_name="semantic_query",
+        status="success",
+        latency_ms=340,
     )
-    record_skill_activation(role="cube_analyst", skill_names=("sample-size-discipline",))
+    record_skill_activation(
+        role="cube_analyst", skill_names=("sample-size-discipline",)
+    )
 
 
 def test_no_recorder_writes_an_attribute_nobody_reviewed(telemetry) -> None:

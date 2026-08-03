@@ -262,7 +262,7 @@ class _RecordingUnitOfWork:
     """Enough of the real unit of work for `record()` to run to completion,
     without a real Postgres transaction behind it."""
 
-    async def __aenter__(self) -> "_RecordingUnitOfWork":
+    async def __aenter__(self) -> _RecordingUnitOfWork:
         return self
 
     async def __aexit__(self, *args: object) -> None:
@@ -272,21 +272,21 @@ class _RecordingUnitOfWork:
         return None
 
     @property
-    def agent_executions(self) -> "_RecordingUnitOfWork":
+    def agent_executions(self) -> _RecordingUnitOfWork:
         return self
 
     async def add(self, execution: AgentExecutionRecord) -> None:
         return None
 
     @property
-    def outbox(self) -> "_RecordingUnitOfWork":
+    def outbox(self) -> _RecordingUnitOfWork:
         return self
 
     async def enqueue(self, events: object) -> None:
         return None
 
     @property
-    def work_feed(self) -> "_RecordingUnitOfWork":
+    def work_feed(self) -> _RecordingUnitOfWork:
         return self
 
     async def append_for_investigation(self, **kwargs: object) -> None:
