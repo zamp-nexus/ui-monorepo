@@ -116,7 +116,7 @@ export const useThreadEvents = (
       // the stream itself is only authorised at connect time, a reconnect an
       // hour later must not present the token it opened with.
       const token = await getToken();
-      const response = await fetch(`${apiUrl}/v1/threads/${threadId}/events?after=${sequence}`, {
+      const response = await fetch(`${apiUrl}/v1/chats/${threadId}/events?after=${sequence}`, {
         signal: controller.signal,
         headers: {
           Accept: 'text/event-stream',

@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { TokenSource } from '../../api';
 import type { ThreadEvent } from '../../types';
 import { AgentProgress } from '../chat/agent-progress';
-import { appendMessage, getThread } from '../chat/api';
+import { appendMessage, getChat } from '../chat/api';
 import { ChatComposer } from '../chat/chat-composer';
 import { ChatMessageRow } from '../chat/chat-message-row';
 import { toTimeline } from '../chat/to-chat-message';
@@ -33,7 +33,7 @@ export const SequenceChatPanel = ({ getToken, threadId, feed }: SequenceChatPane
 
   const thread = useQuery({
     queryKey: ['thread', threadId],
-    queryFn: () => getThread(getToken, threadId),
+    queryFn: () => getChat(getToken, threadId),
   });
 
   const send = useMutation({

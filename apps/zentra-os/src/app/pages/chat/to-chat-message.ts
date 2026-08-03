@@ -57,10 +57,13 @@ export const toTimeline = (thread: Thread): readonly TimelineEntry[] => {
 
     if (!message.authored_by_user) return;
 
-    // A clarification immediately after the question is the router declining
-    // to open any Investigation, so this question gets no answer entry.
+    // A clarification or an assistant reply immediately after the question
+    // means the router opened no Investigation for it -- a clarification
+    // because it declined to route, a reply because it wasn't a business
+    // question at all (ADR-0033). Either way, this question gets no answer
+    // entry, and the next Investigation in the array belongs to a later one.
     const next = thread.messages[index + 1];
-    if (next && next.kind === 'router_clarification') return;
+    if (next && (next.kind === 'router_clarification' || next.kind === 'assistant_reply')) return;
 
     const investigation = thread.investigations[attempt];
     if (!investigation) return;
