@@ -1,10 +1,11 @@
 /**
- * Talking to the Thread API.
+ * Talking to the Chat Session API.
  *
- * The chat surface creates analytical work only as a consequence of a Thread
- * message resolving to a governed scenario. It never posts to
+ * The chat surface creates analytical work only as a consequence of a Chat
+ * Session message resolving to a governed scenario. It never posts to
  * `/v1/investigations` — that is the older standalone flow the launcher uses,
- * and going through it directly would produce an Investigation no Thread owns.
+ * and going through it directly would produce an Investigation no Chat
+ * Session owns.
  */
 
 import { requestJson, type TokenSource } from '../../api';
@@ -12,7 +13,6 @@ import type {
   Agent,
   Group,
   Page,
-  Project,
   ResolvedCitation,
   Thread,
   ThreadSummary,
@@ -35,45 +35,39 @@ export const listGroups = (getToken: TokenSource) =>
 export const createGroup = (getToken: TokenSource, name: string) =>
   requestJson<Group>('/v1/groups', getToken, post({ name }));
 
-export const listProjects = (getToken: TokenSource, groupId: string) =>
-  requestJson<Page<Project>>(`/v1/groups/${groupId}/projects`, getToken);
-
-export const createProject = (getToken: TokenSource, groupId: string, name: string) =>
-  requestJson<Project>(`/v1/groups/${groupId}/projects`, getToken, post({ name }));
-
 /* -------------------------------------------------------------------------- */
-/* Threads                                                                     */
+/* Chat Sessions                                                               */
 /* -------------------------------------------------------------------------- */
 
-export const listThreads = (getToken: TokenSource, projectId: string, cursor?: string | null) =>
+export const listChats = (getToken: TokenSource, groupId: string, cursor?: string | null) =>
   requestJson<Page<ThreadSummary>>(
-    `/v1/projects/${projectId}/threads${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
+    `/v1/groups/${groupId}/chats${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
     getToken,
   );
 
 /**
- * A Thread is never created empty — the first message is what the router reads
- * to decide whether there is governed work to do.
+ * A Chat Session is never created empty — the first message is what the
+ * router reads to decide whether there is governed work to do.
  */
-export const createThread = (getToken: TokenSource, projectId: string, message: string) =>
-  requestJson<Thread>(`/v1/projects/${projectId}/threads`, getToken, post({ message }));
+export const createChat = (getToken: TokenSource, groupId: string, message: string) =>
+  requestJson<Thread>(`/v1/groups/${groupId}/chats`, getToken, post({ message }));
 
-export const getThread = (getToken: TokenSource, threadId: string) =>
-  requestJson<Thread>(`/v1/threads/${threadId}`, getToken);
+export const getChat = (getToken: TokenSource, threadId: string) =>
+  requestJson<Thread>(`/v1/chats/${threadId}`, getToken);
 
 /** The same endpoint serves an initial clarification and a later follow-up. */
 export const appendMessage = (getToken: TokenSource, threadId: string, message: string) =>
-  requestJson<Thread>(`/v1/threads/${threadId}/messages`, getToken, post({ message }));
+  requestJson<Thread>(`/v1/chats/${threadId}/messages`, getToken, post({ message }));
 
-export const archiveThread = (getToken: TokenSource, threadId: string) =>
-  requestJson<Thread>(`/v1/threads/${threadId}/archive`, getToken, post());
+export const archiveChat = (getToken: TokenSource, threadId: string) =>
+  requestJson<Thread>(`/v1/chats/${threadId}/archive`, getToken, post());
 
-export const restoreThread = (getToken: TokenSource, threadId: string) =>
-  requestJson<Thread>(`/v1/threads/${threadId}/restore`, getToken, post());
+export const restoreChat = (getToken: TokenSource, threadId: string) =>
+  requestJson<Thread>(`/v1/chats/${threadId}/restore`, getToken, post());
 
-/** Draft Threads with no Investigation only. The server enforces it. */
-export const deleteThread = (getToken: TokenSource, threadId: string) =>
-  requestJson<void>(`/v1/threads/${threadId}`, getToken, { method: 'DELETE' });
+/** Draft Chat Sessions with no Investigation only. The server enforces it. */
+export const deleteChat = (getToken: TokenSource, threadId: string) =>
+  requestJson<void>(`/v1/chats/${threadId}`, getToken, { method: 'DELETE' });
 
 /* -------------------------------------------------------------------------- */
 /* Investigation controls                                                      */

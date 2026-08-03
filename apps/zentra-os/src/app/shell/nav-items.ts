@@ -11,15 +11,17 @@ export interface NavItem {
 /**
  * The product's destinations, in the order the rail lists them.
  *
- * Investigations is the launcher at `/`; everything else is a Phase 2 page and
+ * Chat is the primary surface at `/` now (ADR-0028) -- the Investigation
+ * launcher moved to an explicit `/investigations` path, reachable but no
+ * longer a top-level rail destination; an Analysis Run's answer links out to
+ * it directly (`AnswerRow`) instead. Everything else is a Phase 2 page and
  * currently answers with a placeholder rather than a dead link.
  */
 export const navItems: readonly NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
-  { label: 'Investigations', to: '/', icon: 'search', matches: ['/investigations'] },
   { label: 'Datasets', to: '/datasets', icon: 'database' },
   { label: 'Sequences', to: '/sequences', icon: 'columns' },
-  { label: 'Chat', to: '/chat', icon: 'message_square' },
+  { label: 'Chat', to: '/', icon: 'message_square', matches: ['/investigations'] },
   { label: 'Connections', to: '/connections', icon: 'network' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ];
@@ -27,8 +29,10 @@ export const navItems: readonly NavItem[] = [
 /**
  * Whether a rail item owns the current location.
  *
- * `/` would prefix-match every path, so the launcher matches exactly and names
- * the investigation routes it also covers.
+ * `/` would prefix-match every path, so Chat matches exactly and names the
+ * investigation routes it also covers (kept selected there for back-compat
+ * highlighting -- a user landing directly on an Analysis Details link still
+ * sees which rail item they came from).
  */
 export const isNavItemActive = (item: NavItem, pathname: string): boolean => {
   if (pathname === item.to) return true;
