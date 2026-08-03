@@ -27,7 +27,7 @@ from .dto import (
     ConflictError,
     InvestigationNotFoundError,
 )
-from .ports import InvestigationUnitOfWorkFactory
+from .ports import AgentExecutionObserver, InvestigationUnitOfWorkFactory
 
 _VISUALIZATION_EVENT_NAMESPACE = UUID("a9fa2e45-4e53-4f8d-89ca-8cb450f6c5b8")
 
@@ -75,12 +75,14 @@ class VisualizationService:
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
         continuation: ConversationContinuation | None = None,
+        agent_execution_observer: AgentExecutionObserver | None = None,
     ) -> None:
         self._uow_factory = unit_of_work_factory
         self._renderer = renderer
         self._now = now
         self._new_id = new_id
         self._continuation = continuation
+        self._agent_execution_observer = agent_execution_observer
 
     async def for_investigation(
         self, actor: AuthenticatedActor, investigation_id: UUID
@@ -161,6 +163,7 @@ class VisualizationService:
                 }
             )
             await uow.visualizations.save(ready)
+            self._observe_agent_execution(ready, status="success", error_category=None)
             await self._event(uow, ready, WorkFeedEventKind.VISUALIZATION_COMPLETED)
             await self._agent_events(uow, ready, started=False)
             await uow.commit()
@@ -188,6 +191,9 @@ class VisualizationService:
                 }
             )
             await uow.visualizations.save(failed)
+            self._observe_agent_execution(
+                failed, status="failure", error_category=failure_category
+            )
             await self._event(uow, failed, WorkFeedEventKind.VISUALIZATION_FAILED)
             await self._agent_events(uow, failed, started=False)
             await uow.commit()
@@ -281,6 +287,30 @@ class VisualizationService:
             kind=action.kind.value,
             thread_id=thread_id,
             investigation_id=detail.investigation_id,
+        )
+
+    def _observe_agent_execution(
+        self,
+        artifact: VisualizationArtifact,
+        *,
+        status: str,
+        error_category: str | None,
+    ) -> None:
+        """Report the Data Visualization Agent's run, never its C1 response."""
+        if self._agent_execution_observer is None:
+            return
+        self._agent_execution_observer(
+            role="visualization",
+            agent_id="data_visualization_v1",
+            model=artifact.model,
+            provider="thesys",
+            fallback_count=0,
+            input_tokens=artifact.usage.input_tokens,
+            output_tokens=artifact.usage.output_tokens,
+            cost_usd=str(artifact.usage.cost_usd),
+            duration_ms=artifact.usage.latency_ms,
+            status=status,
+            error_category=error_category,
         )
 
     async def _event(
