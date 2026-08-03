@@ -55,11 +55,7 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           // itself is the difference between a surface that declines and one
           // that lets someone type an answer it was never going to accept.
           disabled={disabled}
-          placeholder={
-            disabled
-              ? 'Waiting for the current investigation to finish…'
-              : 'Ask a governed question…'
-          }
+          placeholder={disabled ? 'Sending…' : 'Ask a governed question…'}
           onKeyDown={handleKeyDown}
           onChange={(event) => {
             onDraftChange(event.target.value);
