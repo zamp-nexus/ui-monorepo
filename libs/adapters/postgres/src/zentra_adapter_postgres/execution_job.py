@@ -19,7 +19,7 @@ def _job_from_row(row: Any) -> ExecutionJob:
     return ExecutionJob(
         job_id=row.job_id,
         tenant_id=row.tenant_id,
-        investigation_id=row.investigation_id,
+        investigation_id=row.analysis_run_id,
         status=ExecutionJobStatus(row.status),
         attempts=row.attempts,
         max_attempts=row.max_attempts,
@@ -64,7 +64,7 @@ class PostgresExecutionJobRepository:
             insert(execution_jobs).values(
                 job_id=job.job_id,
                 tenant_id=job.tenant_id,
-                investigation_id=job.investigation_id,
+                analysis_run_id=job.investigation_id,
                 created_at=job.created_at,
                 **_values(job),
             )
@@ -125,7 +125,7 @@ class PostgresExecutionJobRepository:
         for_update: bool = False,
     ) -> ExecutionJob | None:
         statement = select(execution_jobs).where(
-            execution_jobs.c.investigation_id == investigation_id,
+            execution_jobs.c.analysis_run_id == investigation_id,
             execution_jobs.c.job_kind == ExecutionJobKind.INVESTIGATION.value,
         )
         if for_update:

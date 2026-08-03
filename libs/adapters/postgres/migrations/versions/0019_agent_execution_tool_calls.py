@@ -11,7 +11,7 @@ table is read by Replay — ADR-0006 keeps the ledger metadata-only.
 """
 
 from alembic import op
-from sqlalchemy import Column
+from sqlalchemy import Column, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0019_agent_execution_tool_calls"
@@ -21,13 +21,24 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "agent_executions",
-        # Defaulted rather than nullable: every execution before this ran no
-        # tools, and an empty list says that exactly. NULL would say "unknown",
-        # which is a different and less true claim.
-        Column("tool_calls", JSONB, nullable=False, server_default="[]"),
-    )
+    # Guarded rather than unconditional: on a from-scratch database,
+    # `0001_phase0_foundation`'s blanket `metadata.create_all()` already
+    # creates `agent_executions` with every column the schema module
+    # currently defines, `tool_calls` included -- unrelated to the Chat &
+    # Analysis Run rename, but only reachable (and only visible as a bug)
+    # once something actually exercises a genuinely fresh install.
+    existing = {
+        column["name"]
+        for column in inspect(op.get_bind()).get_columns("agent_executions")
+    }
+    if "tool_calls" not in existing:
+        op.add_column(
+            "agent_executions",
+            # Defaulted rather than nullable: every execution before this ran no
+            # tools, and an empty list says that exactly. NULL would say "unknown",
+            # which is a different and less true claim.
+            Column("tool_calls", JSONB, nullable=False, server_default="[]"),
+        )
 
 
 def downgrade() -> None:

@@ -12,7 +12,7 @@ depends_on = None
 TENANT_TABLES = (
     "tenants",
     "tenant_memberships",
-    "investigations",
+    "analysis_runs",
     "agent_executions",
     "human_approvals",
     "semantic_metrics",
@@ -56,7 +56,7 @@ def upgrade() -> None:
     )
     op.execute(
         "GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, tenant_memberships, "
-        "investigations, agent_executions, human_approvals, semantic_metrics "
+        "analysis_runs, agent_executions, human_approvals, semantic_metrics "
         "TO zentra_runtime"
     )
 

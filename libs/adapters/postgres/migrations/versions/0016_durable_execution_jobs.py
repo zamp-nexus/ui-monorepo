@@ -11,11 +11,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_unique_constraint(
-        "uq_investigations_tenant_identity",
-        "investigations",
-        ["investigation_id", "tenant_id"],
-    )
+    # Not recreated here: `analysis_runs` (renamed from `investigations`,
+    # ADR-0028) already carries `uq_analysis_runs_tenant_identity` --
+    # covering exactly (analysis_run_id, tenant_id), which is what
+    # `execution_jobs`' own composite foreign key needs as its target --
+    # directly in its Table definition, so `metadata.create_all` in
+    # `0001_phase0_foundation` already creates it. Attempting to add it
+    # again here, under either name, would fail: once because
+    # `investigations` no longer exists, and even after renaming the call
+    # because the constraint would already be there.
     metadata.create_all(bind=op.get_bind(), tables=[execution_jobs], checkfirst=True)
     op.execute("ALTER TABLE execution_jobs ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE execution_jobs FORCE ROW LEVEL SECURITY")
@@ -131,8 +135,15 @@ def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS checkpoints")
     op.execute("DROP TABLE IF EXISTS checkpoint_migrations")
     op.execute("DROP TABLE IF EXISTS execution_jobs")
-    op.drop_constraint(
-        "uq_investigations_tenant_identity",
-        "investigations",
-        type_="unique",
+    # Not `op.drop_constraint`: that errors if either the table or the
+    # constraint is missing. Past the destructive Chat & Analysis Run
+    # cutover (0023, ADR-0030), `investigations` no longer exists under
+    # this name at all -- it is `analysis_runs`, with its own
+    # `uq_analysis_runs_tenant_identity` already built into that table's
+    # definition. A downgrade walking back through this revision from past
+    # that cutover has nothing to drop here; one walking back from before
+    # it needs this to still work exactly as before.
+    op.execute(
+        "ALTER TABLE IF EXISTS investigations "
+        "DROP CONSTRAINT IF EXISTS uq_investigations_tenant_identity"
     )

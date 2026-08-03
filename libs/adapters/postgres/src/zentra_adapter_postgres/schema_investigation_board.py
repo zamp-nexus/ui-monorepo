@@ -1,6 +1,6 @@
-"""Investigation Board and Work Item: the Investigation Engine's durable
-working memory and work queue (ADR-0026), plus the Analytical Scope an
-Intake Agent resolves a question against (ADR-0027).
+"""Analysis Workspace and Work Item: the Analysis Run's durable working
+memory and work queue (ADR-0026), plus the Analytical Scope an Intake Agent
+resolves a question against (ADR-0027).
 
 `role`'s CHECK is generated from the current `CANONICAL_ROLES`, the same
 pattern `agent_registry.role` uses (`schema.py`) — correct for this table's
@@ -9,8 +9,9 @@ CHECK explicitly (mirroring `0005_canonical_insight_role.py`), not a rewrite
 of this one.
 
 One Analytical Scope per Tenant is the Phase 1 shape: a Tenant either
-narrows its catalog or does not. Per-thread or per-cube-family scopes are a
-Phase 5+ concern and would need a different key, not a change to this one.
+narrows its catalog or does not. Per-chat-session or per-cube-family scopes
+are a Phase 5+ concern and would need a different key, not a change to this
+one.
 """
 
 from sqlalchemy import (
@@ -38,11 +39,11 @@ def _role_check() -> str:
     return f"role IN ({values})"
 
 
-investigation_boards = Table(
-    "investigation_boards",
+analysis_workspaces = Table(
+    "analysis_workspaces",
     metadata,
     Column(
-        "board_id",
+        "workspace_id",
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
@@ -53,7 +54,7 @@ investigation_boards = Table(
         ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
         nullable=False,
     ),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("narrative", Text),
     Column("confidence_score", Numeric(5, 4)),
     Column("confidence_threshold", Numeric(5, 4)),
@@ -70,16 +71,16 @@ investigation_boards = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_investigation_boards_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_analysis_workspaces_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     UniqueConstraint(
-        "investigation_id", "tenant_id", name="uq_investigation_boards_one_per_run"
+        "analysis_run_id", "tenant_id", name="uq_analysis_workspaces_one_per_run"
     ),
     UniqueConstraint(
-        "board_id", "tenant_id", name="uq_investigation_boards_tenant_identity"
+        "workspace_id", "tenant_id", name="uq_analysis_workspaces_tenant_identity"
     ),
 )
 
@@ -93,7 +94,7 @@ board_facts = Table(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     ),
-    Column("board_id", UUID(as_uuid=True), nullable=False),
+    Column("workspace_id", UUID(as_uuid=True), nullable=False),
     Column(
         "tenant_id",
         UUID(as_uuid=True),
@@ -114,9 +115,9 @@ board_facts = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("board_id", "tenant_id"),
-        ("investigation_boards.board_id", "investigation_boards.tenant_id"),
-        name="fk_board_facts_board_tenant",
+        ("workspace_id", "tenant_id"),
+        ("analysis_workspaces.workspace_id", "analysis_workspaces.tenant_id"),
+        name="fk_board_facts_workspace_tenant",
         ondelete="CASCADE",
     ),
 )
@@ -131,7 +132,7 @@ board_hypotheses = Table(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     ),
-    Column("board_id", UUID(as_uuid=True), nullable=False),
+    Column("workspace_id", UUID(as_uuid=True), nullable=False),
     Column(
         "tenant_id",
         UUID(as_uuid=True),
@@ -153,9 +154,9 @@ board_hypotheses = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("board_id", "tenant_id"),
-        ("investigation_boards.board_id", "investigation_boards.tenant_id"),
-        name="fk_board_hypotheses_board_tenant",
+        ("workspace_id", "tenant_id"),
+        ("analysis_workspaces.workspace_id", "analysis_workspaces.tenant_id"),
+        name="fk_board_hypotheses_workspace_tenant",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -174,7 +175,7 @@ board_gaps = Table(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     ),
-    Column("board_id", UUID(as_uuid=True), nullable=False),
+    Column("workspace_id", UUID(as_uuid=True), nullable=False),
     Column(
         "tenant_id",
         UUID(as_uuid=True),
@@ -197,9 +198,9 @@ board_gaps = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("board_id", "tenant_id"),
-        ("investigation_boards.board_id", "investigation_boards.tenant_id"),
-        name="fk_board_gaps_board_tenant",
+        ("workspace_id", "tenant_id"),
+        ("analysis_workspaces.workspace_id", "analysis_workspaces.tenant_id"),
+        name="fk_board_gaps_workspace_tenant",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -217,7 +218,7 @@ board_conflicts = Table(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     ),
-    Column("board_id", UUID(as_uuid=True), nullable=False),
+    Column("workspace_id", UUID(as_uuid=True), nullable=False),
     Column(
         "tenant_id",
         UUID(as_uuid=True),
@@ -240,9 +241,9 @@ board_conflicts = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("board_id", "tenant_id"),
-        ("investigation_boards.board_id", "investigation_boards.tenant_id"),
-        name="fk_board_conflicts_board_tenant",
+        ("workspace_id", "tenant_id"),
+        ("analysis_workspaces.workspace_id", "analysis_workspaces.tenant_id"),
+        name="fk_board_conflicts_workspace_tenant",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -267,7 +268,7 @@ work_items = Table(
         ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
         nullable=False,
     ),
-    Column("investigation_id", UUID(as_uuid=True), nullable=False),
+    Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("role", Text, nullable=False),
     Column("objective", Text, nullable=False),
     Column("status", Text, nullable=False, server_default="pending"),
@@ -290,9 +291,9 @@ work_items = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("investigation_id", "tenant_id"),
-        ("investigations.investigation_id", "investigations.tenant_id"),
-        name="fk_work_items_investigation_tenant",
+        ("analysis_run_id", "tenant_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
+        name="fk_work_items_analysis_run_tenant",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(

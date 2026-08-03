@@ -33,10 +33,10 @@ from zentra_adapter_postgres.draft_finding import (
     PostgresEvidenceCitationRepository,
 )
 from zentra_adapter_postgres.schema import (
+    analysis_runs,
     draft_finding_claims,
     draft_findings,
     evidence_citations,
-    investigations,
     tenants,
 )
 
@@ -70,9 +70,9 @@ async def seed(owner_url: str) -> None:
             .on_conflict_do_nothing()
         )
         await connection.execute(
-            postgres_insert(investigations)
+            postgres_insert(analysis_runs)
             .values(
-                investigation_id=INVESTIGATION_A,
+                analysis_run_id=INVESTIGATION_A,
                 tenant_id=TENANT_A,
                 question="Why did EU refunds increase?",
                 status="completed",
@@ -162,12 +162,12 @@ async def cleanup(owner_url: str) -> None:
     async with owner.begin() as connection:
         await connection.execute(
             draft_findings.delete().where(
-                draft_findings.c.investigation_id == INVESTIGATION_A
+                draft_findings.c.analysis_run_id == INVESTIGATION_A
             )
         )
         await connection.execute(
             evidence_citations.delete().where(
-                evidence_citations.c.investigation_id == INVESTIGATION_A
+                evidence_citations.c.analysis_run_id == INVESTIGATION_A
             )
         )
     await owner.dispose()

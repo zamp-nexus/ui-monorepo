@@ -8,7 +8,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "identity_subjects",
         "tenant_identity_bindings",
         "tenant_memberships",
-        "investigations",
+        "analysis_runs",
         "agent_executions",
         "human_approvals",
         "semantic_metrics",
@@ -29,18 +29,17 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "harvest_runs",
         "catalog_agent_access",
         "workspace_groups",
-        "projects",
-        "investigation_threads",
-        "thread_messages",
-        "thread_events",
+        "chat_sessions",
+        "messages",
+        "activity_events",
         "execution_jobs",
         "visualization_briefs",
         "visualization_artifacts",
         "visualization_actions",
-        # The Investigation Engine's working memory: what an investigation has
-        # established, what it still does not know, and the queue it works off
-        # (ADR-0026). Migration 0020.
-        "investigation_boards",
+        # The Analysis Run's working memory: what it has established, what it
+        # still does not know, and the queue it works off (ADR-0026). Migration
+        # 0020, renamed from Investigation Board per ADR-0028.
+        "analysis_workspaces",
         "board_facts",
         "board_hypotheses",
         "board_gaps",

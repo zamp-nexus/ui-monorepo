@@ -32,11 +32,11 @@ from zentra_adapter_postgres.database import set_tenant_context
 from zentra_adapter_postgres.erasure import PostgresErasureRepository
 from zentra_adapter_postgres.schema import (
     agent_executions,
+    analysis_runs,
     draft_finding_claims,
     draft_findings,
     erasure_operations,
     evidence_citations,
-    investigations,
     tenants,
 )
 
@@ -81,17 +81,17 @@ async def seed(status: str = "completed") -> None:
         )
         await connection.execute(
             erasure_operations.delete().where(
-                erasure_operations.c.investigation_id == INVESTIGATION
+                erasure_operations.c.analysis_run_id == INVESTIGATION
             )
         )
         await connection.execute(
-            investigations.delete().where(
-                investigations.c.investigation_id == INVESTIGATION
+            analysis_runs.delete().where(
+                analysis_runs.c.analysis_run_id == INVESTIGATION
             )
         )
         await connection.execute(
-            investigations.insert().values(
-                investigation_id=INVESTIGATION,
+            analysis_runs.insert().values(
+                analysis_run_id=INVESTIGATION,
                 tenant_id=TENANT,
                 question="Why did EU refunds increase?",
                 status=status,
@@ -117,7 +117,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             agent_executions.insert().values(
                 execution_id=EXECUTION,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=INVESTIGATION,
                 tenant_id=TENANT,
                 agent_id="cube_analyst_v1",
                 step=1,
@@ -138,7 +138,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             draft_findings.insert().values(
                 draft_finding_id=DRAFT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=INVESTIGATION,
                 tenant_id=TENANT,
                 version=1,
                 headline=MARKERS[EvidenceSurface.DRAFT_FINDING_NARRATIVE],
@@ -170,7 +170,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             evidence_citations.insert().values(
                 citation_id=CITATION,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=INVESTIGATION,
                 tenant_id=TENANT,
                 metric="refund_amount",
                 filters=[{"member": "Commerce.region", "operator": "equals",
@@ -188,8 +188,8 @@ async def cleanup() -> None:
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
         await connection.execute(
-            investigations.delete().where(
-                investigations.c.investigation_id == INVESTIGATION
+            analysis_runs.delete().where(
+                analysis_runs.c.analysis_run_id == INVESTIGATION
             )
         )
     await owner.dispose()
@@ -200,22 +200,22 @@ async def surviving_markers(connection) -> set[str]:
     found: set[str] = set()
     rows = []
     rows.append(str(await connection.scalar(
-        select(investigations.c.state).where(
-            investigations.c.investigation_id == INVESTIGATION
+        select(analysis_runs.c.state).where(
+            analysis_runs.c.analysis_run_id == INVESTIGATION
         )
     )))
     for column, where in (
         (
             agent_executions.c.input,
-            agent_executions.c.investigation_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == INVESTIGATION,
         ),
         (
             agent_executions.c.output,
-            agent_executions.c.investigation_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == INVESTIGATION,
         ),
         (
             draft_findings.c.headline,
-            draft_findings.c.investigation_id == INVESTIGATION,
+            draft_findings.c.analysis_run_id == INVESTIGATION,
         ),
         (
             draft_finding_claims.c.claim_text,
@@ -223,15 +223,15 @@ async def surviving_markers(connection) -> set[str]:
         ),
         (
             evidence_citations.c.aggregate_value,
-            evidence_citations.c.investigation_id == INVESTIGATION,
+            evidence_citations.c.analysis_run_id == INVESTIGATION,
         ),
         (
             draft_findings.c.contradictions,
-            draft_findings.c.investigation_id == INVESTIGATION,
+            draft_findings.c.analysis_run_id == INVESTIGATION,
         ),
         (
             agent_executions.c.outcome,
-            agent_executions.c.investigation_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == INVESTIGATION,
         ),
     ):
         rows.extend(
@@ -315,10 +315,10 @@ async def test_process_survives_what_content_does_not() -> None:
             row = (
                 await connection.execute(
                     select(
-                        investigations.c.status,
-                        investigations.c.question,
-                        investigations.c.state,
-                    ).where(investigations.c.investigation_id == INVESTIGATION)
+                        analysis_runs.c.status,
+                        analysis_runs.c.question,
+                        analysis_runs.c.state,
+                    ).where(analysis_runs.c.analysis_run_id == INVESTIGATION)
                 )
             ).one()
             execution = (
@@ -328,7 +328,7 @@ async def test_process_survives_what_content_does_not() -> None:
                         agent_executions.c.model,
                         agent_executions.c.latency_ms,
                         agent_executions.c.status,
-                    ).where(agent_executions.c.investigation_id == INVESTIGATION)
+                    ).where(agent_executions.c.analysis_run_id == INVESTIGATION)
                 )
             ).one()
             claim = (
@@ -459,7 +459,7 @@ async def test_asking_twice_reaches_the_same_operation() -> None:
             )
             count = await connection.scalar(
                 select(erasure_operations.c.erasure_id).where(
-                    erasure_operations.c.investigation_id == INVESTIGATION
+                    erasure_operations.c.analysis_run_id == INVESTIGATION
                 )
             )
 
@@ -536,7 +536,7 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
                         erasure_operations.c.completed_at,
                         erasure_operations.c.failure_code,
                     ).where(
-                        erasure_operations.c.investigation_id == INVESTIGATION
+                        erasure_operations.c.analysis_run_id == INVESTIGATION
                     )
                 )
             ).one()
@@ -589,7 +589,7 @@ async def test_a_rolled_back_erasure_leaves_everything_intact() -> None:
             survived = await surviving_markers(connection)
             operation = await connection.scalar(
                 select(erasure_operations.c.progress).where(
-                    erasure_operations.c.investigation_id == INVESTIGATION
+                    erasure_operations.c.analysis_run_id == INVESTIGATION
                 )
             )
 
@@ -620,7 +620,7 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
             await connection.execute(
                 audit_outbox.insert().values(
                     event_id=event_id,
-                    investigation_id=INVESTIGATION,
+                    analysis_run_id=INVESTIGATION,
                     tenant_id=TENANT,
                     payload={
                         "event_type": "investigation.completed",
@@ -751,7 +751,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             rows = (
                 await connection.execute(
                     select(audit_outbox.c.created_at, audit_outbox.c.payload)
-                    .where(audit_outbox.c.investigation_id == INVESTIGATION)
+                    .where(audit_outbox.c.analysis_run_id == INVESTIGATION)
                     .order_by(audit_outbox.c.created_at)
                 )
             ).all()
@@ -769,7 +769,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             await set_tenant_context(connection, TENANT)
             await connection.execute(
                 audit_outbox.delete().where(
-                    audit_outbox.c.investigation_id == INVESTIGATION
+                    audit_outbox.c.analysis_run_id == INVESTIGATION
                 )
             )
         await runtime.dispose()

@@ -47,7 +47,6 @@ def test_backend_journey_contract_and_fixtures_are_complete() -> None:
     paths = create_app().openapi()["paths"]
     for path in (
         "/v1/groups",
-        "/v1/groups/{group_id}/projects",
         "/v1/projects/{project_id}/threads",
         "/v1/threads/{thread_id}/messages",
         "/v1/threads/{thread_id}/events",

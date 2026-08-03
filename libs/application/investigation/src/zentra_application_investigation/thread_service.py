@@ -40,7 +40,7 @@ from .thread_dto import (
 )
 from .thread_ports import IntakePort, ThreadUnitOfWork, ThreadUnitOfWorkFactory
 from .thread_routing import deterministic_thread_title
-from .thread_snapshot import build_thread_detail, require_project, validate_page_size
+from .thread_snapshot import build_thread_detail, require_group, validate_page_size
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
@@ -137,9 +137,6 @@ class ThreadService:
                 now,
                 data_connection_id=data_connection_id,
             )
-            await unit_of_work.organization.record_project_activity(
-                project_id, occurred_at=now
-            )
             await unit_of_work.commit()
         return build_thread_detail(
             thread,
@@ -210,9 +207,6 @@ class ThreadService:
                 data_connection_id=data_connection_id,
             )
             await unit_of_work.threads.save_thread(thread)
-            await unit_of_work.organization.record_project_activity(
-                thread.project_id, occurred_at=now
-            )
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(thread_id)
             return build_thread_detail(
@@ -331,9 +325,6 @@ class ThreadService:
                 event_id=self._new_id(),
             )
         await unit_of_work.threads.save_thread(thread)
-        await unit_of_work.organization.record_project_activity(
-            thread.project_id, occurred_at=now
-        )
         await unit_of_work.commit()
         messages = await unit_of_work.threads.messages_for_thread(thread.thread_id)
         return build_thread_detail(thread, messages, investigation_id, routing, actor)
@@ -454,7 +445,7 @@ class ThreadService:
         limit = validate_page_size(limit, MAX_PAGE_SIZE)
         after = ThreadCursor.decode(cursor) if cursor else None
         async with self._uow(actor) as unit_of_work:
-            require_project(await unit_of_work.organization.get_project(project_id))
+            require_group(await unit_of_work.organization.get_group(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
                 include_archived=include_archived,
@@ -610,16 +601,11 @@ class ThreadService:
     async def _require_writable_project(
         self, unit_of_work: ThreadUnitOfWork, project_id: UUID
     ) -> None:
-        project = require_project(
-            await unit_of_work.organization.get_project(project_id)
-        )
-        group = await unit_of_work.organization.get_group(project.group_id)
-        if group is None:
-            raise ThreadNotFoundError("Project was not found")
-        if project.archived_at is not None or group.archived_at is not None:
-            raise ThreadConflictError(
-                "Archived Groups and Projects cannot accept Thread messages"
-            )
+        # `project_id` names a Group directly now -- Groups own Chat Sessions
+        # directly, with no Project layer between them (ADR-0028).
+        group = require_group(await unit_of_work.organization.get_group(project_id))
+        if group.archived_at is not None:
+            raise ThreadConflictError("Archived Groups cannot accept Thread messages")
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(

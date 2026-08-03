@@ -12,7 +12,7 @@ from zentra_domain_investigation import (
     WorkFeedPayload,
 )
 
-from .schema import investigation_threads, investigations, thread_events
+from .schema import activity_events, analysis_runs, chat_sessions
 
 _PAYLOAD = TypeAdapter(WorkFeedPayload)
 
@@ -34,21 +34,23 @@ class PostgresWorkFeedRepository:
         if event_id is not None:
             existing = (
                 await self._connection.execute(
-                    select(thread_events).where(thread_events.c.event_id == event_id)
+                    select(activity_events).where(
+                        activity_events.c.event_id == event_id
+                    )
                 )
             ).one_or_none()
             if existing is not None:
                 return _event(existing)
         sequence = (
             await self._connection.execute(
-                update(investigation_threads)
-                .where(investigation_threads.c.thread_id == thread_id)
+                update(chat_sessions)
+                .where(chat_sessions.c.chat_session_id == thread_id)
                 .values(
                     next_event_sequence=(
-                        investigation_threads.c.next_event_sequence + 1
+                        chat_sessions.c.next_event_sequence + 1
                     )
                 )
-                .returning(investigation_threads.c.next_event_sequence - 1)
+                .returning(chat_sessions.c.next_event_sequence - 1)
             )
         ).scalar_one()
         event = ThreadEvent(
@@ -61,10 +63,10 @@ class PostgresWorkFeedRepository:
             payload=payload,
         )
         await self._connection.execute(
-            insert(thread_events).values(
+            insert(activity_events).values(
                 event_id=event.event_id,
                 tenant_id=event.tenant_id,
-                thread_id=event.thread_id,
+                chat_session_id=event.thread_id,
                 sequence=event.sequence,
                 kind=event.kind.value,
                 payload=event.payload.model_dump(mode="json"),
@@ -90,8 +92,8 @@ class PostgresWorkFeedRepository:
     ) -> ThreadEvent | None:
         thread_id = (
             await self._connection.execute(
-                select(investigations.c.thread_id).where(
-                    investigations.c.investigation_id == investigation_id
+                select(analysis_runs.c.chat_session_id).where(
+                    analysis_runs.c.analysis_run_id == investigation_id
                 )
             )
         ).scalar_one_or_none()
@@ -111,12 +113,12 @@ class PostgresWorkFeedRepository:
     ) -> tuple[ThreadEvent, ...]:
         rows = (
             await self._connection.execute(
-                select(thread_events)
+                select(activity_events)
                 .where(
-                    thread_events.c.thread_id == thread_id,
-                    thread_events.c.sequence > after,
+                    activity_events.c.chat_session_id == thread_id,
+                    activity_events.c.sequence > after,
                 )
-                .order_by(thread_events.c.sequence)
+                .order_by(activity_events.c.sequence)
                 .limit(limit)
             )
         ).all()
@@ -125,8 +127,8 @@ class PostgresWorkFeedRepository:
     async def latest_sequence(self, thread_id: UUID) -> int:
         next_value = (
             await self._connection.execute(
-                select(investigation_threads.c.next_event_sequence).where(
-                    investigation_threads.c.thread_id == thread_id
+                select(chat_sessions.c.next_event_sequence).where(
+                    chat_sessions.c.chat_session_id == thread_id
                 )
             )
         ).scalar_one_or_none()
@@ -137,7 +139,7 @@ def _event(row: object) -> ThreadEvent:
     return ThreadEvent(
         event_id=row.event_id,
         tenant_id=row.tenant_id,
-        thread_id=row.thread_id,
+        thread_id=row.chat_session_id,
         sequence=row.sequence,
         kind=WorkFeedEventKind(row.kind),
         payload=_PAYLOAD.validate_python(row.payload),
