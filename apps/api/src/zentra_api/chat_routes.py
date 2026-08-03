@@ -27,7 +27,7 @@ from .active_connection import (
     active_data_connection_id,
 )
 from .request_context import RequestContext, authenticated_context
-from .thread_schemas import ThreadMessageRequest, ThreadPageResponse, ThreadResponse
+from .thread_schemas import ChatMessageRequest, ChatPageResponse, ChatResponse
 
 router = APIRouter(prefix="/v1")
 AuthenticatedRequest = Annotated[RequestContext, Depends(authenticated_context)]
@@ -63,21 +63,21 @@ def _thread_error(error: Exception) -> NoReturn:
 
 
 @router.post(
-    "/projects/{project_id}/threads",
-    response_model=ThreadResponse,
+    "/groups/{group_id}/chats",
+    response_model=ChatResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_thread(
-    project_id: UUID,
-    body: ThreadMessageRequest,
+async def create_chat(
+    group_id: UUID,
+    body: ChatMessageRequest,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> ThreadResponse:
+) -> ChatResponse:
     dependencies = request.app.state.dependencies
     try:
         detail = await dependencies.threads.create(
             resolved.actor,
-            project_id=project_id,
+            project_id=group_id,
             content=body.message,
             data_connection_id=await _active_connection(dependencies, resolved.actor),
         )
@@ -88,51 +88,51 @@ async def create_thread(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    return ThreadResponse.from_detail(detail)
+    return ChatResponse.from_detail(detail)
 
 
-@router.get("/projects/{project_id}/threads", response_model=ThreadPageResponse)
-async def list_threads(
-    project_id: UUID,
+@router.get("/groups/{group_id}/chats", response_model=ChatPageResponse)
+async def list_chats(
+    group_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
     limit: PageSize = 50,
     cursor: str | None = None,
     include_archived: bool = False,
-) -> ThreadPageResponse:
+) -> ChatPageResponse:
     try:
         detail = await request.app.state.dependencies.threads.list(
             resolved.actor,
-            project_id=project_id,
+            project_id=group_id,
             limit=limit,
             cursor=cursor,
             include_archived=include_archived,
         )
     except (ThreadNotFoundError, ThreadCursorError, ValueError) as error:
         _thread_error(error)
-    return ThreadPageResponse.from_detail(detail)
+    return ChatPageResponse.from_detail(detail)
 
 
-@router.get("/threads/{thread_id}", response_model=ThreadResponse)
-async def get_thread(
-    thread_id: UUID, request: Request, resolved: AuthenticatedRequest
-) -> ThreadResponse:
+@router.get("/chats/{chat_id}", response_model=ChatResponse)
+async def get_chat(
+    chat_id: UUID, request: Request, resolved: AuthenticatedRequest
+) -> ChatResponse:
     try:
         detail = await request.app.state.dependencies.threads.get(
-            resolved.actor, thread_id
+            resolved.actor, chat_id
         )
     except ThreadNotFoundError as error:
         _thread_error(error)
-    return ThreadResponse.from_detail(detail)
+    return ChatResponse.from_detail(detail)
 
 
 @router.get(
-    "/threads/{thread_id}/events",
+    "/chats/{chat_id}/events",
     response_class=StreamingResponse,
     responses={200: {"content": {"text/event-stream": {}}}},
 )
-async def stream_thread_events(
-    thread_id: UUID,
+async def stream_chat_events(
+    chat_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
     after: int | None = Query(default=None, ge=0),
@@ -141,7 +141,7 @@ async def stream_thread_events(
     try:
         cursor = after if after is not None else int(header_cursor or "0")
         await request.app.state.dependencies.threads.event_cursor(
-            resolved.actor, thread_id
+            resolved.actor, chat_id
         )
     except (ThreadNotFoundError, ValueError) as error:
         _thread_error(error)
@@ -152,7 +152,7 @@ async def stream_thread_events(
         while not await request.is_disconnected():
             events = await request.app.state.dependencies.threads.events(
                 resolved.actor,
-                thread_id=thread_id,
+                thread_id=chat_id,
                 after=cursor,
             )
             if events:
@@ -181,18 +181,18 @@ async def stream_thread_events(
     )
 
 
-@router.post("/threads/{thread_id}/messages", response_model=ThreadResponse)
-async def append_thread_message(
-    thread_id: UUID,
-    body: ThreadMessageRequest,
+@router.post("/chats/{chat_id}/messages", response_model=ChatResponse)
+async def append_chat_message(
+    chat_id: UUID,
+    body: ChatMessageRequest,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> ThreadResponse:
+) -> ChatResponse:
     dependencies = request.app.state.dependencies
     try:
         detail = await dependencies.threads.append(
             resolved.actor,
-            thread_id=thread_id,
+            thread_id=chat_id,
             content=body.message,
             data_connection_id=await _active_connection(dependencies, resolved.actor),
         )
@@ -203,29 +203,29 @@ async def append_thread_message(
         ThreadMessageError,
     ) as error:
         _thread_error(error)
-    return ThreadResponse.from_detail(detail)
+    return ChatResponse.from_detail(detail)
 
 
-@router.post("/threads/{thread_id}/archive", response_model=ThreadResponse)
-async def archive_thread(
-    thread_id: UUID, request: Request, resolved: AuthenticatedRequest
-) -> ThreadResponse:
+@router.post("/chats/{chat_id}/archive", response_model=ChatResponse)
+async def archive_chat(
+    chat_id: UUID, request: Request, resolved: AuthenticatedRequest
+) -> ChatResponse:
     try:
         detail = await request.app.state.dependencies.threads.archive(
-            resolved.actor, thread_id
+            resolved.actor, chat_id
         )
     except (PermissionDeniedError, ThreadNotFoundError) as error:
         _thread_error(error)
-    return ThreadResponse.from_detail(detail)
+    return ChatResponse.from_detail(detail)
 
 
-@router.post("/threads/{thread_id}/restore", response_model=ThreadResponse)
-async def restore_thread(
-    thread_id: UUID, request: Request, resolved: AuthenticatedRequest
-) -> ThreadResponse:
+@router.post("/chats/{chat_id}/restore", response_model=ChatResponse)
+async def restore_chat(
+    chat_id: UUID, request: Request, resolved: AuthenticatedRequest
+) -> ChatResponse:
     try:
         detail = await request.app.state.dependencies.threads.restore(
-            resolved.actor, thread_id
+            resolved.actor, chat_id
         )
     except (
         PermissionDeniedError,
@@ -233,15 +233,15 @@ async def restore_thread(
         ThreadConflictError,
     ) as error:
         _thread_error(error)
-    return ThreadResponse.from_detail(detail)
+    return ChatResponse.from_detail(detail)
 
 
-@router.delete("/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_thread(
-    thread_id: UUID, request: Request, resolved: AuthenticatedRequest
+@router.delete("/chats/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat(
+    chat_id: UUID, request: Request, resolved: AuthenticatedRequest
 ) -> None:
     try:
-        await request.app.state.dependencies.threads.delete(resolved.actor, thread_id)
+        await request.app.state.dependencies.threads.delete(resolved.actor, chat_id)
     except (
         PermissionDeniedError,
         ThreadNotFoundError,

@@ -6,6 +6,7 @@ queue; what is left here are the Agents themselves, which never depended on
 LangGraph — they are model calls against a governed semantic layer.
 """
 
+from .agents.conversational import ConversationalAgent
 from .agents.cube_analyst import CubeAnalystAgent
 from .agents.evaluator import EvaluatorAgent
 from .agents.insight import (
@@ -35,6 +36,7 @@ __all__ = [
     "RuntimeResult",
     "AgentRuntime",
     "AbsentEvidenceError",
+    "ConversationalAgent",
     "CubeAnalystAgent",
     "EvaluatorAgent",
     "InsightAgent",

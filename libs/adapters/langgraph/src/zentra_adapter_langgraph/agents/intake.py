@@ -90,7 +90,17 @@ class IntakeAgent:
                 outcome=ValidationOutcome(
                     passed=resolved,
                     checks=("The question resolves inside the Analytical Scope.",),
-                    issues=() if resolved else ("The question needs clarification.",),
+                    issues=(
+                        ()
+                        if resolved
+                        else (
+                            (
+                                "The message is not a business question."
+                                if decision.get("disposition") == "not_analytical"
+                                else "The question needs clarification."
+                            ),
+                        )
+                    ),
                 ),
                 usage=response.usage,
                 fallbacks=response.fallbacks,

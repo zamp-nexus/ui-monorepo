@@ -5,7 +5,6 @@ from datetime import datetime
 from uuid import UUID
 
 from zentra_domain_investigation import (
-    TERMINAL_STATUSES,
     ExecutionJob,
     Investigation,
     InvestigationEventPayload,
@@ -38,7 +37,12 @@ from .thread_dto import (
     ThreadNotFoundError,
     ThreadPage,
 )
-from .thread_ports import IntakePort, ThreadUnitOfWork, ThreadUnitOfWorkFactory
+from .thread_ports import (
+    ConversationalPort,
+    IntakePort,
+    ThreadUnitOfWork,
+    ThreadUnitOfWorkFactory,
+)
 from .thread_routing import deterministic_thread_title
 from .thread_snapshot import build_thread_detail, require_group, validate_page_size
 
@@ -70,11 +74,13 @@ class ThreadService:
         *,
         unit_of_work_factory: ThreadUnitOfWorkFactory,
         intake: IntakePort,
+        conversational: ConversationalPort,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._intake = intake
+        self._conversational = conversational
         self._now = now
         self._new_id = new_id
 
@@ -160,6 +166,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             await self._require_writable_project(unit_of_work, thread.project_id)
             if thread.status is ThreadStatus.ARCHIVED:
                 raise ThreadConflictError("Archived Threads cannot accept messages")
@@ -221,13 +228,15 @@ class ThreadService:
         content: str,
         now: datetime,
     ) -> ThreadDetail:
+        # No longer requires `latest` to have finished (or to exist at all --
+        # a Thread whose first message was NOT_ANALYTICAL has no Investigation
+        # yet). A follow-up always queues its own Analysis Run, chained to
+        # whatever the most recent one is, regardless of its status
+        # (ADR-0028): job leasing is per-job, not per-Thread, so nothing
+        # downstream assumes only one Investigation runs per Thread at a time.
         latest = await unit_of_work.investigations.latest_for_thread(
             thread.thread_id, for_update=True
         )
-        if latest is None or latest.status not in TERMINAL_STATUSES:
-            raise ThreadConflictError(
-                "The latest Investigation must finish before a follow-up"
-            )
         message = ThreadMessage.create(
             message_id=self._new_id(),
             thread_id=thread.thread_id,
@@ -240,7 +249,7 @@ class ThreadService:
         routing = await self._intake.resolve(
             message.content,
             tenant_id=actor.tenant_id,
-            data_connection_id=latest.data_connection_id,
+            data_connection_id=latest.data_connection_id if latest else None,
         )
         normalized = message.content.casefold()
         published_reference = any(
@@ -248,7 +257,8 @@ class ThreadService:
             for token in ("again", "latest", "re-run", "rerun", "same")
         )
         if (
-            routing.disposition is not RoutingDisposition.RESOLVED
+            latest is not None
+            and routing.disposition is not RoutingDisposition.RESOLVED
             and published_reference
             and latest.status is InvestigationStatus.COMPLETED
         ):
@@ -272,19 +282,23 @@ class ThreadService:
             occurred_at=now,
             event_id=self._new_id(),
         )
-        investigation_id = latest.investigation_id
-        if routing.disposition is RoutingDisposition.RESOLVED:
+        investigation_id = latest.investigation_id if latest else None
+        if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
+            await self._conversational_reply(
+                unit_of_work, actor, thread, message.content, routing, now
+            )
+        elif routing.disposition is RoutingDisposition.RESOLVED:
             assert routing.canonical_question is not None
             follow_up = Investigation.create(
                 investigation_id=self._new_id(),
                 tenant_id=actor.tenant_id,
                 question=routing.canonical_question,
                 now=now,
-                data_connection_id=latest.data_connection_id,
+                data_connection_id=latest.data_connection_id if latest else None,
                 thread_id=thread.thread_id,
-                thread_sequence=(latest.thread_sequence or 0) + 1,
+                thread_sequence=(latest.thread_sequence or 0) + 1 if latest else 1,
                 initiating_message_id=message.message_id,
-                parent_investigation_id=latest.investigation_id,
+                parent_investigation_id=latest.investigation_id if latest else None,
             )
             follow_up.start(now)
             await unit_of_work.investigations.add(follow_up)
@@ -304,7 +318,9 @@ class ThreadService:
                 payload=InvestigationEventPayload(
                     investigation_id=follow_up.investigation_id,
                     status=follow_up.status,
-                    parent_investigation_id=latest.investigation_id,
+                    parent_investigation_id=(
+                        latest.investigation_id if latest else None
+                    ),
                 ),
                 occurred_at=now,
                 event_id=self._new_id(),
@@ -334,6 +350,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             messages = await unit_of_work.threads.messages_for_thread(thread_id)
             investigation_id = await unit_of_work.threads.investigation_id_for_thread(
                 thread_id
@@ -448,6 +465,7 @@ class ThreadService:
             require_group(await unit_of_work.organization.get_group(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
+                viewer_id=actor.user_id,
                 include_archived=include_archived,
                 limit=limit,
                 after=after,
@@ -471,6 +489,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             investigation_id = await unit_of_work.threads.investigation_id_for_thread(
                 thread_id
             )
@@ -491,6 +510,7 @@ class ThreadService:
             thread = self._require_thread(
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
+            await self._require_visible(unit_of_work, actor, thread_id)
             if restore:
                 await self._require_writable_project(unit_of_work, thread.project_id)
                 thread.restore(now)
@@ -514,6 +534,20 @@ class ThreadService:
         now: datetime,
         data_connection_id: UUID | None = None,
     ) -> tuple[UUID | None, tuple[ThreadMessage, ...]]:
+        if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
+            # Activated, not left in Draft: unlike Ambiguous/Unsupported, a
+            # Conversational Agent reply is a complete exchange, not a request
+            # for more detail about the same question. Leaving the Thread in
+            # Draft would make the next message's routing re-combine it with
+            # this one via `_combined_question_text`, which is wrong for an
+            # ordinary greeting followed by an unrelated real question.
+            thread.title = deterministic_thread_title(message.content)
+            thread.activate(now)
+            await unit_of_work.threads.save_thread(thread)
+            reply_message = await self._conversational_reply(
+                unit_of_work, actor, thread, message.content, routing, now
+            )
+            return None, (reply_message,)
         if routing.disposition is not RoutingDisposition.RESOLVED:
             router_messages = self._router_messages(thread, routing, now)
             await unit_of_work.threads.add_message(router_messages[0])
@@ -577,6 +611,41 @@ class ThreadService:
         )
         return investigation.investigation_id, ()
 
+    async def _conversational_reply(
+        self,
+        unit_of_work: ThreadUnitOfWork,
+        actor: AuthenticatedActor,
+        thread: InvestigationThread,
+        content: str,
+        routing: RoutingResult,
+        now: datetime,
+    ) -> ThreadMessage:
+        reply_text = await self._conversational.reply(
+            content, tenant_id=actor.tenant_id
+        )
+        reply_message = ThreadMessage.create(
+            message_id=self._new_id(),
+            thread_id=thread.thread_id,
+            tenant_id=thread.tenant_id,
+            author_id=None,
+            kind=ThreadMessageKind.ASSISTANT_REPLY,
+            content=reply_text,
+            now=now,
+        )
+        await unit_of_work.threads.add_message(reply_message)
+        await unit_of_work.work_feed.append(
+            tenant_id=actor.tenant_id,
+            thread_id=thread.thread_id,
+            kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
+            payload=RoutingEventPayload(
+                disposition=routing.disposition.value,
+                suggestion_count=0,
+            ),
+            occurred_at=now,
+            event_id=self._new_id(),
+        )
+        return reply_message
+
     def _router_messages(
         self,
         thread: InvestigationThread,
@@ -606,6 +675,23 @@ class ThreadService:
         group = require_group(await unit_of_work.organization.get_group(project_id))
         if group.archived_at is not None:
             raise ThreadConflictError("Archived Groups cannot accept Thread messages")
+
+    async def _require_visible(
+        self, unit_of_work: ThreadUnitOfWork, actor: AuthenticatedActor, thread_id: UUID
+    ) -> None:
+        # Application-layer filter, not a second RLS policy (ADR-0033): every
+        # existing RLS policy in this codebase is tenant-scoped only, and a
+        # `created_by`-scoped policy would need a second session variable set
+        # on every connection for the sake of one table. Raises the same
+        # error a nonexistent or cross-Tenant Thread would -- a private
+        # Thread another User cannot see should look identical to one that
+        # does not exist, not confirm its existence via a different error.
+        visibility = await unit_of_work.threads.visibility_and_creator(thread_id)
+        if visibility is None:
+            return
+        session_visibility, created_by = visibility
+        if session_visibility == "private" and created_by != actor.user_id:
+            raise ThreadNotFoundError("Thread was not found")
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
