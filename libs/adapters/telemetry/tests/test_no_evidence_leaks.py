@@ -36,10 +36,13 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 from zentra_adapter_telemetry import (
     SAFE_ATTRIBUTES,
     SAFE_DIMENSIONS,
+    record_agent_execution,
     record_citation_resolution,
     record_evidence_deletion,
     record_insight_execution,
     record_publication_decision,
+    record_skill_activation,
+    record_tool_call,
 )
 from zentra_adapter_telemetry.metrics import dimensions, reset_instruments
 from zentra_adapter_telemetry.tracing import _record
@@ -144,6 +147,23 @@ def _emit_everything() -> None:
         attempts=2,
         duration_ms=880,
     )
+    record_agent_execution(
+        agent_id="cube_analyst_v1",
+        role="cube_analyst",
+        model="gemini/gemini-3.6-flash",
+        provider="gemini",
+        fallback_count=0,
+        input_tokens=900,
+        output_tokens=210,
+        cost_usd="0.0044",
+        duration_ms=2100,
+        status="success",
+        error_category=None,
+    )
+    record_tool_call(
+        role="cube_analyst", tool_name="semantic_query", status="success", latency_ms=340
+    )
+    record_skill_activation(role="cube_analyst", skill_names=("sample-size-discipline",))
 
 
 def test_no_recorder_writes_an_attribute_nobody_reviewed(telemetry) -> None:
@@ -208,6 +228,7 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
         {
             "zentra.tenant_id",
             "zentra.investigation_id",
+            "zentra.thread_id",
             "zentra.insight.agent_id",
             "zentra.insight.model",
             "zentra.insight.provider",
@@ -228,6 +249,23 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
             "zentra.deletion.attempts",
             "zentra.deletion.duration_ms",
             "zentra.deletion.failure_category",
+            "zentra.agent.role",
+            "zentra.agent.agent_id",
+            "zentra.agent.model",
+            "zentra.agent.provider",
+            "zentra.agent.fallback_count",
+            "zentra.agent.input_tokens",
+            "zentra.agent.output_tokens",
+            "zentra.agent.cost_usd",
+            "zentra.agent.duration_ms",
+            "zentra.agent.status",
+            "zentra.agent.error_category",
+            "zentra.tool.role",
+            "zentra.tool.name",
+            "zentra.tool.status",
+            "zentra.tool.latency_ms",
+            "zentra.skill.role",
+            "zentra.skill.names",
         }
     ) == SAFE_ATTRIBUTES
     assert frozenset(
@@ -241,6 +279,9 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
             "progress",
             "failure_category",
             "error_category",
+            "role",
+            "tool_name",
+            "skill_name",
         }
     ) == SAFE_DIMENSIONS
 
@@ -320,3 +361,12 @@ def test_a_partial_erasure_is_never_reported_as_completed(telemetry) -> None:
     attributes = telemetry.attributes()
     assert attributes["zentra.deletion.progress"] == "failed"
     assert attributes["zentra.deletion.attempts"] == 3
+
+
+def test_an_execution_with_no_skills_writes_no_skill_attribute(telemetry) -> None:
+    """Most roles hold no Skill at all — the common case must stay silent
+    rather than write an empty `zentra.skill.names`."""
+    with telemetry.tracer.start_as_current_span("investigation"):
+        record_skill_activation(role="intake", skill_names=())
+
+    assert "zentra.skill.role" not in telemetry.attributes()
