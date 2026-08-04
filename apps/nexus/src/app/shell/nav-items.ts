@@ -13,16 +13,17 @@ export interface NavItem {
  *
  * Chat is the primary surface, at `/chats` (`/` redirects there) -- the
  * standalone Analysis Run launcher (create-without-a-Chat-Session) was
- * removed; `/analysis-runs/:id` is still reachable, but only as the deep
- * link an Analysis Run's answer links out to (`AnswerRow`). Everything else
- * is a Phase 2 page and currently answers with a placeholder rather than a
- * dead link.
+ * removed, and the once-standalone Analysis Run page has followed it: an
+ * Analysis Run's citations, outcome and approval now render inline in the
+ * Chat surface itself, so there is no deep link out of Chat to keep this
+ * rail item selected for. Everything else is a Phase 2 page and currently
+ * answers with a placeholder rather than a dead link.
  */
 export const navItems: readonly NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
   { label: 'Datasets', to: '/datasets', icon: 'database' },
   { label: 'Sequences', to: '/sequences', icon: 'columns' },
-  { label: 'Chat', to: '/chats', icon: 'message_square', matches: ['/analysis-runs'] },
+  { label: 'Chat', to: '/chats', icon: 'message_square' },
   { label: 'Connections', to: '/connections', icon: 'network' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ];
@@ -30,10 +31,7 @@ export const navItems: readonly NavItem[] = [
 /**
  * Whether a rail item owns the current location.
  *
- * `/` would prefix-match every path, so Chat matches exactly and names the
- * Analysis Run routes it also covers (kept selected there for back-compat
- * highlighting -- a user landing directly on an Analysis Details link still
- * sees which rail item they came from).
+ * `/` would prefix-match every path, so Chat matches exactly.
  */
 export const isNavItemActive = (item: NavItem, pathname: string): boolean => {
   if (pathname === item.to) return true;

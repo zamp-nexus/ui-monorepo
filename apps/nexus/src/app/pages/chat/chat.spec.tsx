@@ -212,6 +212,143 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = () => undefined;
 });
 
+const AGENT_A: Agent = {
+  agent_id: 'agent-a',
+  role: 'sql_analyst',
+  version: '1',
+  display_name: 'Cube Analyst',
+  description: '',
+  enabled: true,
+  evaluation_status: 'passed',
+  capabilities: [],
+};
+const AGENT_B: Agent = {
+  agent_id: 'agent-b',
+  role: 'insight',
+  version: '1',
+  display_name: 'Insight Agent',
+  description: '',
+  enabled: true,
+  evaluation_status: 'passed',
+  capabilities: [],
+};
+
+const agentPayload = (over: Partial<AgentEventPayload>): AgentEventPayload => ({
+  type: 'agent',
+  execution_id: 'exec-1',
+  agent_id: AGENT_A.agent_id,
+  role: AGENT_A.role,
+  capability_id: null,
+  from_agent_id: null,
+  to_agent_id: null,
+  summary: null,
+  reasoning: null,
+  provider: null,
+  model: null,
+  fallback_count: 0,
+  latency_ms: null,
+  input_tokens: 0,
+  output_tokens: 0,
+  cost_usd: '0',
+  ...over,
+});
+
+const threadEvent = (
+  id: string,
+  threadId: string,
+  sequence: number,
+  kind: ThreadEvent['kind'],
+  payload: ThreadEvent['payload'],
+): ThreadEvent => ({
+  event_id: id,
+  organization_id: identity.organization_id,
+  thread_id: threadId,
+  sequence,
+  kind,
+  occurred_at: `2026-08-04T10:00:${String(sequence).padStart(2, '0')}Z`,
+  payload,
+});
+
+const baseAnalysisRun = (over: Partial<ThreadAnalysisRun>): ThreadAnalysisRun => ({
+  analysis_run_id: 'ar-1',
+  sequence: 1,
+  status: 'running',
+  parent_analysis_run_id: null,
+  retry_of_analysis_run_id: null,
+  created_at: '2026-08-04T10:00:00Z',
+  updated_at: '2026-08-04T10:00:00Z',
+  canonical_question: 'Why did EU refunds increase?',
+  finding: null,
+  draft_finding: null,
+  outcome: null,
+  approval: null,
+  citations: [],
+  audit_delivery: 'pending',
+  usage: USAGE,
+  ...over,
+});
+
+/** A body that yields every event in one chunk, as `useThreadEvents` reads it. */
+const eventsStreamBody = (frames: readonly ThreadEvent[]) => {
+  const text = frames.map((value) => `data: ${JSON.stringify(value)}\n\n`).join('');
+  const bytes = encoder.encode(text);
+  let sent = false;
+  return {
+    getReader: () => ({
+      read: async () => {
+        if (sent) return { done: true, value: undefined };
+        sent = true;
+        return { done: false, value: bytes };
+      },
+    }),
+  };
+};
+
+/**
+ * `route()` plus one extra branch: the Work Feed's `GET .../events` reads
+ * `response.body` as a stream rather than `.json()`, so it needs a real
+ * (fake) stream, not the plain object every other endpoint here returns.
+ */
+const routeWithEvents = (
+  handlers: Record<string, { status?: number; body: unknown }>,
+  threadId: string,
+  feedEvents: readonly ThreadEvent[],
+) =>
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method === 'GET' && url.includes(`/v1/chats/${threadId}/events`)) {
+      return {
+        ok: true,
+        status: 200,
+        body: eventsStreamBody(feedEvents),
+        json: async () => ({}),
+      } as unknown as Response;
+    }
+    const key = Object.keys(handlers)
+      .sort((a, b) => b.length - a.length)
+      .find((fragment) => {
+        const [wanted, path] = fragment.includes(' ') ? fragment.split(' ') : [method, fragment];
+        return wanted === method && url.includes(path);
+      });
+    const handler = key ? handlers[key] : undefined;
+    if (!handler) throw new Error(`unhandled ${method}: ${url}`);
+    const ok = (handler.status ?? 200) < 400;
+    return {
+      ok,
+      status: handler.status ?? 200,
+      body: sseBody(
+        method === 'POST' && ok && isThread(handler.body)
+          ? [
+              { event: 'routing', data: { thread_id: handler.body.thread_id } },
+              { event: 'thread', data: handler.body },
+            ]
+          : [],
+      ),
+      json: async () => handler.body,
+    } as unknown as Response;
+  });
+
 describe('Chat', () => {
   it("builds empty-thread suggestions from this tenant's own catalog", async () => {
     route(baseRoutes);
@@ -525,142 +662,6 @@ describe('the brief a reader falls back to', () => {
 });
 
 describe('Agent Activity', () => {
-  const AGENT_A: Agent = {
-    agent_id: 'agent-a',
-    role: 'sql_analyst',
-    version: '1',
-    display_name: 'Cube Analyst',
-    description: '',
-    enabled: true,
-    evaluation_status: 'passed',
-    capabilities: [],
-  };
-  const AGENT_B: Agent = {
-    agent_id: 'agent-b',
-    role: 'insight',
-    version: '1',
-    display_name: 'Insight Agent',
-    description: '',
-    enabled: true,
-    evaluation_status: 'passed',
-    capabilities: [],
-  };
-
-  const agentPayload = (over: Partial<AgentEventPayload>): AgentEventPayload => ({
-    type: 'agent',
-    execution_id: 'exec-1',
-    agent_id: AGENT_A.agent_id,
-    role: AGENT_A.role,
-    capability_id: null,
-    from_agent_id: null,
-    to_agent_id: null,
-    summary: null,
-    provider: null,
-    model: null,
-    fallback_count: 0,
-    latency_ms: null,
-    input_tokens: 0,
-    output_tokens: 0,
-    cost_usd: '0',
-    ...over,
-  });
-
-  const threadEvent = (
-    id: string,
-    threadId: string,
-    sequence: number,
-    kind: ThreadEvent['kind'],
-    payload: ThreadEvent['payload'],
-  ): ThreadEvent => ({
-    event_id: id,
-    organization_id: identity.organization_id,
-    thread_id: threadId,
-    sequence,
-    kind,
-    occurred_at: `2026-08-04T10:00:${String(sequence).padStart(2, '0')}Z`,
-    payload,
-  });
-
-  const baseAnalysisRun = (over: Partial<ThreadAnalysisRun>): ThreadAnalysisRun => ({
-    analysis_run_id: 'ar-1',
-    sequence: 1,
-    status: 'running',
-    parent_analysis_run_id: null,
-    retry_of_analysis_run_id: null,
-    created_at: '2026-08-04T10:00:00Z',
-    updated_at: '2026-08-04T10:00:00Z',
-    canonical_question: 'Why did EU refunds increase?',
-    finding: null,
-    draft_finding: null,
-    outcome: null,
-    approval: null,
-    citations: [],
-    audit_delivery: 'pending',
-    usage: USAGE,
-    ...over,
-  });
-
-  /** A body that yields every event in one chunk, as `useThreadEvents` reads it. */
-  const eventsStreamBody = (frames: readonly ThreadEvent[]) => {
-    const text = frames.map((value) => `data: ${JSON.stringify(value)}\n\n`).join('');
-    const bytes = encoder.encode(text);
-    let sent = false;
-    return {
-      getReader: () => ({
-        read: async () => {
-          if (sent) return { done: true, value: undefined };
-          sent = true;
-          return { done: false, value: bytes };
-        },
-      }),
-    };
-  };
-
-  /**
-   * `route()` plus one extra branch: the Work Feed's `GET .../events` reads
-   * `response.body` as a stream rather than `.json()`, so it needs a real
-   * (fake) stream, not the plain object every other endpoint here returns.
-   */
-  const routeWithEvents = (
-    handlers: Record<string, { status?: number; body: unknown }>,
-    threadId: string,
-    feedEvents: readonly ThreadEvent[],
-  ) =>
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input);
-      const method = (init?.method ?? 'GET').toUpperCase();
-      if (method === 'GET' && url.includes(`/v1/chats/${threadId}/events`)) {
-        return {
-          ok: true,
-          status: 200,
-          body: eventsStreamBody(feedEvents),
-          json: async () => ({}),
-        } as unknown as Response;
-      }
-      const key = Object.keys(handlers)
-        .sort((a, b) => b.length - a.length)
-        .find((fragment) => {
-          const [wanted, path] = fragment.includes(' ') ? fragment.split(' ') : [method, fragment];
-          return wanted === method && url.includes(path);
-        });
-      const handler = key ? handlers[key] : undefined;
-      if (!handler) throw new Error(`unhandled ${method}: ${url}`);
-      const ok = (handler.status ?? 200) < 400;
-      return {
-        ok,
-        status: handler.status ?? 200,
-        body: sseBody(
-          method === 'POST' && ok && isThread(handler.body)
-            ? [
-                { event: 'routing', data: { thread_id: handler.body.thread_id } },
-                { event: 'thread', data: handler.body },
-              ]
-            : [],
-        ),
-        json: async () => handler.body,
-      } as unknown as Response;
-    });
-
   it('groups a live turn into one block, expanded, tagging its two agents distinctly', async () => {
     const threadId = '43000000-0000-0000-0000-000000000050';
     const runningThread: Thread = {
@@ -807,6 +808,59 @@ describe('Agent Activity', () => {
     expect(screen.getByRole('button', { expanded: false })).toBeTruthy();
   });
 
+  it("renders an agent's reasoning as its own line, distinct from its summary", async () => {
+    const events: readonly ThreadEvent[] = [
+      threadEvent(
+        'e1',
+        'thread-1',
+        1,
+        'agent.started',
+        agentPayload({
+          agent_id: AGENT_A.agent_id,
+          role: AGENT_A.role,
+          summary: 'Reading governed metrics…',
+        }),
+      ),
+      threadEvent(
+        'e2',
+        'thread-1',
+        2,
+        'agent.completed',
+        agentPayload({
+          agent_id: AGENT_A.agent_id,
+          role: AGENT_A.role,
+          reasoning: 'EU refunds are the only region with a June-to-July increase.',
+        }),
+      ),
+    ];
+
+    render(<AgentActivityBlock events={events} agents={[AGENT_A]} finalized={false} />);
+
+    // The status sentence and the reasoning sentence both render, as two
+    // separate lines rather than one concatenated string.
+    expect(screen.getByText('Reading governed metrics…')).toBeTruthy();
+    expect(
+      screen.getByText('EU refunds are the only region with a June-to-July increase.'),
+    ).toBeTruthy();
+  });
+
+  it('renders no reasoning line when the Agent produced none', async () => {
+    const events: readonly ThreadEvent[] = [
+      threadEvent(
+        'e1',
+        'thread-1',
+        1,
+        'agent.completed',
+        agentPayload({ agent_id: AGENT_A.agent_id, role: AGENT_A.role, summary: 'Done.' }),
+      ),
+    ];
+
+    render(<AgentActivityBlock events={events} agents={[AGENT_A]} finalized={false} />);
+
+    expect(screen.getByText('Done.')).toBeTruthy();
+    expect(screen.queryByText(/reasoning/i)).toBeNull();
+  });
+
   it('renders one collapsed block per already-completed turn, each independently toggleable, with no side panel', async () => {
     const threadId = '43000000-0000-0000-0000-000000000051';
 
@@ -942,5 +996,194 @@ describe('Agent Activity', () => {
     expect(screen.queryByTestId('activity-inspector')).toBeNull();
     expect(screen.queryByRole('button', { name: /activity panel/i })).toBeNull();
     expect(screen.queryByRole('separator', { name: /resize the activity panel/i })).toBeNull();
+  });
+});
+
+/**
+ * #117: the standalone `/analysis-runs/:id` page is gone -- citations, the
+ * typed outcome and a pending Human Approval all render (and, for the
+ * approval, act) inline on the Finding message itself, on the Chat route.
+ */
+describe('Finding message', () => {
+  const findingThread = (analysisRun: ThreadAnalysisRun, threadId: string): Thread => ({
+    ...clarifiedThread,
+    thread_id: threadId,
+    messages: [
+      {
+        message_id: `${threadId}-question`,
+        kind: 'user_question',
+        content: analysisRun.canonical_question,
+        created_at: '2026-08-04T10:00:00Z',
+        authored_by_user: true,
+      },
+    ],
+    analysis_run_id: analysisRun.analysis_run_id,
+    analysis_runs: [analysisRun],
+    routing: null,
+    event_cursor: 0,
+  });
+
+  const renderFinding = (analysisRun: ThreadAnalysisRun, extraRoutes: Record<string, { status?: number; body: unknown }> = {}) => {
+    const threadId = 'finding-thread';
+    const fetchMock = routeWithEvents(
+      {
+        ...baseRoutes,
+        [`/v1/chats/${threadId}`]: { body: findingThread(analysisRun, threadId) },
+        ...extraRoutes,
+      },
+      threadId,
+      [],
+    );
+    renderPage(`/chats/${threadId}`);
+    return fetchMock;
+  };
+
+  it('lets the user expand a citation inline, without leaving the chat route', async () => {
+    const citation = {
+      citation_id: 'c-1',
+      metric: 'refund_amount',
+      filters: [{ member: 'Commerce.region', operator: 'equals', values: ['EU'] }],
+      period: 'July 2026',
+      grain: 'month',
+      producing_execution_id: null,
+      aggregate_value: '260.00',
+      evaluator_outcome: null,
+      state: 'active' as const,
+    };
+
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-1',
+        status: 'completed',
+        audit_delivery: 'complete',
+        finding: {
+          headline: 'EU refunds rose $240 in July',
+          summary: 'Refunds increased.',
+          metrics: [],
+          evidence_references: [],
+        },
+        citations: [citation],
+      }),
+      { '/citations/': { body: citation } },
+    );
+
+    const headline = await screen.findByText('EU refunds rose $240 in July');
+
+    await userEvent.click(screen.getByRole('button', { name: /1 citation/i }));
+    await userEvent.click(screen.getByRole('button', { name: /refund_amount · 260\.00/i }));
+
+    // The detail `citation-detail.tsx` already knew how to render, opened in
+    // place -- not a second page.
+    expect(await screen.findByText(/July 2026 · month/)).toBeTruthy();
+    expect(screen.getByText(/Commerce\.region equals EU/)).toBeTruthy();
+    // Still the same Chat route: the question is still on screen, and there
+    // is no route match for anything else to have navigated to.
+    expect(headline.isConnected).toBe(true);
+  });
+
+  it('renders the confidence outcome inline, flagging a non-independent recheck', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-2',
+        status: 'completed',
+        audit_delivery: 'complete',
+        outcome: {
+          kind: 'confidence',
+          score: 0.42,
+          calibration_method: 'capped_evaluator_shared_model_family',
+        },
+      }),
+    );
+
+    expect(await screen.findByText(/Confidence 42%/i)).toBeTruthy();
+    expect(screen.getByText(/not an independent recheck/i)).toBeTruthy();
+  });
+
+  it('renders a validation outcome and its issues inline', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-2b',
+        status: 'completed',
+        audit_delivery: 'complete',
+        outcome: {
+          kind: 'validation',
+          passed: false,
+          checks: ['row_count_matches'],
+          issues: ['sample_size_small'],
+        },
+      }),
+    );
+
+    expect(await screen.findByText(/Validation flagged/i)).toBeTruthy();
+    expect(screen.getByText('sample_size_small')).toBeTruthy();
+  });
+
+  it('renders a pending Human Approval inline and lets the user decide it', async () => {
+    const fetchMock = renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-3',
+        status: 'awaiting_approval',
+        approval: {
+          approval_id: 'appr-1',
+          reason: 'low_confidence',
+          status: 'pending',
+          failed_conditions: ['confident'],
+          requested_at: '2026-08-04T10:00:00Z',
+          decided_at: null,
+          decision_reason: null,
+          can_decide: true,
+        },
+      }),
+      { 'POST /decision': { body: {} } },
+    );
+
+    const approve = await screen.findByRole('button', { name: 'Approve' });
+    await userEvent.click(approve);
+
+    // The same underlying call the removed `ApprovalInspector` made --
+    // decided at the point in the chat where the approval was requested.
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/decision'));
+      expect(call).toBeTruthy();
+      expect(String((call?.[1] as RequestInit | undefined)?.body)).toContain('"decision":"approve"');
+    });
+  });
+
+  it('offers no link to the removed standalone analysis-run or investigation page', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-4',
+        status: 'completed',
+        audit_delivery: 'complete',
+        finding: {
+          headline: 'EU refunds rose $240 in July',
+          summary: 'Refunds increased.',
+          metrics: [],
+          evidence_references: [],
+        },
+        citations: [
+          {
+            citation_id: 'c-2',
+            metric: 'refund_amount',
+            filters: [],
+            period: null,
+            grain: null,
+            producing_execution_id: null,
+            aggregate_value: '260.00',
+            evaluator_outcome: null,
+            state: 'active',
+          },
+        ],
+        outcome: { kind: 'confidence', score: 0.9, calibration_method: 'evaluator_independent_recheck' },
+      }),
+    );
+
+    await screen.findByText('EU refunds rose $240 in July');
+
+    for (const link of screen.queryAllByRole('link')) {
+      const href = link.getAttribute('href') ?? '';
+      expect(href).not.toMatch(/\/analysis-runs\//);
+      expect(href).not.toMatch(/\/investigations\//);
+    }
   });
 });

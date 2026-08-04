@@ -24,7 +24,6 @@ import {
   SetupRequired,
   SignedOut,
 } from './pages/entry-screens';
-import { InvestigationWorkspace } from './pages/investigation/investigation-workspace';
 import { SequenceDetailPage } from './pages/sequences/sequence-detail-page';
 import { SequencesPage } from './pages/sequences/sequences-page';
 import { AppShell } from './shell/app-shell';
@@ -129,10 +128,6 @@ const AuthenticatedWorkspace = () => {
         <Route
           path="/chats/:chatId"
           element={<ChatPage getToken={getToken} identity={identity.data} />}
-        />
-        <Route
-          path="/analysis-runs/:id"
-          element={<InvestigationWorkspace getToken={getToken} />}
         />
         <Route
           path="/dashboard"
