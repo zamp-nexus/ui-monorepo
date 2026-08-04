@@ -71,7 +71,7 @@ through Tenant authorization (#15, #16).
 
 **5 — Publication enforces convergence, bounded confidence, citation
 resolvability and contradiction rules.**
-`libs/domain/investigation/src/zentra_domain_investigation/publication.py`, with
+`libs/domain/analysis_run/src/zentra_domain_analysis_run/publication.py`, with
 a truth-table suite over all sixteen condition combinations (#17).
 
 **6 — Replay composes ClickHouse process truth with authorized evidence and

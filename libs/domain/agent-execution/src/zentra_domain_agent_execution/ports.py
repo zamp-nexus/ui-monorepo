@@ -271,12 +271,12 @@ class ExecutionStatus(StrEnum):
 
 
 class AgentExecutionRecord(BaseModel):
-    """One bounded unit of agent work, scoped to an Organization and Investigation."""
+    """One bounded unit of agent work, scoped to an Organization and Analysis Run."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: UUID
-    investigation_id: UUID
+    analysis_run_id: UUID
     organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
@@ -321,7 +321,7 @@ class AgentExecutionStart(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: UUID
-    investigation_id: UUID
+    analysis_run_id: UUID
     organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
@@ -331,7 +331,7 @@ class AgentExecutionStart(BaseModel):
 
 class AgentExecutionRecorder(Protocol):
     """Persists a completed step before the next one starts, so an interrupted
-    investigation still has a replayable trail of what already ran."""
+    Analysis Run still has a replayable trail of what already ran."""
 
     def record_started(self, start: AgentExecutionStart) -> Awaitable[None]: ...
 

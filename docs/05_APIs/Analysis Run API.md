@@ -1,6 +1,6 @@
 ---
-id: api-investigation
-title: Investigation API
+id: api-analysis-run
+title: Analysis Run API
 type: api
 status: active
 owner: unassigned
@@ -11,23 +11,23 @@ reviewed: 2026-07-30
 confidence: verified
 implementation: current
 priority: critical
-tags: [api, investigation, approval]
-related: ["[[APIs MOC]]", "[[Investigation Trust Loop]]", "[[Forensic Observatory]]"]
-depends_on: ["[[Authenticated Tenant Resolution]]", "[[Investigation Core]]"]
+tags: [api, analysis_run, approval]
+related: ["[[APIs MOC]]", "[[Analysis Run Trust Loop]]", "[[Forensic Observatory]]"]
+depends_on: ["[[Authenticated Tenant Resolution]]", "[[Analysis Run Core]]"]
 repo_path: apps/api/src/zentra_api/routes.py
 code_refs:
   - apps/api/src/zentra_api/routes.py
   - apps/api/tests/test_api.py
 ---
 
-# Investigation API
+# Analysis Run API
 
 | Method | Path | Purpose | Authorization |
 | --- | --- | --- | --- |
 | GET | `/v1/scenarios` | List the governed questions this deployment answers | all Membership roles |
-| POST | `/v1/investigations` | Start one of the listed scenarios | owner/admin/member |
-| GET | `/v1/investigations/{investigation_id}` | Read current detail/replay | all Membership roles |
-| POST | `/v1/investigations/{investigation_id}/approvals/{approval_id}/decision` | Approve or reject | owner/admin |
+| POST | `/v1/analysis_runs` | Start one of the listed scenarios | owner/admin/member |
+| GET | `/v1/analysis_runs/{analysis_run_id}` | Read current detail/replay | all Membership roles |
+| POST | `/v1/analysis_runs/{analysis_run_id}/approvals/{approval_id}/decision` | Approve or reject | owner/admin |
 
 ## Scenarios
 
@@ -45,7 +45,7 @@ state, Finding, validation, pending approval, safe timeline, and delivery state.
 
 ## Read
 
-Response includes internal Investigation ID, scenario, status, version,
+Response includes internal Analysis Run ID, scenario, status, version,
 evaluation attempts, timestamps, structured metrics, `artifact://` evidence,
 typed validation, optional approval with `can_decide`, and deduplicated audit
 timeline.
@@ -61,19 +61,19 @@ decisions return `409`.
 
 - `401`: invalid identity.
 - `403`: insufficient role.
-- `404`: invisible/cross-tenant Investigation or approval.
+- `404`: invisible/cross-tenant Analysis Run or approval.
 - `409`: invalid transition or conflicting decision.
 - `422`: unsupported scenario or invalid request/reason.
 - `503`: sanitized governed-metric dependency failure with no misleading result.
 
 ## Draft Finding — additive, current
 
-`InvestigationDetailResponse` carries an optional `draft_finding` block beside
+`Analysis RunDetailResponse` carries an optional `draft_finding` block beside
 the existing `finding`. Additive on purpose: `finding` is unchanged, so every
 Phase 1 client keeps working, and the two are served together rather than one
 replacing the other.
 
-`draft_finding` is `null` for an Investigation that ran before the Insight
+`draft_finding` is `null` for an Analysis Run that ran before the Insight
 Agent existed. That null is the signal a client uses to tell a legacy narrative
 apart from claims that are structured and will become individually citable —
 reporting the old shape as the new one would assert its sentences are
@@ -85,14 +85,14 @@ Citations exist. `root_cause` is always `unresolved` in Phase 2.
 
 ## Evidence Citation resolution — current
 
-`GET /v1/investigations/{investigation_id}/citations/{citation_id}` follows one
+`GET /v1/analysis_runs/{analysis_run_id}/citations/{citation_id}` follows one
 claim to the evidence behind it, returning the governed metric, filters,
 period, grain, producing Agent Execution, validated aggregate, Evaluator
 outcome, and the citation's state.
 
-Nested under the Investigation deliberately: the Investigation's own visibility
+Nested under the Analysis Run deliberately: the Analysis Run's own visibility
 is checked first, so a citation identifier cannot become a way to probe an
-Investigation the caller cannot read.
+Analysis Run the caller cannot read.
 
 **There is no Tenant parameter**, here or anywhere below. Identity comes from
 the verified token through `authenticated_context`, so there is nothing for a
@@ -100,7 +100,7 @@ caller to supply or override, and the transaction's `app.tenant_id` is set from
 it before any row is read.
 
 Three ways of not being allowed to see a citation — another Tenant's, another
-Investigation's, and nonexistent — return the same `404` with the same body. A
+Analysis Run's, and nonexistent — return the same `404` with the same body. A
 caller who could tell them apart could confirm somebody else's evidence exists
 by copying an identifier. A malformed identifier is a `422` and discloses
 nothing either.

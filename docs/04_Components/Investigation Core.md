@@ -13,11 +13,11 @@ implementation: current
 priority: critical
 tags: [component, investigation, python]
 aliases: [investigation, investigation-application]
-related: ["[[Components MOC]]", "[[Investigation Domain]]", "[[Investigation Trust Loop]]"]
-repo_path: libs/application/investigation
+related: ["[[Components MOC]]", "[[Analysis Run Domain]]", "[[Investigation Trust Loop]]"]
+repo_path: libs/application/analysis_run
 code_refs:
-  - libs/domain/investigation/src/zentra_domain_investigation/model.py
-  - libs/application/investigation/src/zentra_application_investigation/service.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/service.py
 ---
 
 # Investigation Core

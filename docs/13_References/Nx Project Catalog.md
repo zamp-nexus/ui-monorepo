@@ -29,9 +29,9 @@ the governed `docs` project makes documentation the thirty-second Nx project.
 | `nexus` | `apps/nexus` | React app |
 | `nexus-e2e` | `apps/nexus-e2e` | e2e |
 | `api` | `apps/api` | Python service |
-| `investigation` | `libs/domain/investigation` | domain |
+| `investigation` | `libs/domain/analysis_run` | domain |
 | `agent-execution` | `libs/domain/agent-execution` | domain |
-| `investigation-application` | `libs/application/investigation` | application |
+| `investigation-application` | `libs/application/analysis_run` | application |
 | `postgres` | `libs/adapters/postgres` | adapter |
 | `clickhouse` | `libs/adapters/clickhouse` | adapter |
 | `cube` | `libs/adapters/cube` | adapter |

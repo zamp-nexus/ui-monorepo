@@ -1,4 +1,4 @@
-"""Drive one real investigation end to end.
+"""Drive one real analysis run end to end.
 
 Builds the same graph the API composition root builds, but seeds an Organization
 directly and calls the service with a hand-made actor, so no Clerk setup is
@@ -48,7 +48,7 @@ from zentra_adapter_model_providers import (
     RoutedModelClient,
     chain_for,
 )
-from zentra_adapter_postgres import Database, PostgresInvestigationUnitOfWorkFactory
+from zentra_adapter_postgres import Database, PostgresAnalysisRunUnitOfWorkFactory
 from zentra_adapter_postgres.schema import (
     agent_registry,
     organization_memberships,
@@ -60,9 +60,9 @@ from zentra_api.cube_scope import ScopedCubeSemanticLayers
 from zentra_api.orchestrator_loop import OrchestratorLoop, StepAgents
 from zentra_api.pipeline import PostgresExecutionRecorder
 from zentra_api.settings import Settings
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
-    InvestigationService,
+    AnalysisRunService,
     Role,
 )
 from zentra_domain_agent_execution import AgentRole, ModelPort
@@ -127,7 +127,7 @@ def build(
     record: str | None,
     replay: str | None,
     without: Sequence[str] = (),
-) -> tuple[InvestigationService, ProviderClients, AuditRepository]:
+) -> tuple[AnalysisRunService, ProviderClients, AuditRepository]:
     keys = settings.provider_api_keys()
     for provider in without:
         # Simulates an outage the chain must survive. `from_keys` skips falsy
@@ -177,12 +177,12 @@ def _assemble(
     tier: ModelTier,
     database: Database,
     model: ModelPort,
-) -> tuple[InvestigationService, AuditRepository]:
+) -> tuple[AnalysisRunService, AuditRepository]:
     """Everything below the model seam, identical whichever client is above it."""
-    uow = PostgresInvestigationUnitOfWorkFactory(database)
+    uow = PostgresAnalysisRunUnitOfWorkFactory(database)
 
     async def _unreachable_fingerprint(organization_id, data_connection_id):
-        # live_run.py never targets a Data Connection — every investigation
+        # live_run.py never targets a Data Connection — every analysis run
         # here runs against the demo warehouse — so this resolver is never
         # actually called.
         raise NotImplementedError(
@@ -214,7 +214,7 @@ def _assemble(
         secure=settings.clickhouse_secure,
     )
     delivery = AuditDeliveryCoordinator(unit_of_work_factory=uow, audit=audit)
-    service = InvestigationService(
+    service = AnalysisRunService(
         unit_of_work_factory=uow,
         pipeline=OrchestratorLoop(
             {tier: build_agents},
@@ -331,15 +331,15 @@ async def main() -> int:
 
     started = datetime.now(UTC)
     detail = await service.start(actor, question=args.question)
-    print(f"started  {detail.investigation_id}  status={detail.status.value}")
+    print(f"started  {detail.analysis_run_id}  status={detail.status.value}")
     print("running the agents...\n")
 
     try:
-        await service.execute(actor, detail.investigation_id)
+        await service.execute(actor, detail.analysis_run_id)
     finally:
         elapsed = (datetime.now(UTC) - started).total_seconds()
 
-    detail = await service.get(actor, detail.investigation_id)
+    detail = await service.get(actor, detail.analysis_run_id)
 
     print(f"=== {detail.status.value}  in {elapsed:.0f}s ===")
     if detail.outcome is not None:
@@ -368,9 +368,9 @@ async def main() -> int:
                 text(
                     "SELECT step, agent_id, model, status, confidence, "
                     "latency_ms, cost_usd, output FROM agent_executions "
-                    "WHERE investigation_id = :i ORDER BY step"
+                    "WHERE analysis_run_id = :i ORDER BY step"
                 ),
-                {"i": detail.investigation_id},
+                {"i": detail.analysis_run_id},
             )
         ).all()
     await engine.dispose()

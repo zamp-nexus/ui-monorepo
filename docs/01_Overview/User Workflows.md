@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 priority: high
 tags: [user, workflow, frontend]
-related: ["[[Overview MOC]]", "[[Forensic Observatory]]", "[[Investigation API]]"]
+related: ["[[Overview MOC]]", "[[Forensic Observatory]]", "[[Analysis Run API]]"]
 repo_path: apps/nexus/src/app/app.tsx
 code_refs:
   - apps/nexus/src/app/app.tsx

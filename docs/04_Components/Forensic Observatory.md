@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [component, frontend, react]
 aliases: [nexus, frontend]
-related: ["[[Components MOC]]", "[[Chat Surface]]", "[[User Workflows]]", "[[Investigation API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
+related: ["[[Components MOC]]", "[[Chat Surface]]", "[[User Workflows]]", "[[Analysis Run API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
 depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]", "[[Design Token Pipeline]]"]
 repo_path: apps/nexus
 code_refs:

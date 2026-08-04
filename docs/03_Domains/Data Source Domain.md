@@ -12,7 +12,7 @@ confidence: verified
 implementation: planned
 priority: critical
 tags: [domain, data-source, dataset-workspace, connector]
-related: ["[[Domains MOC]]", "[[Semantic Modeling]]", "[[Investigation Domain]]", "[[Phase 3 Data Execution]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
+related: ["[[Domains MOC]]", "[[Semantic Modeling]]", "[[Analysis Run Domain]]", "[[Phase 3 Data Execution]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
 repo_path: libs/domain/data-source
 code_refs: [libs/domain/data-source/CONTEXT.md, libs/foundation/query-engine/src/types/query.ts]
 ---

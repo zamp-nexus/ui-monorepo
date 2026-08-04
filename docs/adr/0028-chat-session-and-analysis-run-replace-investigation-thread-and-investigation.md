@@ -11,8 +11,8 @@ reviewed: 2026-08-02
 confidence: verified
 implementation: planned
 tags: [adr, chat, investigation, analysis-run]
-related: ["[[Chat & Analysis Run Domain]]", "[[Nexus Domain]]", "[[adr/0017-linked-investigation-threads]]"]
-repo_path: libs/domain/investigation
+related: ["[[Analysis Run Domain]]", "[[Nexus Domain]]", "[[adr/0017-linked-investigation-threads]]"]
+repo_path: libs/domain/analysis_run
 ---
 
 # Chat Session and Analysis Run replace Investigation Thread and Investigation
@@ -43,7 +43,7 @@ under a new name.
 This is a clean-domain cutover, not a compatibility rename — see
 [[adr/0030-destructive-reset-for-the-chat-and-analysis-cutover]]. Old ADRs,
 API routes, and DTOs referencing the retired vocabulary are deleted outright,
-not deprecated. The `libs/domain/investigation` package path has not yet been
+not deprecated. The `libs/domain/analysis_run` package path has not yet been
 renamed to match; that is tracked as follow-up implementation work, not part
 of this decision. Intake remains the single arbiter for every routing
 decision this redesign adds — see

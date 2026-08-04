@@ -4,7 +4,7 @@
 
 **Goal:** Implement ADR-0031 — point the existing safe-telemetry OTLP pipe at Langfuse Cloud's free tier, and extend `SAFE_ATTRIBUTES` beyond its current coverage (Insight execution, publication decision, citation resolution, evidence deletion) to also cover Intake Agent runs, Cube Analyst Agent runs, Data Visualization Agent runs, tool calls, and skill activations — with no richer, second telemetry channel for Langfuse than any other OTLP consumer gets.
 
-**Architecture:** `libs/adapters/telemetry/src/zentra_adapter_telemetry` owns the allowlist (`SAFE_ATTRIBUTES`, `_record()`) and the OTLP wiring (`configure_telemetry`); every `record_*` function is a thin, allowlisted setter plus a matching OTel metric. Every existing recorder is called from the outermost layer that already has the finished fact to report — `apps/api/src/zentra_api/pipeline.py`'s `PostgresExecutionRecorder.record()` for the Insight/Intake/Cube-Analyst/tool-call/skill path (it is already `zentra_api`, which may import any adapter directly), and, for the Data Visualization Agent — which lives in `zentra_application_investigation`, an application-layer package `.importlinter` forbids from importing `opentelemetry` — through a new `AgentExecutionObserver` port injected from `apps/api/src/zentra_api/dependencies.py`, mirroring the existing `PublicationObserver`/`ErasureObserver` pattern in `libs/application/investigation/src/zentra_application_investigation/ports.py` and `service.py`.
+**Architecture:** `libs/adapters/telemetry/src/zentra_adapter_telemetry` owns the allowlist (`SAFE_ATTRIBUTES`, `_record()`) and the OTLP wiring (`configure_telemetry`); every `record_*` function is a thin, allowlisted setter plus a matching OTel metric. Every existing recorder is called from the outermost layer that already has the finished fact to report — `apps/api/src/zentra_api/pipeline.py`'s `PostgresExecutionRecorder.record()` for the Insight/Intake/Cube-Analyst/tool-call/skill path (it is already `zentra_api`, which may import any adapter directly), and, for the Data Visualization Agent — which lives in `zentra_application_analysis_run`, an application-layer package `.importlinter` forbids from importing `opentelemetry` — through a new `AgentExecutionObserver` port injected from `apps/api/src/zentra_api/dependencies.py`, mirroring the existing `PublicationObserver`/`ErasureObserver` pattern in `libs/application/analysis_run/src/zentra_application_analysis_run/ports.py` and `service.py`.
 
 **Tech Stack:** Python 3.13, OpenTelemetry SDK (`opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http`), pytest.
 
@@ -12,7 +12,7 @@
 
 - No second, richer Langfuse integration path (ADR-0031's "Considered Options"): every new attribute is allowlisted the same way the existing four recorders are, and reaches Langfuse only as an OTLP span/metric attribute — never a native Langfuse SDK call.
 - `SAFE_ATTRIBUTES` and `SAFE_DIMENSIONS` are enforced at runtime (`_record()` / `dimensions()` raise `ValueError` on an unlisted key) — every new key is added to the relevant frozenset in the same commit as its first use, never after.
-- `zentra_application_investigation` (and every other `zentra_application_*`/`zentra_domain_*` package) may not import `opentelemetry` or any adapter package directly (`.importlinter`'s `application-is-framework-independent` and `adapters-do-not-depend-on-each-other` contracts) — the Data Visualization Agent's telemetry is wired through a `Protocol` port and injected from `apps/api`, exactly like `PublicationObserver`/`ErasureObserver` already are.
+- `zentra_application_analysis_run` (and every other `zentra_application_*`/`zentra_domain_*` package) may not import `opentelemetry` or any adapter package directly (`.importlinter`'s `application-is-framework-independent` and `adapters-do-not-depend-on-each-other` contracts) — the Data Visualization Agent's telemetry is wired through a `Protocol` port and injected from `apps/api`, exactly like `PublicationObserver`/`ErasureObserver` already are.
 - `record_insight_execution` and its existing call site are untouched — Insight already has ADR-blessed, tested telemetry under its own `zentra.insight.*` namespace; Intake, Cube Analyst, and the Data Visualization Agent share one new generic recorder (`record_agent_execution`, `zentra.agent.*`) instead of each getting a bespoke near-duplicate, because their reported shape is identical.
 - No Evaluator telemetry is added. ADR-0031's consequence list names Intake, Cube Analyst, and Data Visualization Agent runs specifically — Evaluator is not in that list, and adding it would be scope the ADR did not ask for. Evaluator's tool calls and skill activations are still recorded, because "tool calls" and "skill activations" are unscoped by role in the ADR.
 - No Postgres migration. Nothing in this plan touches persisted schema — every change is telemetry (OTel spans/metrics) plus the observer-port wiring needed to reach the Data Visualization Agent.
@@ -29,9 +29,9 @@
 - Modify `libs/adapters/telemetry/tests/test_tracing.py` — cover `correlate_thread` and the Langfuse-shaped `configure_telemetry` header wiring.
 - Modify `apps/api/src/zentra_api/pipeline.py` — wire Intake/Cube-Analyst/tool-call/skill-activation telemetry into `PostgresExecutionRecorder`.
 - Modify `apps/api/tests/test_pipeline.py` — cover the new telemetry calls with a fake unit of work.
-- Modify `libs/application/investigation/src/zentra_application_investigation/ports.py` — add `AgentExecutionObserver`.
-- Modify `libs/application/investigation/src/zentra_application_investigation/visualization_service.py` — accept and call the observer on the Data Visualization Agent's success/failure paths.
-- Create `libs/application/investigation/tests/test_visualization_service.py` — cover the observer wiring.
+- Modify `libs/application/analysis_run/src/zentra_application_analysis_run/ports.py` — add `AgentExecutionObserver`.
+- Modify `libs/application/analysis_run/src/zentra_application_analysis_run/visualization_service.py` — accept and call the observer on the Data Visualization Agent's success/failure paths.
+- Create `libs/application/analysis_run/tests/test_visualization_service.py` — cover the observer wiring.
 - Modify `apps/api/src/zentra_api/dependencies.py` — wire `record_agent_execution` into `VisualizationService`.
 - Modify `apps/api/src/zentra_api/routes.py` — correlate the Chat Session identifier (`zentra.thread_id`) at the one call site that already resolves one.
 
@@ -676,9 +676,9 @@ git commit -m "feat(api): record Intake, Cube Analyst, tool-call, and skill-acti
 ### Task 4: Add `AgentExecutionObserver` and wire the Data Visualization Agent's telemetry
 
 **Files:**
-- Modify: `libs/application/investigation/src/zentra_application_investigation/ports.py`
-- Modify: `libs/application/investigation/src/zentra_application_investigation/visualization_service.py`
-- Create: `libs/application/investigation/tests/test_visualization_service.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/ports.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/visualization_service.py`
+- Create: `libs/application/analysis_run/tests/test_visualization_service.py`
 
 **Interfaces:**
 - Consumes: nothing from the telemetry adapter directly (forbidden by `.importlinter`) — only the new `Protocol`.
@@ -686,7 +686,7 @@ git commit -m "feat(api): record Intake, Cube Analyst, tool-call, and skill-acti
 
 - [ ] **Step 1: Add the port**
 
-In `libs/application/investigation/src/zentra_application_investigation/ports.py`, after `ErasureObserver`, add:
+In `libs/application/analysis_run/src/zentra_application_analysis_run/ports.py`, after `ErasureObserver`, add:
 
 ```python
 class AgentExecutionObserver(Protocol):
@@ -718,7 +718,7 @@ class AgentExecutionObserver(Protocol):
 
 - [ ] **Step 2: Write the failing tests**
 
-Create `libs/application/investigation/tests/test_visualization_service.py`. Build a minimal fake `InvestigationUnitOfWorkFactory`/unit-of-work exposing only what `execute_visualization_job`/`fail_visualization_job` call (`visualizations.get`, `.brief`, `.save`; `work_feed.append_for_investigation`; `outbox.enqueue`; `commit`), a fake `VisualizationRenderer` returning a fixed `RenderResult`, and construct `VisualizationService` with `agent_execution_observer=` a recording callable. Cover:
+Create `libs/application/analysis_run/tests/test_visualization_service.py`. Build a minimal fake `InvestigationUnitOfWorkFactory`/unit-of-work exposing only what `execute_visualization_job`/`fail_visualization_job` call (`visualizations.get`, `.brief`, `.save`; `work_feed.append_for_investigation`; `outbox.enqueue`; `commit`), a fake `VisualizationRenderer` returning a fixed `RenderResult`, and construct `VisualizationService` with `agent_execution_observer=` a recording callable. Cover:
 
 ```python
 @pytest.mark.asyncio
@@ -771,7 +771,7 @@ Expected: FAIL — `VisualizationService` does not yet accept or call `agent_exe
 
 - [ ] **Step 4: Wire the observer into `VisualizationService`**
 
-In `libs/application/investigation/src/zentra_application_investigation/visualization_service.py`, import `AgentExecutionObserver` from `.ports` (add to the existing `from .ports import InvestigationUnitOfWorkFactory` line). Add to `__init__`:
+In `libs/application/analysis_run/src/zentra_application_analysis_run/visualization_service.py`, import `AgentExecutionObserver` from `.ports` (add to the existing `from .ports import InvestigationUnitOfWorkFactory` line). Add to `__init__`:
 
 ```python
         agent_execution_observer: AgentExecutionObserver | None = None,
@@ -834,9 +834,9 @@ Expected: PASS — no new forbidden import was introduced.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add libs/application/investigation/src/zentra_application_investigation/ports.py \
-        libs/application/investigation/src/zentra_application_investigation/visualization_service.py \
-        libs/application/investigation/tests/test_visualization_service.py
+git add libs/application/analysis_run/src/zentra_application_analysis_run/ports.py \
+        libs/application/analysis_run/src/zentra_application_analysis_run/visualization_service.py \
+        libs/application/analysis_run/tests/test_visualization_service.py
 git commit -m "feat(investigation): report Data Visualization Agent runs through a new AgentExecutionObserver port"
 ```
 

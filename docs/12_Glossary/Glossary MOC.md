@@ -16,7 +16,7 @@ repo_path: libs/domain/CONTEXT.md
 code_refs:
   - CONTEXT-MAP.md
   - libs/domain/CONTEXT.md
-  - libs/domain/investigation/CONTEXT.md
+  - libs/domain/analysis_run/CONTEXT.md
   - libs/domain/agent-execution/CONTEXT.md
   - libs/domain/data-source/CONTEXT.md
 ---
@@ -26,11 +26,11 @@ code_refs:
 Canonical term definitions live in the context files:
 
 - [Nexus domain](../../libs/domain/CONTEXT.md)
-- [Investigation](../../libs/domain/investigation/CONTEXT.md)
+- [Investigation](../../libs/domain/analysis_run/CONTEXT.md)
 - [Agent Execution](../../libs/domain/agent-execution/CONTEXT.md)
 - [Data Source](../../libs/domain/data-source/CONTEXT.md)
 
-Use [[Identity and Tenancy]], [[Investigation Domain]],
+Use [[Identity and Tenancy]], [[Analysis Run Domain]],
 [[Agent Execution Domain]], [[Semantic Modeling]], [[Data Source Domain]], and
 [[Trust and Verification]] as navigational entries. Do not create a competing
 definition here.

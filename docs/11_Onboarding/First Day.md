@@ -30,7 +30,7 @@ Investigation from HTTP to domain, persistence, semantic query, audit, and UI.
 1. [[Repository Overview]] and [[Product Boundaries]].
 2. [[System Context]] and [[Hexagonal Modular Monolith]].
 3. Root [context map](../../CONTEXT-MAP.md), then
-   [[Investigation Domain]] and [[Identity and Tenancy]].
+   [[Analysis Run Domain]] and [[Identity and Tenancy]].
 4. [[Investigation Trust Loop]].
 5. [[Tenancy Security]] and [[Audit and Observability Architecture]].
 

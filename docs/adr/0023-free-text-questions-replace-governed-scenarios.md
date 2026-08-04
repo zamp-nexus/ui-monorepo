@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 tags: [adr, investigation, routing]
 related: ["[[Investigation Core]]", "[[Chat Surface]]", "[[Trust and Verification]]"]
-repo_path: libs/application/investigation/src/zentra_application_investigation/thread_routing.py
+repo_path: libs/application/analysis_run/src/zentra_application_analysis_run/thread_routing.py
 ---
 
 # Free-text questions replace governed scenarios

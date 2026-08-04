@@ -422,7 +422,7 @@ def _execution_with_reasoning(reasoning: str | None) -> AgentExecutionRecord:
     moment = datetime(2026, 7, 30, 9, 0, tzinfo=UTC)
     return AgentExecutionRecord(
         execution_id=uuid4(),
-        investigation_id=ANALYSIS_RUN_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
         organization_id=TENANT_ID,
         agent_id="cube_analyst_v1",
         role=AgentRole.CUBE_ANALYST,

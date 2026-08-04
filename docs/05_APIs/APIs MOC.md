@@ -18,7 +18,7 @@ repo_path: apps/api/src/zentra_api/routes.py
 # APIs
 
 - [[Health and Context API]]
-- [[Investigation API]]
+- [[Analysis Run API]]
 - [[Connector API]]
 - [[Workspace Organization API]]
 - [[Investigation Thread API]]

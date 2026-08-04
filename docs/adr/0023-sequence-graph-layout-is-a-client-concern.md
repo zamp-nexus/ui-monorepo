@@ -10,7 +10,7 @@ updated: 2026-08-02
 reviewed: 2026-08-02
 confidence: verified
 implementation: current
-priority: medium
+priority: low
 tags: [adr, sequence, frontend, react-flow, work-feed]
 related:
   - "[[Sequence Domain]]"

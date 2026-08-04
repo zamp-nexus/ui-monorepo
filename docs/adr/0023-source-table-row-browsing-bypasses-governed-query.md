@@ -10,7 +10,7 @@ updated: 2026-08-02
 reviewed: 2026-08-02
 confidence: verified
 implementation: current
-priority: medium
+priority: low
 tags: [adr, cube, connector, semantic-model]
 related:
   - "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"

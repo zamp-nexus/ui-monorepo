@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 priority: high
 tags: [api, groups, tenancy]
-related: ["[[APIs MOC]]", "[[Investigation API]]", "[[Postgres Control Plane]]"]
+related: ["[[APIs MOC]]", "[[Analysis Run API]]", "[[Postgres Control Plane]]"]
 depends_on: ["[[Authenticated Tenant Resolution]]"]
 repo_path: apps/api/src/zentra_api/workspace_routes.py
 code_refs:

@@ -88,28 +88,28 @@ async def _two_tenants():
     plugin this project does not configure, and the integration test beside this
     one does its own setup for the same reason.
     """
-    organization_id, other_tenant_id = uuid4(), uuid4()
+    organization_id, other_organization_id = uuid4(), uuid4()
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
         await connection.execute(
             insert(organizations),
             [
                 {"organization_id": organization_id, "name": "Connector Tenant"},
-                {"organization_id": other_tenant_id, "name": "Other Connector Tenant"},
+                {"organization_id": other_organization_id, "name": "Other Connector Tenant"},
             ],
         )
     try:
-        yield organization_id, other_tenant_id
+        yield organization_id, other_organization_id
     finally:
         async with owner.begin() as connection:
             await connection.execute(
                 data_sources.delete().where(
-                    data_sources.c.organization_id.in_([organization_id, other_tenant_id])
+                    data_sources.c.organization_id.in_([organization_id, other_organization_id])
                 )
             )
             await connection.execute(
                 organizations.delete().where(
-                    organizations.c.organization_id.in_([organization_id, other_tenant_id])
+                    organizations.c.organization_id.in_([organization_id, other_organization_id])
                 )
             )
         await owner.dispose()

@@ -13,22 +13,22 @@ implementation: current
 priority: high
 tags: [adr, investigation, orchestration, agent-execution]
 related:
-  - "[[Investigation Domain]]"
+  - "[[Analysis Run Domain]]"
   - "[[Agent Execution Domain]]"
   - "[[Investigation Trust Loop]]"
   - "[[adr/0005-agents-and-execution-participants]]"
   - "[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]"
   - "[[adr/0018-postgres-leased-execution]]"
-repo_path: libs/application/investigation
+repo_path: libs/application/analysis_run
 code_refs:
-  - libs/application/investigation/src/zentra_application_investigation/ports.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/ports.py
   - apps/api/src/zentra_api/pipeline.py
   - apps/api/src/zentra_api/dependencies.py
   - apps/api/src/zentra_api/outcomes.py
   - apps/api/src/zentra_api/orchestrator_loop.py
-  - libs/domain/investigation/src/zentra_domain_investigation/completion.py
-  - libs/domain/investigation/src/zentra_domain_investigation/investigation_board.py
-  - libs/domain/investigation/src/zentra_domain_investigation/work_item.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/completion.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/investigation_board.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/work_item.py
 ---
 
 # Investigation Engine owns orchestration; LangGraph is not the platform controller
@@ -54,7 +54,7 @@ by which a dynamically-planned step could invoke one — the graph only ever
 calls the four roles wired into its four nodes.
 
 The one seam this decision exploits: `InvestigationPipeline`
-(`libs/application/investigation/.../ports.py`) is a `Protocol` with a single
+(`libs/application/analysis_run/.../ports.py`) is a `Protocol` with a single
 method, `run(investigation_id, tenant_id, question, model_tier,
 data_connection_id) -> PipelineResult`, implemented by exactly one class,
 `LangGraphInvestigationPipeline`, bound once in
@@ -244,7 +244,7 @@ writing to it. Crash recovery is still unbuilt.
 ## Phase 4 status
 
 Implemented. `CompletionCriteria` is formalized in the domain as
-`libs/domain/investigation/.../completion.py`: `assess_completion` grades a
+`libs/domain/analysis_run/.../completion.py`: `assess_completion` grades a
 Board against every criterion — no open HIGH-priority gap, the recheck
 validated, no unsettled Conflict, confidence at or above the Tenant's
 threshold — and reports *all* unmet ones, since a run blocked on three things

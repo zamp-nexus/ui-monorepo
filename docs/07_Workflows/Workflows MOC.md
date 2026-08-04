@@ -12,7 +12,7 @@ confidence: verified
 priority: critical
 tags: [workflow, index]
 related: ["[[Nexus Knowledge Base]]"]
-repo_path: libs/application/investigation
+repo_path: libs/application/analysis_run
 ---
 
 # Workflows

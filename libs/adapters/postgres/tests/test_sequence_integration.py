@@ -37,13 +37,13 @@ pytestmark = pytest.mark.skipif(
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
 
 
-async def _seed_tenants(*tenant_ids: UUID) -> None:
+async def _seed_organizations(*organization_ids: UUID) -> None:
     assert OWNER_URL is not None
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
             insert(organizations),
-            [{"organization_id": tid, "name": f"Tenant {tid}"} for tid in tenant_ids],
+            [{"organization_id": tid, "name": f"Tenant {tid}"} for tid in organization_ids],
         )
     await owner_engine.dispose()
 
@@ -155,7 +155,7 @@ def _build_sequence_with_two_steps(
 async def test_sequence_lineage_and_immutability_survive_a_full_reload() -> None:
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    await _seed_tenants(organization_id)
+    await _seed_organizations(organization_id)
 
     sequence_id = uuid4()
     dataset_workspace_id = uuid4()
@@ -223,8 +223,8 @@ async def test_no_repository_method_can_mutate_a_persisted_prepared_table() -> N
 async def test_cross_tenant_isolation_is_enforced_by_rls() -> None:
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    other_tenant_id = uuid4()
-    await _seed_tenants(organization_id, other_tenant_id)
+    other_organization_id = uuid4()
+    await _seed_organizations(organization_id, other_organization_id)
 
     sequence_id = uuid4()
     original = _build_sequence_with_two_steps(
@@ -241,7 +241,7 @@ async def test_cross_tenant_isolation_is_enforced_by_rls() -> None:
             await unit_of_work.sequences.add_step(step, table)
         await unit_of_work.commit()
 
-    async with factory(other_tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+    async with factory(other_organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
         invisible = await unit_of_work.sequences.get_sequence(sequence_id)
 
     assert invisible is None
@@ -251,7 +251,7 @@ async def test_cross_tenant_isolation_is_enforced_by_rls() -> None:
 async def test_thread_id_round_trips_through_a_full_reload() -> None:
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    await _seed_tenants(organization_id)
+    await _seed_organizations(organization_id)
     thread_id = uuid4()
 
     sequence_id = uuid4()
@@ -279,8 +279,8 @@ async def test_thread_id_round_trips_through_a_full_reload() -> None:
 async def test_list_sequences_orders_by_activity_and_isolates_tenants() -> None:
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    other_tenant_id = uuid4()
-    await _seed_tenants(organization_id, other_tenant_id)
+    other_organization_id = uuid4()
+    await _seed_organizations(organization_id, other_organization_id)
     dataset_workspace_id = uuid4()
 
     older_id, newer_id, foreign_id = uuid4(), uuid4(), uuid4()
@@ -301,7 +301,7 @@ async def test_list_sequences_orders_by_activity_and_isolates_tenants() -> None:
     )
     foreign_tenant_sequence = Sequence.create(
         sequence_id=foreign_id,
-        organization_id=other_tenant_id,
+        organization_id=other_organization_id,
         dataset_workspace_id=uuid4(),
         raw_table_reference=DatasetTableVersionReference(
             storage_locator="s3://fixtures/other.csv", file_format="csv"
@@ -326,7 +326,7 @@ async def test_list_sequences_orders_by_activity_and_isolates_tenants() -> None:
             )
         await unit_of_work.sequences.add_sequence(newer)
         await unit_of_work.commit()
-    async with factory(other_tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+    async with factory(other_organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
         await unit_of_work.sequences.add_sequence(foreign_tenant_sequence)
         await unit_of_work.commit()
 

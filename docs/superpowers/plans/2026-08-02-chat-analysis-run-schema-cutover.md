@@ -781,7 +781,7 @@ git commit -m "feat(postgres): rename Work Feed to Activity Feed, update Visuali
 
 **Interfaces:**
 - Consumes: `analysis_runs.analysis_run_id` (Task 3).
-- Produces: `analysis_workspaces` table (PK `workspace_id`, FK `analysis_run_id`). `board_facts`, `board_hypotheses`, `board_gaps`, `board_conflicts`, `work_items`, `analytical_scopes` keep their table names (not in the renamed-terms table — see `libs/domain/investigation/CONTEXT.md`) but their FK column to the parent table is renamed.
+- Produces: `analysis_workspaces` table (PK `workspace_id`, FK `analysis_run_id`). `board_facts`, `board_hypotheses`, `board_gaps`, `board_conflicts`, `work_items`, `analytical_scopes` keep their table names (not in the renamed-terms table — see `libs/domain/analysis_run/CONTEXT.md`) but their FK column to the parent table is renamed.
 
 - [ ] **Step 1: Update the expected table set**
 
@@ -1132,7 +1132,7 @@ analytical_scopes = Table(
 )
 ```
 
-Note `board_facts`, `board_hypotheses`, `board_gaps`, `board_conflicts`, `work_items`, and `analytical_scopes` keep their existing table names — none of them are in the renamed-terms list (`libs/domain/investigation/CONTEXT.md`'s `Work Item`, `Knowledge Gap`, `Conflict`, `Analytical Scope` terms are unchanged). Only their `board_id`/`investigation_id` foreign key columns are renamed to `workspace_id`/`analysis_run_id` to match the tables they now point at.
+Note `board_facts`, `board_hypotheses`, `board_gaps`, `board_conflicts`, `work_items`, and `analytical_scopes` keep their existing table names — none of them are in the renamed-terms list (`libs/domain/analysis_run/CONTEXT.md`'s `Work Item`, `Knowledge Gap`, `Conflict`, `Analytical Scope` terms are unchanged). Only their `board_id`/`investigation_id` foreign key columns are renamed to `workspace_id`/`analysis_run_id` to match the tables they now point at.
 
 - [ ] **Step 4: Update the re-exports in `schema.py`**
 
@@ -1387,7 +1387,7 @@ git commit -m "feat(postgres): destructive-reset migration for the Chat & Analys
 - ADR-0028 (Chat Session/Analysis Run rename, no Project layer, Group owns Chat Session directly) — Tasks 1, 2, 3.
 - ADR-0029 (Activity Feed rename) — Task 4. The inline-approval-card UI consequence of ADR-0029 belongs to the Frontend plan, not this one — `human_approvals` here only carries the renamed FK, not UI behavior.
 - ADR-0030 (destructive reset, no migration path) — Task 6.
-- Analysis Workspace / Analysis Run Status renames from `libs/domain/investigation/CONTEXT.md` — Task 5 (workspace tables); `Analysis Run Status` is a domain-layer enum (`InvestigationStatus` in `model.py`), not a schema table, so it is out of this plan's scope (the `status` column and its `CheckConstraint` values are unchanged strings, carried through Task 3 verbatim).
+- Analysis Workspace / Analysis Run Status renames from `libs/domain/analysis_run/CONTEXT.md` — Task 5 (workspace tables); `Analysis Run Status` is a domain-layer enum (`InvestigationStatus` in `model.py`), not a schema table, so it is out of this plan's scope (the `status` column and its `CheckConstraint` values are unchanged strings, carried through Task 3 verbatim).
 - Tenant/Organization scoping decision (no rename) — enforced by the Global Constraints section and Task 6's use of `tenant_id`/`{table}_tenant_isolation` throughout.
 - ADR-0033 (creator-only private Chat Sessions; `assistant_reply` as a real message kind) — Task 2's `chat_sessions.created_by`/`visibility` columns and `messages.kind`/`analysis_run_id` addition; Task 3's deferred FK closing the circular reference.
 
@@ -1399,8 +1399,8 @@ git commit -m "feat(postgres): destructive-reset migration for the Chat & Analys
 
 ## What this plan does not cover
 
-- The Python domain-layer rename (`Investigation` → `AnalysisRun` classes in `model.py`, `InvestigationThread`/`ThreadMessage` in `thread.py`, and the other ten files in `zentra_domain_investigation`) — deferred to a mechanical rename pass per your earlier decision, guided by this schema change making every stale reference fail its tests.
+- The Python domain-layer rename (`Investigation` → `AnalysisRun` classes in `model.py`, `InvestigationThread`/`ThreadMessage` in `thread.py`, and the other ten files in `zentra_domain_analysis_run`) — deferred to a mechanical rename pass per your earlier decision, guided by this schema change making every stale reference fail its tests.
 - Application/API layer: Intake's `NOT_ANALYTICAL` outcome, the Conversational Agent, removing `_append_follow_up`'s block, the new `/v1/groups/.../chats` routes (ADR-0028, ADR-0032) — next plan in the sequence.
 - Telemetry/Langfuse (ADR-0031) and Frontend (ADR-0029's Activity Inspector, composer commands) — plans 3 and 4.
-- The `libs/domain/investigation` package rename to match its new domain (tracked as follow-up, noted in `libs/domain/investigation/CONTEXT.md`).
+- The `libs/domain/analysis_run` package rename to match its new domain (tracked as follow-up, noted in `libs/domain/analysis_run/CONTEXT.md`).
 - **Enforcing** `chat_sessions.visibility = 'private'` (creator-only access) is not implemented here — this plan only adds the column. Every existing RLS policy in this codebase is tenant-scoped only (`tenant_id = current_setting('app.tenant_id')`); there is no precedent for a user-scoped policy layered on top. Enforcement (either a second RLS policy checking `created_by` against a session-local `app.user_id` setting, or an application-layer query filter) is Application-layer-plan work, and picking between those two mechanisms is itself a decision that plan should make explicitly, not inherit silently from this one.
