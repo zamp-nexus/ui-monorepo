@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 priority: high
 tags: [component, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Architecture MOC]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Architecture MOC]]"]
 repo_path: apps
 ---
 
@@ -31,4 +31,4 @@ repo_path: apps
 The current backend is one deployable composition root with internal hexagonal
 modules. The React frontend remains a separate application.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

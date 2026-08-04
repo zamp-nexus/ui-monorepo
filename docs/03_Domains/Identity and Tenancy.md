@@ -42,6 +42,6 @@ two, and never introduce a second naming scheme for the same distinction.
 
 Avoid “account,” “Clerk organization” (when the internal UUID is meant),
 “organization user,” and “guest membership” when naming domain facts.
-Canonical definitions: [ZentraOS domain context](../../libs/domain/CONTEXT.md).
+Canonical definitions: [Nexus domain context](../../libs/domain/CONTEXT.md).
 
 Parent: [[Domains MOC]]

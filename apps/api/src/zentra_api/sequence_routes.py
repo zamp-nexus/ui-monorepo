@@ -14,11 +14,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     PermissionDeniedError as ThreadPermissionDeniedError,
 )
-from zentra_application_investigation import ThreadConflictError
-from zentra_application_investigation import (
+from zentra_application_analysis_run import ThreadConflictError
+from zentra_application_analysis_run import (
     ThreadNotFoundError as ThreadServiceNotFoundError,
 )
 from zentra_application_sequence import (
@@ -30,7 +30,7 @@ from zentra_application_sequence import (
     SequenceNotFoundError,
     SequenceService,
 )
-from zentra_domain_investigation import ThreadMessageError
+from zentra_domain_analysis_run import ThreadMessageError
 
 from .request_context import RequestContext, authenticated_context
 from .sequence_schemas import (

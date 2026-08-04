@@ -16,7 +16,7 @@ related: ["[[Operations MOC]]", "[[FastAPI Service]]", "[[Forensic Observatory]]
 repo_path: apps/api/.env.example
 code_refs:
   - apps/api/.env.example
-  - apps/zentra-os/.env.example
+  - apps/nexus/.env.example
   - apps/api/src/zentra_api/settings.py
   - infra/terraform/variables.tf
 ---

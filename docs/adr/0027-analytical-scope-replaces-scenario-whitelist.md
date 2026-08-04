@@ -13,18 +13,18 @@ implementation: current
 priority: high
 tags: [adr, investigation, intake, governance]
 related:
-  - "[[Investigation Domain]]"
+  - "[[Analysis Run Domain]]"
   - "[[Chat Surface]]"
   - "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"
   - "[[adr/0026-investigation-engine-owns-orchestration]]"
-repo_path: libs/application/investigation
+repo_path: libs/application/analysis_run
 code_refs:
-  - libs/application/investigation/src/zentra_application_investigation/thread_routing.py
-  - libs/application/investigation/src/zentra_application_investigation/thread_service.py
-  - libs/application/investigation/src/zentra_application_investigation/intake_service.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/thread_routing.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/thread_service.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/intake_service.py
   - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/intake.py
-  - libs/domain/investigation/src/zentra_domain_investigation/model.py
-  - libs/domain/investigation/src/zentra_domain_investigation/analytical_scope.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/analytical_scope.py
   - libs/domain/agent-execution/src/zentra_domain_agent_execution/ports.py
 ---
 
@@ -43,7 +43,7 @@ floor no Analytical Scope configuration can widen.
 
 `thread_routing.py` matches a user's message against exactly two
 hardcoded scenarios (`eu_refund_spike`, `na_channel_growth`,
-`libs/application/investigation/.../dto.py`) via frozenset token-overlap
+`libs/application/analysis_run/.../dto.py`) via frozenset token-overlap
 requirements. Zero matches is `UNSUPPORTED`, more than one is `AMBIGUOUS`,
 and this is the entire reason chat cannot answer a question it wasn't
 specifically coded for. The coupling runs deeper than the router: the
@@ -89,7 +89,7 @@ clarified using the tenant's real configured catalog, and can never
 reference a cube or member the tenant hasn't granted — Intake calls the same
 `SemanticCatalog`-backed check every other agent is bound by, it does not
 invent a parallel governance path. `SCENARIOS`
-(`libs/application/investigation/.../dto.py`) and the two hardcoded
+(`libs/application/analysis_run/.../dto.py`) and the two hardcoded
 requirement tuples in `thread_routing.py` are deleted once Intake replaces
 them; nothing else in the domain model changes shape as a result.
 

@@ -56,7 +56,7 @@ class EvaluatorAgent:
 
     On the same tool loop as the Analyst, and for the same reason: it builds
     its own query, so it can pick a member wrong in exactly the same ways.
-    One malformed query used to end the whole investigation — observed live,
+    One malformed query used to end the whole analysis_run — observed live,
     where an Evaluator failed with `MalformedAgentResponseError` after the
     Analyst had already succeeded. A recheck that cannot correct its own
     query is a recheck that fails closed on the checker's mistake rather than

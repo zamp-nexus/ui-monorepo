@@ -12,11 +12,11 @@ confidence: verified
 implementation: current
 priority: critical
 tags: [domain, trust, approval, audit]
-related: ["[[Domains MOC]]", "[[Investigation Domain]]", "[[ClickHouse Audit Ledger]]"]
+related: ["[[Domains MOC]]", "[[Analysis Run Domain]]", "[[ClickHouse Audit Ledger]]"]
 repo_path: libs/domain/CONTEXT.md
 code_refs:
   - libs/domain/CONTEXT.md
-  - libs/domain/investigation/src/zentra_domain_investigation/model.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
 ---
 

@@ -20,14 +20,14 @@ code_refs: [package.json, nx.json, .github/workflows/ci.yml, CONTEXT-MAP.md]
 
 ## 1. Repository understanding
 
-ZentraOS is a trust-first analytical investigation product. Its current
+Nexus is a trust-first analytical investigation product. Its current
 end-to-end workflow runs one deterministic Cube-governed scenario, persists a
 tenant-isolated Investigation in Postgres, pauses at Human Approval, and emits
 an immutable metadata-only timeline to ClickHouse.
 
 The Nx monorepo contained 31 software/workspace projects before this vault; the
 governed documentation project makes 32. They span React/TypeScript and Python.
-Major surfaces are the `zentra-os` Vite application, FastAPI composition root,
+Major surfaces are the `nexus` Vite application, FastAPI composition root,
 domain and application packages, infrastructure adapters, reusable frontend
 foundation libraries, local Docker services, Terraform, and GitHub Actions.
 
@@ -48,7 +48,7 @@ foundation libraries, local Docker services, Terraform, and GitHub Actions.
 
 | Folder | Purpose and admission rule | Examples |
 | --- | --- | --- |
-| `00_Index` | One root entry and cross-vault reading paths | ZentraOS Knowledge Base |
+| `00_Index` | One root entry and cross-vault reading paths | Nexus Knowledge Base |
 | `01_Overview` | Product/repository orientation that applies across contexts | repository overview, boundaries, current status |
 | `02_Architecture` | System shape, runtime boundaries, qualities, and constraints | system context, tenancy security |
 | `03_Domains` | Behavioral context notes that index canonical `CONTEXT.md` language | Investigation, Identity and Tenancy |
@@ -135,10 +135,10 @@ reviewed: 2026-07-29
 confidence: verified
 implementation: current
 tags: [investigation, workflow]
-repo_path: libs/application/investigation
+repo_path: libs/application/analysis_run
 code_refs:
-  - libs/application/investigation/src/zentra_application_investigation/service.py
-related: ["[[Investigation Domain]]"]
+  - libs/application/analysis_run/src/zentra_application_analysis_run/service.py
+related: ["[[Analysis Run Domain]]"]
 ---
 ```
 
@@ -169,11 +169,11 @@ criteria.
 
 ## 8. Documentation map for this repository
 
-The root map is [[ZentraOS Knowledge Base]]. The highest-value path follows
-[[Investigation Trust Loop]] through [[Investigation Domain]],
+The root map is [[Nexus Knowledge Base]]. The highest-value path follows
+[[Investigation Trust Loop]] through [[Analysis Run Domain]],
 [[Cube Semantic Model]], [[Postgres Control Plane]],
 [[Audit Outbox Delivery]], [[ClickHouse Audit Ledger]],
-[[Trust and Verification]], [[Investigation API]], and
+[[Trust and Verification]], [[Analysis Run API]], and
 [[Forensic Observatory]].
 
 Architecture, domains, APIs, data, operations, onboarding, and runbooks each
@@ -216,7 +216,7 @@ See [[Documentation Maintenance Workflow]].
 
 A documentation engineer should create or verify, in order:
 
-1. [[ZentraOS Knowledge Base]] and all MOCs.
+1. [[Nexus Knowledge Base]] and all MOCs.
 2. [[Repository Overview]], [[System Context]], and [[Product Boundaries]].
 3. [[Investigation Trust Loop]] and its linked domain/data/API/component notes.
 4. [[Local Development]], [[First Day]], and [[First Change]].

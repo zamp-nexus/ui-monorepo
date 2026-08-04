@@ -17,7 +17,7 @@ repo_path: .github/workflows/ci.yml
 code_refs:
   - .github/workflows/ci.yml
   - vitest.workspace.ts
-  - apps/zentra-os-e2e/playwright.config.ts
+  - apps/nexus-e2e/playwright.config.ts
 ---
 
 # Test Strategy

@@ -33,9 +33,9 @@ guaranteed never to.
 
 | Role | Database | Contains | Owner |
 | --- | --- | --- | --- |
-| **Audit Ledger** | `zentra_audit` | Process metadata and `artifact://` refs, never raw values | ZentraOS |
+| **Audit Ledger** | `zentra_audit` | Process metadata and `artifact://` refs, never raw values | Nexus |
 | **Connected warehouse** | the customer's own | The customer's rows, read in place, never copied | Tenant |
-| **Upload landing zone** | `zentra_uploads` | Raw customer data, by design | ZentraOS |
+| **Upload landing zone** | `zentra_uploads` | Raw customer data, by design | Nexus |
 
 The landing zone is deliberately a **different database** from the audit ledger.
 The ledger's guarantee under
@@ -56,7 +56,7 @@ reasonable thing to do to them.
 
 **Raw sample values are opt-in per Data Source and off by default.** Statistics
 are aggregates and carry limited disclosure risk; retained values would place
-customer data in ZentraOS storage, which is a materially different posture for a
+customer data in Nexus storage, which is a materially different posture for a
 system whose ledger is built to hold none. The default costs no functionality,
 because relation inference runs on aggregate counts.
 

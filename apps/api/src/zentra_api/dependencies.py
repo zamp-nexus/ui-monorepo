@@ -6,7 +6,6 @@ import socket
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -27,33 +26,33 @@ from zentra_adapter_model_providers import (
 from zentra_adapter_postgres import (
     Database,
     PostgresAgentAccessRepository,
+    PostgresAnalysisRunUnitOfWorkFactory,
     PostgresCatalogRepository,
     PostgresDataSourceRepository,
     PostgresGroupUnitOfWorkFactory,
     PostgresHarvestRunRepository,
-    PostgresInvestigationUnitOfWorkFactory,
     PostgresOrganizationProvisioningUnitOfWorkFactory,
     PostgresRelationRepository,
     PostgresSequenceUnitOfWorkFactory,
     PostgresThreadUnitOfWorkFactory,
+    listen_for_notify,
 )
 from zentra_adapter_telemetry import (
     record_agent_execution,
     record_evidence_deletion,
     record_publication_decision,
 )
-from zentra_adapter_thesys import ThesysC1Client
-from zentra_application_connector import ConnectorService
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
+    AnalysisRunService,
     ConversationalService,
     ExecutionJobWorker,
     GroupService,
     IntakeService,
-    InvestigationService,
     OrganizationProvisioningService,
     ThreadService,
     VisualizationService,
 )
+from zentra_application_connector import ConnectorService
 from zentra_application_sequence import SequenceService
 from zentra_domain_agent_execution import SemanticLayerPort
 
@@ -66,6 +65,7 @@ from .pipeline import PostgresExecutionRecorder
 from .registry import PostgresAgentRegistry
 from .sequence_model import ConnectorRawTableResolver
 from .settings import Settings
+from .thread_event_notifier import CHANNEL, ThreadEventNotifier
 
 
 class HealthProbe(Protocol):
@@ -75,7 +75,7 @@ class HealthProbe(Protocol):
 class _UtcClock:
     """The Connector's `Clock` port.
 
-    A class rather than the `now=lambda` the Investigation service takes,
+    A class rather than the `now=lambda` the Analysis Run service takes,
     because that port asks for an object with a `now()` method.
     """
 
@@ -95,7 +95,7 @@ class AppDependencies:
     semantic_layers: ScopedCubeSemanticLayers
     models: ProviderClients
     jwt_verifier: ClerkJwtVerifier
-    investigations: InvestigationService
+    analysis_runs: AnalysisRunService
     audit_delivery: AuditDeliveryCoordinator
     groups: GroupService
     #: Provisions Organizations/Users from Clerk webhook events. Named
@@ -106,6 +106,9 @@ class AppDependencies:
     execution_worker: ExecutionJobWorker
     execution_worker_enabled: bool
     registry: PostgresAgentRegistry
+    #: Wakes an SSE reader within milliseconds of a Work Feed commit instead
+    #: of waiting for the next poll tick -- see `thread_event_notifier.py`.
+    thread_events: ThreadEventNotifier
     visualizations: VisualizationService | None = None
     #: Absent when `CONNECTOR_CREDENTIAL_KEY` is unset. `None` rather than a
     #: service with no key: the Connector routes then fail with a message
@@ -129,6 +132,13 @@ class AppDependencies:
     @classmethod
     def from_settings(cls, settings: Settings) -> AppDependencies:
         database = Database(settings.database_url)
+        # `listen`/`NOTIFY` needs a session-scoped connection straight from
+        # the driver, never one handed back to a pool mid-subscription --
+        # SQLAlchemy's async engine is the wrong tool for this one connection.
+        # `+psycopg` is a SQLAlchemy dialect qualifier; psycopg itself takes a
+        # plain `postgresql://` DSN.
+        raw_dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
+        thread_events = ThreadEventNotifier(lambda: listen_for_notify(raw_dsn, CHANNEL))
         audit = AuditRepository.connect(
             host=settings.clickhouse_host,
             port=settings.clickhouse_port,
@@ -140,7 +150,7 @@ class AppDependencies:
         # Unauthenticated: /readyz needs no token, and a health probe must
         # not depend on a JWT's expiry.
         cube = CubeClient(settings.cube_url, None)
-        unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
+        unit_of_work_factory = PostgresAnalysisRunUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
         recorder = PostgresExecutionRecorder(unit_of_work_factory)
 
@@ -168,7 +178,7 @@ class AppDependencies:
             resolve_relation_fingerprint=resolve_relation_fingerprint,
         )
 
-        # ADR-0026: the Investigation Engine's Board and Work Item queue
+        # ADR-0026: the Analysis Run Engine's Board and Work Item queue
         # are the platform controller. There is no graph to build any more —
         # the loop holds the Agents directly.
         #
@@ -186,7 +196,7 @@ class AppDependencies:
             unit_of_work_factory=unit_of_work_factory,
             audit=audit,
         )
-        investigations = InvestigationService(
+        analysis_runs = AnalysisRunService(
             unit_of_work_factory=unit_of_work_factory,
             pipeline=OrchestratorLoop(
                 agents_factories,
@@ -249,25 +259,20 @@ class AppDependencies:
                 agent_factory=_build_conversational_agent,
                 new_id=uuid4,
             ),
+            # Same coordinator `analysis_runs` uses above -- it owns the
+            # retry-loop task and the set of organizations that loop sweeps,
+            # so Thread-created Analysis Runs need to flush through this
+            # instance rather than a second one, or the sweep gap this closes
+            # would just reopen.
+            audit_writer=audit_delivery,
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
         visualizations = VisualizationService(
             unit_of_work_factory=unit_of_work_factory,
-            renderer=(
-                ThesysC1Client(
-                    api_key=settings.thesys_api_key,
-                    model=settings.thesys_model,
-                    input_price_per_million=Decimal(
-                        str(settings.thesys_input_price_per_million)
-                    ),
-                    output_price_per_million=Decimal(
-                        str(settings.thesys_output_price_per_million)
-                    ),
-                )
-                if settings.thesys_api_key
-                else None
-            ),
+            # The chat surface renders the governed brief natively now, not a
+            # generative-UI render of it, so there is no renderer to call.
+            renderer=None,
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
             continuation=threads,
@@ -314,7 +319,7 @@ class AppDependencies:
         )
         execution_worker = ExecutionJobWorker(
             unit_of_work_factory=unit_of_work_factory,
-            executor=investigations,
+            executor=analysis_runs,
             visualization_executor=visualizations,
             worker_id=worker_id,
             now=lambda: datetime.now(UTC),
@@ -329,7 +334,7 @@ class AppDependencies:
                 settings.clerk_issuer,
                 settings.clerk_audience,
             ),
-            investigations=investigations,
+            analysis_runs=analysis_runs,
             audit_delivery=audit_delivery,
             groups=groups,
             organizations=organizations,
@@ -337,6 +342,7 @@ class AppDependencies:
             execution_worker=execution_worker,
             execution_worker_enabled=settings.execution_worker_enabled,
             registry=registry,
+            thread_events=thread_events,
             visualizations=visualizations,
             connector=connector,
             sequences=sequences,
@@ -345,10 +351,11 @@ class AppDependencies:
 
     async def start(self) -> None:
         self.audit_delivery.start()
+        self.thread_events.start()
         if self.execution_worker_enabled and self.worker_task is None:
             self.worker_task = asyncio.create_task(
                 self.execution_worker.run_forever(),
-                name="investigation-execution-worker",
+                name="analysis-run-execution-worker",
             )
 
     async def stop(self) -> None:
@@ -358,6 +365,7 @@ class AppDependencies:
             with suppress(asyncio.CancelledError):
                 await self.worker_task
             self.worker_task = None
+        self.thread_events.stop()
         await self.audit_delivery.stop()
 
     async def close(self) -> None:

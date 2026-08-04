@@ -32,7 +32,7 @@ def _raw_table() -> ConnectorSourceTableReference:
 
 
 def _actor() -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=uuid4(), tenant_id=TENANT_ID, role=Role.MEMBER)
+    return AuthenticatedActor(user_id=uuid4(), organization_id=TENANT_ID, role=Role.MEMBER)
 
 
 @pytest.mark.asyncio

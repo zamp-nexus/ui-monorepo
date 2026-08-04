@@ -14,7 +14,7 @@ priority: critical
 tags: [operations, local, development]
 related: ["[[Operations MOC]]", "[[First Day]]", "[[Recover Local Foundation]]"]
 repo_path: README.md
-code_refs: [README.md, docker-compose.yml, apps/api/.env.example, apps/zentra-os/.env.example]
+code_refs: [README.md, docker-compose.yml, apps/api/.env.example, apps/nexus/.env.example]
 ---
 
 # Local Development
@@ -40,7 +40,7 @@ provider placeholders. Local database credentials in Compose are fixtures only.
 
 ```bash
 npm exec -- nx serve api
-npm exec -- nx serve zentra-os
+npm exec -- nx serve nexus
 ```
 
 Frontend: `http://localhost:4200`; API: `http://localhost:8000`; Cube:
@@ -55,7 +55,7 @@ rather than assuming a development identity.
 npm exec -- nx run docs:check
 uv run python tools/architecture/verify_known_bad_boundary.py
 npm exec -- nx run-many -t lint test build typecheck
-npm exec -- nx e2e zentra-os-e2e
+npm exec -- nx e2e nexus-e2e
 ```
 
 Troubleshooting: [[Recover Local Foundation]] and

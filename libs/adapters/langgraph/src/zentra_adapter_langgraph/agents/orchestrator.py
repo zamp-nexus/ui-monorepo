@@ -24,7 +24,7 @@ from ..schemas import TASK_LEDGER_SCHEMA, parse_json_object
 AGENT_ID = "orchestrator_v1"
 
 # The roles this workflow cannot run without. Resolved against the registry at
-# investigation start, never against a hardcoded list of implementations.
+# analysis_run start, never against a hardcoded list of implementations.
 #
 # Injectable because the Phase 2 route needs Insight to be required too, and a
 # route that needs an Agent must refuse when the registry has not promoted one
@@ -50,6 +50,9 @@ DESCRIPTOR = AgentDescriptor(
 
 class NoEnabledAgentError(RuntimeError):
     """A required role has no enabled, eval-passing agent registered."""
+
+    category = "no_enabled_agent"
+    transient = False
 
 
 class OrchestratorAgent:

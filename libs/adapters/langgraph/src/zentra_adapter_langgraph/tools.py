@@ -223,7 +223,7 @@ class SemanticQueryTool:
             # Reported to the model rather than raised past it. Reaching for a
             # member the catalog does not define is a mistake the Agent can
             # correct on the next turn, and telling it which member was wrong
-            # is the difference between a retry and a failed investigation.
+            # is the difference between a retry and a failed analysis_run.
             return _refusal(str(error))
 
         self.last_query = query

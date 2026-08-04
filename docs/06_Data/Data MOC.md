@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 priority: critical
 tags: [data, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Tenancy Security]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Tenancy Security]]"]
 repo_path: libs/adapters
 ---
 
@@ -28,4 +28,4 @@ Postgres is transactional state, ClickHouse is the immutable audit authority,
 and Cube governs analytical definitions over the synthetic warehouse. Phase 3
 plans R2 objects, server-side DuckDB, and verified Cube live-source routing.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

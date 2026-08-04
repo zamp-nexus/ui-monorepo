@@ -11,9 +11,9 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
-from zentra_application_investigation import InvestigationNotFoundError
+from zentra_application_analysis_run import AnalysisRunNotFoundError
 from zentra_domain_agent_execution import ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     CitationFilter,
     CitationState,
     Claim,
@@ -25,18 +25,18 @@ from zentra_domain_investigation import (
 )
 
 from .test_api import (
+    AnalysisRunServiceStub,
     IdentityContext,
-    InvestigationServiceStub,
+    analysis_run_detail,
     client,
-    investigation_detail,
 )
 
 
 def structured_citation() -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-        investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
+        analysis_run_id=UUID("30000000-0000-0000-0000-000000000003"),
         metric="refund_amount",
         filters=(
             CitationFilter(member="Commerce.region", operator="equals", values=("EU",)),
@@ -55,8 +55,8 @@ def structured_citation() -> EvidenceCitation:
 def structured_draft() -> DraftFinding:
     return DraftFinding(
         draft_finding_id=UUID("40000000-0000-0000-0000-000000000004"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-        investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
+        analysis_run_id=UUID("30000000-0000-0000-0000-000000000003"),
         version=2,
         created_at=datetime(2026, 7, 29, tzinfo=UTC),
         produced_by_execution_id=None,
@@ -92,27 +92,27 @@ def authenticated(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
 
 
-def test_a_legacy_investigation_is_not_dressed_up_as_a_structured_draft(
+def test_a_legacy_analysis_run_is_not_dressed_up_as_a_structured_draft(
     monkeypatch,
 ) -> None:
-    """The whole point of keeping the two side by side. An Investigation that
+    """The whole point of keeping the two side by side. An Analysis Run that
     ran before Insight has narrative and opaque pointers; reporting it as a
     Draft Finding would claim its sentences are individually citable when
     nothing can resolve them."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    with client(investigations=service) as test_client:
+    service = AnalysisRunServiceStub()
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -129,14 +129,14 @@ def test_a_structured_draft_survives_the_api_round_trip(monkeypatch) -> None:
     the unresolved root cause all have to arrive as data — a client cannot
     re-derive any of them from prose."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    service.detail = investigation_detail(
+    service = AnalysisRunServiceStub()
+    service.detail = analysis_run_detail(
         draft_finding=structured_draft(),
         evidence_citations=(structured_citation(),),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -166,14 +166,14 @@ def test_the_legacy_finding_is_still_served_beside_a_structured_draft(
     """Additive means both, not either. Dropping `finding` the moment a draft
     exists would break every client written against Phase 1."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    service.detail = investigation_detail(
+    service = AnalysisRunServiceStub()
+    service.detail = analysis_run_detail(
         draft_finding=structured_draft(),
         evidence_citations=(structured_citation(),),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -187,14 +187,14 @@ def test_the_api_distinguishes_measurement_from_interpretation(monkeypatch) -> N
     measured, what an Agent made of it, what is still disputed, and whether the
     cause is known. Each arrives as its own field."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    service.detail = investigation_detail(
+    service = AnalysisRunServiceStub()
+    service.detail = analysis_run_detail(
         draft_finding=structured_draft(),
         evidence_citations=(structured_citation(),),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -221,23 +221,23 @@ def test_root_cause_unresolved_is_reported_even_on_a_confident_draft(
     monkeypatch,
 ) -> None:
     """The failure mode ADR 0011 exists to prevent: a high-confidence,
-    fully-agreeing Investigation reading as though the cause were established."""
+    fully-agreeing Analysis Run reading as though the cause were established."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    service.detail = investigation_detail(
+    service = AnalysisRunServiceStub()
+    service.detail = analysis_run_detail(
         draft_finding=structured_draft(),
         evidence_citations=(structured_citation(),),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
     assert response.json()["draft_finding"]["root_cause"] == "unresolved"
 
 
-def resolving(service: InvestigationServiceStub, result):
+def resolving(service: AnalysisRunServiceStub, result):
     """Point the stub's resolver at one outcome — a citation or an exception."""
 
     async def resolve(*args: object, **kwargs: object):
@@ -252,10 +252,10 @@ def resolving(service: InvestigationServiceStub, result):
 def test_an_authorized_reader_resolves_an_active_citation(monkeypatch) -> None:
     """Everything ADR 0011 says a citation identifies, in one response."""
     authenticated(monkeypatch)
-    service = resolving(InvestigationServiceStub(), structured_citation())
-    with client(investigations=service) as test_client:
+    service = resolving(AnalysisRunServiceStub(), structured_citation())
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001",
             headers={"Authorization": "Bearer valid"},
         )
@@ -278,10 +278,10 @@ def test_a_resolved_citation_carries_no_prohibited_payload(monkeypatch) -> None:
     """`extra="forbid"` makes this a property of the type, but the assertion is
     on the wire because that is where a future field would show up."""
     authenticated(monkeypatch)
-    service = resolving(InvestigationServiceStub(), structured_citation())
-    with client(investigations=service) as test_client:
+    service = resolving(AnalysisRunServiceStub(), structured_citation())
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001",
             headers={"Authorization": "Bearer valid"},
         )
@@ -298,10 +298,10 @@ def test_unexpectedly_missing_evidence_is_unavailable_not_a_tombstone(
     loss as a deletion would reassure a reader about data that is simply gone."""
     authenticated(monkeypatch)
     lost = replace(structured_citation(), state=CitationState.UNAVAILABLE)
-    service = resolving(InvestigationServiceStub(), lost)
-    with client(investigations=service) as test_client:
+    service = resolving(AnalysisRunServiceStub(), lost)
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001",
             headers={"Authorization": "Bearer valid"},
         )
@@ -318,17 +318,17 @@ def test_another_tenants_citation_is_indistinguishable_from_nothing(
     somebody else's evidence exists by copying an identifier."""
     authenticated(monkeypatch)
     service = resolving(
-        InvestigationServiceStub(),
-        InvestigationNotFoundError("Evidence was not found"),
+        AnalysisRunServiceStub(),
+        AnalysisRunNotFoundError("Evidence was not found"),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         foreign = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001",
             headers={"Authorization": "Bearer valid"},
         )
         unknown = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/99999999-9999-4999-8999-999999999999",
             headers={"Authorization": "Bearer valid"},
         )
@@ -341,10 +341,10 @@ def test_another_tenants_citation_is_indistinguishable_from_nothing(
 
 def test_a_malformed_citation_id_discloses_nothing(monkeypatch) -> None:
     authenticated(monkeypatch)
-    service = resolving(InvestigationServiceStub(), structured_citation())
-    with client(investigations=service) as test_client:
+    service = resolving(AnalysisRunServiceStub(), structured_citation())
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/not-a-uuid",
             headers={"Authorization": "Bearer valid"},
         )
@@ -354,10 +354,10 @@ def test_a_malformed_citation_id_discloses_nothing(monkeypatch) -> None:
 
 
 def test_resolution_requires_authentication() -> None:
-    service = resolving(InvestigationServiceStub(), structured_citation())
-    with client(investigations=service) as test_client:
+    service = resolving(AnalysisRunServiceStub(), structured_citation())
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001",
         )
 
@@ -371,16 +371,16 @@ def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
     seen: list[object] = []
 
     async def resolve(actor, **kwargs: object):
-        seen.append(actor.tenant_id)
+        seen.append(actor.organization_id)
         return structured_citation()
 
-    service = InvestigationServiceStub()
+    service = AnalysisRunServiceStub()
     service.resolve_citation = resolve  # type: ignore[method-assign]
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001"
-            "?tenant_id=11111111-1111-4111-8111-111111111111",
+            "?organization_id=11111111-1111-4111-8111-111111111111",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -389,9 +389,9 @@ def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
 
 
 def gated_detail(*failed: str):
-    from zentra_application_investigation import PendingApproval
+    from zentra_application_analysis_run import PendingApproval
 
-    detail = investigation_detail(draft_finding=structured_draft())
+    detail = analysis_run_detail(draft_finding=structured_draft())
     return replace(
         detail,
         pending_approval=PendingApproval(
@@ -408,11 +408,11 @@ def test_the_api_reports_every_failed_publication_condition(monkeypatch) -> None
     """A client shown only the headline would show a reviewer part of the
     picture. Both use the policy's own vocabulary."""
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
+    service = AnalysisRunServiceStub()
     service.detail = gated_detail("converged", "confident", "evidenced")
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
@@ -421,25 +421,25 @@ def test_the_api_reports_every_failed_publication_condition(monkeypatch) -> None
     assert approval["failed_conditions"] == ["converged", "confident", "evidenced"]
 
 
-def test_an_automatically_published_investigation_reports_no_gate(
+def test_an_automatically_published_analysis_run_reports_no_gate(
     monkeypatch,
 ) -> None:
     authenticated(monkeypatch)
-    service = InvestigationServiceStub()
-    with client(investigations=service) as test_client:
+    service = AnalysisRunServiceStub()
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003",
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003",
             headers={"Authorization": "Bearer valid"},
         )
 
     assert response.json()["pending_approval"] is None
 
 
-INVESTIGATION_UUID = "30000000-0000-0000-0000-000000000003"
-DELETION_URL = f"/v1/investigations/{INVESTIGATION_UUID}/evidence-deletion"
+ANALYSIS_RUN_UUID = "30000000-0000-0000-0000-000000000003"
+DELETION_URL = f"/v1/analysis-runs/{ANALYSIS_RUN_UUID}/evidence-deletion"
 
 
-def deleting(service: InvestigationServiceStub, result):
+def deleting(service: AnalysisRunServiceStub, result):
     async def delete_evidence(*args: object, **kwargs: object):
         if isinstance(result, Exception):
             raise result
@@ -449,18 +449,18 @@ def deleting(service: InvestigationServiceStub, result):
     return service
 
 
-def test_deletion_requires_naming_the_investigation_being_deleted(
+def test_deletion_requires_naming_the_analysis_run_being_deleted(
     monkeypatch,
 ) -> None:
     """An irreversible action should be impossible to trigger by replaying a
     URL, and a confirmation the client can default to would not be one."""
     authenticated(monkeypatch)
-    service = deleting(InvestigationServiceStub(), InvestigationServiceStub().detail)
-    with client(investigations=service) as test_client:
+    service = deleting(AnalysisRunServiceStub(), AnalysisRunServiceStub().detail)
+    with client(analysis_runs=service) as test_client:
         wrong = test_client.post(
             DELETION_URL,
             headers={"Authorization": "Bearer valid"},
-            json={"confirm_investigation_id": "99999999-9999-4999-8999-999999999999"},
+            json={"confirm_analysis_run_id": "99999999-9999-4999-8999-999999999999"},
         )
         missing = test_client.post(
             DELETION_URL,
@@ -472,14 +472,14 @@ def test_deletion_requires_naming_the_investigation_being_deleted(
     assert missing.status_code == 422
 
 
-def test_a_confirmed_deletion_returns_the_investigation(monkeypatch) -> None:
+def test_a_confirmed_deletion_returns_the_analysis_run(monkeypatch) -> None:
     authenticated(monkeypatch)
-    service = deleting(InvestigationServiceStub(), InvestigationServiceStub().detail)
-    with client(investigations=service) as test_client:
+    service = deleting(AnalysisRunServiceStub(), AnalysisRunServiceStub().detail)
+    with client(analysis_runs=service) as test_client:
         response = test_client.post(
             DELETION_URL,
             headers={"Authorization": "Bearer valid"},
-            json={"confirm_investigation_id": INVESTIGATION_UUID},
+            json={"confirm_analysis_run_id": ANALYSIS_RUN_UUID},
         )
 
     assert response.status_code == 200
@@ -488,43 +488,43 @@ def test_a_confirmed_deletion_returns_the_investigation(monkeypatch) -> None:
 
 
 def test_a_member_cannot_delete_evidence(monkeypatch) -> None:
-    from zentra_application_investigation import PermissionDeniedError
+    from zentra_application_analysis_run import PermissionDeniedError
 
     authenticated(monkeypatch)
     service = deleting(
-        InvestigationServiceStub(),
+        AnalysisRunServiceStub(),
         PermissionDeniedError("This membership cannot delete evidence"),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.post(
             DELETION_URL,
             headers={"Authorization": "Bearer valid"},
-            json={"confirm_investigation_id": INVESTIGATION_UUID},
+            json={"confirm_analysis_run_id": ANALYSIS_RUN_UUID},
         )
 
     assert response.status_code == 403
 
 
-def test_deleting_a_live_investigation_is_a_conflict_not_a_refusal(
+def test_deleting_a_live_analysis_run_is_a_conflict_not_a_refusal(
     monkeypatch,
 ) -> None:
     """ "Not yet" is a different answer from "not allowed", and a caller that
     conflated them would retry the wrong thing."""
-    from zentra_application_investigation import ConflictError
+    from zentra_application_analysis_run import ConflictError
 
     authenticated(monkeypatch)
     service = deleting(
-        InvestigationServiceStub(),
+        AnalysisRunServiceStub(),
         ConflictError(
-            "Evidence can only be erased from a terminal Investigation; "
+            "Evidence can only be erased from a terminal Analysis Run; "
             "this one is running"
         ),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.post(
             DELETION_URL,
             headers={"Authorization": "Bearer valid"},
-            json={"confirm_investigation_id": INVESTIGATION_UUID},
+            json={"confirm_analysis_run_id": ANALYSIS_RUN_UUID},
         )
 
     assert response.status_code == 409
@@ -538,20 +538,20 @@ def test_a_tombstone_response_carries_nothing_but_identity_and_time(
     later change reintroducing the metric or the filters."""
     from datetime import UTC as _UTC
 
-    from zentra_domain_investigation import Tombstone
+    from zentra_domain_analysis_run import Tombstone
 
     authenticated(monkeypatch)
     service = resolving(
-        InvestigationServiceStub(),
+        AnalysisRunServiceStub(),
         Tombstone(
             citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
-            category="tenant_request",
+            category="organization_request",
             erased_at=datetime(2026, 7, 31, 14, 0, tzinfo=_UTC),
         ),
     )
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.get(
-            f"/v1/investigations/{INVESTIGATION_UUID}"
+            f"/v1/analysis-runs/{ANALYSIS_RUN_UUID}"
             "/citations/cc000000-0000-0000-0000-000000000001",
             headers={"Authorization": "Bearer valid"},
         )

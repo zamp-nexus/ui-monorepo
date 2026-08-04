@@ -1,7 +1,7 @@
-"""ZentraOS agent adapter.
+"""Nexus agent adapter.
 
 Named for LangGraph, which used to compile these agents into a fixed graph.
-ADR-0026 moved orchestration to the Investigation Engine's Board and Work Item
+ADR-0026 moved orchestration to the AnalysisRun Engine's Board and Work Item
 queue; what is left here are the Agents themselves, which never depended on
 LangGraph — they are model calls against a governed semantic layer.
 """

@@ -1,11 +1,11 @@
 # Connector
 
-The Connector context owns how ZentraOS learns what is in a Tenant's data and how that data connects.
+The Connector context owns how Nexus learns what is in a Tenant's data and how that data connects.
 
 ## Data Sources
 
 **Data Source**:
-A tenant-owned origin of queryable data ZentraOS has been granted access to. Either `connected` — a warehouse ZentraOS reads in place — or `uploaded` — a file ZentraOS landed. Two kinds of one concept, not two concepts.
+A tenant-owned origin of queryable data Nexus has been granted access to. Either `connected` — a warehouse Nexus reads in place — or `uploaded` — a file Nexus landed. Two kinds of one concept, not two concepts.
 _Avoid_: Connector, integration, connection, database
 
 **Connection Check**:

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import and_, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     ExecutionJob,
     ExecutionJobKind,
     ExecutionJobStatus,
@@ -19,7 +19,7 @@ def _job_from_row(row: Any) -> ExecutionJob:
     return ExecutionJob(
         job_id=row.job_id,
         organization_id=row.organization_id,
-        investigation_id=row.analysis_run_id,
+        analysis_run_id=row.analysis_run_id,
         status=ExecutionJobStatus(row.status),
         attempts=row.attempts,
         max_attempts=row.max_attempts,
@@ -64,7 +64,7 @@ class PostgresExecutionJobRepository:
             insert(execution_jobs).values(
                 job_id=job.job_id,
                 organization_id=job.organization_id,
-                analysis_run_id=job.investigation_id,
+                analysis_run_id=job.analysis_run_id,
                 created_at=job.created_at,
                 **_values(job),
             )
@@ -118,15 +118,15 @@ class PostgresExecutionJobRepository:
         row = (await self._connection.execute(statement)).one_or_none()
         return _job_from_row(row) if row is not None else None
 
-    async def get_for_investigation(
+    async def get_for_analysis_run(
         self,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         *,
         for_update: bool = False,
     ) -> ExecutionJob | None:
         statement = select(execution_jobs).where(
-            execution_jobs.c.analysis_run_id == investigation_id,
-            execution_jobs.c.job_kind == ExecutionJobKind.INVESTIGATION.value,
+            execution_jobs.c.analysis_run_id == analysis_run_id,
+            execution_jobs.c.job_kind == ExecutionJobKind.ANALYSIS_RUN.value,
         )
         if for_update:
             statement = statement.with_for_update()

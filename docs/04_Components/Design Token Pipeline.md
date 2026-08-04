@@ -19,7 +19,7 @@ code_refs:
   - libs/foundation/design-system/src/tokens/tokens.css
   - libs/foundation/design-system/src/tokens/themes/dark.ts
   - libs/foundation/design-system/src/tokens/themes/light.ts
-  - apps/zentra-os/src/styles.css
+  - apps/nexus/src/styles.css
 ---
 
 # Design Token Pipeline
@@ -34,7 +34,7 @@ How a design system class becomes a colour on screen.
    runtime variables the themes set (`--interactive-primary`, `--text-primary`,
    `--bg-layer-01`, `--border-default`, `--interactive-destructive`).
 3. `:root` and `.light` / `[data-theme='light']` supply those runtime variables.
-4. `apps/zentra-os/src/styles.css` imports `tokens.css` and declares
+4. `apps/nexus/src/styles.css` imports `tokens.css` and declares
    `@source` for the design system directory.
 
 `inline` is load-bearing. A plain `@theme` computes each alias once against

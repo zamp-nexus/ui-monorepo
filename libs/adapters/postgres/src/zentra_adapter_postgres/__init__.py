@@ -1,4 +1,4 @@
-"""ZentraOS Postgres control-plane adapter"""
+"""Nexus Postgres control-plane adapter"""
 
 from .agent_access import PostgresAgentAccessRepository
 from .connector import PostgresDataSourceRepository
@@ -9,16 +9,17 @@ from .connector_catalog import (
 )
 from .database import Database
 from .execution_job import PostgresExecutionJobRepository
+from .notify import listen as listen_for_notify
 from .identity import (
     IdentityContext,
     IdentityNotBoundError,
     resolve_identity_context,
 )
-from .investigation import (
-    ConcurrentInvestigationUpdateError,
+from .analysis_run import (
+    ConcurrentAnalysisRunUpdateError,
     OutboxRecord,
-    PostgresInvestigationUnitOfWork,
-    PostgresInvestigationUnitOfWorkFactory,
+    PostgresAnalysisRunUnitOfWork,
+    PostgresAnalysisRunUnitOfWorkFactory,
 )
 from .organization_provisioning import (
     PostgresOrganizationProvisioningRepository,
@@ -46,17 +47,18 @@ from .workspace import (
 
 __all__ = [
     "Database",
+    "listen_for_notify",
     "IdentityContext",
     "IdentityNotBoundError",
-    "ConcurrentInvestigationUpdateError",
+    "ConcurrentAnalysisRunUpdateError",
     "OutboxRecord",
     "PostgresAgentAccessRepository",
     "PostgresCatalogRepository",
     "PostgresDataSourceRepository",
     "PostgresHarvestRunRepository",
     "PostgresExecutionJobRepository",
-    "PostgresInvestigationUnitOfWork",
-    "PostgresInvestigationUnitOfWorkFactory",
+    "PostgresAnalysisRunUnitOfWork",
+    "PostgresAnalysisRunUnitOfWorkFactory",
     "PostgresGroupRepository",
     "PostgresGroupUnitOfWork",
     "PostgresGroupUnitOfWorkFactory",

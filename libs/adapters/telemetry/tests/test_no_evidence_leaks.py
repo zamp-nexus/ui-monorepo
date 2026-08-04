@@ -172,7 +172,7 @@ def _emit_everything() -> None:
 
 
 def test_no_recorder_writes_an_attribute_nobody_reviewed(telemetry) -> None:
-    with telemetry.tracer.start_as_current_span("investigation"):
+    with telemetry.tracer.start_as_current_span("analysis_run"):
         _emit_everything()
 
     written = set(telemetry.attributes())
@@ -181,7 +181,7 @@ def test_no_recorder_writes_an_attribute_nobody_reviewed(telemetry) -> None:
 
 
 def test_no_metric_carries_an_unbounded_dimension(telemetry) -> None:
-    with telemetry.tracer.start_as_current_span("investigation"):
+    with telemetry.tracer.start_as_current_span("analysis_run"):
         _emit_everything()
 
     points = telemetry.dimensions()
@@ -204,7 +204,7 @@ def test_poison_cannot_reach_a_span_through_an_unlisted_key(
     expected behaviour is an exception.
     """
     with (
-        telemetry.tracer.start_as_current_span("investigation"),
+        telemetry.tracer.start_as_current_span("analysis_run"),
         pytest.raises(ValueError, match="not on the safe list"),
     ):
         _record({f"zentra.insight.{category}": value})
@@ -231,8 +231,8 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
     """
     assert frozenset(
         {
-            "zentra.tenant_id",
-            "zentra.investigation_id",
+            "zentra.organization_id",
+            "zentra.analysis_run_id",
             "zentra.thread_id",
             "zentra.insight.agent_id",
             "zentra.insight.model",
@@ -371,7 +371,7 @@ def test_a_partial_erasure_is_never_reported_as_completed(telemetry) -> None:
 def test_an_execution_with_no_skills_writes_no_skill_attribute(telemetry) -> None:
     """Most roles hold no Skill at all — the common case must stay silent
     rather than write an empty `zentra.skill.names`."""
-    with telemetry.tracer.start_as_current_span("investigation"):
+    with telemetry.tracer.start_as_current_span("analysis_run"):
         record_skill_activation(role="intake", skill_names=())
 
     assert "zentra.skill.role" not in telemetry.attributes()

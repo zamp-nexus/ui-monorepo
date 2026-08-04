@@ -29,7 +29,7 @@ def override(
 ) -> CatalogAccessOverride:
     return CatalogAccessOverride(
         override_id=UUID(int=hash((table_name, field_name, decided_at)) & (2**128 - 1)),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_source_id=DATA_SOURCE_ID,
         table_name=table_name,
         field_name=field_name,
@@ -60,7 +60,7 @@ def version(tables: tuple[SourceTable, ...]) -> CatalogVersion:
     return CatalogVersion(
         catalog_version_id=UUID(int=1),
         data_source_id=DATA_SOURCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         harvest_run_id=UUID(int=1),
         created_at=NOW,
         tables=tables,

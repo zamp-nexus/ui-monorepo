@@ -11,7 +11,7 @@ reviewed: YYYY-MM-DD
 confidence: verified
 priority: normal
 tags: [index, <topic>]
-related: ["[[ZentraOS Knowledge Base]]"]
+related: ["[[Nexus Knowledge Base]]"]
 repo_path: docs/<folder>
 ---
 
@@ -31,4 +31,4 @@ Describe the shortest paths for onboarding, implementation, and support.
 
 Link the code or canonical docs this MOC indexes.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

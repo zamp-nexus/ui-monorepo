@@ -11,7 +11,7 @@ reviewed: 2026-07-29
 confidence: verified
 priority: high
 tags: [runbook, operations, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Operations MOC]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Operations MOC]]"]
 repo_path: docs/10_Runbooks
 ---
 
@@ -28,4 +28,4 @@ repo_path: docs/10_Runbooks
 Runbooks are executable support procedures. Review them after every use and
 whenever their source configuration changes.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

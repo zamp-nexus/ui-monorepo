@@ -59,12 +59,12 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
     now = datetime.now(UTC)
     record = OutboxRecord(
         event_id=uuid4(),
-        tenant_id=uuid4(),
-        investigation_id=uuid4(),
+        organization_id=uuid4(),
+        analysis_run_id=uuid4(),
         payload={
             "trace_id": str(uuid4()),
             "span_id": str(uuid4()),
-            "event_type": "investigation.created",
+            "event_type": "analysis_run.created",
             "status": "pending",
             "occurred_at": now.isoformat(),
             "input_hash": "sha256:fixture",
@@ -84,8 +84,8 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
 
     assert (
         await coordinator.flush(
-            tenant_id=record.tenant_id,
-            investigation_id=record.investigation_id,
+            organization_id=record.organization_id,
+            analysis_run_id=record.analysis_run_id,
         )
         is False
     )
@@ -94,8 +94,8 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
     audit.fail = False
     assert (
         await coordinator.flush(
-            tenant_id=record.tenant_id,
-            investigation_id=record.investigation_id,
+            organization_id=record.organization_id,
+            analysis_run_id=record.analysis_run_id,
         )
         is True
     )
@@ -159,8 +159,8 @@ def test_the_delivered_entry_keeps_the_outbox_ordering_floor() -> None:
 
     record = OutboxRecord(
         event_id=_UUID("50000000-0000-0000-0000-000000000005"),
-        tenant_id=_UUID("20000000-0000-0000-0000-000000000002"),
-        investigation_id=_UUID("30000000-0000-0000-0000-000000000003"),
+        organization_id=_UUID("20000000-0000-0000-0000-000000000002"),
+        analysis_run_id=_UUID("30000000-0000-0000-0000-000000000003"),
         payload={
             "trace_id": str(_UUID(int=0)),
             "span_id": str(_UUID(int=0)),
@@ -197,16 +197,16 @@ async def test_an_event_in_both_sources_appears_once() -> None:
     from zentra_api.audit_delivery import AuditDeliveryCoordinator
 
     tenant = _UUID("20000000-0000-0000-0000-000000000002")
-    investigation = _UUID("30000000-0000-0000-0000-000000000003")
+    analysis_run = _UUID("30000000-0000-0000-0000-000000000003")
     shared = _UUID("50000000-0000-0000-0000-000000000005")
     moment = datetime(2026, 7, 31, 12, 0, tzinfo=UTC)
 
     class Ledger:
-        async def list_for_investigation(self, **_: object):
+        async def list_for_analysis_run(self, **_: object):
             return [
                 {
                     "entry_id": str(shared),
-                    "event_type": "investigation.completed",
+                    "event_type": "analysis_run.completed",
                     "status": "completed",
                     "created_at": moment,
                     "artifact_refs": [],
@@ -218,15 +218,15 @@ async def test_an_event_in_both_sources_appears_once() -> None:
             ]
 
     class Outbox:
-        async def all_for_investigation(self, _investigation_id):
+        async def all_for_analysis_run(self, _analysis_run_id):
             # The same event, not yet marked dispatched.
             return [
                 OutboxRecord(
                     event_id=shared,
-                    tenant_id=tenant,
-                    investigation_id=investigation,
+                    organization_id=tenant,
+                    analysis_run_id=analysis_run,
                     payload={
-                        "event_type": "investigation.completed",
+                        "event_type": "analysis_run.completed",
                         "status": "completed",
                         "artifact_refs": [],
                         "metadata": {},
@@ -259,8 +259,8 @@ async def test_an_event_in_both_sources_appears_once() -> None:
     )
 
     timeline = await coordinator.list_timeline(
-        tenant_id=tenant,
-        investigation_id=investigation,
+        organization_id=tenant,
+        analysis_run_id=analysis_run,
     )
 
     assert len(timeline) == 1

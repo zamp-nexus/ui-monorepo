@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 implementation: current
 tags: [api, sse, visualization, thesys]
-related: ["[[Investigation Thread API]]", "[[Investigation API]]", "[[adr/0019-public-work-feed]]", "[[adr/0020-thesys-terminal-presentation]]"]
+related: ["[[Investigation Thread API]]", "[[Analysis Run API]]", "[[adr/0019-public-work-feed]]", "[[adr/0020-thesys-terminal-presentation]]"]
 repo_path: apps/api/src/zentra_api
 ---
 

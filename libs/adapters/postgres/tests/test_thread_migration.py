@@ -27,7 +27,7 @@ def test_thread_migration_is_additive_and_messages_are_not_updatable() -> None:
     # Run cutover (0023, chat_analysis_run_cutover), not by an earlier,
     # separately-additive migration -- and that cutover's own downgrade
     # cannot walk further back than itself (ADR-0030: recreating
-    # `investigations`' pre-cutover shape would mean reversing everything
+    # `analysis_runs`' pre-cutover shape would mean reversing everything
     # 0002 through 0022 did to it, just to prove a point already settled).
     # This now verifies the structure at head directly rather than round
     # -tripping through history that no longer exists.

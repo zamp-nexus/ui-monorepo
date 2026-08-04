@@ -11,8 +11,8 @@ reviewed: 2026-08-02
 confidence: verified
 implementation: planned
 tags: [adr, chat, sse, events, approval]
-related: ["[[Chat & Analysis Run Domain]]", "[[adr/0019-public-work-feed]]", "[[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]"]
-repo_path: libs/domain/investigation/src/zentra_domain_investigation/work_feed.py
+related: ["[[Analysis Run Domain]]", "[[adr/0019-public-work-feed]]", "[[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]"]
+repo_path: libs/domain/analysis_run/src/zentra_domain_analysis_run/work_feed.py
 ---
 
 # Activity Feed replaces the Work Feed; a pending approval is the one thing shown inline

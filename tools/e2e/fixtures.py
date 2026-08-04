@@ -1,4 +1,4 @@
-"""Deterministic Investigations for the browser journeys.
+"""Deterministic Analysis Runs for the browser journeys.
 
 Written through the real repositories and real domain objects rather than as
 SQL. The domain refuses an observed claim with no citation, an approval with no
@@ -23,11 +23,11 @@ from uuid import UUID
 from identity import organization_id
 from sqlalchemy import text
 from zentra_adapter_postgres import Database
-from zentra_adapter_postgres.investigation import (
-    PostgresInvestigationUnitOfWorkFactory,
+from zentra_adapter_postgres.analysis_run import (
+    PostgresAnalysisRunUnitOfWorkFactory,
 )
 from zentra_domain_agent_execution import ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     Claim,
     ClaimKind,
     Contradiction,
@@ -35,12 +35,12 @@ from zentra_domain_investigation import (
     EvaluationDirective,
     EvidenceCitation,
     Finding,
-    Investigation,
+    AnalysisRun,
     MetricComparison,
     PublicationCondition,
     RootCauseState,
 )
-from zentra_domain_investigation.citation import CitationFilter, CitationState
+from zentra_domain_analysis_run.citation import CitationFilter, CitationState
 
 _OUTPUT = Path(__file__).resolve().parents[2] / ".e2e"
 
@@ -79,19 +79,19 @@ def _finding(headline: str, summary: str, metric: str, before: str, after: str) 
 
 
 def _settle(
-    investigation: Investigation,
+    analysis_run: AnalysisRun,
     finding: Finding,
     confidence: ConfidenceOutcome,
     failed: tuple[PublicationCondition, ...],
 ) -> None:
-    """Take the Investigation through evaluation, the way the pipeline does.
+    """Take the Analysis Run through evaluation, the way the pipeline does.
 
     Calling the aggregate's own transition rather than writing a terminal row
     keeps the lifecycle events real, so the Replay timeline a journey asserts
     on is one the product actually produces.
     """
-    investigation.begin_evaluation(_NOW + timedelta(seconds=40))
-    investigation.record_evaluation(
+    analysis_run.begin_evaluation(_NOW + timedelta(seconds=40))
+    analysis_run.record_evaluation(
         directive=EvaluationDirective.PASS if not failed else EvaluationDirective.ESCALATE,
         outcome=confidence,
         finding=finding,
@@ -116,11 +116,11 @@ def _claim(index: int, position: int, *, kind: ClaimKind, text: str, **extra) ->
     )
 
 
-def _citation(index: int, investigation: UUID, *, metric: str, value: str) -> EvidenceCitation:
+def _citation(index: int, analysis_run: UUID, *, metric: str, value: str) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=UUID(f"e2e00000-0000-4000-8002-{index:012d}"),
         organization_id=organization_id(),
-        investigation_id=investigation,
+        analysis_run_id=analysis_run,
         metric=metric,
         filters=(CitationFilter(member="Commerce.region", operator="equals", values=("EU",)),),
         period="2026-06-01/2026-07-01",
@@ -132,15 +132,15 @@ def _citation(index: int, investigation: UUID, *, metric: str, value: str) -> Ev
     )
 
 
-def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
+def _published() -> tuple[AnalysisRun, DraftFinding, list[EvidenceCitation]]:
     """Every condition satisfied: cited, uncontradicted, converged, confident."""
-    investigation = Investigation.create(
-        investigation_id=PUBLISHED,
+    analysis_run = AnalysisRun.create(
+        analysis_run_id=PUBLISHED,
         organization_id=organization_id(),
         question="Why did EU refunds increase from June to July 2026?",
         now=_NOW,
     )
-    investigation.start(_NOW + timedelta(seconds=1))
+    analysis_run.start(_NOW + timedelta(seconds=1))
     citations = [
         _citation(1, PUBLISHED, metric="refund_rate", value="0.0412"),
         _citation(2, PUBLISHED, metric="refund_count", value="184"),
@@ -148,7 +148,7 @@ def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000001"),
         organization_id=organization_id(),
-        investigation_id=PUBLISHED,
+        analysis_run_id=PUBLISHED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
         produced_by_execution_id=None,
@@ -193,18 +193,18 @@ def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
         confidence=ConfidenceOutcome(score=0.82, calibration_method="evaluator_agreement"),
     )
     _settle(
-        investigation,
+        analysis_run,
         _finding(draft.headline, draft.summary, "refund_rate", "0.0301", "0.0412"),
         ConfidenceOutcome(score=0.82, calibration_method="evaluator_agreement"),
         (),
     )
-    return investigation, draft, citations
+    return analysis_run, draft, citations
 
 
-def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
+def _gated() -> tuple[AnalysisRun, DraftFinding, list[EvidenceCitation]]:
     """Held back: an observed claim whose only citation is unavailable."""
-    investigation = Investigation.create(
-        investigation_id=GATED,
+    analysis_run = AnalysisRun.create(
+        analysis_run_id=GATED,
         organization_id=organization_id(),
         question=(
             "Which sales channel accounted for the increase in North America "
@@ -212,7 +212,7 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
         ),
         now=_NOW,
     )
-    investigation.start(_NOW + timedelta(seconds=1))
+    analysis_run.start(_NOW + timedelta(seconds=1))
     citation = _citation(3, GATED, metric="revenue", value="128400")
     # Unavailable, not tombstoned: unexpected loss and a deliberate deletion are
     # different answers and criterion 7 requires they never be conflated.
@@ -225,7 +225,7 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000002"),
         organization_id=organization_id(),
-        investigation_id=GATED,
+        analysis_run_id=GATED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
         produced_by_execution_id=None,
@@ -248,28 +248,28 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
         confidence=ConfidenceOutcome(score=0.55, calibration_method="evaluator_agreement"),
     )
     _settle(
-        investigation,
+        analysis_run,
         _finding(draft.headline, draft.summary, "revenue", "119200", "128400"),
         ConfidenceOutcome(score=0.55, calibration_method="evaluator_agreement"),
         (PublicationCondition.EVIDENCED, PublicationCondition.CONFIDENT),
     )
-    return investigation, draft, [citation]
+    return analysis_run, draft, [citation]
 
 
-def _contradicted() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
+def _contradicted() -> tuple[AnalysisRun, DraftFinding, list[EvidenceCitation]]:
     """Cited and confident, but the Evaluator disagreed and nobody resolved it."""
-    investigation = Investigation.create(
-        investigation_id=CONTRADICTED,
+    analysis_run = AnalysisRun.create(
+        analysis_run_id=CONTRADICTED,
         organization_id=organization_id(),
         question="Why did EU refunds increase from June to July 2026?",
         now=_NOW,
     )
-    investigation.start(_NOW + timedelta(seconds=1))
+    analysis_run.start(_NOW + timedelta(seconds=1))
     citations = [_citation(4, CONTRADICTED, metric="refund_rate", value="0.0388")]
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000003"),
         organization_id=organization_id(),
-        investigation_id=CONTRADICTED,
+        analysis_run_id=CONTRADICTED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
         produced_by_execution_id=None,
@@ -299,23 +299,23 @@ def _contradicted() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]
         confidence=ConfidenceOutcome(score=0.79, calibration_method="evaluator_agreement"),
     )
     _settle(
-        investigation,
+        analysis_run,
         _finding(draft.headline, draft.summary, "refund_rate", "0.0301", "0.0388"),
         ConfidenceOutcome(score=0.79, calibration_method="evaluator_agreement"),
         (PublicationCondition.UNCONTRADICTED,),
     )
-    return investigation, draft, citations
+    return analysis_run, draft, citations
 
 
 async def _purge(database) -> None:
     """Remove anything an earlier run left, before writing it again.
 
     Deleting rather than upserting: a journey that saw two Draft Findings for
-    one Investigation, or a claim from a previous shape of this file, would
+    one Analysis Run, or a claim from a previous shape of this file, would
     fail in a way that looks like a product bug. Restated on every run, the
     fixtures are whatever this file currently says and nothing else.
 
-    Only the three fixed Investigation ids are touched. The bound identities
+    Only the three fixed Analysis Run ids are touched. The bound identities
     are left alone — they are upserted by `bootstrap()` and shared.
     """
     async with database.engine.begin() as connection:
@@ -333,24 +333,24 @@ async def seed() -> dict:
         )
     )
     await _purge(database)
-    factory = PostgresInvestigationUnitOfWorkFactory(database)
+    factory = PostgresAnalysisRunUnitOfWorkFactory(database)
     made: dict[str, str] = {}
     for name, build in (
         ("published", _published),
         ("gated", _gated),
         ("contradicted", _contradicted),
     ):
-        investigation, draft, citations = build()
+        analysis_run, draft, citations = build()
         async with factory(organization_id(), _TRACE_ID, _SPAN_ID) as uow:
-            await uow.investigations.add(investigation)
+            await uow.analysis_runs.add(analysis_run)
             # Citations before the draft: the claim/citation join has a foreign
             # key, so a draft written first cites rows that do not exist yet.
             if citations:
                 await uow.citations.add(citations)
             await uow.draft_findings.add(draft)
-            await uow.outbox.enqueue(investigation.events)
+            await uow.outbox.enqueue(analysis_run.events)
             await uow.commit()
-        made[name] = str(investigation.investigation_id)
+        made[name] = str(analysis_run.analysis_run_id)
     await database.engine.dispose()
     return made
 

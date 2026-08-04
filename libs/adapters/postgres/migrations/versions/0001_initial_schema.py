@@ -1,4 +1,4 @@
-"""Build the complete ZentraOS control-plane schema from scratch.
+"""Build the complete Nexus control-plane schema from scratch.
 
 The sole migration. The ~30 incremental revisions that preceded it were
 collapsed into this one when the Tenant -> Organization rename landed

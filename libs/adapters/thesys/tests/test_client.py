@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
-from zentra_domain_investigation import VisualizationBriefV1
+from zentra_domain_analysis_run import VisualizationBriefV1
 
 from zentra_adapter_thesys import (
     DEFAULT_THESYS_MODEL,
@@ -29,7 +29,7 @@ class _Completions:
 
 def _brief() -> VisualizationBriefV1:
     return VisualizationBriefV1(
-        investigation_id=UUID("10000000-0000-0000-0000-000000000001"),
+        analysis_run_id=UUID("10000000-0000-0000-0000-000000000001"),
         question="How did revenue change?",
         headline="Revenue increased",
         summary="The governed comparison increased.",

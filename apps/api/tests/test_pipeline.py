@@ -23,6 +23,7 @@ from zentra_domain_agent_execution import (
     ExecutionStatus,
     LegacyRoleWriteError,
 )
+from zentra_domain_analysis_run import WorkFeedEventKind
 
 from zentra_api.outcomes import PipelineOutcome
 from zentra_api.pipeline import (
@@ -30,7 +31,7 @@ from zentra_api.pipeline import (
     _pipeline_result,
 )
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 
 
@@ -141,8 +142,8 @@ def outcome(**overrides: object) -> PipelineOutcome:
 async def run(**overrides: object):
     return _pipeline_result(
         outcome(**overrides),
-        investigation_id=INVESTIGATION_ID,
-        tenant_id=TENANT_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
     )
 
 
@@ -237,8 +238,8 @@ def execution(role: AgentRole) -> AgentExecutionRecord:
     moment = datetime(2026, 7, 30, 9, 0, tzinfo=UTC)
     return AgentExecutionRecord(
         execution_id=uuid4(),
-        investigation_id=INVESTIGATION_ID,
-        tenant_id=TENANT_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
         agent_id="insight_v1",
         role=role,
         step=3,
@@ -261,6 +262,9 @@ class ExplodingUnitOfWorkFactory:
 class _RecordingUnitOfWork:
     """Enough of the real unit of work for `record()` to run to completion,
     without a real Postgres transaction behind it."""
+
+    def __init__(self) -> None:
+        self.work_feed_calls: list[dict[str, object]] = []
 
     async def __aenter__(self) -> _RecordingUnitOfWork:
         return self
@@ -289,8 +293,8 @@ class _RecordingUnitOfWork:
     def work_feed(self) -> _RecordingUnitOfWork:
         return self
 
-    async def append_for_investigation(self, **kwargs: object) -> None:
-        return None
+    async def append_for_analysis_run(self, **kwargs: object) -> None:
+        self.work_feed_calls.append(kwargs)
 
 
 class _RecordingFactory:
@@ -414,6 +418,60 @@ def test_the_audit_event_carries_the_canonical_role() -> None:
     assert event.metadata["role"] == "insight"
 
 
+def _execution_with_reasoning(reasoning: str | None) -> AgentExecutionRecord:
+    moment = datetime(2026, 7, 30, 9, 0, tzinfo=UTC)
+    return AgentExecutionRecord(
+        execution_id=uuid4(),
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
+        agent_id="cube_analyst_v1",
+        role=AgentRole.CUBE_ANALYST,
+        step=1,
+        input={"question": "Why did EU refunds increase?"},
+        status=ExecutionStatus.SUCCESS,
+        latency_ms=1200,
+        reasoning=reasoning,
+        started_at=moment,
+        completed_at=moment,
+    )
+
+
+def _completed_payload(uow: _RecordingUnitOfWork) -> object:
+    return next(
+        call["payload"]
+        for call in uow.work_feed_calls
+        if call["kind"] is WorkFeedEventKind.AGENT_COMPLETED
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_completed_event_carries_the_agents_own_reasoning() -> None:
+    """ADR-0006 lets exactly one Agent-authored sentence onto the chat
+    surface -- this is where it has to land."""
+    factory = _RecordingFactory()
+    recorder = PostgresExecutionRecorder(factory)
+
+    await recorder.record(
+        _execution_with_reasoning("EU refunds rose because of a June promo lapse.")
+    )
+
+    payload = _completed_payload(factory.uow)
+    assert payload.reasoning == "EU refunds rose because of a June promo lapse."
+
+
+@pytest.mark.asyncio
+async def test_the_completed_event_carries_no_reasoning_when_the_agent_gave_none() -> (
+    None
+):
+    factory = _RecordingFactory()
+    recorder = PostgresExecutionRecorder(factory)
+
+    await recorder.record(_execution_with_reasoning(None))
+
+    payload = _completed_payload(factory.uow)
+    assert payload.reasoning is None
+
+
 @pytest.mark.asyncio
 async def test_the_draft_names_the_execution_that_produced_it() -> None:
     """Attribution is the point of running Insight separately. A draft that
@@ -426,8 +484,8 @@ async def test_the_draft_names_the_execution_that_produced_it() -> None:
     assert draft.produced_by_execution_id == UUID(
         "70000000-0000-0000-0000-000000000007"
     )
-    assert draft.investigation_id == INVESTIGATION_ID
-    assert draft.tenant_id == TENANT_ID
+    assert draft.analysis_run_id == ANALYSIS_RUN_ID
+    assert draft.organization_id == TENANT_ID
 
 
 @pytest.mark.asyncio

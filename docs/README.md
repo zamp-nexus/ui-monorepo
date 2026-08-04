@@ -1,10 +1,10 @@
-# ZentraOS engineering knowledge vault
+# Nexus engineering knowledge vault
 
 Open this `docs/` directory as an Obsidian vault. The vault uses standard
 Markdown, frontmatter, wikilinks, backlinks, and graph navigation; it requires
 no community plugins and commits no personal `.obsidian` workspace state.
 
-Start at [[00_Index/ZentraOS Knowledge Base]]. Templates live in
+Start at [[00_Index/Nexus Knowledge Base]]. Templates live in
 [[98_Templates/Templates Guide]], while the governing rules live in
 [[01_Overview/Documentation System Specification]] and
 [[13_References/Documentation Quality Bar]].

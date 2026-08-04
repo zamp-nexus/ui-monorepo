@@ -1,6 +1,6 @@
-"""Which Data Connection an Investigation queries.
+"""Which Data Connection an Analysis Run queries.
 
-`Investigation.data_connection_id` has existed since ADR-0012, and nothing ever
+`AnalysisRun.data_connection_id` has existed since ADR-0012, and nothing ever
 set it: every caller passed `None`, which means the demo warehouse. That was
 invisible while the only questions were the two demo scenarios, because those
 questions were *about* the demo warehouse. Free-text questions (ADR-0023) made
@@ -17,12 +17,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from zentra_application_analysis_run import AuthenticatedActor
 from zentra_application_connector import (
     AuthenticatedActor as ConnectorActor,
 )
 from zentra_application_connector import ConnectorService
 from zentra_application_connector import Role as ConnectorRole
-from zentra_application_investigation import AuthenticatedActor
 
 
 class AmbiguousDataConnectionError(ValueError):

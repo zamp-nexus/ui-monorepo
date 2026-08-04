@@ -254,7 +254,7 @@ async def _run_case(path: Path) -> CaseResult:
     try:
         output = await _build_agent(case).invoke(
             AgentInput(
-                investigation_id=INVESTIGATION_ID,
+                analysis_run_id=INVESTIGATION_ID,
                 organization_id=ORGANIZATION_ID,
                 state=state,
             )

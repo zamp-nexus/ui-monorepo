@@ -1,7 +1,7 @@
 """Fan-out: the loop asking what else is worth measuring, and deciding by rule.
 
 ADR-0026's Phase 3. The Board stops being a record of one measurement and
-becomes the thing the investigation reasons over: follow-ups run against it
+becomes the thing the analysis run reasons over: follow-ups run against it
 concurrently, their Facts land beside the primary one, and a disagreement
 between two of them is a Conflict nobody would have seen while each result
 lived only inside its own Agent.
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 from zentra_domain_agent_execution import AgentRole, ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     ConflictStatus,
     GapPriority,
     WorkItemStatus,
@@ -150,7 +150,7 @@ async def test_every_accepted_proposal_opens_a_knowledge_gap() -> None:
 
 
 @pytest.mark.asyncio
-async def test_the_cap_bounds_what_one_investigation_may_spend() -> None:
+async def test_the_cap_bounds_what_one_analysis_run_may_spend() -> None:
     loop, recorder, _ = build_loop(
         recheck_passed=True,
         tasks=[BY_REGION, BY_CHANNEL],
@@ -327,12 +327,12 @@ def test_insight_may_not_be_reached_with_an_open_contradiction() -> None:
     from datetime import UTC, datetime
     from uuid import uuid4
 
-    from zentra_domain_investigation import Conflict, InvestigationBoard
+    from zentra_domain_analysis_run import AnalysisRunBoard, Conflict
 
-    board = InvestigationBoard.create(
+    board = AnalysisRunBoard.create(
         board_id=uuid4(),
-        investigation_id=uuid4(),
-        tenant_id=uuid4(),
+        analysis_run_id=uuid4(),
+        organization_id=uuid4(),
         now=datetime(2026, 8, 1, tzinfo=UTC),
     )
     board.open_conflict(
@@ -378,7 +378,7 @@ async def test_a_converged_run_records_itself_complete_on_the_board() -> None:
 async def test_an_unconverged_run_says_it_stopped_rather_than_finished() -> None:
     """Three failed rechecks still produce a Draft Finding — publication
     policy decides whether it may be shown. What must not happen is the Board
-    presenting that run as a finished investigation."""
+    presenting that run as a finished Analysis Run."""
     loop, _, _ = build_loop(recheck_passed=False)
 
     result = await run(loop)

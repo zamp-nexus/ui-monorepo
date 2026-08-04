@@ -20,7 +20,7 @@ code_refs: [package.json, nx.json, libs/foundation]
 
 # TypeScript Foundation Library Catalog
 
-The repository contains reusable packages beyond the current ZentraOS product
+The repository contains reusable packages beyond the current Nexus product
 slice:
 
 | Concern | Nx project |
@@ -39,7 +39,7 @@ the foundation folder. Internal Nx generators live under `tools`.
 
 ## Third-party renderer
 
-`zentra-os` additionally depends on `@thesysai/genui-sdk`, `@crayonai/react-ui`,
+`nexus` additionally depends on `@thesysai/genui-sdk`, `@crayonai/react-ui`,
 and `@crayonai/react-core` to display Thesys C1 generative UI. They are confined
 to [[Chat Surface]] and loaded lazily. `foundation-design-system` has no chart
 component, so the native fallback renderer draws its two-point comparison as

@@ -5,14 +5,14 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4, uuid5
 
 from zentra_adapter_langgraph import SkillRegistry
-from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
+from zentra_adapter_postgres import PostgresAnalysisRunUnitOfWorkFactory
 from zentra_adapter_telemetry import (
     record_agent_execution,
     record_insight_execution,
     record_skill_activation,
     record_tool_call,
 )
-from zentra_application_investigation import PipelineResult
+from zentra_application_analysis_run import PipelineResult
 from zentra_domain_agent_execution import (
     AgentExecutionRecord,
     AgentExecutionStart,
@@ -22,8 +22,9 @@ from zentra_domain_agent_execution import (
     OutcomeSignal,
     reject_legacy_role,
 )
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     AgentEventPayload,
+    AnalysisRunStatus,
     CitationFilter,
     Claim,
     ClaimKind,
@@ -33,7 +34,6 @@ from zentra_domain_investigation import (
     EvidenceCitation,
     EvidenceReference,
     Finding,
-    InvestigationStatus,
     MetricComparison,
     RootCauseState,
     WorkFeedEventKind,
@@ -110,7 +110,7 @@ _HANDOFF_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000003")
 _UPDATE_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000004")
 _TOOL_NAMESPACE = UUID("5f9d1e3a-0000-4000-8000-000000000005")
 _CAPABILITY_BY_ROLE = {
-    AgentRole.ORCHESTRATOR: "plan_investigation",
+    AgentRole.ORCHESTRATOR: "plan_analysis_run",
     AgentRole.CUBE_ANALYST: "query_semantic_metrics",
     AgentRole.EVALUATOR: "validate_evidence",
     AgentRole.INSIGHT: "draft_finding",
@@ -168,12 +168,12 @@ class PostgresExecutionRecorder:
     """Commits each agent execution as it finishes.
 
     Persisting per step rather than at the end is what makes an interrupted
-    investigation replayable up to the point it stopped.
+    analysis run replayable up to the point it stopped.
     """
 
     def __init__(
         self,
-        unit_of_work_factory: PostgresInvestigationUnitOfWorkFactory,
+        unit_of_work_factory: PostgresAnalysisRunUnitOfWorkFactory,
         *,
         skills: SkillRegistry | None = None,
     ) -> None:
@@ -181,12 +181,12 @@ class PostgresExecutionRecorder:
         self._skills = skills or SkillRegistry.from_directory()
 
     async def cancellation_checkpoint(
-        self, organization_id: UUID, investigation_id: UUID
+        self, organization_id: UUID, analysis_run_id: UUID
     ) -> None:
         async with self._unit_of_work_factory(
             organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            job = await unit_of_work.jobs.get_for_investigation(investigation_id)
+            job = await unit_of_work.jobs.get_for_analysis_run(analysis_run_id)
         if job is not None and job.cancel_requested_at is not None:
             raise CancellationRequested("Cancellation was requested")
 
@@ -198,9 +198,9 @@ class PostgresExecutionRecorder:
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
             await unit_of_work.outbox.enqueue([_started_event(start)])
-            await unit_of_work.work_feed.append_for_investigation(
+            await unit_of_work.work_feed.append_for_analysis_run(
                 organization_id=start.organization_id,
-                investigation_id=start.investigation_id,
+                analysis_run_id=start.analysis_run_id,
                 kind=WorkFeedEventKind.AGENT_STARTED,
                 payload=AgentEventPayload(
                     execution_id=start.execution_id,
@@ -212,9 +212,9 @@ class PostgresExecutionRecorder:
                 event_id=start.execution_id,
             )
             capability = _CAPABILITY_BY_ROLE[start.role]
-            await unit_of_work.work_feed.append_for_investigation(
+            await unit_of_work.work_feed.append_for_analysis_run(
                 organization_id=start.organization_id,
-                investigation_id=start.investigation_id,
+                analysis_run_id=start.analysis_run_id,
                 kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
                 payload=AgentEventPayload(
                     execution_id=start.execution_id,
@@ -228,9 +228,9 @@ class PostgresExecutionRecorder:
             )
             predecessor = _PREDECESSOR_BY_ROLE.get(start.role)
             if predecessor is not None:
-                await unit_of_work.work_feed.append_for_investigation(
+                await unit_of_work.work_feed.append_for_analysis_run(
                     organization_id=start.organization_id,
-                    investigation_id=start.investigation_id,
+                    analysis_run_id=start.analysis_run_id,
                     kind=WorkFeedEventKind.AGENT_HANDOFF,
                     payload=AgentEventPayload(
                         execution_id=start.execution_id,
@@ -243,9 +243,9 @@ class PostgresExecutionRecorder:
                     occurred_at=start.started_at,
                     event_id=uuid5(_HANDOFF_NAMESPACE, str(start.execution_id)),
                 )
-            await unit_of_work.work_feed.append_for_investigation(
+            await unit_of_work.work_feed.append_for_analysis_run(
                 organization_id=start.organization_id,
-                investigation_id=start.investigation_id,
+                analysis_run_id=start.analysis_run_id,
                 kind=WorkFeedEventKind.AGENT_PUBLIC_UPDATE,
                 payload=AgentEventPayload(
                     execution_id=start.execution_id,
@@ -295,9 +295,9 @@ class PostgresExecutionRecorder:
             # publish; its arguments and results are not, and
             # `AgentEventPayload` has nowhere to put them.
             for index, invocation in enumerate(execution.tool_calls):
-                await unit_of_work.work_feed.append_for_investigation(
+                await unit_of_work.work_feed.append_for_analysis_run(
                     organization_id=execution.organization_id,
-                    investigation_id=execution.investigation_id,
+                    analysis_run_id=execution.analysis_run_id,
                     kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
                     payload=AgentEventPayload(
                         execution_id=execution.execution_id,
@@ -318,9 +318,9 @@ class PostgresExecutionRecorder:
                         _TOOL_NAMESPACE, f"{execution.execution_id}:{index}"
                     ),
                 )
-            await unit_of_work.work_feed.append_for_investigation(
+            await unit_of_work.work_feed.append_for_analysis_run(
                 organization_id=execution.organization_id,
-                investigation_id=execution.investigation_id,
+                analysis_run_id=execution.analysis_run_id,
                 kind=WorkFeedEventKind.AGENT_COMPLETED,
                 payload=AgentEventPayload(
                     execution_id=execution.execution_id,
@@ -329,6 +329,7 @@ class PostgresExecutionRecorder:
                     summary=(
                         f"{execution.role.value.replace('_', ' ').title()} completed."
                     ),
+                    reasoning=execution.reasoning,
                     provider=_provider_of(execution.usage.model),
                     model=execution.usage.model,
                     fallback_count=len(execution.fallbacks),
@@ -351,9 +352,9 @@ def _started_event(start: AgentExecutionStart) -> DomainEvent:
     return DomainEvent(
         event_id=uuid5(_STARTED_NAMESPACE, str(start.execution_id)),
         event_type="agent.execution_started",
-        investigation_id=start.investigation_id,
+        analysis_run_id=start.analysis_run_id,
         organization_id=start.organization_id,
-        status=InvestigationStatus.RUNNING,
+        status=AnalysisRunStatus.RUNNING,
         occurred_at=start.started_at,
         metadata={
             "agent_id": start.agent_id,
@@ -377,9 +378,9 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
             if execution.status is ExecutionStatus.SUCCESS
             else "agent.execution_failed"
         ),
-        investigation_id=execution.investigation_id,
+        analysis_run_id=execution.analysis_run_id,
         organization_id=execution.organization_id,
-        status=InvestigationStatus.RUNNING,
+        status=AnalysisRunStatus.RUNNING,
         occurred_at=execution.completed_at,
         artifact_refs=tuple(
             EvidenceReference(reference) for reference in execution.evidence_refs
@@ -409,7 +410,7 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
 def _pipeline_result(
     outcome: PipelineOutcome,
     *,
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     organization_id: UUID,
 ) -> PipelineResult:
     """Adapt what the run established to what the application expects.
@@ -422,7 +423,7 @@ def _pipeline_result(
         outcome.insight,
         outcome.evidence,
         evaluator_outcome=outcome.outcome,
-        investigation_id=investigation_id,
+        analysis_run_id=analysis_run_id,
         organization_id=organization_id,
     )
     return PipelineResult(
@@ -463,12 +464,12 @@ def _draft_with_citations(
     evidence: Sequence[ValidatedEvidence],
     *,
     evaluator_outcome: OutcomeSignal,
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     organization_id: UUID,
 ) -> tuple[DraftFinding, tuple[EvidenceCitation, ...]]:
     """Assemble the Draft Finding and the Citations its claims rest on.
 
-    Here rather than in the graph adapter, because building Investigation
+    Here rather than in the graph adapter, because building Analysis Run
     domain objects is not the agent runtime's job — and here rather than in the
     agent, because a Citation assembled from Insight's output would be a second
     account of the same claim rather than evidence for it.
@@ -515,7 +516,7 @@ def _draft_with_citations(
                     value=value or "",
                     period=period,
                     evaluator_outcome=evaluator_outcome,
-                    investigation_id=investigation_id,
+                    analysis_run_id=analysis_run_id,
                     organization_id=organization_id,
                 )
             citation_ids = (citations[key].citation_id,)
@@ -536,7 +537,7 @@ def _draft_with_citations(
     draft = DraftFinding(
         draft_finding_id=uuid4(),
         organization_id=organization_id,
-        investigation_id=investigation_id,
+        analysis_run_id=analysis_run_id,
         version=1,
         created_at=datetime.now(UTC),
         produced_by_execution_id=insight.execution_id,
@@ -560,7 +561,7 @@ def _citation(
     value: str,
     period: str | None,
     evaluator_outcome: OutcomeSignal,
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     organization_id: UUID,
 ) -> EvidenceCitation:
     """The citation's figure *is* the claim's figure.
@@ -582,7 +583,7 @@ def _citation(
     return EvidenceCitation(
         citation_id=uuid4(),
         organization_id=organization_id,
-        investigation_id=investigation_id,
+        analysis_run_id=analysis_run_id,
         metric=measured.metric,
         filters=tuple(
             CitationFilter(

@@ -1,7 +1,7 @@
 """Migration 0006, run for real against a real database.
 
 Not asserted in a docstring — actually executed. The migration is downgraded
-away, a representative Phase 1 Investigation is seeded into the schema as it
+away, a representative Phase 1 AnalysisRun is seeded into the schema as it
 stood *before* Draft Findings existed, and the upgrade is then run over it and
 run again. Both are things only a real Alembic invocation can demonstrate.
 """
@@ -24,10 +24,10 @@ pytestmark = pytest.mark.skipif(
     reason="local Postgres integration URL is not configured",
 )
 
-PHASE_1_TENANT = UUID("83000000-0000-0000-0000-000000000001")
-PHASE_1_INVESTIGATION = UUID("84000000-0000-0000-0000-000000000001")
+PHASE_1_ORGANIZATION = UUID("83000000-0000-0000-0000-000000000001")
+PHASE_1_ANALYSIS_RUN = UUID("84000000-0000-0000-0000-000000000001")
 
-# A completed Phase 1 Investigation, narrative Finding and all, exactly as it
+# A completed Phase 1 AnalysisRun, narrative Finding and all, exactly as it
 # sits in `analysis_runs.state` today.
 PHASE_1_STATE = {
     "finding": {
@@ -79,21 +79,21 @@ def seed_phase_1(engine) -> None:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "INSERT INTO tenants (tenant_id, name) VALUES (:t, 'Phase 1') "
+                "INSERT INTO organizations (organization_id, name) VALUES (:t, 'Phase 1') "
                 "ON CONFLICT DO NOTHING"
             ),
-            {"t": str(PHASE_1_TENANT)},
+            {"t": str(PHASE_1_ORGANIZATION)},
         )
         connection.execute(
             text(
                 "INSERT INTO analysis_runs "
-                "(analysis_run_id, tenant_id, question, status, state) "
+                "(analysis_run_id, organization_id, question, status, state) "
                 "VALUES (:i, :t, 'Why did EU refunds increase?', 'completed', "
                 "CAST(:s AS json)) ON CONFLICT DO NOTHING"
             ),
             {
-                "i": str(PHASE_1_INVESTIGATION),
-                "t": str(PHASE_1_TENANT),
+                "i": str(PHASE_1_ANALYSIS_RUN),
+                "t": str(PHASE_1_ORGANIZATION),
                 "s": json.dumps(PHASE_1_STATE),
             },
         )
@@ -103,11 +103,11 @@ def cleanup(engine) -> None:
     with engine.begin() as connection:
         connection.execute(
             text("DELETE FROM analysis_runs WHERE analysis_run_id = :i"),
-            {"i": str(PHASE_1_INVESTIGATION)},
+            {"i": str(PHASE_1_ANALYSIS_RUN)},
         )
         connection.execute(
-            text("DELETE FROM tenants WHERE tenant_id = :t"),
-            {"t": str(PHASE_1_TENANT)},
+            text("DELETE FROM organizations WHERE organization_id = :t"),
+            {"t": str(PHASE_1_ORGANIZATION)},
         )
 
 
@@ -119,7 +119,7 @@ def test_upgrading_a_phase_1_database_is_additive_and_rerunnable(
     # into `analysis_runs`, using the schema module's *current* Table
     # definition (the same live-import convention every migration here
     # uses) -- but at that point in a real historical replay, `analysis_runs`
-    # does not exist yet under that name; it is still `investigations`,
+    # does not exist yet under that name; it is still `analysis_runs`,
     # not renamed until the destructive Chat & Analysis Run cutover (0023)
     # much later. That is a real, permanent consequence of a true table
     # rename meeting a migration-file convention that always imports the
@@ -138,7 +138,7 @@ def test_upgrading_a_phase_1_database_is_additive_and_rerunnable(
         assert "draft_findings" in tables
         assert "draft_finding_claims" in tables
 
-        # The Phase 1 Investigation is untouched: same status, same narrative
+        # The Phase 1 AnalysisRun is untouched: same status, same narrative
         # Finding, same opaque pointer. Additive means nothing was rewritten.
         with owner_engine.begin() as connection:
             row = connection.execute(
@@ -146,7 +146,7 @@ def test_upgrading_a_phase_1_database_is_additive_and_rerunnable(
                     "SELECT status, state FROM analysis_runs "
                     "WHERE analysis_run_id = :i"
                 ),
-                {"i": str(PHASE_1_INVESTIGATION)},
+                {"i": str(PHASE_1_ANALYSIS_RUN)},
             ).one()
         assert row.status == "completed"
         assert row.state == PHASE_1_STATE
@@ -158,7 +158,7 @@ def test_upgrading_a_phase_1_database_is_additive_and_rerunnable(
                     "SELECT count(*) FROM draft_findings "
                     "WHERE analysis_run_id = :i"
                 ),
-                {"i": str(PHASE_1_INVESTIGATION)},
+                {"i": str(PHASE_1_ANALYSIS_RUN)},
             ).scalar()
         assert drafts == 0
 
@@ -197,8 +197,8 @@ def test_row_level_security_is_installed_and_forced_on_both_tables(
         assert row.relrowsecurity, f"{row.relname} does not have RLS enabled"
         assert row.relforcerowsecurity, f"{row.relname} does not FORCE RLS"
     assert {policy.policyname for policy in policies} == {
-        "draft_findings_tenant_isolation",
-        "draft_finding_claims_tenant_isolation",
+        "draft_findings_organization_isolation",
+        "draft_finding_claims_organization_isolation",
     }
 
 

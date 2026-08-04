@@ -54,6 +54,7 @@ chat_sessions = Table(
     Column("title", Text, nullable=False),
     Column("status", String(16), nullable=False, server_default="draft"),
     Column("next_event_sequence", Integer, nullable=False, server_default="1"),
+    Column("next_message_sequence", Integer, nullable=False, server_default="1"),
     Column("archived_from_status", String(16)),
     Column(
         "created_at",
@@ -147,6 +148,12 @@ messages = Table(
         nullable=False,
         server_default=text("now()"),
     ),
+    # A per-Chat-Session monotonic counter (`chat_sessions.next_message_sequence`,
+    # incremented the same atomic way as `next_event_sequence`), not the
+    # message's own random `message_id`. `created_at` can tie across a
+    # streamed turn's question and reply, and a `message_id` tiebreak has no
+    # chronological meaning -- this does.
+    Column("sequence", Integer, nullable=False),
     ForeignKeyConstraint(
         ("chat_session_id", "organization_id"),
         ("chat_sessions.chat_session_id", "chat_sessions.organization_id"),
@@ -158,6 +165,11 @@ messages = Table(
         "chat_session_id",
         "organization_id",
         name="uq_messages_chat_session_organization_identity",
+    ),
+    UniqueConstraint(
+        "chat_session_id",
+        "sequence",
+        name="uq_messages_chat_session_sequence",
     ),
     CheckConstraint(
         "kind IN ('user_question', 'user_clarification', "
@@ -178,7 +190,7 @@ Index(
     messages.c.organization_id,
     messages.c.chat_session_id,
     messages.c.created_at,
-    messages.c.message_id,
+    messages.c.sequence,
 )
 
 chat_sessions.append_constraint(

@@ -8,18 +8,18 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
-    InvestigationService,
+    AnalysisRunService,
     Role,
 )
-from zentra_domain_investigation import ExecutionJob, ExecutionJobStatus
+from zentra_domain_analysis_run import ExecutionJob, ExecutionJobStatus
 
 from zentra_adapter_postgres import (
     Database,
-    PostgresInvestigationUnitOfWorkFactory,
+    PostgresAnalysisRunUnitOfWorkFactory,
 )
-from zentra_adapter_postgres.schema import execution_jobs, tenants
+from zentra_adapter_postgres.schema import execution_jobs, organizations
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
 RUNTIME_URL = os.getenv("TEST_DATABASE_RUNTIME_URL")
@@ -44,13 +44,13 @@ class PendingAudit:
 
 
 async def _claim(
-    factory: PostgresInvestigationUnitOfWorkFactory,
-    tenant_id: UUID,
+    factory: PostgresAnalysisRunUnitOfWorkFactory,
+    organization_id: UUID,
     *,
     worker_id: str,
     now: datetime,
 ) -> ExecutionJob | None:
-    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+    async with factory(organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
         job = await unit_of_work.jobs.claim_next(
             worker_id=worker_id,
             now=now,
@@ -65,16 +65,16 @@ async def _claim(
 async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() -> None:
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
-    tenant_id = uuid4()
+    organization_id = uuid4()
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
-            insert(tenants).values(tenant_id=tenant_id, name="Job Tenant")
+            insert(organizations).values(organization_id=organization_id, name="Job Tenant")
         )
 
     database = Database(RUNTIME_URL)
-    factory = PostgresInvestigationUnitOfWorkFactory(database)
-    service = InvestigationService(
+    factory = PostgresAnalysisRunUnitOfWorkFactory(database)
+    service = AnalysisRunService(
         unit_of_work_factory=factory,
         pipeline=UnusedPipeline(),
         audit_writer=PendingAudit(),
@@ -84,7 +84,7 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
     )
     actor = AuthenticatedActor(
         user_id=uuid4(),
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         role=Role.MEMBER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -95,13 +95,13 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
     claimed_at = datetime.now(UTC)
 
     first, second = await asyncio.gather(
-        _claim(factory, tenant_id, worker_id="worker-a", now=claimed_at),
-        _claim(factory, tenant_id, worker_id="worker-b", now=claimed_at),
+        _claim(factory, organization_id, worker_id="worker-a", now=claimed_at),
+        _claim(factory, organization_id, worker_id="worker-b", now=claimed_at),
     )
 
     claimed = [job for job in (first, second) if job is not None]
     assert len(claimed) == 1
-    assert claimed[0].investigation_id == started.investigation_id
+    assert claimed[0].analysis_run_id == started.analysis_run_id
     assert claimed[0].attempts == 1
 
     async with owner_engine.begin() as connection:
@@ -113,7 +113,7 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
 
     recovered = await _claim(
         factory,
-        tenant_id,
+        organization_id,
         worker_id="worker-recovery",
         now=claimed_at,
     )
@@ -126,6 +126,6 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
     await database.close()
     async with owner_engine.begin() as connection:
         await connection.execute(
-            delete(tenants).where(tenants.c.tenant_id == tenant_id)
+            delete(organizations).where(organizations.c.organization_id == organization_id)
         )
     await owner_engine.dispose()

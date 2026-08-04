@@ -11,7 +11,7 @@ reviewed: 2026-07-29
 confidence: verified
 priority: high
 tags: [onboarding, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Repository Overview]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Repository Overview]]"]
 repo_path: docs/11_Onboarding
 ---
 
@@ -23,4 +23,4 @@ repo_path: docs/11_Onboarding
 Read [[Repository Overview]], [[System Context]], and [[Investigation Trust Loop]]
 before making a product change.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

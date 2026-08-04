@@ -4,7 +4,7 @@
 
 **Goal:** Give the application and API layers the behavior ADR-0028 through ADR-0033 promised on top of Plan 1's schema cutover: a third Intake outcome routed to a new Conversational Agent, a composer that is never blocked by an in-flight Analysis Run, a Chat Session dataset default, a REST surface that says `groups`/`chats` instead of `projects`/`threads`, and enforcement (not just a column) for private Chat Sessions.
 
-**Architecture:** All changes live in `libs/application/investigation` (mainly `thread_service.py`, `thread_dto.py`, `thread_ports.py`, `intake_service.py`), a new agent adapter in `libs/adapters/langgraph`, one Postgres migration widening the `agent_registry`/`work_items` role `CHECK` and adding `chat_sessions.default_data_connection_id`, and `apps/api` route/schema renames. No domain-layer class renames (`Investigation`, `InvestigationThread`, `ThreadService` itself) — Plan 1 deferred those and this plan does not pick them back up.
+**Architecture:** All changes live in `libs/application/analysis_run` (mainly `thread_service.py`, `thread_dto.py`, `thread_ports.py`, `intake_service.py`), a new agent adapter in `libs/adapters/langgraph`, one Postgres migration widening the `agent_registry`/`work_items` role `CHECK` and adding `chat_sessions.default_data_connection_id`, and `apps/api` route/schema renames. No domain-layer class renames (`Investigation`, `InvestigationThread`, `ThreadService` itself) — Plan 1 deferred those and this plan does not pick them back up.
 
 **Tech Stack:** Python 3.13, SQLAlchemy Core + Alembic, FastAPI + Pydantic, the existing `AgentPort`/`ModelPort` LangGraph adapter pattern (no LangChain).
 
@@ -154,11 +154,11 @@ git commit -m "feat(postgres): add chat_sessions.default_data_connection_id"
 ### Task 2: `NOT_ANALYTICAL` routing disposition
 
 **Files:**
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_dto.py`
-- Modify: `libs/application/investigation/src/zentra_application_investigation/intake_service.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_dto.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/intake_service.py`
 - Modify: `libs/adapters/langgraph/src/zentra_adapter_langgraph/schemas.py`
 - Modify: `libs/adapters/langgraph/src/zentra_adapter_langgraph/prompts.py`
-- Test: `libs/application/investigation/tests/test_intake_service.py` (create if it does not exist — check first), `libs/adapters/langgraph/tests/test_intake_agent.py` (check the actual existing test file name first: `find libs/adapters/langgraph/tests -iname "*intake*"`)
+- Test: `libs/application/analysis_run/tests/test_intake_service.py` (create if it does not exist — check first), `libs/adapters/langgraph/tests/test_intake_agent.py` (check the actual existing test file name first: `find libs/adapters/langgraph/tests -iname "*intake*"`)
 
 **Interfaces:**
 - Produces: `RoutingDisposition.NOT_ANALYTICAL = "not_analytical"`, consumed by Task 3's `ThreadService` change and Task 3's Conversational Agent wiring.
@@ -287,7 +287,7 @@ ambiguous or unsupported."""
 
 ```bash
 pnpm nx run-many -t test --projects=investigation-application,langgraph --skip-nx-cache
-git add libs/application/investigation libs/adapters/langgraph
+git add libs/application/analysis_run libs/adapters/langgraph
 git commit -m "feat(intake): add the not_analytical routing disposition"
 ```
 
@@ -302,17 +302,17 @@ git commit -m "feat(intake): add the not_analytical routing disposition"
 - Modify: `libs/adapters/langgraph/src/zentra_adapter_langgraph/schemas.py`
 - Modify: `libs/domain/agent-execution/src/zentra_domain_agent_execution/contracts.py` (add `AgentRole.CONVERSATIONAL`)
 - Create: `libs/adapters/postgres/migrations/versions/0026_conversational_role.py`
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_ports.py`
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_service.py`
-- Modify: `libs/domain/investigation/src/zentra_domain_investigation/thread.py` (add `ThreadMessageKind.ASSISTANT_REPLY`)
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_ports.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_service.py`
+- Modify: `libs/domain/analysis_run/src/zentra_domain_analysis_run/thread.py` (add `ThreadMessageKind.ASSISTANT_REPLY`)
 - Modify: `apps/api/src/zentra_api/dependencies.py`, `apps/api/src/zentra_api/registry.py`
-- Test: `libs/application/investigation/tests/test_thread_service.py`, `libs/adapters/langgraph/tests/` (new conversational-agent test file)
+- Test: `libs/application/analysis_run/tests/test_thread_service.py`, `libs/adapters/langgraph/tests/` (new conversational-agent test file)
 
 **Interfaces:**
 - Consumes: `RoutingDisposition.NOT_ANALYTICAL` from Task 2.
 - Produces: a `ConversationalPort` Protocol (`async def reply(self, message: str, *, tenant_id: UUID) -> str`) that `ThreadService` depends on, exactly parallel to `IntakePort`. `ThreadDetail`'s messages gain the ability to carry `kind=ThreadMessageKind.ASSISTANT_REPLY` with `author_id=None`, mirroring how `ROUTER_CLARIFICATION` messages already work.
 
-- [ ] **Step 1: Add `ThreadMessageKind.ASSISTANT_REPLY`** in `libs/domain/investigation/src/zentra_domain_investigation/thread.py`:
+- [ ] **Step 1: Add `ThreadMessageKind.ASSISTANT_REPLY`** in `libs/domain/analysis_run/src/zentra_domain_analysis_run/thread.py`:
 
 ```python
 class ThreadMessageKind(StrEnum):
@@ -525,7 +525,7 @@ Add `conversational` as a required keyword-only constructor argument — every c
         )
 ```
 
-Write `ConversationalService` in `libs/application/investigation/src/zentra_application_investigation/conversational_service.py` — a thin `ConversationalPort` implementation that builds one agent per call (same reasoning as `IntakeService`'s own docstring: nothing here is per-request state, but the pattern matches so a future per-tenant model-tier choice does not require a second refactor) and returns `output.fields["reply"]`.
+Write `ConversationalService` in `libs/application/analysis_run/src/zentra_application_analysis_run/conversational_service.py` — a thin `ConversationalPort` implementation that builds one agent per call (same reasoning as `IntakeService`'s own docstring: nothing here is per-request state, but the pattern matches so a future per-tenant model-tier choice does not require a second refactor) and returns `output.fields["reply"]`.
 
 - [ ] **Step 12: Add `Conversational Agent` to `_PUBLIC_DEFAULTS`** in `apps/api/src/zentra_api/registry.py`, matching the existing entries' shape (display name, description, one capability).
 
@@ -555,8 +555,8 @@ git commit -m "feat(thread): add the Conversational Agent for non-analytical mes
 ### Task 4: Remove the follow-up hard block
 
 **Files:**
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_service.py`
-- Test: `libs/application/investigation/tests/test_thread_service.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_service.py`
+- Test: `libs/application/analysis_run/tests/test_thread_service.py`
 
 **Interfaces:**
 - No new public interface — `ThreadService.append()`'s existing signature and `ThreadDetail` return type are unchanged. The behavior change is purely internal to `_append_follow_up`.
@@ -602,7 +602,7 @@ async def test_a_follow_up_is_accepted_while_the_prior_investigation_is_still_ru
 
 (the `_combined_question_text`/clarification-round-trip framing in the file's existing `FakeIntake` only resolves messages containing "refund" and "eu"/"europe" — check the actual fixture's matching rule before writing the follow-up's content, so it resolves on the first try rather than needing a clarification round-trip first.)
 
-Run it: `cd libs/application/investigation && uv run pytest tests/test_thread_service.py -k follow_up_is_accepted -v`. Expected: FAIL with `ThreadConflictError`.
+Run it: `cd libs/application/analysis_run && uv run pytest tests/test_thread_service.py -k follow_up_is_accepted -v`. Expected: FAIL with `ThreadConflictError`.
 
 - [ ] **Step 2: Remove the block and chain unconditionally**
 
@@ -683,7 +683,7 @@ Read the full current method body before editing — this plan shows the changed
 
 ```bash
 pnpm nx test investigation-application --skip-nx-cache
-git add libs/application/investigation
+git add libs/application/analysis_run
 git commit -m "feat(thread): allow a follow-up while the prior Analysis Run is still active"
 ```
 
@@ -758,9 +758,9 @@ git commit -m "feat(api): rename the Thread REST surface to Chat Session vocabul
 ### Task 6: Enforce private Chat Session visibility
 
 **Files:**
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_service.py`
-- Modify: `libs/application/investigation/src/zentra_application_investigation/thread_dto.py`
-- Test: `libs/application/investigation/tests/test_thread_service.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_service.py`
+- Modify: `libs/application/analysis_run/src/zentra_application_analysis_run/thread_dto.py`
+- Test: `libs/application/analysis_run/tests/test_thread_service.py`
 
 **Interfaces:**
 - No new public method — `ThreadService.get()`, `.append()`, `.archive()`, `.restore()`, `.delete()`, and `.list()` all gain a private-visibility check. `AuthenticatedActor` (already has `.user_id`) is the only new input needed; no new port or repository method (the check runs against a Thread already fetched for other reasons).
@@ -818,7 +818,7 @@ Raising `ThreadNotFoundError` rather than `PermissionDeniedError` is deliberate 
     ) -> ThreadSlice: ...
 ```
 
-In `thread.py`'s SQL, add `AND (chat_sessions.visibility != 'private' OR chat_sessions.created_by = :viewer_id)` to the existing `WHERE`. Update `ThreadService.list()`'s call site to pass `viewer_id=actor.user_id`. Update every test fake `Repository.list_threads` implementation (`test_thread_service.py` and any other file with a hand-written fake matching this Protocol — `grep -rn "async def list_threads" libs/application/investigation/tests`) to accept and honor the new parameter.
+In `thread.py`'s SQL, add `AND (chat_sessions.visibility != 'private' OR chat_sessions.created_by = :viewer_id)` to the existing `WHERE`. Update `ThreadService.list()`'s call site to pass `viewer_id=actor.user_id`. Update every test fake `Repository.list_threads` implementation (`test_thread_service.py` and any other file with a hand-written fake matching this Protocol — `grep -rn "async def list_threads" libs/application/analysis_run/tests`) to accept and honor the new parameter.
 
 - [ ] **Step 5: Write tests**
 

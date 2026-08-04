@@ -1,8 +1,8 @@
-"""The Orchestrator Loop replaces `InvestigationGraph` as the mechanism that
+"""The Orchestrator Loop replaces `AnalysisRunGraph` as the mechanism that
 drives the existing Analyst/Evaluator/Insight Agents (ADR-0026). These tests
 guard the two things that would silently regress chat if this seam broke:
 the same trust-loop behavior (retry up to `MAX_EVALUATION_ATTEMPTS`, then
-settle) and the same `PipelineResult` shape `LangGraphInvestigationPipeline`
+settle) and the same `PipelineResult` shape `LangGraphAnalysisRunPipeline`
 produced — plus the new part, that a Board and Work Items are real rows by
 the time `run()` returns.
 """
@@ -24,11 +24,11 @@ from zentra_domain_agent_execution import (
     ConfidenceOutcome,
     ExecutionUsage,
 )
-from zentra_domain_investigation import WorkItemStatus
+from zentra_domain_analysis_run import WorkItemStatus
 
 from zentra_api.orchestrator_loop import OrchestratorLoop
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 
 ANALYST_QUERY = {
@@ -146,19 +146,19 @@ class FakeBoardRepository:
     async def save(self, board) -> None:
         self._store["boards"][board.board_id] = board
 
-    async def open_gap(self, board_id, tenant_id, gap) -> None:
+    async def open_gap(self, board_id, organization_id, gap) -> None:
         self._store["gaps"][gap.gap_id] = gap
 
-    async def resolve_gap(self, gap_id, tenant_id) -> None:
+    async def resolve_gap(self, gap_id, organization_id) -> None:
         self._store["gaps"][gap_id].resolved = True
 
-    async def record_fact(self, board_id, tenant_id, fact) -> None:
+    async def record_fact(self, board_id, organization_id, fact) -> None:
         self._store["facts"].append(fact)
 
-    async def open_conflict(self, board_id, tenant_id, conflict) -> None:
+    async def open_conflict(self, board_id, organization_id, conflict) -> None:
         self._store["conflicts"][conflict.conflict_id] = conflict
 
-    async def settle_conflict(self, tenant_id, conflict) -> None:
+    async def settle_conflict(self, organization_id, conflict) -> None:
         self._store["conflicts"][conflict.conflict_id] = conflict
 
 
@@ -172,22 +172,22 @@ class FakeWorkItemRepository:
     async def save(self, item) -> None:
         self._store["items"][item.work_item_id] = item
 
-    async def list_for_investigation(self, investigation_id, tenant_id):
+    async def list_for_analysis_run(self, analysis_run_id, organization_id):
         return tuple(
             item
             for item in self._store["items"].values()
-            if item.investigation_id == investigation_id
+            if item.analysis_run_id == analysis_run_id
         )
 
 
 class FakePolicies:
-    async def confidence_threshold(self, tenant_id) -> float:
+    async def confidence_threshold(self, organization_id) -> float:
         return 0.7
 
 
 class FakeUnitOfWork:
     def __init__(self, store: dict) -> None:
-        self.investigation_boards = FakeBoardRepository(store)
+        self.analysis_run_boards = FakeBoardRepository(store)
         self.work_items = FakeWorkItemRepository(store)
         self.policies = FakePolicies()
 
@@ -211,12 +211,12 @@ class FakeUnitOfWorkFactory:
             "conflicts": {},
         }
 
-    def __call__(self, tenant_id, trace_id, span_id) -> FakeUnitOfWork:
+    def __call__(self, organization_id, trace_id, span_id) -> FakeUnitOfWork:
         return FakeUnitOfWork(self.store)
 
 
 class FakeSemanticLayers:
-    async def resolve(self, *, tenant_id, data_connection_id):
+    async def resolve(self, *, organization_id, data_connection_id):
         return object()
 
 
@@ -267,8 +267,8 @@ async def test_a_converged_run_persists_work_items_and_resolves_the_gap() -> Non
     )
 
     result = await loop.run(
-        investigation_id=INVESTIGATION_ID,
-        tenant_id=TENANT_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
         question="Why did EU refunds increase from June to July 2026?",
     )
 
@@ -305,8 +305,8 @@ async def test_a_failed_recheck_retries_the_analyst_before_settling() -> None:
     )
 
     result = await loop.run(
-        investigation_id=INVESTIGATION_ID,
-        tenant_id=TENANT_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
         question="Why did EU refunds increase from June to July 2026?",
     )
 
@@ -340,8 +340,8 @@ async def test_a_persistently_failing_recheck_settles_at_the_attempt_cap() -> No
     )
 
     result = await loop.run(
-        investigation_id=INVESTIGATION_ID,
-        tenant_id=TENANT_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
+        organization_id=TENANT_ID,
         question="Why did EU refunds increase from June to July 2026?",
     )
 

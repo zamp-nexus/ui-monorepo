@@ -46,7 +46,7 @@ class CandidatePair:
 #: An empty proposal list is ambiguous on its own: it reads as "your data has no
 #: relationships" when the truth may be "the relationships your data has are not
 #: of a kind this looks for". Only single-field keys are considered, so a table
-#: keyed on (tenant_id, order_id) yields nothing and looks like a table with no
+#: keyed on (organization_id, order_id) yields nothing and looks like a table with no
 #: relations at all. Saying so is the whole reason composite keys can honestly
 #: be out of scope.
 COMPOSITE_KEY_LIMITATION = (

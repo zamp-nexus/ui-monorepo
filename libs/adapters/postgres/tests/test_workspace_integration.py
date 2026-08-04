@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
     GroupNameConflictError,
     GroupNotFoundError,
@@ -16,7 +16,7 @@ from zentra_application_investigation import (
 )
 
 from zentra_adapter_postgres import Database, PostgresGroupUnitOfWorkFactory
-from zentra_adapter_postgres.schema import tenants
+from zentra_adapter_postgres.schema import organizations
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
 RUNTIME_URL = os.getenv("TEST_DATABASE_RUNTIME_URL")
@@ -31,15 +31,15 @@ pytestmark = pytest.mark.skipif(
 async def test_workspace_repository_enforces_names_and_tenant_visibility() -> None:
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
-    tenant_id = uuid4()
-    other_tenant_id = uuid4()
+    organization_id = uuid4()
+    other_organization_id = uuid4()
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
-            insert(tenants),
+            insert(organizations),
             [
-                {"tenant_id": tenant_id, "name": "Workspace Tenant"},
-                {"tenant_id": other_tenant_id, "name": "Other Tenant"},
+                {"organization_id": organization_id, "name": "Workspace Tenant"},
+                {"organization_id": other_organization_id, "name": "Other Tenant"},
             ],
         )
 
@@ -51,14 +51,14 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     )
     actor = AuthenticatedActor(
         user_id=uuid4(),
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
     )
     other_actor = AuthenticatedActor(
         user_id=uuid4(),
-        tenant_id=other_tenant_id,
+        organization_id=other_organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -73,8 +73,8 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     await database.close()
     async with owner_engine.begin() as connection:
         await connection.execute(
-            tenants.delete().where(
-                tenants.c.tenant_id.in_((tenant_id, other_tenant_id))
+            organizations.delete().where(
+                organizations.c.organization_id.in_((organization_id, other_organization_id))
             )
         )
     await owner_engine.dispose()

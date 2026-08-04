@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -12,6 +12,9 @@ from zentra_domain_agent_execution import (
     ModelMessage,
     ModelPort,
     ModelResponse,
+    ModelStreamDelta,
+    ModelStreamEnd,
+    ModelStreamEvent,
     ToolDefinition,
 )
 
@@ -113,6 +116,58 @@ class RecordingModelClient:
         )
         return response
 
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        """Passes the stream through and records it as one recorded reply.
+
+        Recorded the same way a non-streaming call is: the cassette holds the
+        final text and usage, not the individual chunk boundaries — replay
+        reproduces the same reply, delivered as a single chunk, which is
+        sufficient for a test asserting on final content.
+        """
+        text_parts: list[str] = []
+        end: ModelStreamEnd | None = None
+        async for event in self._inner.stream(
+            model=model,
+            system=system,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        ):
+            if isinstance(event, ModelStreamDelta):
+                text_parts.append(event.text)
+            else:
+                end = event
+            yield event
+        assert end is not None
+        key = _key(
+            model=model, system=system, messages=messages, response_schema=None
+        )
+        (self._directory / f"{key}.json").write_text(
+            json.dumps(
+                {
+                    "requested_model": model,
+                    "text": "".join(text_parts),
+                    "usage": {
+                        "input_tokens": end.usage.input_tokens,
+                        "output_tokens": end.usage.output_tokens,
+                        "cost_usd": str(end.usage.cost_usd),
+                        "model": end.usage.model,
+                    },
+                    "fallbacks": list(end.fallbacks),
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+
 
 class ReplayModelClient:
     """Serves recorded responses. Never touches the network."""
@@ -161,6 +216,39 @@ class ReplayModelClient:
                 # cassette a few times while verifying a change had already
                 # booked several times its real cost as if it were spend. The
                 # cassette keeps the recorded figure; the ledger must not.
+                cost_usd=Decimal("0"),
+                model=usage["model"],
+            ),
+            fallbacks=tuple(recorded.get("fallbacks", ())),
+        )
+
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        """Replays the recorded reply as a single chunk, then the terminal event."""
+        key = _key(
+            model=model, system=system, messages=messages, response_schema=None
+        )
+        path = self._directory / f"{key}.json"
+        if not path.exists():
+            raise UnrecordedRequestError(
+                f"No recording for {model} at {path.name}. Re-record with "
+                f"--record, or check whether a prompt changed."
+            )
+        recorded = json.loads(path.read_text())
+        usage = recorded["usage"]
+        if recorded["text"]:
+            yield ModelStreamDelta(text=recorded["text"])
+        yield ModelStreamEnd(
+            usage=ExecutionUsage(
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
                 cost_usd=Decimal("0"),
                 model=usage["model"],
             ),

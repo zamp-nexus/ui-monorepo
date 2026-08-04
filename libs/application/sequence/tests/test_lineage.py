@@ -51,12 +51,12 @@ def _prepared_table(
 ) -> PreparedTable:
     return PreparedTable(
         prepared_table_id=prepared_table_id,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=uuid4(),
         step_id=step_id,
         parent_table_reference=(
             SequenceTableReference(
-                tenant_id=TENANT_ID, reference_id=parent, kind="prepared"
+                organization_id=TENANT_ID, reference_id=parent, kind="prepared"
             )
             if parent is not None
             else None
@@ -77,11 +77,11 @@ def _step(
     return SequenceStep(
         step_id=step_id,
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         operation=DropNullsParameters(columns=("email",)),
         input_reference=(
             SequenceTableReference(
-                tenant_id=TENANT_ID, reference_id=input_id, kind="prepared"
+                organization_id=TENANT_ID, reference_id=input_id, kind="prepared"
             )
             if input_id is not None
             else None
@@ -96,7 +96,7 @@ def _sequence(
 ) -> Sequence:
     return Sequence(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=WORKSPACE_ID,
         raw_table_reference=_connector_table(),
         created_at=BASE,
@@ -137,7 +137,7 @@ def test_a_failed_run_anchors_to_the_latest_prior_prepared_table() -> None:
     run = SequenceRun(
         run_id=uuid4(),
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         step_id=uuid4(),
         outcome=SequenceRunFailed(
             reason=SequenceExecutionFailureReason.DATA_INCOMPATIBLE, detail="bad cast"
@@ -151,7 +151,7 @@ def test_a_failed_run_before_any_prepared_table_anchors_to_the_raw_table() -> No
     run = SequenceRun(
         run_id=uuid4(),
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         step_id=uuid4(),
         outcome=SequenceRunFailed(
             reason=SequenceExecutionFailureReason.UNKNOWN_TABLE, detail="no such table"
@@ -197,7 +197,7 @@ def test_build_graph_view_reports_a_linear_sequence() -> None:
 def test_build_graph_view_reports_a_chat_origin_sequence_with_no_thread() -> None:
     sequence = Sequence(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=WORKSPACE_ID,
         raw_table_reference=_connector_table(),
         created_at=BASE,
@@ -211,7 +211,7 @@ def test_build_graph_view_includes_a_failed_run_as_its_own_entry() -> None:
     run = SequenceRun(
         run_id=uuid4(),
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         step_id=uuid4(),
         outcome=SequenceRunFailed(
             reason=SequenceExecutionFailureReason.CATALOG_VIOLATION, detail="bad op"
@@ -237,7 +237,7 @@ def test_build_graph_view_ignores_succeeded_runs() -> None:
     run = SequenceRun(
         run_id=uuid4(),
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         step_id=uuid4(),
         outcome=SequenceRunSucceeded(produced_table_id=table_id),
         attempted_at=BASE,

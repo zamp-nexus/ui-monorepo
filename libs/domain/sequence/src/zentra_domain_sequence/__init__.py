@@ -1,4 +1,4 @@
-"""ZentraOS Sequence domain: typed, versioned data-cleaning pipelines"""
+"""Nexus Sequence domain: typed, versioned data-cleaning pipelines"""
 
 from .catalog import (
     SEQUENCE_OPERATION_ADAPTER,

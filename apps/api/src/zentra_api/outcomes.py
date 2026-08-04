@@ -1,6 +1,6 @@
-"""What a completed Investigation run established, before it becomes domain.
+"""What a completed Analysis Run run established, before it becomes domain.
 
-These three travelled with `InvestigationGraph` while LangGraph was the
+These three travelled with `AnalysisRunGraph` while LangGraph was the
 mechanism (ADR-0026). They never depended on it — they are plain dataclasses —
 and nothing inside the agent adapter reads them, so with the graph deleted they
 belong beside their only consumer: the Orchestrator Loop that produces them and

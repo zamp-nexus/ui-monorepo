@@ -29,23 +29,23 @@ from zentra_api.settings import Settings
 
 OWNER = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000001"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000002"),
     email="owner@example.com",
-    tenant_name="Acme Europe",
+    organization_name="Acme Europe",
     role="owner",
 )
 OTHER_TENANT = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000009"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000008"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000008"),
     email="stranger@example.com",
-    tenant_name="Other Co",
+    organization_name="Other Co",
     role="owner",
 )
 VIEWER = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000003"),
-    tenant_id=OWNER.tenant_id,
+    organization_id=OWNER.organization_id,
     email="viewer@example.com",
-    tenant_name="Acme Europe",
+    organization_name="Acme Europe",
     role="viewer",
 )
 
@@ -129,20 +129,20 @@ class SourceRepository:
     async def add(self, source) -> None:
         self.rows[source.data_source_id] = source
 
-    async def get(self, data_source_id: UUID, *, tenant_id: UUID):
+    async def get(self, data_source_id: UUID, *, organization_id: UUID):
         found = self.rows.get(data_source_id)
         # Tenant scoping, as RLS gives it in production.
-        return found if found is not None and found.tenant_id == tenant_id else None
+        return found if found is not None and found.organization_id == organization_id else None
 
-    async def list(self, *, tenant_id: UUID):
-        return [s for s in self.rows.values() if s.tenant_id == tenant_id]
+    async def list(self, *, organization_id: UUID):
+        return [s for s in self.rows.values() if s.organization_id == organization_id]
 
     async def save(self, source) -> None:
         self.rows[source.data_source_id] = source
 
-    async def delete(self, data_source_id: UUID, *, tenant_id: UUID) -> None:
+    async def delete(self, data_source_id: UUID, *, organization_id: UUID) -> None:
         found = self.rows.get(data_source_id)
-        if found is not None and found.tenant_id == tenant_id:
+        if found is not None and found.organization_id == organization_id:
             del self.rows[data_source_id]
 
 
@@ -154,11 +154,11 @@ class AccessRepository:
         key = (override.data_source_id, override.table_name, override.field_name)
         self.rows[key] = override
 
-    async def list_for_source(self, data_source_id: UUID, *, tenant_id: UUID):
+    async def list_for_source(self, data_source_id: UUID, *, organization_id: UUID):
         return [
             o
             for o in self.rows.values()
-            if o.data_source_id == data_source_id and o.tenant_id == tenant_id
+            if o.data_source_id == data_source_id and o.organization_id == organization_id
         ]
 
 
@@ -179,7 +179,7 @@ class Dependencies:
     cube: Probe
     jwt_verifier: Verifier
     connector: ConnectorService | None
-    investigations: object | None = None
+    analysis_runs: object | None = None
 
     async def close(self) -> None:
         return None
@@ -199,7 +199,7 @@ def build(
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
     monkeypatch.setattr(
-        "zentra_api.request_context.correlate_tenant", lambda *_: None
+        "zentra_api.request_context.correlate_organization", lambda *_: None
     )
 
     sources = SourceRepository() if sources is None else sources

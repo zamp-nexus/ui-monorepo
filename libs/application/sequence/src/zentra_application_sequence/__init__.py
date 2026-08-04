@@ -1,4 +1,4 @@
-"""ZentraOS Sequence application: read models and manual creation over the
+"""Nexus Sequence application: read models and manual creation over the
 Sequence domain."""
 
 from .dto import (

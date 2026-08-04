@@ -87,9 +87,9 @@ export const buttonDefaultTheme: ComponentThemeConfigStructure = {
     variants: {
       intent: {
         primary:
-          'bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-primary',
+          'bg-primary text-primary-foreground hover:bg-primary-hover hover:shadow-[0_0_20px_var(--color-primary)] focus-visible:ring-primary',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary-hover focus-visible:ring-secondary border border-border',
+          'bg-glass text-secondary-foreground hover:bg-secondary-hover focus-visible:ring-secondary border border-glass-border',
         danger: 'bg-danger text-danger-foreground hover:bg-danger-hover focus-visible:ring-danger',
         ghost: 'bg-transparent hover:bg-secondary text-foreground',
         link: 'bg-transparent text-primary underline-offset-4 hover:underline p-0 h-auto',

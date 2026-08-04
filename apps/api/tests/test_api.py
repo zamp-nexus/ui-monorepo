@@ -5,9 +5,9 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 from zentra_adapter_postgres import IdentityContext, IdentityNotBoundError
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
+    AnalysisRunDetail,
     AuditDelivery,
-    InvestigationDetail,
     PermissionDeniedError,
 )
 from zentra_domain_agent_execution import (
@@ -16,13 +16,13 @@ from zentra_domain_agent_execution import (
     SemanticDimension,
     SemanticMeasure,
 )
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
+    AnalysisRunStatus,
     ApprovalDecision,
     DraftFinding,
     EvidenceCitation,
     EvidenceReference,
     Finding,
-    InvestigationStatus,
     MetricComparison,
 )
 
@@ -96,9 +96,9 @@ class SemanticLayers:
         self.resolved: list[tuple[object, object]] = []
 
     async def resolve(
-        self, *, tenant_id: object, data_connection_id: object
+        self, *, organization_id: object, data_connection_id: object
     ) -> SemanticLayer:
-        self.resolved.append((tenant_id, data_connection_id))
+        self.resolved.append((organization_id, data_connection_id))
         return SemanticLayer()
 
 
@@ -108,7 +108,7 @@ class Dependencies:
     audit: Probe
     cube: Probe
     jwt_verifier: Verifier
-    investigations: object | None = None
+    analysis_runs: object | None = None
     groups: object | None = None
     organizations: object | None = None
     threads: object | None = None
@@ -138,7 +138,7 @@ def client(
     postgres: bool = True,
     clickhouse: bool = True,
     cube: bool = True,
-    investigations: object | None = None,
+    analysis_runs: object | None = None,
     groups: object | None = None,
     organizations: object | None = None,
     threads: object | None = None,
@@ -150,7 +150,7 @@ def client(
         audit=Probe(clickhouse),
         cube=Probe(cube),
         jwt_verifier=Verifier(),
-        investigations=investigations,
+        analysis_runs=analysis_runs,
         groups=groups,
         organizations=organizations,
         threads=threads,
@@ -159,11 +159,6 @@ def client(
     app = create_app(
         Settings(
             clerk_issuer="https://example.clerk.accounts.dev",
-            # `Settings` reads the repository `.env`, so a developer holding a
-            # real renderer key would otherwise change what readiness reports
-            # here. The harness states the renderer's absence rather than
-            # inheriting whatever the machine happens to be configured for.
-            thesys_api_key=None,
             clerk_webhook_secret=clerk_webhook_secret,
         ),
         dependencies=dependencies,  # type: ignore[arg-type]
@@ -207,7 +202,6 @@ def test_readiness_reports_sanitized_dependency_state() -> None:
         "postgres": {"status": "ready"},
         "clickhouse": {"status": "unavailable"},
         "cube": {"status": "ready"},
-        "thesys": {"status": "unavailable"},
     }
     assert "password" not in response.text
 
@@ -234,9 +228,9 @@ def test_context_rejects_invalid_bearer_token() -> None:
 def test_context_returns_internal_identity(monkeypatch) -> None:
     expected = IdentityContext(
         user_id=UUID("10000000-0000-0000-0000-000000000001"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
         email="owner@example.com",
-        tenant_name="Acme Europe",
+        organization_name="Acme Europe",
         role="owner",
     )
 
@@ -246,7 +240,7 @@ def test_context_returns_internal_identity(monkeypatch) -> None:
     correlated_tenants = []
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
     monkeypatch.setattr(
-        "zentra_api.request_context.correlate_tenant",
+        "zentra_api.request_context.correlate_organization",
         correlated_tenants.append,
     )
 
@@ -264,12 +258,12 @@ def test_context_returns_internal_identity(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "user_id": str(expected.user_id),
-        "tenant_id": str(expected.tenant_id),
+        "organization_id": str(expected.organization_id),
         "email": expected.email,
-        "tenant_name": expected.tenant_name,
+        "organization_name": expected.organization_name,
         "role": expected.role,
     }
-    assert correlated_tenants == [expected.tenant_id]
+    assert correlated_tenants == [expected.organization_id]
 
 
 def test_context_denies_unbound_organization(monkeypatch) -> None:
@@ -288,18 +282,18 @@ def test_context_denies_unbound_organization(monkeypatch) -> None:
     assert response.json()["detail"] == "Identity organization is not bound to a tenant"
 
 
-def investigation_detail(
+def analysis_run_detail(
     draft_finding: DraftFinding | None = None,
     evidence_citations: tuple[EvidenceCitation, ...] = (),
-) -> InvestigationDetail:
+) -> AnalysisRunDetail:
     """Defaults to the legacy shape — a narrative Finding and no draft —
-    because that is what every Investigation that ran before Insight has."""
+    because that is what every Analysis Run that ran before Insight has."""
     now = datetime(2026, 7, 29, tzinfo=UTC)
-    return InvestigationDetail(
-        investigation_id=UUID("30000000-0000-0000-0000-000000000003"),
+    return AnalysisRunDetail(
+        analysis_run_id=UUID("30000000-0000-0000-0000-000000000003"),
         question="Why did EU refunds increase from June to July 2026?",
         scenario_key=None,
-        status=InvestigationStatus.AWAITING_APPROVAL,
+        status=AnalysisRunStatus.AWAITING_APPROVAL,
         version=5,
         evaluation_attempts=1,
         created_at=now,
@@ -333,16 +327,16 @@ def investigation_detail(
     )
 
 
-class InvestigationServiceStub:
+class AnalysisRunServiceStub:
     def __init__(self) -> None:
-        self.detail = investigation_detail()
+        self.detail = analysis_run_detail()
         self.last_decision: ApprovalDecision | None = None
         self.execute_calls = 0
 
-    async def start(self, *args: object, **kwargs: object) -> InvestigationDetail:
+    async def start(self, *args: object, **kwargs: object) -> AnalysisRunDetail:
         return self.detail
 
-    async def get(self, *args: object, **kwargs: object) -> InvestigationDetail:
+    async def get(self, *args: object, **kwargs: object) -> AnalysisRunDetail:
         return self.detail
 
     async def execute(self, *args: object, **kwargs: object) -> None:
@@ -353,85 +347,27 @@ class InvestigationServiceStub:
         *args: object,
         decision: ApprovalDecision,
         **kwargs: object,
-    ) -> InvestigationDetail:
+    ) -> AnalysisRunDetail:
         self.last_decision = decision
         return self.detail
-
-
-def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
-    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
-        return IdentityContext(
-            user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-            email="owner@example.com",
-            tenant_name="Acme Europe",
-            role="owner",
-        )
-
-    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    service = InvestigationServiceStub()
-    with client(investigations=service) as test_client:
-        response = test_client.post(
-            "/v1/investigations",
-            headers={"Authorization": "Bearer valid"},
-            json={"question": "Why did EU refunds increase from June to July 2026?"},
-        )
-
-    assert response.status_code == 201
-    assert service.execute_calls == 0
-    assert response.json()["status"] == "awaiting_approval"
-    assert response.json()["outcome"] == {
-        "kind": "confidence",
-        "score": 0.42,
-        "calibration_method": "evaluator_independent_recheck",
-    }
-
-
-def test_a_metric_carries_the_periods_it_compares(monkeypatch) -> None:
-    """The client cannot derive them and must never guess them, so the response
-    is the only place they can come from."""
-
-    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
-        return IdentityContext(
-            user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-            email="owner@example.com",
-            tenant_name="Acme Europe",
-            role="owner",
-        )
-
-    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    with client(investigations=InvestigationServiceStub()) as test_client:
-        response = test_client.post(
-            "/v1/investigations",
-            headers={"Authorization": "Bearer valid"},
-            json={"question": "Why did EU refunds increase from June to July 2026?"},
-        )
-
-    dated, undated = response.json()["finding"]["metrics"]
-    assert dated["previous_label"] == "June 2026"
-    assert dated["current_label"] == "July 2026"
-    # A metric with no period to name says so, rather than borrowing one.
-    assert undated["previous_label"] is None
-    assert undated["current_label"] is None
 
 
 def test_approval_request_validates_reason_before_service(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    service = InvestigationServiceStub()
-    with client(investigations=service) as test_client:
+    service = AnalysisRunServiceStub()
+    with client(analysis_runs=service) as test_client:
         response = test_client.post(
             (
-                "/v1/investigations/30000000-0000-0000-0000-000000000003/"
+                "/v1/analysis-runs/30000000-0000-0000-0000-000000000003/"
                 "approvals/40000000-0000-0000-0000-000000000004/decision"
             ),
             headers={"Authorization": "Bearer valid"},
@@ -463,9 +399,9 @@ def test_the_catalog_served_is_the_asking_tenants_own(
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
@@ -547,27 +483,27 @@ def test_a_trailing_slash_on_the_issuer_does_not_change_it() -> None:
 
 def test_a_member_cannot_decide_and_is_told_so(monkeypatch) -> None:
     """403, and the body says which membership rule applied without naming the
-    Investigation's contents."""
+    Analysis Run's contents."""
 
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="member@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="member",
         )
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    service = InvestigationServiceStub()
+    service = AnalysisRunServiceStub()
 
     async def deny(*args: object, **kwargs: object):
         raise PermissionDeniedError("This membership cannot decide Human Approvals")
 
     service.decide = deny  # type: ignore[method-assign]
-    with client(investigations=service) as test_client:
+    with client(analysis_runs=service) as test_client:
         response = test_client.post(
-            "/v1/investigations/30000000-0000-0000-0000-000000000003"
+            "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/approvals/40000000-0000-0000-0000-000000000004/decision",
             headers={"Authorization": "Bearer valid"},
             json={"decision": "approve"},

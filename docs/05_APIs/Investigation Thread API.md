@@ -12,13 +12,13 @@ confidence: verified
 implementation: current
 priority: high
 tags: [api, threads, messages, routing]
-related: ["[[APIs MOC]]", "[[Investigation API]]", "[[Workspace Organization API]]", "[[Postgres Control Plane]]"]
+related: ["[[APIs MOC]]", "[[Analysis Run API]]", "[[Workspace Organization API]]", "[[Postgres Control Plane]]"]
 depends_on: ["[[Authenticated Tenant Resolution]]"]
 repo_path: apps/api/src/zentra_api/chat_routes.py
 code_refs:
   - apps/api/src/zentra_api/chat_routes.py
   - apps/api/src/zentra_api/thread_schemas.py
-  - libs/application/investigation/src/zentra_application_investigation/thread_service.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/thread_service.py
   - apps/api/tests/test_thread_api.py
 ---
 

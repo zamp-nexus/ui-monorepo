@@ -2,10 +2,10 @@
 
 ## Contexts
 
-- [ZentraOS Domain](./libs/domain/CONTEXT.md) — owns the product language shared by chat, analysis, tenancy, semantic modeling, and trust
+- [Nexus Domain](./libs/domain/CONTEXT.md) — owns the product language shared by chat, analysis, tenancy, semantic modeling, and trust
 - [Investigation](./libs/domain/investigation/CONTEXT.md) — owns the lifecycle of a Chat Session and the Analysis Runs it accumulates; still at this path pending the package rename (see [[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]])
 - [Agent Execution](./libs/domain/agent-execution/CONTEXT.md) — owns autonomous analytical work and its typed outcomes
-- [Connector](./libs/domain/connector/CONTEXT.md) — owns how ZentraOS learns what is in a Tenant's data and how that data connects
+- [Connector](./libs/domain/connector/CONTEXT.md) — owns how Nexus learns what is in a Tenant's data and how that data connects
 - [Data Source](./libs/domain/data-source/CONTEXT.md) — owns uploaded and live analytical inputs, versions, and Analysis Run bindings
 - [Sequence](./libs/domain/sequence/CONTEXT.md) — owns the versioned graph of typed transform steps that turns a raw table into a final, model-ready table
 
@@ -19,7 +19,7 @@
 > question for its own scope (chDB, not DuckDB) but does not resolve Data
 > Source's separate query-execution debate.
 
-> **Tenant → Organization, partially reconciled.** The ZentraOS Domain and
+> **Tenant → Organization, partially reconciled.** The Nexus Domain and
 > Investigation contexts now use **Organization** as the canonical term for a
 > customer, per [[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]].
 > Connector, Sequence, Data Source, and Agent Execution still say **Tenant** —

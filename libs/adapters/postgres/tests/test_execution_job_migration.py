@@ -25,7 +25,7 @@ def _config() -> Config:
 def test_durable_job_migration_adds_leases_rls_and_checkpoint_tables() -> None:
     # No longer downgrades to a pre-cutover revision first: walking back
     # that far also walks back through 0016_durable_execution_jobs' own
-    # downgrade, which drops a uniqueness constraint on `investigations` by
+    # downgrade, which drops a uniqueness constraint on `analysis_runs` by
     # name -- a table the destructive Chat & Analysis Run cutover (0023,
     # ADR-0030) has already renamed to `analysis_runs` and does not (and
     # cannot, short of reversing everything 0002 through 0022 did to it)

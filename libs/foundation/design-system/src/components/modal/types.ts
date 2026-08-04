@@ -170,7 +170,7 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
     // paints past it — a long modal running off the screen with nothing to
     // scroll, and its rounded corners no longer clipping.
     popup: {
-      base: 'fixed left-1/2 top-1/2 z-50 flex flex-col overflow-hidden -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-lg transition-all data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
+      base: 'fixed left-1/2 top-1/2 z-50 flex flex-col overflow-hidden -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-glass-border bg-glass backdrop-blur-3xl shadow-[0_8px_40px_rgb(0_0_0_/_0.12)] transition-all data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
       variants: {
         size: {
           '480': 'w-[480px] max-w-[calc(100vw-2rem)]',

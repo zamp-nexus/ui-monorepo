@@ -13,7 +13,7 @@ Loaded from markdown with YAML-ish frontmatter — the same convention the docs
 vault uses, so a skill reads like the rest of this repository's prose.
 Deliberately not read per call: skills are stable per role, and they are
 appended to the *system* prompt, which providers cache. A skill that varied per
-investigation would silently break that cache on every request.
+analysis_run would silently break that cache on every request.
 """
 
 from __future__ import annotations

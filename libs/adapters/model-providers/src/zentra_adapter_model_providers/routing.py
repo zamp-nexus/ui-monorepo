@@ -5,7 +5,7 @@ from zentra_domain_agent_execution import AgentRole
 from .providers import ModelChoice, ModelTier, Provider
 
 # Free-tier ceilings are set well under the tightest published TPM budget
-# (Groq bottoms out at 6K/min on some models), because one investigation makes
+# (Groq bottoms out at 6K/min on some models), because one analysis_run makes
 # six or more calls. Anthropic has the headroom for real reasoning depth.
 _FREE_MAX_TOKENS = 8000
 _PAID_MAX_TOKENS = 16000
@@ -21,7 +21,7 @@ def _free(
     """A free rung. The default is Groq's constraint, not everyone's.
 
     Overriding matters: a truncated response is a dead rung, and on a chain with
-    one reachable provider it is a dead investigation. That happened live —
+    one reachable provider it is a dead analysis_run. That happened live —
     Nemotron ran out of room analysing a 300-order result and the run failed
     with every other rung deliberately withheld.
     """
@@ -34,13 +34,18 @@ def _free(
 
 
 def _paid(
-    provider: Provider, model: str, *, supports_tools: bool = True
+    provider: Provider,
+    model: str,
+    *,
+    supports_tools: bool = True,
+    supports_thinking: bool = False,
 ) -> ModelChoice:
     return ModelChoice(
         provider=provider,
         model=model,
         max_tokens=_PAID_MAX_TOKENS,
         supports_tools=supports_tools,
+        supports_thinking=supports_thinking,
     )
 
 
@@ -67,7 +72,7 @@ _GEMINI_FLASH = _free(Provider.GEMINI, "gemini-3.6-flash")
 # per minute against Cerebras's 5.
 # NIM does not share Groq's per-minute token budget, so it is not held to it.
 # A reasoning model leading the Evaluator chain needs the room: at 8000 it
-# truncated on the larger scenario and took the whole investigation with it.
+# truncated on the larger scenario and took the whole analysis_run with it.
 _NVIDIA_NEMOTRON = _free(
     Provider.NVIDIA,
     "nvidia/nemotron-3-ultra-550b-a55b",
@@ -99,7 +104,12 @@ _GROQ_OSS = _free(Provider.GROQ, "openai/gpt-oss-120b", supports_tools=True)
 _OPENROUTER_FREE = _free(Provider.OPENROUTER, "openrouter/free")
 
 _SONNET = _paid(Provider.ANTHROPIC, "claude-sonnet-5")
-_OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5")
+# `supports_thinking=True`: Opus is the rung with headroom for real reasoning
+# depth (see the free-tier comment above), so it is the one marked eligible
+# for the Anthropic client's extended-thinking capture. Not yet read by
+# `RoutedModelClient` — recorded here as the per-role config surface for
+# when a caller decides to request it.
+_OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5", supports_thinking=True)
 _GPT = _paid(Provider.OPENAI, "gpt-5.5")
 # Premium-tier light roles (Intake, Evaluator, Insight) lead on this instead of
 # Sonnet/Opus — a deliberate speed tradeoff. Measured live: Cube Analyst and
@@ -120,7 +130,7 @@ _HAIKU = _paid(Provider.ANTHROPIC, "claude-haiku-4-5-20251001")
 ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
     ModelTier.FREE: {
         # Intake classifies a question against a scoped catalog before any
-        # Investigation exists — the same light workload shape as planning,
+        # AnalysisRun exists — the same light workload shape as planning,
         # so it inherits the Orchestrator's chain rather than getting its own.
         AgentRole.INTAKE: (
             _GEMINI_FLASH,
@@ -160,6 +170,18 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
         # independence check, so it is under no obligation to lead on a
         # different family from either upstream Agent.
         AgentRole.INSIGHT: (
+            _GEMINI_FLASH,
+            _NVIDIA_NEMOTRON,
+            _GROQ_OSS,
+            _CEREBRAS_GLM,
+            _OPENROUTER_FREE,
+            _SONNET,
+        ),
+        # Conversational replies to non-analytical messages (ADR-0033) are
+        # always served on this chain today — the Conversational Agent is
+        # wired to the Intake model client regardless of tenant tier — so it
+        # inherits Intake's chain rather than getting its own.
+        AgentRole.CONVERSATIONAL: (
             _GEMINI_FLASH,
             _NVIDIA_NEMOTRON,
             _GROQ_OSS,

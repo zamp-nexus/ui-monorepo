@@ -3,11 +3,11 @@ from zentra_adapter_postgres.schema import agent_registry, metadata
 
 def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
     assert {
-        "tenants",
+        "organizations",
         "users",
         "identity_subjects",
-        "tenant_identity_bindings",
-        "tenant_memberships",
+        "organization_identity_bindings",
+        "organization_memberships",
         "analysis_runs",
         "agent_executions",
         "human_approvals",
@@ -38,7 +38,7 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "visualization_actions",
         # The Analysis Run's working memory: what it has established, what it
         # still does not know, and the queue it works off (ADR-0026). Migration
-        # 0020, renamed from Investigation Board per ADR-0028.
+        # 0020, renamed from AnalysisRun Board per ADR-0028.
         "analysis_workspaces",
         "board_facts",
         "board_hypotheses",

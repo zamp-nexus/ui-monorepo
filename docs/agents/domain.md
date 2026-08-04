@@ -24,7 +24,7 @@ decision is actually resolved.
 │   └── adr/                              ← system-wide decisions
 └── libs/
     └── domain/
-        ├── CONTEXT.md                    ← shared ZentraOS language
+        ├── CONTEXT.md                    ← shared Nexus language
         ├── agent-execution/
         │   └── CONTEXT.md
         └── investigation/

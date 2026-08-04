@@ -92,11 +92,31 @@ def test_evidence_references_are_metadata_only_artifact_pointers() -> None:
 def test_input_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError):
         AgentInput(
-            investigation_id=uuid4(),
-            tenant_id=uuid4(),
+            analysis_run_id=uuid4(),
+            organization_id=uuid4(),
             state={},
-            caller_tenant_id=uuid4(),
+            caller_organization_id=uuid4(),
         )
+
+
+def test_reasoning_defaults_to_none_and_is_accepted_when_given() -> None:
+    """Most Agents have no reasoning worth showing; where one is given, it is
+    carried as-is rather than folded into `fields`."""
+    silent = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+    )
+    assert silent.reasoning is None
+
+    explained = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+        reasoning="EU refunds are the only region with a June-to-July increase.",
+    )
+    assert (
+        explained.reasoning
+        == "EU refunds are the only region with a June-to-July increase."
+    )
 
 
 def test_output_rejects_undeclared_fields() -> None:
@@ -114,8 +134,8 @@ async def test_agent_port_shape_is_usable() -> None:
     agent = StubAgent()
     output = await agent.invoke(
         AgentInput(
-            investigation_id=uuid4(),
-            tenant_id=uuid4(),
+            analysis_run_id=uuid4(),
+            organization_id=uuid4(),
             state={"question": "Why did refunds increase?"},
         )
     )
@@ -129,8 +149,8 @@ def _legacy_execution() -> dict[str, object]:
     moment = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
     return {
         "execution_id": str(uuid4()),
-        "investigation_id": str(uuid4()),
-        "tenant_id": str(uuid4()),
+        "analysis_run_id": str(uuid4()),
+        "organization_id": str(uuid4()),
         "agent_id": "orchestrator_v1",
         "role": "insight_root_cause",
         "step": 3,
@@ -187,7 +207,7 @@ def test_each_legacy_role_names_its_own_replacement() -> None:
 
 
 def test_a_phase_1_execution_record_still_deserialises() -> None:
-    """Replay has to keep rendering investigations that ran before the rename.
+    """Replay has to keep rendering Analysis Runs that ran before the rename.
     Dropping the value would make them unreadable, not merely mislabelled."""
     record = AgentExecutionRecord.model_validate(_legacy_execution())
 
@@ -216,6 +236,27 @@ def test_reject_legacy_role_refuses_only_the_legacy_value() -> None:
 
     with pytest.raises(LegacyRoleWriteError, match="insight_root_cause"):
         reject_legacy_role(AgentRole.INSIGHT_ROOT_CAUSE)
+
+
+def test_reasoning_defaults_to_none() -> None:
+    """Most Agents have nothing to say about why -- the field must not force
+    one into inventing a sentence."""
+    output = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+    )
+
+    assert output.reasoning is None
+
+
+def test_reasoning_carries_the_agents_own_sentence() -> None:
+    output = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+        reasoning="Refunds rose because June's promo period lapsed.",
+    )
+
+    assert output.reasoning == "Refunds rose because June's promo period lapsed."
 
 
 def test_adding_usage_drops_the_model_rather_than_guessing() -> None:

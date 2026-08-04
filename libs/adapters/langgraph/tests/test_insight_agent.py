@@ -21,7 +21,7 @@ from zentra_domain_agent_execution import (
 
 from zentra_adapter_langgraph import InsightAgent
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 QUESTION = "Why did EU refunds increase from June to July 2026?"
 
@@ -112,8 +112,8 @@ async def test_a_refusal_never_carries_the_content_it_refused(payload: object) -
     with pytest.raises(Exception) as raised:  # noqa: PT011 - four distinct types
         await agent.invoke(
             AgentInput(
-                investigation_id=INVESTIGATION_ID,
-                tenant_id=TENANT_ID,
+                analysis_run_id=ANALYSIS_RUN_ID,
+                organization_id=TENANT_ID,
                 state=UPSTREAM,
             )
         )
@@ -136,8 +136,8 @@ async def test_no_metrics_with_a_summary_drafts_an_informational_finding() -> No
 
     output = await agent.invoke(
         AgentInput(
-            investigation_id=INVESTIGATION_ID,
-            tenant_id=TENANT_ID,
+            analysis_run_id=ANALYSIS_RUN_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What tables are available in the catalog?",
                 "analyst": {
@@ -185,8 +185,8 @@ async def test_a_long_summary_yields_a_headline_within_the_brief_bound() -> None
 
     output = await agent.invoke(
         AgentInput(
-            investigation_id=INVESTIGATION_ID,
-            tenant_id=TENANT_ID,
+            analysis_run_id=ANALYSIS_RUN_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What tables are available in the catalog?",
                 "analyst": {
@@ -211,8 +211,8 @@ async def test_no_metrics_and_no_summary_still_refuses() -> None:
     with pytest.raises(Exception, match="No validated aggregate"):  # noqa: PT011
         await agent.invoke(
             AgentInput(
-                investigation_id=INVESTIGATION_ID,
-                tenant_id=TENANT_ID,
+                analysis_run_id=ANALYSIS_RUN_ID,
+                organization_id=TENANT_ID,
                 state={
                     "question": QUESTION,
                     "analyst": {"metrics": [], "result_summary": ""},
@@ -263,8 +263,8 @@ async def test_a_claim_citing_an_earlier_point_in_a_breakdown_is_not_ungrounded(
 
     output = await agent.invoke(
         AgentInput(
-            investigation_id=INVESTIGATION_ID,
-            tenant_id=TENANT_ID,
+            analysis_run_id=ANALYSIS_RUN_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What is the count of started applications by date "
                 "for the last month?",

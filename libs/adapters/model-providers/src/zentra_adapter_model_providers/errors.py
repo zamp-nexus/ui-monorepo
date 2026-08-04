@@ -32,7 +32,7 @@ class ProviderTruncatedError(ProviderError):
 class ChainExhaustedError(ProviderError):
     """Every rung failed.
 
-    Carries what each one did, so the ledger records why an investigation could
+    Carries what each one did, so the ledger records why an analysis_run could
     not run rather than just that it didn't.
     """
 

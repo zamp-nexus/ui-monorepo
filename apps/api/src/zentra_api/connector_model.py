@@ -14,7 +14,7 @@ sealed — every function here accepts `ConnectorService | None` and raises
 clear reason instead of an `AttributeError` deep in an unrelated method.
 
 `data_connection_id` here is deliberately the ADR-0012 vocabulary — Cube's
-JWT claims and `Investigation.data_connection_id` use the same name — but
+JWT claims and `AnalysisRun.data_connection_id` use the same name — but
 it is passed straight through as `ConnectorService`'s `data_source_id`.
 The Connector domain has not yet split "Data Source" into distinct
 uploaded/live-connection kinds, so today they are the same identifier;

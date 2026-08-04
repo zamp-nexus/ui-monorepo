@@ -1,1 +1,1 @@
-# ZentraOS model provider adapter
+# Nexus model provider adapter

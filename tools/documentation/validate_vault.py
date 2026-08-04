@@ -251,7 +251,7 @@ def main() -> int:
         if count > 1:
             errors.append(f"duplicate note id {note_id!r} appears {count} times")
 
-    root_index = VAULT_ROOT / "00_Index" / "ZentraOS Knowledge Base.md"
+    root_index = VAULT_ROOT / "00_Index" / "Nexus Knowledge Base.md"
     for path in sorted(active_notes):
         if path != root_index and incoming[path] == 0:
             errors.append(

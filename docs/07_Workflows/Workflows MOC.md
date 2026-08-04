@@ -11,8 +11,8 @@ reviewed: 2026-07-29
 confidence: verified
 priority: critical
 tags: [workflow, index]
-related: ["[[ZentraOS Knowledge Base]]"]
-repo_path: libs/application/investigation
+related: ["[[Nexus Knowledge Base]]"]
+repo_path: libs/application/analysis_run
 ---
 
 # Workflows
@@ -25,4 +25,4 @@ repo_path: libs/application/investigation
 These notes trace behavior across components without reproducing internal
 implementation line by line.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

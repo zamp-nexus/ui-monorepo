@@ -12,19 +12,19 @@ confidence: verified
 implementation: current
 priority: critical
 tags: [component, frontend, react]
-aliases: [zentra-os, frontend]
-related: ["[[Components MOC]]", "[[Chat Surface]]", "[[User Workflows]]", "[[Investigation API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
+aliases: [nexus, frontend]
+related: ["[[Components MOC]]", "[[Chat Surface]]", "[[User Workflows]]", "[[Analysis Run API]]", "[[Connector API]]", "[[Design Token Pipeline]]"]
 depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]", "[[Design Token Pipeline]]"]
-repo_path: apps/zentra-os
+repo_path: apps/nexus
 code_refs:
-  - apps/zentra-os/src/app/app.tsx
-  - apps/zentra-os/src/app/shell/app-shell.tsx
-  - apps/zentra-os/src/app/pages
-  - apps/zentra-os/src/app/pages/chat
-  - apps/zentra-os/src/app/pages/connections
-  - apps/zentra-os/src/app/pages/datasets
-  - apps/zentra-os/src/app/providers.tsx
-  - apps/zentra-os/src/styles.css
+  - apps/nexus/src/app/app.tsx
+  - apps/nexus/src/app/shell/app-shell.tsx
+  - apps/nexus/src/app/pages
+  - apps/nexus/src/app/pages/chat
+  - apps/nexus/src/app/pages/connections
+  - apps/nexus/src/app/pages/datasets
+  - apps/nexus/src/app/providers.tsx
+  - apps/nexus/src/styles.css
 ---
 
 # Forensic Observatory
@@ -33,7 +33,7 @@ The React/Vite application is the authenticated product UI. It uses Clerk,
 foundation authentication/authorization, the internal design system, React
 Query, React Router, and Motion.
 
-It presents itself as **Oddessy**. The Nx project, package and module names stay
+It presents itself as **Nexus**. The Nx project, package and module names stay
 `zentra`; the displayed name is decided in one place,
 `src/app/constants/product.ts`.
 

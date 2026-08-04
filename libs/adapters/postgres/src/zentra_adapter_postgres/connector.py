@@ -1,6 +1,6 @@
 """Persistence for Connector Data Sources.
 
-Unlike the Investigation repositories, these open their own connections rather
+Unlike the AnalysisRun repositories, these open their own connections rather
 than being handed one. `ConnectorService` is built once at startup and holds its
 repositories for the process lifetime — it has no unit of work to enlist in — so
 a connection captured at construction would be a single connection shared by

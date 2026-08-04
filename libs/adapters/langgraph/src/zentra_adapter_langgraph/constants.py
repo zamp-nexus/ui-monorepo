@@ -17,7 +17,7 @@ INSIGHT_MODEL = AgentRole.INSIGHT.value
 MAX_TOKENS = 16000
 
 # The Evaluator-Optimizer loop exits hard at this many attempts regardless of
-# score (§3.7 loop failure). The Investigation aggregate enforces the same cap.
+# score (§3.7 loop failure). The AnalysisRun aggregate enforces the same cap.
 MAX_EVALUATION_ATTEMPTS = 3
 
 # A recheck disagreeing by more than this fraction fails and forces a retry.

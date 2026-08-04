@@ -34,8 +34,8 @@ def correlate_organization(organization_id: UUID) -> None:
 SAFE_ATTRIBUTES: frozenset[str] = frozenset(
     {
         "zentra.organization_id",
-        "zentra.investigation_id",
-        # Chat Session correlation (paired with zentra.investigation_id)
+        "zentra.analysis_run_id",
+        # Chat Session correlation (paired with zentra.analysis_run_id)
         "zentra.thread_id",
         # Insight execution
         "zentra.insight.agent_id",
@@ -209,7 +209,7 @@ def record_evidence_deletion(
 ) -> None:
     """How an erasure went, without any of what it erased.
 
-    The erasure's own identity, not the Investigation's content. A deletion's
+    The erasure's own identity, not the AnalysisRun's content. A deletion's
     telemetry is the last place the deleted value could hide.
     """
     _record(
@@ -317,19 +317,19 @@ def record_skill_activation(*, role: str, skill_names: tuple[str, ...]) -> None:
         meters.skill_activations.add(1, dimensions(role=role, skill_name=name))
 
 
-def correlate_investigation(investigation_id: UUID) -> None:
+def correlate_analysis_run(analysis_run_id: UUID) -> None:
     """Internal identifier only, so a trace can be followed to its work.
 
     Never the question, which is an Organization's own words.
     """
     trace.get_current_span().set_attribute(
-        "zentra.investigation_id", str(investigation_id)
+        "zentra.analysis_run_id", str(analysis_run_id)
     )
 
 
 def correlate_thread(thread_id: UUID) -> None:
     """Internal identifier only, so a trace can be followed to its Chat
-    Session. Mirrors `correlate_investigation`: never the message content,
+    Session. Mirrors `correlate_analysis_run`: never the message content,
     which is a Tenant's own words.
     """
     trace.get_current_span().set_attribute("zentra.thread_id", str(thread_id))

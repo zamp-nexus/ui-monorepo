@@ -21,7 +21,7 @@ addopts = """
 [project]
 name = "zentra-adapter-sequence-execution"
 version = "1.0.0"
-description = "ZentraOS chDB-backed Sequence Step execution adapter"
+description = "Nexus chDB-backed Sequence Step execution adapter"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [

@@ -3,7 +3,7 @@
 Split from ``service.py``, which crossed the repository's 600-line limit once
 every resource group landed in it. Uploads are the natural seam: they are the
 only operations that hold state between two calls — a previewed file waits for a
-commit — and the only ones that write customer data into ZentraOS storage.
+commit — and the only ones that write customer data into Nexus storage.
 
 Mixed into ``ConnectorService`` rather than standing alone, because an upload
 *becomes* a Data Source and the two halves share the source repository, the

@@ -1,11 +1,11 @@
-"""ZentraOS OpenTelemetry adapter"""
+"""Nexus OpenTelemetry adapter"""
 
 from .metrics import SAFE_DIMENSIONS
 from .tracing import (
     SAFE_ATTRIBUTES,
     TelemetrySettings,
     configure_telemetry,
-    correlate_investigation,
+    correlate_analysis_run,
     correlate_organization,
     correlate_thread,
     current_trace_ids,
@@ -23,7 +23,7 @@ __all__ = [
     "SAFE_DIMENSIONS",
     "TelemetrySettings",
     "configure_telemetry",
-    "correlate_investigation",
+    "correlate_analysis_run",
     "correlate_organization",
     "correlate_thread",
     "current_trace_ids",

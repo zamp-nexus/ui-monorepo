@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Sequence
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal, Protocol
@@ -186,6 +186,30 @@ class ModelResponse(BaseModel):
     stop_reason: str | None = None
 
 
+class ModelStreamDelta(BaseModel):
+    """One incremental chunk of a freeform-text streaming reply."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+
+
+class ModelStreamEnd(BaseModel):
+    """The terminal event of a streaming reply, carrying the same usage
+    accounting `complete()` returns, so streamed calls cost exactly as much
+    as a one-shot call in the ledger."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    usage: ExecutionUsage
+    stop_reason: str | None = None
+    # Rungs that failed before this one answered, same as `ModelResponse.fallbacks`.
+    fallbacks: tuple[str, ...] = ()
+
+
+ModelStreamEvent = ModelStreamDelta | ModelStreamEnd
+
+
 def merged_fallbacks(*responses: ModelResponse) -> tuple[str, ...]:
     """Every rung that failed across the calls one agent made, in order.
 
@@ -218,6 +242,21 @@ class ModelPort(Protocol):
         temperature: float = 0.2,
     ) -> Awaitable[ModelResponse]: ...
 
+    # Freeform-text only: deliberately no `response_schema`/`tools`. A
+    # structured, tool-calling role can never safely reveal a partial JSON
+    # object as prose, so it has no reason to call this — it keeps using
+    # `complete()` unchanged. Only a role whose whole output is one field of
+    # prose a user reads directly (Conversational, Insight) calls this.
+    def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]: ...
+
 
 # ---------------------------------------------------------------------------
 # Agent executions
@@ -232,12 +271,12 @@ class ExecutionStatus(StrEnum):
 
 
 class AgentExecutionRecord(BaseModel):
-    """One bounded unit of agent work, scoped to an Organization and Investigation."""
+    """One bounded unit of agent work, scoped to an Organization and Analysis Run."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: UUID
-    investigation_id: UUID
+    analysis_run_id: UUID
     organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
@@ -256,6 +295,10 @@ class AgentExecutionRecord(BaseModel):
     # Agent that searched the catalog four times and queried twice is
     # indistinguishable in Replay from one that answered in a single shot.
     tool_calls: tuple[ToolInvocation, ...] = ()
+    # Mirrors `AgentOutput.reasoning`: the Agent's own sentence about why,
+    # carried onto the record so the chat surface can show it without
+    # reaching into `output`, which may hold more than ADR-0006 allows there.
+    reasoning: str | None = None
     started_at: datetime
     completed_at: datetime
 
@@ -278,7 +321,7 @@ class AgentExecutionStart(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: UUID
-    investigation_id: UUID
+    analysis_run_id: UUID
     organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
@@ -288,7 +331,7 @@ class AgentExecutionStart(BaseModel):
 
 class AgentExecutionRecorder(Protocol):
     """Persists a completed step before the next one starts, so an interrupted
-    investigation still has a replayable trail of what already ran."""
+    Analysis Run still has a replayable trail of what already ran."""
 
     def record_started(self, start: AgentExecutionStart) -> Awaitable[None]: ...
 

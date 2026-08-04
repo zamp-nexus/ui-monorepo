@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 implementation: current
 tags: [adr, postgres, jobs]
-related: ["[[Postgres Control Plane]]", "[[Investigation Domain]]"]
+related: ["[[Postgres Control Plane]]", "[[Analysis Run Domain]]"]
 repo_path: libs/adapters/postgres
 ---
 

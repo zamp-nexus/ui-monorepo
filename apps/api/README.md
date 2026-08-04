@@ -1,6 +1,6 @@
-# ZentraOS API
+# Nexus API
 
-FastAPI composition root for the ZentraOS modular monolith. It owns HTTP and
+FastAPI composition root for the Nexus modular monolith. It owns HTTP and
 lifespan concerns while delegating investigation rules to the domain and
 application packages.
 

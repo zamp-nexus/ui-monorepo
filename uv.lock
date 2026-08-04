@@ -19,12 +19,12 @@ members = [
     "zentra-adapter-telemetry",
     "zentra-adapter-thesys",
     "zentra-api",
+    "zentra-application-analysis-run",
     "zentra-application-connector",
-    "zentra-application-investigation",
     "zentra-application-sequence",
     "zentra-domain-agent-execution",
+    "zentra-domain-analysis-run",
     "zentra-domain-connector",
-    "zentra-domain-investigation",
     "zentra-domain-sequence",
 ]
 
@@ -702,12 +702,12 @@ dependencies = [
     { name = "zentra-adapter-telemetry" },
     { name = "zentra-adapter-thesys" },
     { name = "zentra-api" },
+    { name = "zentra-application-analysis-run" },
     { name = "zentra-application-connector" },
-    { name = "zentra-application-investigation" },
     { name = "zentra-application-sequence" },
     { name = "zentra-domain-agent-execution" },
+    { name = "zentra-domain-analysis-run" },
     { name = "zentra-domain-connector" },
-    { name = "zentra-domain-investigation" },
     { name = "zentra-domain-sequence" },
 ]
 
@@ -734,12 +734,12 @@ requires-dist = [
     { name = "zentra-adapter-telemetry", editable = "libs/adapters/telemetry" },
     { name = "zentra-adapter-thesys", editable = "libs/adapters/thesys" },
     { name = "zentra-api", editable = "apps/api" },
+    { name = "zentra-application-analysis-run", editable = "libs/application/analysis_run" },
     { name = "zentra-application-connector", editable = "libs/application/connector" },
-    { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-application-sequence", editable = "libs/application/sequence" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
+    { name = "zentra-domain-analysis-run", editable = "libs/domain/analysis_run" },
     { name = "zentra-domain-connector", editable = "libs/domain/connector" },
-    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
     { name = "zentra-domain-sequence", editable = "libs/domain/sequence" },
 ]
 
@@ -1717,11 +1717,11 @@ dependencies = [
     { name = "greenlet" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "sqlalchemy" },
-    { name = "zentra-application-investigation" },
+    { name = "zentra-application-analysis-run" },
     { name = "zentra-application-sequence" },
     { name = "zentra-domain-agent-execution" },
+    { name = "zentra-domain-analysis-run" },
     { name = "zentra-domain-connector" },
-    { name = "zentra-domain-investigation" },
     { name = "zentra-domain-sequence" },
 ]
 
@@ -1731,11 +1731,11 @@ requires-dist = [
     { name = "greenlet", specifier = ">=3.2,<4" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2,<4" },
     { name = "sqlalchemy", specifier = ">=2.0,<3" },
-    { name = "zentra-application-investigation", editable = "libs/application/investigation" },
+    { name = "zentra-application-analysis-run", editable = "libs/application/analysis_run" },
     { name = "zentra-application-sequence", editable = "libs/application/sequence" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
+    { name = "zentra-domain-analysis-run", editable = "libs/domain/analysis_run" },
     { name = "zentra-domain-connector", editable = "libs/domain/connector" },
-    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
     { name = "zentra-domain-sequence", editable = "libs/domain/sequence" },
 ]
 
@@ -1793,13 +1793,13 @@ version = "1.0.0"
 source = { editable = "libs/adapters/thesys" }
 dependencies = [
     { name = "openai" },
-    { name = "zentra-domain-investigation" },
+    { name = "zentra-domain-analysis-run" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "openai", specifier = ">=2.50.0" },
-    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
+    { name = "zentra-domain-analysis-run", editable = "libs/domain/analysis_run" },
 ]
 
 [[package]]
@@ -1821,11 +1821,11 @@ dependencies = [
     { name = "zentra-adapter-postgres" },
     { name = "zentra-adapter-telemetry" },
     { name = "zentra-adapter-thesys" },
+    { name = "zentra-application-analysis-run" },
     { name = "zentra-application-connector" },
-    { name = "zentra-application-investigation" },
     { name = "zentra-application-sequence" },
     { name = "zentra-domain-agent-execution" },
-    { name = "zentra-domain-investigation" },
+    { name = "zentra-domain-analysis-run" },
     { name = "zentra-domain-sequence" },
 ]
 
@@ -1845,12 +1845,27 @@ requires-dist = [
     { name = "zentra-adapter-postgres", editable = "libs/adapters/postgres" },
     { name = "zentra-adapter-telemetry", editable = "libs/adapters/telemetry" },
     { name = "zentra-adapter-thesys", editable = "libs/adapters/thesys" },
+    { name = "zentra-application-analysis-run", editable = "libs/application/analysis_run" },
     { name = "zentra-application-connector", editable = "libs/application/connector" },
-    { name = "zentra-application-investigation", editable = "libs/application/investigation" },
     { name = "zentra-application-sequence", editable = "libs/application/sequence" },
     { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
-    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
+    { name = "zentra-domain-analysis-run", editable = "libs/domain/analysis_run" },
     { name = "zentra-domain-sequence", editable = "libs/domain/sequence" },
+]
+
+[[package]]
+name = "zentra-application-analysis-run"
+version = "1.0.0"
+source = { editable = "libs/application/analysis_run" }
+dependencies = [
+    { name = "zentra-domain-agent-execution" },
+    { name = "zentra-domain-analysis-run" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
+    { name = "zentra-domain-analysis-run", editable = "libs/domain/analysis_run" },
 ]
 
 [[package]]
@@ -1863,21 +1878,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "zentra-domain-connector", editable = "libs/domain/connector" }]
-
-[[package]]
-name = "zentra-application-investigation"
-version = "1.0.0"
-source = { editable = "libs/application/investigation" }
-dependencies = [
-    { name = "zentra-domain-agent-execution" },
-    { name = "zentra-domain-investigation" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" },
-    { name = "zentra-domain-investigation", editable = "libs/domain/investigation" },
-]
 
 [[package]]
 name = "zentra-application-sequence"
@@ -1906,20 +1906,20 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2.12,<3" }]
 
 [[package]]
-name = "zentra-domain-connector"
+name = "zentra-domain-analysis-run"
 version = "1.0.0"
-source = { editable = "libs/domain/connector" }
-
-[[package]]
-name = "zentra-domain-investigation"
-version = "1.0.0"
-source = { editable = "libs/domain/investigation" }
+source = { editable = "libs/domain/analysis_run" }
 dependencies = [
     { name = "zentra-domain-agent-execution" },
 ]
 
 [package.metadata]
 requires-dist = [{ name = "zentra-domain-agent-execution", editable = "libs/domain/agent-execution" }]
+
+[[package]]
+name = "zentra-domain-connector"
+version = "1.0.0"
+source = { editable = "libs/domain/connector" }
 
 [[package]]
 name = "zentra-domain-sequence"

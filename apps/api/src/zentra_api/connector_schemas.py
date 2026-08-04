@@ -55,7 +55,7 @@ class RegisterSourceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     credentials: SourceCredentialsRequest
     description: str | None = Field(default=None, max_length=1000)
-    #: Off by default. Enabling it stores raw field values in ZentraOS, which is
+    #: Off by default. Enabling it stores raw field values in Nexus, which is
     #: a materially different data posture, so it must be asked for explicitly.
     store_sample_values: bool = False
 
@@ -349,7 +349,7 @@ class RelationResponse(BaseModel):
 class RelationDecisionRequest(BaseModel):
     """Confirm or reject. A rejection must say why; a confirmation need not.
 
-    Asymmetric on purpose, and the same asymmetry the Investigation API already
+    Asymmetric on purpose, and the same asymmetry the Analysis Run API already
     uses for Human Approvals: the recorded reason is what suppresses
     re-proposal, so a rejection without one would silently lose that behaviour.
     """

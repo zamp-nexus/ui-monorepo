@@ -1,1 +1,1 @@
-# ZentraOS LangGraph agent adapter
+# Nexus LangGraph agent adapter

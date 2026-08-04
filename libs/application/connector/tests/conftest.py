@@ -63,24 +63,24 @@ class Harness:
 
 @pytest.fixture
 def admin() -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=USER_ID, tenant_id=TENANT_ID, role=Role.ADMIN)
+    return AuthenticatedActor(user_id=USER_ID, organization_id=TENANT_ID, role=Role.ADMIN)
 
 
 @pytest.fixture
 def member() -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=USER_ID, tenant_id=TENANT_ID, role=Role.MEMBER)
+    return AuthenticatedActor(user_id=USER_ID, organization_id=TENANT_ID, role=Role.MEMBER)
 
 
 @pytest.fixture
 def viewer() -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=USER_ID, tenant_id=TENANT_ID, role=Role.VIEWER)
+    return AuthenticatedActor(user_id=USER_ID, organization_id=TENANT_ID, role=Role.VIEWER)
 
 
 @pytest.fixture
 def intruder() -> AuthenticatedActor:
     """An admin of a different Tenant, used to prove isolation."""
     return AuthenticatedActor(
-        user_id=USER_ID, tenant_id=OTHER_TENANT_ID, role=Role.ADMIN
+        user_id=USER_ID, organization_id=OTHER_TENANT_ID, role=Role.ADMIN
     )
 
 
