@@ -516,7 +516,7 @@ class PostgresAgentExecutionRepository:
         await self._connection.execute(
             insert(agent_executions).values(
                 execution_id=execution.execution_id,
-                analysis_run_id=execution.investigation_id,
+                analysis_run_id=execution.analysis_run_id,
                 organization_id=execution.organization_id,
                 agent_id=execution.agent_id,
                 role=execution.role.value,

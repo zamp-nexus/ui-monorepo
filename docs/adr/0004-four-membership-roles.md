@@ -11,11 +11,11 @@ reviewed: 2026-07-29
 confidence: verified
 priority: high
 tags: [adr, authorization, membership]
-related: ["[[Decisions MOC]]", "[[Identity and Tenancy]]", "[[Investigation API]]"]
+related: ["[[Decisions MOC]]", "[[Identity and Tenancy]]", "[[Analysis Run API]]"]
 repo_path: docs/adr/0004-four-membership-roles.md
 code_refs:
   - libs/adapters/postgres/src/zentra_adapter_postgres/schema.py
-  - libs/application/investigation/src/zentra_application_investigation/service.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/service.py
 ---
 
 # Persist four tenant membership roles

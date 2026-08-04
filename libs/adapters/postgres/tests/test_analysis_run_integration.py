@@ -82,7 +82,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    other_tenant_id = uuid4()
+    other_organization_id = uuid4()
     user_id = uuid4()
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
@@ -90,7 +90,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
             insert(organizations),
             [
                 {"organization_id": organization_id, "name": "Phase 1A Tenant"},
-                {"organization_id": other_tenant_id, "name": "Other Tenant"},
+                {"organization_id": other_organization_id, "name": "Other Tenant"},
             ],
         )
         await connection.execute(
@@ -173,7 +173,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
 
     invisible_actor = AuthenticatedActor(
         user_id=user_id,
-        organization_id=other_tenant_id,
+        organization_id=other_organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -182,7 +182,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
         await service.get(invisible_actor, started.analysis_run_id)
 
     async with runtime.begin() as connection:
-        await set_organization_context(connection, other_tenant_id)
+        await set_organization_context(connection, other_organization_id)
         visible_outbox = await connection.scalar(
             select(func.count()).select_from(audit_outbox)
         )

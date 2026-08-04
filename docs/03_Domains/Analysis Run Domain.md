@@ -1,6 +1,6 @@
 ---
-id: domain-investigation
-title: Investigation Domain
+id: domain-analysis-run
+title: Analysis Run Domain
 type: domain
 status: active
 owner: unassigned
@@ -11,27 +11,27 @@ reviewed: 2026-08-01
 confidence: verified
 implementation: current
 priority: critical
-tags: [domain, investigation]
-aliases: [investigation]
-related: ["[[Domains MOC]]", "[[Investigation Trust Loop]]", "[[Investigation Core]]", "[[Data Source Domain]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
-repo_path: libs/domain/investigation
+tags: [domain, analysis_run]
+aliases: [analysis_run]
+related: ["[[Domains MOC]]", "[[Analysis Run Trust Loop]]", "[[Analysis Run Core]]", "[[Data Source Domain]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
+repo_path: libs/domain/analysis_run
 code_refs:
-  - libs/domain/investigation/src/zentra_domain_investigation/draft_finding.py
-  - libs/domain/investigation/CONTEXT.md
-  - libs/domain/investigation/src/zentra_domain_investigation/model.py
-  - libs/domain/investigation/src/zentra_domain_investigation/workspace.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/draft_finding.py
+  - libs/domain/analysis_run/CONTEXT.md
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/workspace.py
 ---
 
-# Investigation Domain
+# Analysis Run Domain
 
-An Investigation is one traceable attempt to answer a governed business
+An Analysis Run is one traceable attempt to answer a governed business
 question. The context owns lifecycle, Finding, Evaluation Attempt, Validation
 Result, terminal outcomes, Evidence References, and Human Approval transition
 rules.
 
 ## Workspace organization
 
-Groups and Projects provide Tenant-visible organization for the Investigation
+Groups and Projects provide Tenant-visible organization for the Analysis Run
 Thread surface. They do not own analytical truth and do not introduce nested
 authorization. Owners and admins organize them; members and viewers read them.
 
@@ -39,25 +39,25 @@ Names retain a display form and a normalized uniqueness key. Groups are unique
 within a Tenant and Projects within a Group. Archive is reversible and changes
 write availability only: it never deletes or rewrites descendants. A Project's
 latest activity advances separately from metadata changes so future Thread and
-Investigation activity can determine recent-work ordering.
+Analysis Run activity can determine recent-work ordering.
 
-## Investigation Threads
+## Chat Sessions
 
-An Investigation Thread belongs to one Project and presents a linear
-conversation without weakening Investigation boundaries. Its first user message
+An Chat Session belongs to one Project and presents a linear
+conversation without weakening Analysis Run boundaries. Its first user message
 is created atomically with the Thread, and every message is append-only. Thread
 state is `draft`, `active`, or `archived`.
 
-Draft Threads contain no Investigation until deterministic routing resolves
+Draft Threads contain no Analysis Run until deterministic routing resolves
 exactly one governed scenario. Ambiguous or unsupported input receives a stored
 router clarification with the supported canonical questions. Routing and title
 generation make no model call. Once analytical work exists, the Thread cannot
 be hard-deleted; archive and restore preserve its evidence lineage.
 
-Each follow-up and retry is a new immutable Investigation. Linear parent,
+Each follow-up and retry is a new immutable Analysis Run. Linear parent,
 retry-of, and Thread-sequence fields preserve intent without rewriting a
 terminal attempt. A Thread may retain an unresolved follow-up clarification
-while remaining active. See [[adr/0017-linked-investigation-threads]].
+while remaining active. See [[adr/0017-linked-analysis_run-threads]].
 
 ## Visualization Brief and artifact
 
@@ -89,11 +89,11 @@ bound applied. Agents that disagree about the sample size by more than 2x open
 
 `EvaluationDirective` decides what a finished evaluation does: publish, retry, or
 `ESCALATE` to a human. A non-converged run escalates rather than returning to
-`running`, so no investigation can settle in a non-terminal state.
+`running`, so no analysis_run can settle in a non-terminal state.
 
 ## Publication policy — current
 
-Publication authority is deterministic Investigation policy. Not the Insight
+Publication authority is deterministic Analysis Run policy. Not the Insight
 Agent, not the Orchestrator: ADR 0011 puts it here precisely so that no Agent —
 however confident, however well-evidenced — publishes its own conclusion.
 
@@ -133,7 +133,7 @@ citing nothing cannot be constructed, so it fails closed rather than opening a
 gate — gating is for a conclusion a reviewer can judge.
 
 The Phase 1 path is unchanged: a narrative Finding was never citable, and
-gating every legacy Investigation on a contract that did not exist when it ran
+gating every legacy Analysis Run on a contract that did not exist when it ran
 would be a change of behaviour rather than a policy.
 
 Validation is deterministic checks and issues, not a confidence score. Evidence
@@ -154,7 +154,7 @@ and satisfied. See [[Phase 2 - Insight Auditor and Replay]].
 ### Draft Finding shape — current
 
 The Draft Finding is now a persisted, structured record rather than a planned
-contract. It has its own identity, Tenant and Investigation ownership, version,
+contract. It has its own identity, Tenant and Analysis Run ownership, version,
 creation metadata, bounded confidence, and an ordered set of claims. What used
 to be readable only by a person reading prose is now data:
 
@@ -177,7 +177,7 @@ to be readable only by a person reading prose is now data:
 - **Citation identifiers** — carried per claim, empty until Evidence Citations
   exist, so adding them is a write rather than another migration.
 
-Nothing here decides whether a draft publishes; that is the Investigation's
+Nothing here decides whether a draft publishes; that is the Analysis Run's
 deterministic policy, deliberately elsewhere.
 
 ### What Insight may and may not say
@@ -228,7 +228,7 @@ Filters and grain are now carried on the Citation, which is where ADR 0011 puts
 them. A filter or grain asserted in a claim's *free text* remains unchecked.
 
 The Phase 1 narrative `Finding` is untouched and still lives in
-`investigations.state`. An Investigation that ran before Insight has a
+`analysis_runs.state`. An Analysis Run that ran before Insight has a
 `finding` and no draft, and every surface says so rather than presenting
 narrative as claims that could be individually cited.
 
@@ -241,7 +241,7 @@ delete statement.
 
 `EvidenceSurface` enumerates every place evidence or its derivatives can be —
 Agent Execution input and output, the Phase 1 narrative Finding inside
-`investigations.state`, a Draft Finding's narrative, its claims, and a
+`analysis_runs.state`, a Draft Finding's narrative, its claims, and a
 citation's validated aggregate. Enumerated rather than described, so "did we
 get all of it?" has an answer a test can check: the integration harness seeds a
 distinct marker on each surface, proves every one is reachable, erases, and
@@ -264,7 +264,7 @@ Four guarantees carry the design:
   imports nothing that could reach the ledger, which is a stronger statement
   than remembering not to.
 
-Only a terminal Investigation is eligible. Erasing under a live pipeline races
+Only a terminal Analysis Run is eligible. Erasing under a live pipeline races
 every write still to come, and the Agent Executions it has not finished would
 reintroduce exactly what was erased.
 
@@ -274,10 +274,10 @@ not the thing that has never run.
 
 ### Deletion and Tombstones — current
 
-An owner or admin can erase a terminal Investigation's evidence. The request
-names the Investigation in its body as well as its path: an irreversible action
+An owner or admin can erase a terminal Analysis Run's evidence. The request
+names the Analysis Run in its body as well as its path: an irreversible action
 should be impossible to trigger by replaying a URL, and a confirmation a client
-can default to would not be a confirmation. A live Investigation is a typed
+can default to would not be a confirmation. A live Analysis Run is a typed
 `409`, because "not yet" is a different answer from "not allowed" and a caller
 that conflated them would retry the wrong thing.
 
@@ -298,17 +298,17 @@ citation row, because *why* and *when* content went are facts about the request,
 not about the thing deleted.
 
 `unavailable` and `tombstoned` stay apart after a deletion as before one.
-Erasing one Investigation must not relabel another's missing evidence as
+Erasing one Analysis Run must not relabel another's missing evidence as
 deliberate.
 
 Whether a caller may delete is decided by the server and carried on the
-Investigation, exactly as `can_decide` is for an approval. A client consulting
+Analysis Run, exactly as `can_decide` is for an approval. A client consulting
 its own role would be a second authorisation rule that can disagree with the one
 that applies.
 
 ## Phase 3 target boundary
 
-Each real-data Investigation receives one immutable Data Source Binding naming a
+Each real-data Analysis Run receives one immutable Data Source Binding naming a
 Workspace Snapshot or Data Connection plus exact model and policy versions. No
 source or model switches mid-run. Each plan change creates a Query Version.
 Citations resolve through that version and binding without raw rows. Relation or
@@ -316,7 +316,7 @@ Workspace deletion cascades content erasure while preserving existing identity,
 safe process metadata, Audit Entry, and Tombstone guarantees.
 
 Canonical language:
-[Investigation context](../../libs/domain/investigation/CONTEXT.md). Behavior:
-[domain model](../../libs/domain/investigation/src/zentra_domain_investigation/model.py).
+[Analysis Run context](../../libs/domain/analysis_run/CONTEXT.md). Behavior:
+[domain model](../../libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py).
 
 Parent: [[Domains MOC]]

@@ -32,14 +32,14 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
     organization_id = uuid4()
-    other_tenant_id = uuid4()
+    other_organization_id = uuid4()
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
             insert(organizations),
             [
                 {"organization_id": organization_id, "name": "Workspace Tenant"},
-                {"organization_id": other_tenant_id, "name": "Other Tenant"},
+                {"organization_id": other_organization_id, "name": "Other Tenant"},
             ],
         )
 
@@ -58,7 +58,7 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     )
     other_actor = AuthenticatedActor(
         user_id=uuid4(),
-        organization_id=other_tenant_id,
+        organization_id=other_organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -74,7 +74,7 @@ async def test_workspace_repository_enforces_names_and_tenant_visibility() -> No
     async with owner_engine.begin() as connection:
         await connection.execute(
             organizations.delete().where(
-                organizations.c.organization_id.in_((organization_id, other_tenant_id))
+                organizations.c.organization_id.in_((organization_id, other_organization_id))
             )
         )
     await owner_engine.dispose()

@@ -12,12 +12,12 @@ confidence: verified
 implementation: planned
 priority: critical
 tags: [adr, phase-2, insight, evidence, replay]
-related: ["[[Decisions MOC]]", "[[Phase 2 - Insight Auditor and Replay]]", "[[Investigation Domain]]", "[[Trust and Verification]]"]
+related: ["[[Decisions MOC]]", "[[Phase 2 - Insight Auditor and Replay]]", "[[Analysis Run Domain]]", "[[Trust and Verification]]"]
 depends_on: ["[[adr/0005-agents-and-execution-participants]]", "[[adr/0006-metadata-only-audit-ledger]]", "[[adr/0010-confidence-bounded-by-evidence]]"]
 repo_path: docs/adr/0011-complete-phase-2-as-insight-auditor-and-replay.md
 code_refs:
   - libs/domain/agent-execution/src/zentra_domain_agent_execution/ports.py
-  - libs/domain/investigation/src/zentra_domain_investigation/model.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/model.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
   - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py
 ---

@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [component, api, python]
 aliases: [api, zentra-api]
-related: ["[[Components MOC]]", "[[Health and Context API]]", "[[Investigation API]]", "[[Workspace Organization API]]", "[[Investigation Thread API]]"]
+related: ["[[Components MOC]]", "[[Health and Context API]]", "[[Analysis Run API]]", "[[Workspace Organization API]]", "[[Investigation Thread API]]"]
 depends_on: ["[[Investigation Core]]", "[[Postgres Adapter]]", "[[ClickHouse Adapter]]", "[[Cube Adapter]]", "[[Telemetry Adapter]]"]
 repo_path: apps/api
 code_refs:

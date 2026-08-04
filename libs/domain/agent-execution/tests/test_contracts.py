@@ -95,7 +95,7 @@ def test_input_rejects_unknown_fields() -> None:
             analysis_run_id=uuid4(),
             organization_id=uuid4(),
             state={},
-            caller_tenant_id=uuid4(),
+            caller_organization_id=uuid4(),
         )
 
 
@@ -149,7 +149,7 @@ def _legacy_execution() -> dict[str, object]:
     moment = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
     return {
         "execution_id": str(uuid4()),
-        "investigation_id": str(uuid4()),
+        "analysis_run_id": str(uuid4()),
         "organization_id": str(uuid4()),
         "agent_id": "orchestrator_v1",
         "role": "insight_root_cause",
@@ -207,7 +207,7 @@ def test_each_legacy_role_names_its_own_replacement() -> None:
 
 
 def test_a_phase_1_execution_record_still_deserialises() -> None:
-    """Replay has to keep rendering investigations that ran before the rename.
+    """Replay has to keep rendering Analysis Runs that ran before the rename.
     Dropping the value would make them unreadable, not merely mislabelled."""
     record = AgentExecutionRecord.model_validate(_legacy_execution())
 

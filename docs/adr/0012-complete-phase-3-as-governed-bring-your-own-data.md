@@ -13,7 +13,7 @@ implementation: planned
 priority: critical
 tags: [adr, phase-3, data-source, duckdb, cube, query-plan]
 related: ["[[Decisions MOC]]", "[[Phase 3 - Governed Bring Your Own Data]]", "[[Data Source Domain]]", "[[Phase 3 Data Execution]]", "[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]"]
-depends_on: ["[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]", "[[Semantic Modeling]]", "[[Investigation Domain]]"]
+depends_on: ["[[adr/0011-complete-phase-2-as-insight-auditor-and-replay]]", "[[Semantic Modeling]]", "[[Analysis Run Domain]]"]
 repo_path: docs/adr/0012-complete-phase-3-as-governed-bring-your-own-data.md
 code_refs:
   - libs/foundation/query-engine/src/types/query.ts

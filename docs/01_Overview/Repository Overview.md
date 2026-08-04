@@ -29,7 +29,7 @@ orchestration, and caching across both languages.
 - `apps/api`: FastAPI composition root and HTTP boundary.
 - `libs/domain`: framework-independent Investigation and Agent Execution
   contracts.
-- `libs/application/investigation`: deterministic trust-loop orchestration.
+- `libs/application/analysis_run`: deterministic trust-loop orchestration.
 - `libs/adapters`: Postgres, ClickHouse, Cube, and telemetry implementations.
 - `infra`: local service initialization, analytical seed, semantic model, and
   managed-service Terraform.

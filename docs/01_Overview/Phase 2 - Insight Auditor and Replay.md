@@ -17,7 +17,7 @@ depends_on: ["[[Investigation Trust Loop]]", "[[ClickHouse Audit Ledger]]", "[[F
 repo_path: .
 code_refs:
   - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py
-  - libs/application/investigation/src/zentra_application_investigation/service.py
+  - libs/application/analysis_run/src/zentra_application_analysis_run/service.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
   - apps/nexus/src/app/app.tsx
 ---
@@ -109,7 +109,7 @@ unresolved” when the available evidence cannot establish causality.
   — #15, #16; `DraftFinding.__post_init__` refuses an observed claim that cites
   nothing, and `PostgresEvidenceCitationRepository.resolve` dereferences it
 - [x] Automatic publication enforces every accepted trust condition. — #17;
-  `libs/domain/investigation/.../publication.py` and its 16-combination truth
+  `libs/domain/analysis_run/.../publication.py` and its 16-combination truth
   table
 - [x] Replay composes ClickHouse process truth with authorized evidence content.
   — #21

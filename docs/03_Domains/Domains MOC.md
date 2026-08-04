@@ -18,7 +18,7 @@ code_refs: [CONTEXT-MAP.md, libs/domain/CONTEXT.md, libs/domain/data-source/CONT
 
 # Domains
 
-- [[Investigation Domain]]
+- [[Analysis Run Domain]]
 - [[Connector Domain]]
 - [[Agent Execution Domain]]
 - [[Data Source Domain]]

@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 implementation: current
 tags: [adr, thesys, visualization]
-related: ["[[Visualization and Work Feed API]]", "[[Investigation Domain]]"]
+related: ["[[Visualization and Work Feed API]]", "[[Analysis Run Domain]]"]
 repo_path: libs/adapters/thesys
 ---
 

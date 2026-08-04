@@ -135,10 +135,10 @@ reviewed: 2026-07-29
 confidence: verified
 implementation: current
 tags: [investigation, workflow]
-repo_path: libs/application/investigation
+repo_path: libs/application/analysis_run
 code_refs:
-  - libs/application/investigation/src/zentra_application_investigation/service.py
-related: ["[[Investigation Domain]]"]
+  - libs/application/analysis_run/src/zentra_application_analysis_run/service.py
+related: ["[[Analysis Run Domain]]"]
 ---
 ```
 
@@ -170,10 +170,10 @@ criteria.
 ## 8. Documentation map for this repository
 
 The root map is [[Nexus Knowledge Base]]. The highest-value path follows
-[[Investigation Trust Loop]] through [[Investigation Domain]],
+[[Investigation Trust Loop]] through [[Analysis Run Domain]],
 [[Cube Semantic Model]], [[Postgres Control Plane]],
 [[Audit Outbox Delivery]], [[ClickHouse Audit Ledger]],
-[[Trust and Verification]], [[Investigation API]], and
+[[Trust and Verification]], [[Analysis Run API]], and
 [[Forensic Observatory]].
 
 Architecture, domains, APIs, data, operations, onboarding, and runbooks each

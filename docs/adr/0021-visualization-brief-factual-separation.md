@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 tags: [adr, visualization, evidence]
 related: ["[[Visualization and Work Feed API]]", "[[Trust and Verification]]"]
-repo_path: libs/domain/investigation/src/zentra_domain_investigation/visualization.py
+repo_path: libs/domain/analysis_run/src/zentra_domain_analysis_run/visualization.py
 ---
 
 # Visualization briefs separate facts from rendering

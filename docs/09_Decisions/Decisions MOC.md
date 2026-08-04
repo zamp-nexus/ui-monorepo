@@ -52,4 +52,14 @@ decision supersedes an old one and both notes link to each other. Create an ADR
 only for a hard-to-reverse choice with real alternatives and meaningful future
 surprise.
 
+- [[0023-sequence-graph-layout-is-a-client-concern]]
+- [[0023-source-table-row-browsing-bypasses-governed-query]]
+- [[0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]
+- [[0029-activity-feed-replaces-the-work-feed]]
+- [[0030-destructive-reset-for-the-chat-and-analysis-cutover]]
+- [[0031-langfuse-on-the-existing-safe-telemetry-pipe]]
+- [[0032-composer-power-user-commands-hint-the-governed-pipeline]]
+- [[0033-private-chat-sessions-and-assistant-reply-messages]]
+- [[0034-supersede-investigation-and-hidden-analysis]]
+
 Parent: [[Nexus Knowledge Base]]

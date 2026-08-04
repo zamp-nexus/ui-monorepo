@@ -13,7 +13,7 @@ implementation: current
 priority: high
 tags: [domain, agent-execution]
 aliases: [agent-execution, Agent Port]
-related: ["[[Domains MOC]]", "[[Investigation Domain]]", "[[adr/0005-agents-and-execution-participants]]"]
+related: ["[[Domains MOC]]", "[[Analysis Run Domain]]", "[[adr/0005-agents-and-execution-participants]]"]
 repo_path: libs/domain/agent-execution
 code_refs:
   - libs/domain/agent-execution/CONTEXT.md

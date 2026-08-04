@@ -35,7 +35,7 @@ def test_every_table_is_tenant_scoped() -> None:
         assert "organization_id" in table.c, f"{table.name} has no organization_id column"
 
 
-def test_sequences_carries_its_own_tenant_identity_for_children_to_target() -> None:
+def test_sequences_carries_its_own_organization_identity_for_children_to_target() -> None:
     assert "uq_sequences_organization_identity" in _unique_names(sequences)
 
 
