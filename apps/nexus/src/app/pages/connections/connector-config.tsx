@@ -6,6 +6,8 @@ import { ClickHouseConfig } from './clickhouse-config';
 import { CLICKHOUSE_ID, findConnector } from './constants';
 import { PlaceholderConfig } from './placeholder-config';
 
+import { UploadConfig } from './upload-config';
+
 interface ConnectorConfigProps {
   readonly getToken: TokenSource;
   readonly identity: IdentityContext;
@@ -24,6 +26,9 @@ export const ConnectorConfig = ({ getToken, identity }: ConnectorConfigProps) =>
   if (!connector) return <Navigate replace to="/connections/new" />;
   if (connector.id === CLICKHOUSE_ID) {
     return <ClickHouseConfig getToken={getToken} canWrite={identity.role !== 'viewer'} />;
+  }
+  if (connector.id === 'upload') {
+    return <UploadConfig getToken={getToken} canWrite={identity.role !== 'viewer'} />;
   }
   return <PlaceholderConfig connector={connector} />;
 };

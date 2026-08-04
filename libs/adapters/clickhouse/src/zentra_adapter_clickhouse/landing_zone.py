@@ -21,6 +21,7 @@ from uuid import UUID
 import clickhouse_connect
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pandas as pd
 from zentra_application_connector import (
     LandedTable,
     SourceCredentials,
@@ -157,6 +158,8 @@ class ClickHouseLandingZone:
         payload = await _collect(stream)
         if upload_format is UploadFormat.CSV:
             return await asyncio.to_thread(self._inspect_csv, payload, preview_rows)
+        elif upload_format is UploadFormat.EXCEL:
+            return await asyncio.to_thread(self._inspect_excel, payload, preview_rows)
         return await asyncio.to_thread(self._inspect_parquet, payload, preview_rows)
 
     def _inspect_csv(
@@ -244,6 +247,44 @@ class ClickHouseLandingZone:
                 f"File is not readable as Parquet: {exc}"
             ) from exc
 
+    def _inspect_excel(
+        self, payload: bytes, preview_rows: int
+    ) -> tuple[list[SourceFieldDescriptor], list[tuple[str, ...]], int]:
+        try:
+            df = pd.read_excel(io.BytesIO(payload), nrows=TYPE_INFERENCE_ROWS)
+        except Exception as exc:
+            raise UploadRejectedError(f"File is not readable as Excel: {exc}") from exc
+
+        if df.empty and df.columns.empty:
+            raise UploadRejectedError("File is empty")
+
+        columns = []
+        for index, col_name in enumerate(df.columns):
+            name = _sanitise_identifier(str(col_name))
+            sample = df[col_name].dropna().astype(str).tolist()
+            declared_type = _infer_type(sample)
+            columns.append(
+                SourceFieldDescriptor(
+                    name=name,
+                    declared_type=declared_type,
+                    nullable=True,
+                    position=index,
+                )
+            )
+
+        head_df = pd.read_excel(io.BytesIO(payload), nrows=preview_rows)
+        head_df = head_df.fillna("")
+        rows = [tuple(str(val) for val in row) for row in head_df.itertuples(index=False, name=None)]
+
+        # Get total rows approx
+        try:
+            total_df = pd.read_excel(io.BytesIO(payload), usecols=[0])
+            total_rows = len(total_df)
+        except Exception:
+            total_rows = len(df)
+
+        return columns, rows, total_rows
+
     async def land(
         self,
         stream: AsyncIterator[bytes],
@@ -289,12 +330,49 @@ class ClickHouseLandingZone:
                 client.raw_insert(
                     table=target, insert_block=payload, fmt="CSVWithNames"
                 )
+            elif upload_format is UploadFormat.EXCEL:
+                df = pd.read_excel(io.BytesIO(payload))
+                
+                # Sanitize column names so they match the schema
+                sanitized_names = {col: _sanitise_identifier(str(col)) for col in df.columns}
+                df = df.rename(columns=sanitized_names)
+                
+                table_schema = pa.schema([
+                    pa.field(c.name, self._clickhouse_to_arrow(c.declared_type), nullable=True) 
+                    for c in sorted(columns, key=lambda c: c.position)
+                ])
+                
+                # Handle pandas types to arrow types safely, and fill NA
+                for c in columns:
+                    if c.name in df.columns:
+                        if "String" in c.declared_type:
+                            df[c.name] = df[c.name].fillna("").astype(str)
+                
+                arrow_table = pa.Table.from_pandas(df, schema=table_schema)
+                client.insert_arrow(target, arrow_table)
             else:
                 # The same Arrow table the preview was read from, so what the
                 # user approved is exactly what lands.
                 client.insert_arrow(target, self._read_parquet(payload))
         finally:
             client.close()
+
+    def _clickhouse_to_arrow(self, clickhouse_type: str):
+        # A quick map to convert string-like inference back to arrow for the table schema
+        # We only really need this to ensure pa.Table.from_pandas works
+        # Alternatively, we could just rely on pandas to infer pyarrow if we don't pass schema, but passing schema is safer
+        type_str = clickhouse_type.replace("Nullable(", "").rstrip(")")
+        if type_str.startswith("Int"):
+            return pa.int64()
+        if type_str.startswith("Float"):
+            return pa.float64()
+        if type_str.startswith("Bool"):
+            return pa.bool_()
+        if type_str.startswith("Date"):
+            return pa.date32()
+        if type_str.startswith("DateTime"):
+            return pa.timestamp('ms')
+        return pa.string()
 
     def _count_rows(self, table: str) -> int:
         client = self._client()

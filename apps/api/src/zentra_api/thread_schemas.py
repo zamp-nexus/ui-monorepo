@@ -25,6 +25,13 @@ from .schemas import (
     _outcome_response,
 )
 
+class ThreadTitleRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"title": "New Chat Title"}]},
+    )
+
+    title: str = Field(min_length=1, max_length=255)
 
 class ChatMessageRequest(BaseModel):
     model_config = ConfigDict(

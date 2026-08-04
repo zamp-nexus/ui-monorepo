@@ -855,6 +855,18 @@ class ThreadService:
         self._require_mutator(actor)
         return await self._change_status(actor, thread_id, restore=True)
 
+    async def rename(self, actor: AuthenticatedActor, thread_id: UUID, *, title: str) -> ThreadDetail:
+        self._require_mutator(actor)
+        async with self._uow(actor) as unit_of_work:
+            thread = self._require_thread(
+                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+            )
+            await self._require_visible(unit_of_work, actor, thread_id)
+            thread.rename(title, self._now())
+            await unit_of_work.threads.update_thread(thread)
+            await unit_of_work.commit()
+            return await self._detail_for_thread(unit_of_work, thread, actor)
+
     async def delete(self, actor: AuthenticatedActor, thread_id: UUID) -> None:
         self._require_mutator(actor)
         async with self._uow(actor) as unit_of_work:

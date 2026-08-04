@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssistantRuntimeProvider, ThreadPrimitive } from '@assistant-ui/react';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { groupEventsByAnalysisRun } from './agent-activity-block';
-import { getChat, listAgents, listChats } from './api';
+import { getChat, listAgents, renameChat } from './api';
 import { ChatComposer } from './chat-composer';
 import { ChatContextProvider } from './chat-context';
 import { ChatEmptyState } from './chat-empty-state';
-import { ChatHistory } from './chat-history';
 import { AssistantMessage, UserMessage } from './chat-messages';
 import { useChatRuntime } from './chat-runtime';
 import { suggestionsFromCatalog } from './chat-suggestions';
-import { useActiveGroup } from './use-active-group';
 import { useSendMessage } from './use-send-message';
 import { useThreadEvents } from './use-thread-events';
+import { useWorkspace } from '../../shell/app-shell';
+import { useMutation } from '@tanstack/react-query';
+import { IconButton, Input, Modal } from '@open-zentra/foundation-design-system';
+import { Icon } from '@open-zentra/foundation-icons';
 
 /** The composer is open but no Thread exists yet — the first message makes one. */
 const NEW_THREAD = null;
@@ -42,23 +44,22 @@ export const ChatPage = ({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { chatId } = useParams();
-  // The URL is the source of truth for which Thread is open (`/chats` vs
-  // `/chats/:chatId`) -- there is no separate local copy of this to drift
-  // out of sync with it.
+  const { groupId } = useWorkspace();
+
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const activeThreadId = chatId ?? NEW_THREAD;
+
+  const renameMutation = useMutation({
+    mutationFn: (newTitle: string) => renameChat(getToken, activeThreadId as string, newTitle),
+    onSuccess: (updatedThread) => {
+      queryClient.setQueryData(['thread', activeThreadId], updatedThread);
+      void queryClient.invalidateQueries({ queryKey: ['threads', groupId] });
+      setIsRenameModalOpen(false);
+    },
+  });
+
   const [draft, setDraft] = useState('');
   const endOfThread = useRef<HTMLDivElement>(null);
-
-  const group = useActiveGroup(getToken);
-  const groupId = group.data ?? null;
-
-  const history = useInfiniteQuery({
-    queryKey: ['threads', groupId],
-    queryFn: ({ pageParam }) => listChats(getToken, groupId as string, pageParam),
-    initialPageParam: null as string | null,
-    getNextPageParam: (page) => page.next_cursor,
-    enabled: Boolean(groupId),
-  });
 
   const snapshot = useQuery({
     queryKey: ['thread', activeThreadId],
@@ -132,59 +133,67 @@ export const ChatPage = ({
     endOfThread.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [thread?.messages.length, feed.events.length, send.streaming?.text]);
 
-  const threads = history.data?.pages.flatMap((page) => page.items) ?? [];
   // Before a Thread exists there is nothing to forbid; afterwards the server
   // says when a follow-up is legal, and it is the only thing that says so.
   const canSend = thread ? thread.actions.can_append_message : Boolean(groupId);
 
-  if (group.error) {
-    return (
-      <section className="flex h-full items-center justify-center px-6">
-        <p className="max-w-md text-sm text-foreground-muted" role="alert">
-          {group.error.message}
-        </p>
-      </section>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0">
-      <ChatHistory
-        threads={threads}
-        activeThreadId={activeThreadId}
-        loading={history.isFetching}
-        onLoadMore={history.hasNextPage ? () => void history.fetchNextPage() : null}
-        onSelect={(threadId) => {
-          navigate(`/chats/${threadId}`);
-          setDraft('');
-        }}
-        onNewChat={() => {
-          navigate('/chats');
-          setDraft('');
-        }}
-      />
-
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-border px-6 py-5">
-          <h1 className="min-w-0 flex-1 font-serif text-2xl font-normal tracking-[-0.03em]">
+        <header className="flex items-center gap-x-4 border-b border-border px-6 py-5 group/header">
+          <h1 className="font-serif text-2xl font-normal tracking-[-0.03em] truncate max-w-lg">
             {thread?.title ?? 'Chat'}
           </h1>
-          <p className="w-full text-sm text-foreground-muted">
-            Ask a governed question and follow the evidence trace it produces.
-          </p>
+          {thread && (
+            <IconButton
+              intent="ghost"
+              size="sm"
+              aria-label="Rename Chat"
+              className="opacity-0 group-hover/header:opacity-100 transition-opacity"
+              onClick={() => setIsRenameModalOpen(true)}
+            >
+              <Icon name="edit" size="xs" />
+            </IconButton>
+          )}
         </header>
 
-        <div className="relative min-h-0 flex-1 flex flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto pb-40">
-            <ChatContextProvider
-              value={{
-                getToken,
-                onFollowUp: submit,
-                onFillComposer: setDraft,
-                activityByRun,
-                agents: agents.data ?? [],
-              }}
-            >
+        <Modal open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+          <Modal.Content>
+            <Modal.Header>
+              <Modal.Title>Rename Chat</Modal.Title>
+              <Modal.Description>Enter a new title for this chat.</Modal.Description>
+              <Modal.Close />
+            </Modal.Header>
+            <Modal.Body>
+              <Input
+                autoFocus
+                defaultValue={thread?.title}
+                placeholder="e.g. Sales analysis"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== thread?.title) {
+                      renameMutation.mutate(e.currentTarget.value.trim());
+                    } else {
+                      setIsRenameModalOpen(false);
+                    }
+                  }
+                }}
+              />
+            </Modal.Body>
+          </Modal.Content>
+        </Modal>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ChatContextProvider
+            value={{
+              getToken,
+              onFollowUp: submit,
+              onFillComposer: setDraft,
+              activityByRun,
+              agents: agents.data ?? [],
+            }}
+          >
             <AssistantRuntimeProvider runtime={runtime}>
               <ThreadPrimitive.Root>
                 <ThreadPrimitive.Empty>
@@ -213,17 +222,12 @@ export const ChatPage = ({
           </ChatContextProvider>
         </div>
 
-          <div className="absolute bottom-8 left-1/2 w-full max-w-3xl -translate-x-1/2 px-6 pointer-events-none">
-            <div className="pointer-events-auto shadow-2xl rounded-3xl overflow-hidden">
-              <ChatComposer
-                draft={draft}
-                onDraftChange={setDraft}
-                onSend={submit}
-                disabled={send.isPending || !canSend}
-              />
-            </div>
-          </div>
-        </div>
+        <ChatComposer
+          draft={draft}
+          onDraftChange={setDraft}
+          onSend={submit}
+          disabled={send.isPending || !canSend}
+        />
       </section>
     </div>
   );

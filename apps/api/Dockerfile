@@ -5,6 +5,7 @@ WORKDIR /workspace
 COPY pyproject.toml uv.lock ./
 COPY apps/api apps/api
 COPY libs/adapters libs/adapters
+COPY libs/application libs/application
 COPY libs/domain libs/domain
 
 RUN uv sync --frozen --no-dev

@@ -39,6 +39,7 @@ from .thread_schemas import (
     ChatResponse,
     RoutingResponse,
     ThreadMessageResponse,
+    ThreadTitleRequest,
 )
 
 _THREAD_ERRORS = (
@@ -371,3 +372,15 @@ async def delete_chat(
         ThreadConflictError,
     ) as error:
         _thread_error(error)
+
+@router.patch("/chats/{chat_id}", response_model=ChatResponse)
+async def rename_chat(
+    chat_id: UUID, body: ThreadTitleRequest, request: Request, resolved: AuthenticatedRequest
+) -> ChatResponse:
+    try:
+        detail = await request.app.state.dependencies.threads.rename(
+            resolved.actor, chat_id, title=body.title
+        )
+    except _THREAD_ERRORS as error:
+        _thread_error(error)
+    return ChatResponse.from_detail(detail)

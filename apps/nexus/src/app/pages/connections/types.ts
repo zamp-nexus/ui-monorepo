@@ -39,6 +39,28 @@ export interface RegisterSourceRequest {
   readonly store_sample_values: boolean;
 }
 
+export interface UploadColumnRequest {
+  readonly name: string;
+  readonly declared_type: string;
+  readonly nullable: boolean;
+  readonly position: number;
+}
+
+export interface UploadPreviewResponse {
+  readonly upload_id: string;
+  readonly filename: string;
+  readonly upload_format: 'csv' | 'parquet';
+  readonly columns: readonly UploadColumnRequest[];
+  readonly rows: readonly (readonly string[])[];
+  readonly total_bytes: number;
+  readonly truncated: boolean;
+}
+
+export interface CommitUploadRequest {
+  readonly name: string;
+  readonly columns?: readonly UploadColumnRequest[];
+}
+
 /** The groups the picker lays connectors out in. */
 export type ConnectorCategory = 'Data warehouses' | 'Databases' | 'Cloud storage' | 'File systems';
 

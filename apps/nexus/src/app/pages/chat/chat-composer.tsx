@@ -1,5 +1,4 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { motion } from 'framer-motion';
 
 import { Badge, Button, IconButton } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
@@ -27,7 +26,6 @@ interface ChatComposerProps {
  */
 export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatComposerProps) => {
   const [rows, setRows] = useState(1);
-  const [isFocused, setIsFocused] = useState(false);
   const parsed = useMemo(() => parseComposerCommands(draft), [draft]);
   const hasCommands = Boolean(parsed.datasetHint || parsed.mentions.length > 0 || parsed.skillHint);
 
@@ -47,16 +45,12 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
   };
 
   return (
-    <motion.form
-      layout
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`relative w-full overflow-hidden rounded-3xl border border-glass-border bg-glass p-3 backdrop-blur-3xl transition-shadow duration-500 ease-out ${
-        isFocused ? 'shadow-[0_0_40px_rgba(255,255,255,0.06)]' : 'shadow-lg'
-      }`}
+    <form
+      className="w-full border-t border-border bg-card p-4"
       onSubmit={submit}
       aria-label="Send a message"
     >
-      <motion.div layout className="flex flex-col gap-3 rounded-2xl bg-background/40 p-3 transition-colors focus-within:bg-background/60">
+      <div className="flex flex-col gap-3 rounded-md border border-border bg-background p-3 focus-within:ring-2 focus-within:ring-border-focus focus-within:ring-offset-2">
         {hasCommands ? (
           <div className="flex flex-wrap items-center gap-2" aria-live="polite">
             {parsed.datasetHint ? (
@@ -97,15 +91,13 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           disabled={disabled}
           placeholder={disabled ? 'Sending…' : 'Ask a governed question…'}
           onKeyDown={handleKeyDown}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           onChange={(event) => {
             onDraftChange(event.target.value);
             setRows(Math.min(6, Math.max(1, event.target.value.split('\n').length)));
           }}
         />
 
-        <motion.div layout className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <IconButton aria-label="Attach a file" intent="ghost" size="sm" disabled>
             <Icon name="clipboard" size="sm" />
           </IconButton>
@@ -125,12 +117,8 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           >
             Send
           </Button>
-        </motion.div>
-      </motion.div>
-
-      <motion.p layout className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted/70">
-        Answers are drafts · every claim is rechecked before it becomes a Finding
-      </motion.p>
-    </motion.form>
+        </div>
+      </div>
+    </form>
   );
 };

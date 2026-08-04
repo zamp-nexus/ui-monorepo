@@ -20,7 +20,6 @@ export interface NavItem {
  * answers with a placeholder rather than a dead link.
  */
 export const navItems: readonly NavItem[] = [
-  { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
   { label: 'Datasets', to: '/datasets', icon: 'database' },
   { label: 'Sequences', to: '/sequences', icon: 'columns' },
   { label: 'Chat', to: '/chats', icon: 'message_square' },

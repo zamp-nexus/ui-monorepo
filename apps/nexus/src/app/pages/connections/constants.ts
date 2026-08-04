@@ -121,6 +121,15 @@ export const CONNECTORS: readonly Connector[] = [
     available: false,
     blurb: 'A remote directory polled for dropped files.',
   },
+  {
+    id: 'upload',
+    name: 'File Upload',
+    category: 'File systems',
+    logo: 'clickhouse', // Reusing clickhouse logo or something suitable, let's use 's3' or 'clickhouse'
+    icon: 'upload',
+    available: true,
+    blurb: 'Upload CSV or Parquet files directly to Nexus.',
+  },
 ];
 
 /** Picker layout order. */
