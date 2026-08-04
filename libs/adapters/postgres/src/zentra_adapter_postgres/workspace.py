@@ -8,12 +8,12 @@ from uuid import UUID
 from sqlalchemy import insert, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     GroupCursor,
     GroupNameConflictError,
     GroupSlice,
 )
-from zentra_domain_investigation import Group
+from zentra_domain_analysis_run import Group
 
 from .database import Database, set_organization_context
 from .schema import workspace_groups

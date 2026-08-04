@@ -16,11 +16,11 @@ pytestmark = pytest.mark.skipif(
 
 OLD_TABLES = (
     "projects",
-    "investigation_threads",
+    "analysis_run_threads",
     "thread_messages",
-    "investigations",
+    "analysis_runs",
     "thread_events",
-    "investigation_boards",
+    "analysis_run_boards",
 )
 NEW_TABLES = (
     "chat_sessions",

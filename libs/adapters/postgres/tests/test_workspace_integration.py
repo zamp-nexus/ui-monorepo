@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
     GroupNameConflictError,
     GroupNotFoundError,

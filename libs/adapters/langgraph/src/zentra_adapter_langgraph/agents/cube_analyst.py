@@ -83,7 +83,7 @@ class CubeAnalystAgent:
         previous_issues = agent_input.state.get("previous_issues") or []
 
         # Built per invocation, never per agent. The Evaluator loop can run
-        # this Agent three times over one Investigation, and each tool
+        # this Agent three times over one AnalysisRun, and each tool
         # remembers the last query it ran — shared across attempts, attempt
         # two would cite attempt one's query if the retry never got as far as
         # querying.

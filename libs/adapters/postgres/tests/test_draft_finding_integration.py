@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_domain_agent_execution import ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     CitationFilter,
     Claim,
     ClaimKind,
@@ -50,7 +50,7 @@ pytestmark = pytest.mark.skipif(
 
 TENANT_A = UUID("81000000-0000-0000-0000-000000000001")
 TENANT_B = UUID("81000000-0000-0000-0000-000000000002")
-INVESTIGATION_A = UUID("82000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_A = UUID("82000000-0000-0000-0000-000000000001")
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
 CITATION_ID = UUID("cc000000-0000-0000-0000-000000000001")
 CITATION_ID_2 = UUID("cc000000-0000-0000-0000-000000000002")
@@ -72,7 +72,7 @@ async def seed(owner_url: str) -> None:
         await connection.execute(
             postgres_insert(analysis_runs)
             .values(
-                analysis_run_id=INVESTIGATION_A,
+                analysis_run_id=ANALYSIS_RUN_A,
                 tenant_id=TENANT_A,
                 question="Why did EU refunds increase?",
                 status="completed",
@@ -90,7 +90,7 @@ def citations() -> tuple[EvidenceCitation, ...]:
         EvidenceCitation(
             citation_id=citation_id,
             tenant_id=TENANT_A,
-            investigation_id=INVESTIGATION_A,
+            analysis_run_id=ANALYSIS_RUN_A,
             metric=metric,
             filters=(
                 CitationFilter(
@@ -114,7 +114,7 @@ def draft(version: int = 1) -> DraftFinding:
     return DraftFinding(
         draft_finding_id=uuid4(),
         tenant_id=TENANT_A,
-        investigation_id=INVESTIGATION_A,
+        analysis_run_id=ANALYSIS_RUN_A,
         version=version,
         created_at=NOW,
         produced_by_execution_id=None,
@@ -162,12 +162,12 @@ async def cleanup(owner_url: str) -> None:
     async with owner.begin() as connection:
         await connection.execute(
             draft_findings.delete().where(
-                draft_findings.c.analysis_run_id == INVESTIGATION_A
+                draft_findings.c.analysis_run_id == ANALYSIS_RUN_A
             )
         )
         await connection.execute(
             evidence_citations.delete().where(
-                evidence_citations.c.analysis_run_id == INVESTIGATION_A
+                evidence_citations.c.analysis_run_id == ANALYSIS_RUN_A
             )
         )
     await owner.dispose()
@@ -191,7 +191,7 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
             await set_tenant_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_investigation(INVESTIGATION_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A)
 
         assert loaded is not None
         assert loaded.draft_finding_id == stored.draft_finding_id
@@ -220,7 +220,7 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
 
 @pytest.mark.asyncio
 async def test_a_refresh_returns_the_latest_stored_draft() -> None:
-    """Not a regenerated one, and not the first attempt's. An Investigation can
+    """Not a regenerated one, and not the first attempt's. An AnalysisRun can
     be evaluated three times; the reader must see the conclusion they were
     shown, whichever attempt produced it."""
     assert OWNER_URL is not None and RUNTIME_URL is not None
@@ -240,7 +240,7 @@ async def test_a_refresh_returns_the_latest_stored_draft() -> None:
             await set_tenant_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_investigation(INVESTIGATION_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A)
 
         assert loaded is not None
         assert loaded.version == 2
@@ -269,7 +269,7 @@ async def test_another_tenants_draft_is_invisible_rather_than_filtered() -> None
             await set_tenant_context(connection, TENANT_B)
             intruder = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_investigation(INVESTIGATION_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A)
             visible_drafts = await connection.scalar(
                 select(func.count()).select_from(draft_findings)
             )
@@ -307,7 +307,7 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
         forged = DraftFinding(
             draft_finding_id=uuid4(),
             tenant_id=TENANT_A,
-            investigation_id=INVESTIGATION_A,
+            analysis_run_id=ANALYSIS_RUN_A,
             version=1,
             created_at=NOW,
             produced_by_execution_id=None,
@@ -329,7 +329,7 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
             assert (
                 await PostgresDraftFindingRepository(
                     connection
-                ).latest_for_investigation(INVESTIGATION_A)
+                ).latest_for_analysis_run(ANALYSIS_RUN_A)
                 is None
             )
     finally:

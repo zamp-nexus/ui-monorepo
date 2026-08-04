@@ -29,7 +29,7 @@ def test_workspace_migration_is_additive_and_installs_forced_rls() -> None:
     #
     # No longer downgrades to a pre-cutover revision first: the cutover's
     # own downgrade cannot walk further back than itself (recreating
-    # `investigations`' pre-cutover shape, which several migrations between
+    # `analysis_runs`' pre-cutover shape, which several migrations between
     # here and there reference by name, would mean reversing the whole
     # chain just to prove Groups are still additive -- a property this test
     # can verify directly at head instead).

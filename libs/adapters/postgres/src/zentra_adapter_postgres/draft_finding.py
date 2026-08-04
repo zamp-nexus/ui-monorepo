@@ -1,9 +1,9 @@
 """Draft Finding persistence.
 
-Its own module rather than another section of `investigation.py`, which is
+Its own module rather than another section of `analysis_run.py`, which is
 already near the repository's 600-line limit.
 
-Two tables, not a JSON blob on the Investigation, because claim order and the
+Two tables, not a JSON blob on the AnalysisRun, because claim order and the
 observed/interpretation split have to survive as *queryable structure* — the
 publication policy will read them, and Replay has to render them. A blob would
 have made both a parsing exercise.
@@ -20,7 +20,7 @@ from uuid import UUID
 from sqlalchemy import and_, case, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_domain_agent_execution import OUTCOME_ADAPTER, ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     CitationFilter,
     CitationState,
     Claim,
@@ -57,7 +57,7 @@ class PostgresDraftFindingRepository:
         await self._connection.execute(
             insert(draft_findings).values(
                 draft_finding_id=draft.draft_finding_id,
-                analysis_run_id=draft.investigation_id,
+                analysis_run_id=draft.analysis_run_id,
                 organization_id=draft.organization_id,
                 version=draft.version,
                 produced_by_execution_id=draft.produced_by_execution_id,
@@ -107,20 +107,20 @@ class PostgresDraftFindingRepository:
         if links:
             await self._connection.execute(insert(draft_finding_claim_citations), links)
 
-    async def latest_for_investigation(
+    async def latest_for_analysis_run(
         self,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
     ) -> DraftFinding | None:
         """The current draft, which is the highest version.
 
-        An Investigation can be evaluated up to three times, so it can hold
+        An AnalysisRun can be evaluated up to three times, so it can hold
         more than one. Returning the latest is what makes a refresh show the
         same conclusion the reader saw, rather than the first attempt's.
         """
         row = (
             await self._connection.execute(
                 select(draft_findings)
-                .where(draft_findings.c.analysis_run_id == investigation_id)
+                .where(draft_findings.c.analysis_run_id == analysis_run_id)
                 .order_by(draft_findings.c.version.desc())
                 .limit(1)
             )
@@ -158,7 +158,7 @@ class PostgresDraftFindingRepository:
         return DraftFinding(
             draft_finding_id=row.draft_finding_id,
             organization_id=row.organization_id,
-            investigation_id=row.analysis_run_id,
+            analysis_run_id=row.analysis_run_id,
             version=row.version,
             created_at=row.created_at,
             produced_by_execution_id=row.produced_by_execution_id,
@@ -211,7 +211,7 @@ class PostgresEvidenceCitationRepository:
             [
                 {
                     "citation_id": citation.citation_id,
-                    "analysis_run_id": citation.investigation_id,
+                    "analysis_run_id": citation.analysis_run_id,
                     "organization_id": citation.organization_id,
                     "metric": citation.metric,
                     "filters": [
@@ -239,13 +239,13 @@ class PostgresEvidenceCitationRepository:
 
     async def resolve(
         self,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         citation_id: UUID,
     ) -> EvidenceCitation | Tombstone | None:
         """One citation, with its state decided against the evidence itself.
 
         `None` means the citation is not visible to this connection — which
-        covers "belongs to another Organization", "belongs to another Investigation",
+        covers "belongs to another Organization", "belongs to another AnalysisRun",
         and "does not exist". They must be indistinguishable: telling a caller
         which one applies confirms that somebody else's evidence exists.
 
@@ -257,7 +257,7 @@ class PostgresEvidenceCitationRepository:
             await self._connection.execute(
                 _resolvable().where(
                     evidence_citations.c.citation_id == citation_id,
-                    evidence_citations.c.analysis_run_id == investigation_id,
+                    evidence_citations.c.analysis_run_id == analysis_run_id,
                 )
             )
         ).one_or_none()
@@ -268,7 +268,7 @@ class PostgresEvidenceCitationRepository:
             # values emptied would still hand back the metric, the period, the
             # grain and the filters — and a filter can carry customer values as
             # readily as an aggregate can.
-            erasure = await self._erasure_record(investigation_id)
+            erasure = await self._erasure_record(analysis_run_id)
             return Tombstone(
                 citation_id=row.citation_id,
                 category=(
@@ -281,7 +281,7 @@ class PostgresEvidenceCitationRepository:
         return _citation_from_row(row)
 
     async def _erasure_record(
-        self, investigation_id: UUID
+        self, analysis_run_id: UUID
     ) -> tuple[str, datetime] | None:
         """The category and instant the Tombstone reports.
 
@@ -296,7 +296,7 @@ class PostgresEvidenceCitationRepository:
                     erasure_operations.c.completed_at,
                 )
                 .where(
-                    erasure_operations.c.analysis_run_id == investigation_id,
+                    erasure_operations.c.analysis_run_id == analysis_run_id,
                     erasure_operations.c.completed_at.isnot(None),
                 )
                 .order_by(erasure_operations.c.completed_at.desc())
@@ -305,9 +305,9 @@ class PostgresEvidenceCitationRepository:
         ).one_or_none()
         return (row.category, row.completed_at) if row is not None else None
 
-    async def for_investigation(
+    async def for_analysis_run(
         self,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
     ) -> tuple[EvidenceCitation, ...]:
         """The same derivation the single-citation path uses.
 
@@ -318,7 +318,7 @@ class PostgresEvidenceCitationRepository:
         rows = (
             await self._connection.execute(
                 _resolvable().where(
-                    evidence_citations.c.analysis_run_id == investigation_id
+                    evidence_citations.c.analysis_run_id == analysis_run_id
                 )
             )
         ).all()
@@ -360,7 +360,7 @@ def _citation_from_row(row: Any) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=row.citation_id,
         organization_id=row.organization_id,
-        investigation_id=row.analysis_run_id,
+        analysis_run_id=row.analysis_run_id,
         metric=row.metric,
         filters=tuple(
             CitationFilter(

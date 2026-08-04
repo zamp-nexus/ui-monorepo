@@ -215,7 +215,7 @@ class AgentRuntime:
         Nothing here raises. A tool that refuses, a tool the Agent may not
         hold, a tool that breaks — all three come back as `is_error` results
         the model reads and can correct on the next step. The alternative is
-        failing an entire investigation because a model guessed one argument
+        failing an entire analysis_run because a model guessed one argument
         wrong on its first try.
         """
         started = self._now()

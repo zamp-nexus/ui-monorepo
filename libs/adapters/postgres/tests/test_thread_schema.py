@@ -53,7 +53,7 @@ def test_chat_sessions_have_a_nullable_default_data_connection() -> None:
     ) in session_foreign_keys
 
 
-def test_investigations_link_to_one_message_and_sequence_in_a_thread() -> None:
+def test_analysis_runs_link_to_one_message_and_sequence_in_a_thread() -> None:
     uniques = {
         constraint.name
         for constraint in analysis_runs.constraints

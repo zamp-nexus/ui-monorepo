@@ -7,14 +7,14 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
     GroupService,
     Role,
     ThreadNotFoundError,
     ThreadService,
 )
-from zentra_application_investigation.thread_dto import (
+from zentra_application_analysis_run.thread_dto import (
     RoutingDisposition,
     RoutingResult,
 )
@@ -75,8 +75,8 @@ class _FakeAuditWriter:
     is a real ClickHouse round trip `AuditDeliveryCoordinator` owns, so a
     no-op stands in for it here."""
 
-    async def flush(self, *, organization_id, investigation_id) -> bool:
-        del organization_id, investigation_id
+    async def flush(self, *, organization_id, analysis_run_id) -> bool:
+        del organization_id, analysis_run_id
         return True
 
 

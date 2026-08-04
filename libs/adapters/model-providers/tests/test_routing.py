@@ -37,7 +37,7 @@ def test_free_evaluator_starts_on_a_different_family_from_the_analyst() -> None:
 def test_every_free_chain_leads_with_a_schema_verified_provider() -> None:
     """A chain may only lead with a provider whose strict json_schema support
     has been confirmed against its live endpoint. Leading with an unverified one
-    puts a retry-and-fall-through on every investigation's critical path."""
+    puts a retry-and-fall-through on every analysis_run's critical path."""
     verified = {Provider.GEMINI, Provider.NVIDIA, Provider.GROQ, Provider.ANTHROPIC}
     for role, chain in ROUTING[ModelTier.FREE].items():
         assert chain[0].provider in verified, (
@@ -70,7 +70,7 @@ def test_premium_light_roles_lead_with_a_fast_model() -> None:
 
 def test_the_canonical_insight_role_routes_on_both_tiers() -> None:
     """A role the registry can hold but the router cannot resolve is a
-    KeyError waiting for the first investigation that reaches it."""
+    KeyError waiting for the first analysis_run that reaches it."""
     for tier in ModelTier:
         assert chain_for(tier, AgentRole.INSIGHT)
 
@@ -199,7 +199,7 @@ def test_both_ids_unpriced_still_fails_loudly() -> None:
 def test_a_rung_is_not_held_to_another_providers_token_budget() -> None:
     """The 8000 default is Groq's constraint. NIM does not share it, and a
     reasoning model leading the Evaluator chain needs the room — at 8000 it
-    truncated on the 300-order scenario and killed the whole investigation."""
+    truncated on the 300-order scenario and killed the whole analysis_run."""
     evaluator = ROUTING[ModelTier.FREE][AgentRole.EVALUATOR]
     nemotron = next(c for c in evaluator if c.provider is Provider.NVIDIA)
     groq = next(c for c in evaluator if c.provider is Provider.GROQ)

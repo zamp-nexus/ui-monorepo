@@ -189,7 +189,7 @@ class InsightAgent:
 
 #: Must not exceed `VisualizationBriefV1.headline`'s `max_length` (240) —
 #: duplicated rather than imported, since this package has no dependency on
-#: the domain investigation model that field lives on.
+#: the domain analysis_run model that field lives on.
 _HEADLINE_MAX_LENGTH = 240
 
 

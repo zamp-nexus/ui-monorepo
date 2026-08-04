@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_application_investigation import MembershipDetail, OrganizationDetail
+from zentra_application_analysis_run import MembershipDetail, OrganizationDetail
 
 from .database import Database, set_organization_context
 from .schema import (
