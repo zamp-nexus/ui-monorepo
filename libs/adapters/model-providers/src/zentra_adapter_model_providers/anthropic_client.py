@@ -24,6 +24,22 @@ from .errors import (
 from .providers import token_cost_usd
 
 
+class AnthropicModelResponse(ModelResponse):
+    """`ModelResponse`, extended with the provider-level reasoning Anthropic's
+    extended-thinking feature returns.
+
+    A new field rather than a new type from scratch: every existing caller of
+    `AnthropicModelClient.complete()` reads a `ModelResponse` and must keep
+    working unchanged, and subclassing is what lets that hold — a plain
+    `ModelResponse` is what they get back too, since `reasoning` defaults to
+    `None`. This is provider-level reasoning output, a genuinely new category
+    under ADR-0006 (not raw Tool arguments or row data) — captured faithfully
+    here; nothing downstream consumes it yet.
+    """
+
+    reasoning: str | None = None
+
+
 def _wire_message(message: ModelMessage) -> dict[str, object]:
     """One ModelMessage as Anthropic content blocks.
 
@@ -92,6 +108,14 @@ class AnthropicModelClient:
         # it is included, which took down every Anthropic call and, through
         # it, the entire chain. Anthropic no longer takes this knob.
         temperature: float = 0.2,
+        # Opt-in only. Not part of `ModelPort` — no other caller passes it, so
+        # every existing call site keeps its current request byte-for-byte.
+        # Adaptive thinking is what current Anthropic models take: a fixed
+        # `budget_tokens` is deprecated on this model generation. `display:
+        # "summarized"` is requested alongside it because the default,
+        # "omitted", streams thinking blocks with empty text — asking for
+        # this and then not reading anything back would defeat the point.
+        thinking: bool = False,
     ) -> ModelResponse:
         del temperature
         request: dict[str, object] = {
@@ -119,6 +143,8 @@ class AnthropicModelClient:
             request["output_config"] = {
                 "format": {"type": "json_schema", "schema": response_schema}
             }
+        if thinking:
+            request["thinking"] = {"type": "adaptive", "display": "summarized"}
 
         try:
             response = await self._client.messages.create(**request)  # type: ignore[arg-type]
@@ -159,11 +185,22 @@ class AnthropicModelClient:
             for block in response.content
             if block.type == "tool_use"
         )
+        # Kept distinct from `text` deliberately: a `thinking` block is the
+        # model's chain-of-thought, not its answer, and conflating the two
+        # would put reasoning in front of a caller (or a user, downstream)
+        # expecting only the final response.
+        reasoning_parts = [
+            block.thinking
+            for block in response.content
+            if block.type == "thinking" and block.thinking
+        ]
+        reasoning = "\n\n".join(reasoning_parts) if reasoning_parts else None
         usage = response.usage
         cache_read = usage.cache_read_input_tokens or 0
         cache_write = usage.cache_creation_input_tokens or 0
-        return ModelResponse(
+        return AnthropicModelResponse(
             text=text,
+            reasoning=reasoning,
             tool_calls=tool_calls,
             stop_reason=response.stop_reason,
             usage=ExecutionUsage(

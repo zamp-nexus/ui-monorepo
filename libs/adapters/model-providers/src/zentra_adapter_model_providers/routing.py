@@ -34,13 +34,18 @@ def _free(
 
 
 def _paid(
-    provider: Provider, model: str, *, supports_tools: bool = True
+    provider: Provider,
+    model: str,
+    *,
+    supports_tools: bool = True,
+    supports_thinking: bool = False,
 ) -> ModelChoice:
     return ModelChoice(
         provider=provider,
         model=model,
         max_tokens=_PAID_MAX_TOKENS,
         supports_tools=supports_tools,
+        supports_thinking=supports_thinking,
     )
 
 
@@ -99,7 +104,12 @@ _GROQ_OSS = _free(Provider.GROQ, "openai/gpt-oss-120b", supports_tools=True)
 _OPENROUTER_FREE = _free(Provider.OPENROUTER, "openrouter/free")
 
 _SONNET = _paid(Provider.ANTHROPIC, "claude-sonnet-5")
-_OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5")
+# `supports_thinking=True`: Opus is the rung with headroom for real reasoning
+# depth (see the free-tier comment above), so it is the one marked eligible
+# for the Anthropic client's extended-thinking capture. Not yet read by
+# `RoutedModelClient` — recorded here as the per-role config surface for
+# when a caller decides to request it.
+_OPUS = _paid(Provider.ANTHROPIC, "claude-opus-5", supports_thinking=True)
 _GPT = _paid(Provider.OPENAI, "gpt-5.5")
 # Premium-tier light roles (Intake, Evaluator, Insight) lead on this instead of
 # Sonnet/Opus — a deliberate speed tradeoff. Measured live: Cube Analyst and
