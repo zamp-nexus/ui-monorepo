@@ -52,7 +52,7 @@ def test_configuring_the_app_without_an_endpoint_touches_no_provider() -> None:
 def test_recorders_are_safe_to_call_with_no_provider_installed() -> None:
     """A no-op provider must not be a crash.
 
-    The recorders run on every Investigation. If they raised when telemetry was
+    The recorders run on every AnalysisRun. If they raised when telemetry was
     unconfigured, the cheapest possible deployment would be the one that does
     not work.
     """

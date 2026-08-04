@@ -270,7 +270,7 @@ async def test_openai_parses_tool_calls_and_their_json_arguments() -> None:
 async def test_openai_treats_malformed_arguments_as_an_empty_call() -> None:
     """A model that emits broken arguments made a bad call; the provider did
     not break. Empty arguments let the tool refuse and say why, which is a turn
-    the model can recover from — raising here would end the investigation."""
+    the model can recover from — raising here would end the analysis_run."""
     call = SimpleNamespace(
         id="call_8",
         type="function",

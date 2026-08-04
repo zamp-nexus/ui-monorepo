@@ -1,12 +1,12 @@
 """The Orchestrator Agent on its own, without a graph around it.
 
-These assertions used to reach the agent through `InvestigationGraph`'s `plan`
+These assertions used to reach the agent through `AnalysisRunGraph`'s `plan`
 node (`test_graph.py`). ADR-0026 deleted the graph and `OrchestratorLoop` does
 not run this agent at all — the loop owns sequencing itself — so the agent's
 registry gate and its output allowlist are tested here directly.
 
 Note what that means: the fail-closed refusal below no longer guards a live
-chat investigation. It is enforced by this agent, and nothing in the live
+chat analysis_run. It is enforced by this agent, and nothing in the live
 wiring invokes it.
 """
 
@@ -31,7 +31,7 @@ from zentra_domain_agent_execution import (
 from zentra_adapter_langgraph import NoEnabledAgentError, OrchestratorAgent
 from zentra_adapter_langgraph.agents.orchestrator import REQUIRED_ROLES
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 QUESTION = "Why did EU refunds increase from June to July 2026?"
 
@@ -94,9 +94,9 @@ def agent(
 
 def agent_input() -> AgentInput:
     return AgentInput(
-        investigation_id=INVESTIGATION_ID,
+        investigation_id=ANALYSIS_RUN_ID,
         tenant_id=TENANT_ID,
-        state={"question": QUESTION, "execution_id": str(INVESTIGATION_ID)},
+        state={"question": QUESTION, "execution_id": str(ANALYSIS_RUN_ID)},
     )
 
 
@@ -147,7 +147,7 @@ async def test_its_output_is_a_task_ledger_and_nothing_else() -> None:
 @pytest.mark.asyncio
 async def test_a_plan_delegating_to_no_registered_role_does_not_pass() -> None:
     """Dropping the unregistered tasks silently and reporting success would
-    delegate the investigation to nobody."""
+    delegate the analysis_run to nobody."""
     planner = agent(
         advertised=(AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR, AgentRole.INSIGHT),
         tasks=[{"role": "forecaster", "objective": "Project next quarter."}],

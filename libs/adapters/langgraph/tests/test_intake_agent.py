@@ -23,7 +23,7 @@ from zentra_domain_agent_execution import (
 from zentra_adapter_langgraph import IntakeAgent
 from zentra_adapter_langgraph.schemas import INTAKE_SCHEMA
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 
 
@@ -59,7 +59,7 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
     None
 ):
     """`not_analytical` is correctly not-resolved -- it never becomes an
-    Investigation -- but the refusal reason must say so rather than the
+    AnalysisRun -- but the refusal reason must say so rather than the
     generic "needs clarification" message, since nothing was ambiguous.
     """
     agent = IntakeAgent(
@@ -76,7 +76,7 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
 
     output = await agent.invoke(
         AgentInput(
-            investigation_id=INVESTIGATION_ID,
+            investigation_id=ANALYSIS_RUN_ID,
             tenant_id=TENANT_ID,
             state={"question": "hi there"},
         )

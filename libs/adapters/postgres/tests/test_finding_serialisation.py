@@ -4,9 +4,9 @@ No database needed: these are the two pure functions the repository calls on the
 way in and out.
 """
 
-from zentra_domain_investigation import EvidenceReference, Finding, MetricComparison
+from zentra_domain_analysis_run import EvidenceReference, Finding, MetricComparison
 
-from zentra_adapter_postgres.investigation import _finding_from_json, _finding_to_json
+from zentra_adapter_postgres.analysis_run import _finding_from_json, _finding_to_json
 
 
 def _finding(*metrics: MetricComparison) -> Finding:
@@ -52,7 +52,7 @@ def test_a_metric_naming_no_period_round_trips_as_none() -> None:
 
 
 def test_a_row_written_before_labels_existed_still_loads() -> None:
-    """Investigations persisted before this field cannot be rewritten, so
+    """AnalysisRuns persisted before this field cannot be rewritten, so
     reading must not require it."""
     legacy = {
         "headline": "EU refunds rose $240 in July",
@@ -79,7 +79,7 @@ def test_a_finding_written_before_the_contraction_still_loads() -> None:
     """The Orchestrator wrote Findings for the whole of Phase 1. Removing the
     node that produced them must not make them unreadable — the row is exactly
     what it was, and nothing about the reader changed."""
-    from zentra_adapter_postgres.investigation import _finding_from_json
+    from zentra_adapter_postgres.analysis_run import _finding_from_json
 
     orchestrator_written = {
         "headline": "EU refunds rose $240 in July",

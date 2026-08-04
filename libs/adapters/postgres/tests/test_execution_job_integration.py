@@ -8,16 +8,16 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
-    InvestigationService,
+    AnalysisRunService,
     Role,
 )
-from zentra_domain_investigation import ExecutionJob, ExecutionJobStatus
+from zentra_domain_analysis_run import ExecutionJob, ExecutionJobStatus
 
 from zentra_adapter_postgres import (
     Database,
-    PostgresInvestigationUnitOfWorkFactory,
+    PostgresAnalysisRunUnitOfWorkFactory,
 )
 from zentra_adapter_postgres.schema import execution_jobs, tenants
 
@@ -44,7 +44,7 @@ class PendingAudit:
 
 
 async def _claim(
-    factory: PostgresInvestigationUnitOfWorkFactory,
+    factory: PostgresAnalysisRunUnitOfWorkFactory,
     tenant_id: UUID,
     *,
     worker_id: str,
@@ -73,8 +73,8 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
         )
 
     database = Database(RUNTIME_URL)
-    factory = PostgresInvestigationUnitOfWorkFactory(database)
-    service = InvestigationService(
+    factory = PostgresAnalysisRunUnitOfWorkFactory(database)
+    service = AnalysisRunService(
         unit_of_work_factory=factory,
         pipeline=UnusedPipeline(),
         audit_writer=PendingAudit(),
@@ -101,7 +101,7 @@ async def test_competing_workers_claim_once_and_an_expired_lease_is_recovered() 
 
     claimed = [job for job in (first, second) if job is not None]
     assert len(claimed) == 1
-    assert claimed[0].investigation_id == started.investigation_id
+    assert claimed[0].analysis_run_id == started.analysis_run_id
     assert claimed[0].attempts == 1
 
     async with owner_engine.begin() as connection:

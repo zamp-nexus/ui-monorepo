@@ -30,7 +30,7 @@ execution_jobs = Table(
         nullable=False,
     ),
     Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
-    Column("job_kind", String(24), nullable=False, server_default="investigation"),
+    Column("job_kind", String(24), nullable=False, server_default="analysis_run"),
     Column("visualization_id", UUID(as_uuid=True)),
     Column("status", String(16), nullable=False, server_default="queued"),
     Column("attempts", Integer, nullable=False, server_default="0"),
@@ -66,11 +66,11 @@ execution_jobs = Table(
         ondelete="CASCADE",
     ),
     CheckConstraint(
-        "job_kind IN ('investigation', 'visualization')",
+        "job_kind IN ('analysis_run', 'visualization')",
         name="ck_execution_jobs_kind",
     ),
     CheckConstraint(
-        "(job_kind = 'investigation' AND visualization_id IS NULL) OR "
+        "(job_kind = 'analysis_run' AND visualization_id IS NULL) OR "
         "(job_kind = 'visualization' AND visualization_id IS NOT NULL)",
         name="ck_execution_jobs_target",
     ),
@@ -94,7 +94,7 @@ Index(
     execution_jobs.c.organization_id,
     execution_jobs.c.analysis_run_id,
     unique=True,
-    postgresql_where=execution_jobs.c.job_kind == "investigation",
+    postgresql_where=execution_jobs.c.job_kind == "analysis_run",
 )
 Index(
     "uq_execution_jobs_visualization",

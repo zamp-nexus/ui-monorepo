@@ -13,7 +13,7 @@ dependencies = [
   "zentra-adapter-thesys",
   "zentra-api",
   "zentra-application-connector",
-  "zentra-application-investigation",
+  "zentra-application-analysis-run",
   "zentra-application-sequence",
   "zentra-domain-agent-execution",
   "zentra-domain-connector",
@@ -33,7 +33,7 @@ members = [
   "libs/adapters/telemetry",
   "libs/adapters/thesys",
   "libs/application/connector",
-  "libs/application/investigation",
+  "libs/application/analysis_run",
   "libs/application/sequence",
   "libs/domain/agent-execution",
   "libs/domain/connector",
@@ -71,7 +71,7 @@ workspace = true
 [tool.uv.sources.zentra-application-connector]
 workspace = true
 
-[tool.uv.sources.zentra-application-investigation]
+[tool.uv.sources.zentra-application-analysis-run]
 workspace = true
 
 [tool.uv.sources.zentra-application-sequence]

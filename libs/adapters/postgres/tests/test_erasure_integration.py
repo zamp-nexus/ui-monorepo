@@ -21,7 +21,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     DeletionCategory,
     ErasureError,
     ErasureProgress,
@@ -49,7 +49,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 TENANT = UUID("88000000-0000-0000-0000-000000000001")
-INVESTIGATION = UUID("89000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN = UUID("89000000-0000-0000-0000-000000000001")
 EXECUTION = UUID("8a000000-0000-0000-0000-000000000001")
 DRAFT = UUID("8b000000-0000-0000-0000-000000000001")
 CLAIM = UUID("8c000000-0000-0000-0000-000000000001")
@@ -61,13 +61,13 @@ NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
 MARKERS = {
     EvidenceSurface.AGENT_EXECUTION_INPUT: "MARKER-execution-input",
     EvidenceSurface.AGENT_EXECUTION_OUTPUT: "MARKER-execution-output",
-    EvidenceSurface.INVESTIGATION_FINDING: "MARKER-narrative-finding",
+    EvidenceSurface.ANALYSIS_RUN_FINDING: "MARKER-narrative-finding",
     EvidenceSurface.DRAFT_FINDING_NARRATIVE: "MARKER-draft-headline",
     EvidenceSurface.DRAFT_FINDING_CLAIMS: "MARKER-claim-text",
     EvidenceSurface.CITATION_AGGREGATE: "MARKER-aggregate-value",
     EvidenceSurface.DRAFT_FINDING_CONTRADICTIONS: "MARKER-contradiction",
     EvidenceSurface.AGENT_EXECUTION_OUTCOME: "MARKER-validation-issue",
-    EvidenceSurface.INVESTIGATION_FAILURE_MESSAGE: "MARKER-failure-message",
+    EvidenceSurface.ANALYSIS_RUN_FAILURE_MESSAGE: "MARKER-failure-message",
 }
 
 
@@ -81,23 +81,23 @@ async def seed(status: str = "completed") -> None:
         )
         await connection.execute(
             erasure_operations.delete().where(
-                erasure_operations.c.analysis_run_id == INVESTIGATION
+                erasure_operations.c.analysis_run_id == ANALYSIS_RUN
             )
         )
         await connection.execute(
             analysis_runs.delete().where(
-                analysis_runs.c.analysis_run_id == INVESTIGATION
+                analysis_runs.c.analysis_run_id == ANALYSIS_RUN
             )
         )
         await connection.execute(
             analysis_runs.insert().values(
-                analysis_run_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 tenant_id=TENANT,
                 question="Why did EU refunds increase?",
                 status=status,
                 state={
                     "finding": {
-                        "headline": MARKERS[EvidenceSurface.INVESTIGATION_FINDING],
+                        "headline": MARKERS[EvidenceSurface.ANALYSIS_RUN_FINDING],
                         "summary": "narrative",
                         "metrics": [],
                         "evidence_refs": [],
@@ -108,7 +108,7 @@ async def seed(status: str = "completed") -> None:
                         # The code explains the terminal state and stays.
                         "code": "pipeline_failed",
                         "message": MARKERS[
-                            EvidenceSurface.INVESTIGATION_FAILURE_MESSAGE
+                            EvidenceSurface.ANALYSIS_RUN_FAILURE_MESSAGE
                         ],
                     },
                 },
@@ -117,7 +117,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             agent_executions.insert().values(
                 execution_id=EXECUTION,
-                analysis_run_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 tenant_id=TENANT,
                 agent_id="cube_analyst_v1",
                 step=1,
@@ -138,7 +138,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             draft_findings.insert().values(
                 draft_finding_id=DRAFT,
-                analysis_run_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 tenant_id=TENANT,
                 version=1,
                 headline=MARKERS[EvidenceSurface.DRAFT_FINDING_NARRATIVE],
@@ -170,7 +170,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             evidence_citations.insert().values(
                 citation_id=CITATION,
-                analysis_run_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 tenant_id=TENANT,
                 metric="refund_amount",
                 filters=[{"member": "Commerce.region", "operator": "equals",
@@ -189,7 +189,7 @@ async def cleanup() -> None:
     async with owner.begin() as connection:
         await connection.execute(
             analysis_runs.delete().where(
-                analysis_runs.c.analysis_run_id == INVESTIGATION
+                analysis_runs.c.analysis_run_id == ANALYSIS_RUN
             )
         )
     await owner.dispose()
@@ -201,21 +201,21 @@ async def surviving_markers(connection) -> set[str]:
     rows = []
     rows.append(str(await connection.scalar(
         select(analysis_runs.c.state).where(
-            analysis_runs.c.analysis_run_id == INVESTIGATION
+            analysis_runs.c.analysis_run_id == ANALYSIS_RUN
         )
     )))
     for column, where in (
         (
             agent_executions.c.input,
-            agent_executions.c.analysis_run_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == ANALYSIS_RUN,
         ),
         (
             agent_executions.c.output,
-            agent_executions.c.analysis_run_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == ANALYSIS_RUN,
         ),
         (
             draft_findings.c.headline,
-            draft_findings.c.analysis_run_id == INVESTIGATION,
+            draft_findings.c.analysis_run_id == ANALYSIS_RUN,
         ),
         (
             draft_finding_claims.c.claim_text,
@@ -223,15 +223,15 @@ async def surviving_markers(connection) -> set[str]:
         ),
         (
             evidence_citations.c.aggregate_value,
-            evidence_citations.c.analysis_run_id == INVESTIGATION,
+            evidence_citations.c.analysis_run_id == ANALYSIS_RUN,
         ),
         (
             draft_findings.c.contradictions,
-            draft_findings.c.analysis_run_id == INVESTIGATION,
+            draft_findings.c.analysis_run_id == ANALYSIS_RUN,
         ),
         (
             agent_executions.c.outcome,
-            agent_executions.c.analysis_run_id == INVESTIGATION,
+            agent_executions.c.analysis_run_id == ANALYSIS_RUN,
         ),
     ):
         rows.extend(
@@ -265,12 +265,12 @@ async def test_every_surface_is_present_before_and_absent_after() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             operation = await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -300,12 +300,12 @@ async def test_process_survives_what_content_does_not() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -318,7 +318,7 @@ async def test_process_survives_what_content_does_not() -> None:
                         analysis_runs.c.status,
                         analysis_runs.c.question,
                         analysis_runs.c.state,
-                    ).where(analysis_runs.c.analysis_run_id == INVESTIGATION)
+                    ).where(analysis_runs.c.analysis_run_id == ANALYSIS_RUN)
                 )
             ).one()
             execution = (
@@ -328,7 +328,7 @@ async def test_process_survives_what_content_does_not() -> None:
                         agent_executions.c.model,
                         agent_executions.c.latency_ms,
                         agent_executions.c.status,
-                    ).where(agent_executions.c.analysis_run_id == INVESTIGATION)
+                    ).where(agent_executions.c.analysis_run_id == ANALYSIS_RUN)
                 )
             ).one()
             claim = (
@@ -373,12 +373,12 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -414,7 +414,7 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_running_investigation_cannot_be_erased() -> None:
+async def test_a_running_analysis_run_cannot_be_erased() -> None:
     """Erasing under a live pipeline races every write still to come."""
     await seed(status="running")
     runtime = create_async_engine(RUNTIME_URL)
@@ -425,7 +425,7 @@ async def test_a_running_investigation_cannot_be_erased() -> None:
                 await PostgresErasureRepository(connection).request(
                     erasure_id=uuid4(),
                     tenant_id=TENANT,
-                    investigation_id=INVESTIGATION,
+                    analysis_run_id=ANALYSIS_RUN,
                     category=DeletionCategory.TENANT_REQUEST,
                     now=NOW,
                 )
@@ -446,20 +446,20 @@ async def test_asking_twice_reaches_the_same_operation() -> None:
             first = await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             second = await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             count = await connection.scalar(
                 select(erasure_operations.c.erasure_id).where(
-                    erasure_operations.c.analysis_run_id == INVESTIGATION
+                    erasure_operations.c.analysis_run_id == ANALYSIS_RUN
                 )
             )
 
@@ -483,17 +483,17 @@ async def test_erasing_twice_keeps_the_original_completion_time() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             first = await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             again = await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=later,
             )
@@ -517,12 +517,12 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             await repository.mark_failed(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 failure_code="storage_unavailable",
             )
@@ -536,7 +536,7 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
                         erasure_operations.c.completed_at,
                         erasure_operations.c.failure_code,
                     ).where(
-                        erasure_operations.c.analysis_run_id == INVESTIGATION
+                        erasure_operations.c.analysis_run_id == ANALYSIS_RUN
                     )
                 )
             ).one()
@@ -547,7 +547,7 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT)
             retried = await PostgresErasureRepository(connection).erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -573,12 +573,12 @@ async def test_a_rolled_back_erasure_leaves_everything_intact() -> None:
                 await repository.request(
                     erasure_id=uuid4(),
                     tenant_id=TENANT,
-                    investigation_id=INVESTIGATION,
+                    analysis_run_id=ANALYSIS_RUN,
                     category=DeletionCategory.TENANT_REQUEST,
                     now=NOW,
                 )
                 await repository.erase(
-                    investigation_id=INVESTIGATION,
+                    analysis_run_id=ANALYSIS_RUN,
                     category=DeletionCategory.TENANT_REQUEST,
                     now=NOW,
                 )
@@ -589,7 +589,7 @@ async def test_a_rolled_back_erasure_leaves_everything_intact() -> None:
             survived = await surviving_markers(connection)
             operation = await connection.scalar(
                 select(erasure_operations.c.progress).where(
-                    erasure_operations.c.analysis_run_id == INVESTIGATION
+                    erasure_operations.c.analysis_run_id == ANALYSIS_RUN
                 )
             )
 
@@ -620,10 +620,10 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
             await connection.execute(
                 audit_outbox.insert().values(
                     event_id=event_id,
-                    analysis_run_id=INVESTIGATION,
+                    analysis_run_id=ANALYSIS_RUN,
                     tenant_id=TENANT,
                     payload={
-                        "event_type": "investigation.completed",
+                        "event_type": "analysis_run.completed",
                         "status": "completed",
                         "metadata": {"agent_id": "cube_analyst_v1", "step": 1},
                     },
@@ -651,12 +651,12 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -708,12 +708,12 @@ def test_the_erasure_never_reaches_the_audit_ledger() -> None:
 @pytest.mark.asyncio
 async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
     """The aggregate bumps its own events by a microsecond, but a rehydrated
-    Investigation carries none — so two requests writing in the same instant
+    AnalysisRun carries none — so two requests writing in the same instant
     would sort by a random id, and Replay would show an order that never
     happened."""
-    from zentra_domain_investigation import DomainEvent, InvestigationStatus
+    from zentra_domain_analysis_run import DomainEvent, AnalysisRunStatus
 
-    from zentra_adapter_postgres.investigation import PostgresAuditOutboxRepository
+    from zentra_adapter_postgres.analysis_run import PostgresAuditOutboxRepository
     from zentra_adapter_postgres.schema import audit_outbox
 
     await seed()
@@ -723,9 +723,9 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
         return DomainEvent(
             event_id=uuid4(),
             event_type=event_type,
-            investigation_id=INVESTIGATION,
+            analysis_run_id=ANALYSIS_RUN,
             tenant_id=TENANT,
-            status=InvestigationStatus.AWAITING_APPROVAL,
+            status=AnalysisRunStatus.AWAITING_APPROVAL,
             occurred_at=same_instant,
         )
 
@@ -751,7 +751,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             rows = (
                 await connection.execute(
                     select(audit_outbox.c.created_at, audit_outbox.c.payload)
-                    .where(audit_outbox.c.analysis_run_id == INVESTIGATION)
+                    .where(audit_outbox.c.analysis_run_id == ANALYSIS_RUN)
                     .order_by(audit_outbox.c.created_at)
                 )
             ).all()
@@ -769,7 +769,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             await set_tenant_context(connection, TENANT)
             await connection.execute(
                 audit_outbox.delete().where(
-                    audit_outbox.c.analysis_run_id == INVESTIGATION
+                    audit_outbox.c.analysis_run_id == ANALYSIS_RUN
                 )
             )
         await runtime.dispose()
@@ -781,7 +781,7 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
     """Identity, category, timestamp. A blanked citation would still hand back
     the metric, the period, the grain and the filters — and a filter can carry
     customer values as readily as an aggregate can."""
-    from zentra_domain_investigation import Tombstone
+    from zentra_domain_analysis_run import Tombstone
 
     from zentra_adapter_postgres.draft_finding import (
         PostgresEvidenceCitationRepository,
@@ -797,12 +797,12 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
             await repository.request(
                 erasure_id=uuid4(),
                 tenant_id=TENANT,
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
             await repository.erase(
-                investigation_id=INVESTIGATION,
+                analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.TENANT_REQUEST,
                 now=NOW,
             )
@@ -810,7 +810,7 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
         async with runtime.begin() as connection:
             await set_tenant_context(connection, TENANT)
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(
-                INVESTIGATION, CITATION
+                ANALYSIS_RUN, CITATION
             )
             # The row is still there — a claim must resolve to something.
             row_count = await connection.scalar(
@@ -836,8 +836,8 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
 async def test_unexpected_loss_is_still_unavailable_after_a_deletion_elsewhere(
 ) -> None:
     """A fault and a Tenant's request stay different facts. Erasing one
-    Investigation must not relabel another's missing evidence as deliberate."""
-    from zentra_domain_investigation import CitationState
+    AnalysisRun must not relabel another's missing evidence as deliberate."""
+    from zentra_domain_analysis_run import CitationState
 
     from zentra_adapter_postgres.draft_finding import (
         PostgresEvidenceCitationRepository,
@@ -851,7 +851,7 @@ async def test_unexpected_loss_is_still_unavailable_after_a_deletion_elsewhere(
             # This citation names no producing execution, so its evidence is
             # unreachable — a fault, not a deletion.
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(
-                INVESTIGATION, CITATION
+                ANALYSIS_RUN, CITATION
             )
 
         assert getattr(resolved, "state", None) is CitationState.UNAVAILABLE

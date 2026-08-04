@@ -1,6 +1,6 @@
 """Aggregates, for the questions a single trace cannot answer.
 
-Spans say what happened in one Investigation. "What does an Insight execution
+Spans say what happened in one AnalysisRun. "What does an Insight execution
 cost us, and how long does it take?" is a question about all of them, and
 answering it from sampled traces gives an answer shaped by the sampler rather
 than by the system. So cost and latency are histograms as well as span
@@ -9,7 +9,7 @@ drift.
 
 The allowlist discipline from `tracing.py` applies here and then tightens. A
 span attribute is written once and read by someone already looking at that
-Investigation; a metric attribute becomes a time series per distinct value, for
+AnalysisRun; a metric attribute becomes a time series per distinct value, for
 ever. `zentra.deletion.erasure_id` is a perfectly safe span attribute and an
 unbounded cardinality explosion as a metric dimension, so `SAFE_DIMENSIONS` is
 a strict subset of `SAFE_ATTRIBUTES` rather than a copy of it.
@@ -24,7 +24,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 
 #: Every dimension a Phase 2 metric may carry. Bounded sets only: a status, a
-#: provider, a policy condition. Nothing that varies per Investigation, per
+#: provider, a policy condition. Nothing that varies per AnalysisRun, per
 #: Organization, or per erasure — those are span attributes, where they cost one
 #: write instead of one time series.
 SAFE_DIMENSIONS: frozenset[str] = frozenset(

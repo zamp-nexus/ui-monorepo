@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import TypeAdapter
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     ThreadEvent,
     WorkFeedEventKind,
     WorkFeedPayload,
@@ -80,11 +80,11 @@ class PostgresWorkFeedRepository:
         )
         return event
 
-    async def append_for_investigation(
+    async def append_for_analysis_run(
         self,
         *,
         organization_id: UUID,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         kind: WorkFeedEventKind,
         payload: WorkFeedPayload,
         occurred_at: datetime,
@@ -93,7 +93,7 @@ class PostgresWorkFeedRepository:
         thread_id = (
             await self._connection.execute(
                 select(analysis_runs.c.chat_session_id).where(
-                    analysis_runs.c.analysis_run_id == investigation_id
+                    analysis_runs.c.analysis_run_id == analysis_run_id
                 )
             )
         ).scalar_one_or_none()

@@ -7,13 +7,13 @@ from uuid import UUID
 
 from sqlalchemy import delete, insert, or_, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     ThreadCursor,
     ThreadSlice,
     ThreadSummary,
 )
-from zentra_domain_investigation import (
-    InvestigationThread,
+from zentra_domain_analysis_run import (
+    AnalysisRunThread,
     ThreadMessage,
     ThreadMessageKind,
     ThreadStatus,
@@ -25,20 +25,20 @@ from .draft_finding import (
     PostgresEvidenceCitationRepository,
 )
 from .execution_job import PostgresExecutionJobRepository
-from .investigation import (
+from .analysis_run import (
     PostgresAgentExecutionRepository,
     PostgresAuditOutboxRepository,
     PostgresHumanApprovalRepository,
-    PostgresInvestigationRepository,
+    PostgresAnalysisRunRepository,
 )
 from .schema import analysis_runs, chat_sessions, messages
 from .work_feed import PostgresWorkFeedRepository
 from .workspace import PostgresGroupRepository
 
 
-def _thread_from_row(row: Any) -> InvestigationThread:
+def _thread_from_row(row: Any) -> AnalysisRunThread:
     value = row._mapping
-    return InvestigationThread(
+    return AnalysisRunThread(
         thread_id=value["chat_session_id"],
         organization_id=value["organization_id"],
         project_id=value["group_id"],
@@ -75,7 +75,7 @@ class PostgresThreadRepository:
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
 
-    async def add_thread(self, thread: InvestigationThread) -> None:
+    async def add_thread(self, thread: AnalysisRunThread) -> None:
         await self._connection.execute(
             insert(chat_sessions).values(
                 chat_session_id=thread.thread_id,
@@ -95,7 +95,7 @@ class PostgresThreadRepository:
 
     async def get_thread(
         self, thread_id: UUID, *, for_update: bool = False
-    ) -> InvestigationThread | None:
+    ) -> AnalysisRunThread | None:
         statement = select(chat_sessions).where(
             chat_sessions.c.chat_session_id == thread_id
         )
@@ -104,7 +104,7 @@ class PostgresThreadRepository:
         row = (await self._connection.execute(statement)).first()
         return _thread_from_row(row) if row else None
 
-    async def save_thread(self, thread: InvestigationThread) -> None:
+    async def save_thread(self, thread: AnalysisRunThread) -> None:
         await self._connection.execute(
             update(chat_sessions)
             .where(chat_sessions.c.chat_session_id == thread.thread_id)
@@ -176,7 +176,7 @@ class PostgresThreadRepository:
         limit: int,
         after: ThreadCursor | None,
     ) -> ThreadSlice:
-        latest_investigation = (
+        latest_analysis_run = (
             select(analysis_runs.c.analysis_run_id)
             .where(analysis_runs.c.chat_session_id == chat_sessions.c.chat_session_id)
             .order_by(analysis_runs.c.chat_sequence.desc())
@@ -185,7 +185,7 @@ class PostgresThreadRepository:
         )
         statement = select(
             chat_sessions,
-            latest_investigation.label("investigation_id"),
+            latest_analysis_run.label("analysis_run_id"),
         ).where(
             chat_sessions.c.group_id == project_id,
             # A private Chat Session is invisible to every Group member
@@ -221,7 +221,7 @@ class PostgresThreadRepository:
                 title=row.title,
                 status=ThreadStatus(row.status),
                 latest_activity_at=row.latest_activity_at,
-                investigation_id=row.investigation_id,
+                analysis_run_id=row.analysis_run_id,
             )
             for row in rows
         )
@@ -234,7 +234,7 @@ class PostgresThreadRepository:
             ThreadCursor(last.latest_activity_at, last.thread_id),
         )
 
-    async def investigation_id_for_thread(self, thread_id: UUID) -> UUID | None:
+    async def analysis_run_id_for_thread(self, thread_id: UUID) -> UUID | None:
         statement = (
             select(analysis_runs.c.analysis_run_id)
             .where(analysis_runs.c.chat_session_id == thread_id)
@@ -274,7 +274,7 @@ class PostgresThreadUnitOfWork:
     ) -> None:
         self.threads = PostgresThreadRepository(connection)
         self.groups = PostgresGroupRepository(connection)
-        self.investigations = PostgresInvestigationRepository(connection)
+        self.analysis_runs = PostgresAnalysisRunRepository(connection)
         self.jobs = PostgresExecutionJobRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection, trace_id=trace_id, span_id=span_id

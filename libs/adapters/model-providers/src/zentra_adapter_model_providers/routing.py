@@ -5,7 +5,7 @@ from zentra_domain_agent_execution import AgentRole
 from .providers import ModelChoice, ModelTier, Provider
 
 # Free-tier ceilings are set well under the tightest published TPM budget
-# (Groq bottoms out at 6K/min on some models), because one investigation makes
+# (Groq bottoms out at 6K/min on some models), because one analysis_run makes
 # six or more calls. Anthropic has the headroom for real reasoning depth.
 _FREE_MAX_TOKENS = 8000
 _PAID_MAX_TOKENS = 16000
@@ -21,7 +21,7 @@ def _free(
     """A free rung. The default is Groq's constraint, not everyone's.
 
     Overriding matters: a truncated response is a dead rung, and on a chain with
-    one reachable provider it is a dead investigation. That happened live —
+    one reachable provider it is a dead analysis_run. That happened live —
     Nemotron ran out of room analysing a 300-order result and the run failed
     with every other rung deliberately withheld.
     """
@@ -67,7 +67,7 @@ _GEMINI_FLASH = _free(Provider.GEMINI, "gemini-3.6-flash")
 # per minute against Cerebras's 5.
 # NIM does not share Groq's per-minute token budget, so it is not held to it.
 # A reasoning model leading the Evaluator chain needs the room: at 8000 it
-# truncated on the larger scenario and took the whole investigation with it.
+# truncated on the larger scenario and took the whole analysis_run with it.
 _NVIDIA_NEMOTRON = _free(
     Provider.NVIDIA,
     "nvidia/nemotron-3-ultra-550b-a55b",
@@ -120,7 +120,7 @@ _HAIKU = _paid(Provider.ANTHROPIC, "claude-haiku-4-5-20251001")
 ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
     ModelTier.FREE: {
         # Intake classifies a question against a scoped catalog before any
-        # Investigation exists — the same light workload shape as planning,
+        # AnalysisRun exists — the same light workload shape as planning,
         # so it inherits the Orchestrator's chain rather than getting its own.
         AgentRole.INTAKE: (
             _GEMINI_FLASH,

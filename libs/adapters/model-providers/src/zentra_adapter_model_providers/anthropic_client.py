@@ -62,7 +62,7 @@ class AnthropicModelClient:
     """ModelPort over the Anthropic Messages API.
 
     System prompts are sent as a cacheable block: they are stable across every
-    investigation, so the governed catalog and role instructions are written
+    analysis_run, so the governed catalog and role instructions are written
     once and read at ~0.1x on every subsequent agent call. No other provider in
     the chain offers an equivalent, which is why this client is separate.
     """

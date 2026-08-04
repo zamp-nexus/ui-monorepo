@@ -7,7 +7,7 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from openai import AsyncOpenAI, OpenAIError
-from zentra_domain_investigation import VisualizationBriefV1
+from zentra_domain_analysis_run import VisualizationBriefV1
 
 THESYS_VISUALIZE_URL = "https://api.thesys.dev/v1/visualize/chat/completions"
 THESYS_BASE_URL = "https://api.thesys.dev/v1/visualize"

@@ -23,7 +23,7 @@ requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [
     "openai>=2.50.0",
-    "zentra-domain-investigation",
+    "zentra-domain-analysis-run",
 ]
 
 
@@ -64,4 +64,4 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.uv.sources]
-zentra-domain-investigation = { workspace = true }
+zentra-domain-analysis-run = { workspace = true }

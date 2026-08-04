@@ -36,7 +36,7 @@ TENANT_A = UUID("71000000-0000-0000-0000-000000000001")
 TENANT_B = UUID("71000000-0000-0000-0000-000000000002")
 USER_ID = UUID("72000000-0000-0000-0000-000000000001")
 INVALID_USER_ID = UUID("72000000-0000-0000-0000-000000000002")
-INVESTIGATION_ID = UUID("73000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("73000000-0000-0000-0000-000000000001")
 
 
 async def seed(owner_url: str) -> None:
@@ -102,7 +102,7 @@ async def seed(owner_url: str) -> None:
         await connection.execute(
             postgres_insert(analysis_runs)
             .values(
-                analysis_run_id=INVESTIGATION_ID,
+                analysis_run_id=ANALYSIS_RUN_ID,
                 tenant_id=TENANT_A,
                 question="Integration fixture",
                 status="running",
@@ -163,7 +163,7 @@ async def test_rls_identity_and_constraints() -> None:
         async with owner.begin() as connection:
             await connection.execute(
                 insert(agent_executions).values(
-                    analysis_run_id=INVESTIGATION_ID,
+                    analysis_run_id=ANALYSIS_RUN_ID,
                     tenant_id=TENANT_A,
                     agent_id="deterministic-validator",
                     step=0,
