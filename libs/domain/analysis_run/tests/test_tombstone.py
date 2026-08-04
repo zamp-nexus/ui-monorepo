@@ -35,9 +35,9 @@ def test_a_tombstone_says_when_and_why_it_exists() -> None:
 
     stone = Tombstone(
         citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
-        category="tenant_request",
+        category="organization_request",
         erased_at=erased,
     )
 
-    assert stone.category == "tenant_request"
+    assert stone.category == "organization_request"
     assert stone.erased_at == erased

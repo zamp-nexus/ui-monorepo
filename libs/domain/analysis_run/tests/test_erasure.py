@@ -27,7 +27,7 @@ def operation(**overrides) -> ErasureOperation:
         "erasure_id": uuid4(),
         "organization_id": UUID("aa000000-0000-0000-0000-000000000001"),
         "analysis_run_id": UUID("bb000000-0000-0000-0000-000000000001"),
-        "category": DeletionCategory.TENANT_REQUEST,
+        "category": DeletionCategory.ORGANIZATION_REQUEST,
         "progress": ErasureProgress.REQUESTED,
         "requested_at": NOW,
     }
@@ -39,7 +39,7 @@ def test_an_operation_is_scoped_to_one_tenant_and_analysis_run() -> None:
 
     assert subject.organization_id == UUID("aa000000-0000-0000-0000-000000000001")
     assert subject.analysis_run_id == UUID("bb000000-0000-0000-0000-000000000001")
-    assert subject.category is DeletionCategory.TENANT_REQUEST
+    assert subject.category is DeletionCategory.ORGANIZATION_REQUEST
 
 
 def test_a_completed_erasure_must_say_when() -> None:
