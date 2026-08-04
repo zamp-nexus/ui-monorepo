@@ -87,7 +87,9 @@ class VisualizationService:
     async def for_investigation(
         self, actor: AuthenticatedActor, investigation_id: UUID
     ) -> VisualizationDetail:
-        async with self._uow(actor.tenant_id, actor.trace_id, actor.span_id) as uow:
+        async with self._uow(
+            actor.organization_id, actor.trace_id, actor.span_id
+        ) as uow:
             investigation = await uow.investigations.get(investigation_id)
             if investigation is None:
                 raise InvestigationNotFoundError("Visualization was not found")
@@ -102,7 +104,9 @@ class VisualizationService:
     async def get(
         self, actor: AuthenticatedActor, visualization_id: UUID
     ) -> VisualizationDetail:
-        async with self._uow(actor.tenant_id, actor.trace_id, actor.span_id) as uow:
+        async with self._uow(
+            actor.organization_id, actor.trace_id, actor.span_id
+        ) as uow:
             artifact = await uow.visualizations.get(visualization_id)
             if artifact is None:
                 raise InvestigationNotFoundError("Visualization was not found")
@@ -110,12 +114,12 @@ class VisualizationService:
         return VisualizationDetail(artifact=artifact, fallback_brief=brief)
 
     async def execute_visualization_job(
-        self, *, tenant_id: UUID, visualization_id: UUID
+        self, *, organization_id: UUID, visualization_id: UUID
     ) -> None:
         if self._renderer is None:
             raise _RendererUnavailable()
         now = self._now()
-        async with self._uow(tenant_id, UUID(int=0), UUID(int=0)) as uow:
+        async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
             artifact = await uow.visualizations.get(visualization_id, for_update=True)
             if artifact is None or artifact.status in {
                 VisualizationArtifactStatus.READY,
@@ -139,7 +143,7 @@ class VisualizationService:
 
         result = await self._renderer.render(brief)
         now = self._now()
-        async with self._uow(tenant_id, UUID(int=0), UUID(int=0)) as uow:
+        async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
             current = await uow.visualizations.get(visualization_id, for_update=True)
             if (
                 current is None
@@ -171,11 +175,11 @@ class VisualizationService:
     async def fail_visualization_job(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         visualization_id: UUID,
         failure_category: str,
     ) -> None:
-        async with self._uow(tenant_id, UUID(int=0), UUID(int=0)) as uow:
+        async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
             artifact = await uow.visualizations.get(visualization_id, for_update=True)
             if (
                 artifact is None
@@ -202,7 +206,9 @@ class VisualizationService:
         self, actor: AuthenticatedActor, visualization_id: UUID
     ) -> VisualizationDetail:
         now = self._now()
-        async with self._uow(actor.tenant_id, actor.trace_id, actor.span_id) as uow:
+        async with self._uow(
+            actor.organization_id, actor.trace_id, actor.span_id
+        ) as uow:
             original = await uow.visualizations.get(visualization_id, for_update=True)
             if original is None:
                 raise InvestigationNotFoundError("Visualization was not found")
@@ -211,7 +217,7 @@ class VisualizationService:
             ordinal = await uow.visualizations.next_retry_ordinal(original.brief_id)
             retried = VisualizationArtifact(
                 visualization_id=self._new_id(),
-                tenant_id=original.tenant_id,
+                organization_id=original.organization_id,
                 investigation_id=original.investigation_id,
                 brief_id=original.brief_id,
                 status=VisualizationArtifactStatus.PENDING,
@@ -223,7 +229,7 @@ class VisualizationService:
             await uow.jobs.add_job(
                 ExecutionJob.create(
                     job_id=self._new_id(),
-                    tenant_id=actor.tenant_id,
+                    organization_id=actor.organization_id,
                     investigation_id=original.investigation_id,
                     visualization_id=retried.visualization_id,
                     job_kind=ExecutionJobKind.VISUALIZATION,
@@ -246,7 +252,9 @@ class VisualizationService:
         action_id: UUID,
     ) -> VisualizationActionResult:
         now = self._now()
-        async with self._uow(actor.tenant_id, actor.trace_id, actor.span_id) as uow:
+        async with self._uow(
+            actor.organization_id, actor.trace_id, actor.span_id
+        ) as uow:
             artifact = await uow.visualizations.get(visualization_id)
             action = await uow.visualizations.action(
                 visualization_id, action_id, for_update=True
@@ -324,7 +332,7 @@ class VisualizationService:
             f"{artifact.visualization_id}:{kind.value}",
         )
         await uow.work_feed.append_for_investigation(
-            tenant_id=artifact.tenant_id,
+            organization_id=artifact.organization_id,
             investigation_id=artifact.investigation_id,
             kind=kind,
             payload=VisualizationEventPayload(
@@ -342,7 +350,7 @@ class VisualizationService:
                     event_id=event_id,
                     event_type=kind.value,
                     investigation_id=artifact.investigation_id,
-                    tenant_id=artifact.tenant_id,
+                    organization_id=artifact.organization_id,
                     status=(
                         InvestigationStatus.FAILED
                         if artifact.status is VisualizationArtifactStatus.FAILED
@@ -388,7 +396,7 @@ class VisualizationService:
         )
         for kind in kinds:
             await uow.work_feed.append_for_investigation(
-                tenant_id=artifact.tenant_id,
+                organization_id=artifact.organization_id,
                 investigation_id=artifact.investigation_id,
                 kind=kind,
                 payload=AgentEventPayload(
@@ -419,8 +427,8 @@ class VisualizationService:
                 ),
             )
 
-    def _uow(self, tenant_id: UUID, trace_id: UUID, span_id: UUID):
-        return self._uow_factory(tenant_id, trace_id, span_id)
+    def _uow(self, organization_id: UUID, trace_id: UUID, span_id: UUID):
+        return self._uow_factory(organization_id, trace_id, span_id)
 
 
 class _RendererUnavailable(RuntimeError):

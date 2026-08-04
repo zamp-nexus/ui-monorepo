@@ -24,6 +24,17 @@ from .execution_worker import (
     classify_execution_failure,
 )
 from .intake_service import IntakeService
+from .organization_dto import (
+    MembershipDetail,
+    OrganizationDetail,
+    OrganizationNotFoundError,
+)
+from .organization_ports import (
+    OrganizationProvisioningRepository,
+    OrganizationProvisioningUnitOfWork,
+    OrganizationProvisioningUnitOfWorkFactory,
+)
+from .organization_service import CLERK_PROVIDER, OrganizationProvisioningService
 from .ports import (
     AgentExecutionRepository,
     AuditOutboxRepository,
@@ -38,7 +49,7 @@ from .ports import (
     InvestigationRepository,
     InvestigationUnitOfWork,
     InvestigationUnitOfWorkFactory,
-    TenantPolicyRepository,
+    OrganizationPolicyRepository,
     VisualizationRepository,
 )
 from .service import InvestigationService, bounded_outcome
@@ -71,21 +82,21 @@ from .visualization_service import (
     VisualizationService,
 )
 from .workspace_dto import (
+    GroupConflictError,
+    GroupCursor,
+    GroupCursorError,
     GroupDetail,
-    OrganizationConflictError,
-    OrganizationCursor,
-    OrganizationCursorError,
-    OrganizationNameConflictError,
-    OrganizationNotFoundError,
-    OrganizationPage,
-    OrganizationSlice,
+    GroupNameConflictError,
+    GroupNotFoundError,
+    GroupPage,
+    GroupSlice,
 )
 from .workspace_ports import (
-    OrganizationRepository,
-    OrganizationUnitOfWork,
-    OrganizationUnitOfWorkFactory,
+    GroupRepository,
+    GroupUnitOfWork,
+    GroupUnitOfWorkFactory,
 )
-from .workspace_service import OrganizationService
+from .workspace_service import GroupService
 
 __all__ = [
     "AgentExecutionRepository",
@@ -95,6 +106,7 @@ __all__ = [
     "AuditReplay",
     "AuditWriter",
     "AuthenticatedActor",
+    "CLERK_PROVIDER",
     "ConflictError",
     "ConversationalPort",
     "ConversationalService",
@@ -116,6 +128,13 @@ __all__ = [
     "InvestigationService",
     "InvestigationUnitOfWork",
     "InvestigationUnitOfWorkFactory",
+    "MembershipDetail",
+    "OrganizationDetail",
+    "OrganizationNotFoundError",
+    "OrganizationProvisioningRepository",
+    "OrganizationProvisioningService",
+    "OrganizationProvisioningUnitOfWork",
+    "OrganizationProvisioningUnitOfWorkFactory",
     "PendingApproval",
     "PermissionDeniedError",
     "PipelineResult",
@@ -124,7 +143,7 @@ __all__ = [
     "RoutingDisposition",
     "RoutingResult",
     "ScenarioUnavailableError",
-    "TenantPolicyRepository",
+    "OrganizationPolicyRepository",
     "TimelineEntry",
     "ThreadConflictError",
     "ThreadCursor",
@@ -148,15 +167,15 @@ __all__ = [
     "deterministic_thread_title",
     "classify_execution_failure",
     "GroupDetail",
-    "OrganizationConflictError",
-    "OrganizationCursor",
-    "OrganizationCursorError",
-    "OrganizationNameConflictError",
-    "OrganizationNotFoundError",
-    "OrganizationPage",
-    "OrganizationSlice",
-    "OrganizationRepository",
-    "OrganizationService",
-    "OrganizationUnitOfWork",
-    "OrganizationUnitOfWorkFactory",
+    "GroupConflictError",
+    "GroupCursor",
+    "GroupCursorError",
+    "GroupNameConflictError",
+    "GroupNotFoundError",
+    "GroupPage",
+    "GroupSlice",
+    "GroupRepository",
+    "GroupService",
+    "GroupUnitOfWork",
+    "GroupUnitOfWorkFactory",
 ]

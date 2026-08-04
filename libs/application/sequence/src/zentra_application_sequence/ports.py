@@ -24,7 +24,7 @@ class SequenceRepository(Protocol):
     ) -> Sequence | None: ...
 
     async def list_sequences(
-        self, *, tenant_id: UUID, dataset_workspace_id: UUID
+        self, *, organization_id: UUID, dataset_workspace_id: UUID
     ) -> tuple[SequenceListItem, ...]: ...
 
 
@@ -37,7 +37,7 @@ class SequenceUnitOfWork(Protocol):
 
 class SequenceUnitOfWorkFactory(Protocol):
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[SequenceUnitOfWork]: ...
 
 
@@ -49,5 +49,5 @@ class RawTableResolver(Protocol):
     """
 
     async def label(
-        self, tenant_id: UUID, reference: RawTableReference
+        self, organization_id: UUID, reference: RawTableReference
     ) -> str | None: ...

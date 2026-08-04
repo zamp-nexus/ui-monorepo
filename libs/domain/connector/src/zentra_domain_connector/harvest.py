@@ -23,7 +23,7 @@ class HarvestScope:
     """Which part of a source a run should look at.
 
     Empty means everything. Scoping exists because sweeping a thousand-table
-    warehouse to profile eight tables is a cost the Tenant pays on their own
+    warehouse to profile eight tables is a cost the Organization pays on their own
     infrastructure.
     """
 
@@ -76,7 +76,7 @@ class HarvestRun:
 
     harvest_run_id: UUID
     data_source_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     phase: HarvestPhase = HarvestPhase.PENDING
     scope: HarvestScope = field(default_factory=HarvestScope)
     budget: HarvestBudget = field(default_factory=HarvestBudget)

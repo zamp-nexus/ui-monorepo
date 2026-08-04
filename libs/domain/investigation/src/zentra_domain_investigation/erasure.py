@@ -1,14 +1,14 @@
 """Erasing evidence, as an operation rather than a delete statement.
 
-A Tenant asking for their evidence to be erased is asking for something that
+An Organization asking for their evidence to be erased is asking for something that
 touches nine surfaces across four tables, must survive a crash halfway
 through,
 and must never report success while any of it remains. That is an operation
 with a lifecycle, not a statement.
 
-Nothing here is reachable by a Tenant. This is the prefactor: the shape and the
+Nothing here is reachable by an Organization. This is the prefactor: the shape and the
 guarantees land first, and the user-facing workflow that invokes them lands
-separately. Building it the other way round means the first thing a Tenant can
+separately. Building it the other way round means the first thing an Organization can
 do is the thing that has never been exercised.
 
 Two invariants carry most of the weight. A partial failure is never a success —
@@ -34,10 +34,10 @@ class DeletionCategory(StrEnum):
 
     Recorded because a Tombstone must be able to say *that* it was deliberate
     without saying what was erased. One member today: inventing categories no
-    caller can produce would put words in a future Tenant's mouth.
+    caller can produce would put words in a future Organization's mouth.
     """
 
-    TENANT_REQUEST = "tenant_request"
+    ORGANIZATION_REQUEST = "organization_request"
 
 
 class ErasureProgress(StrEnum):
@@ -54,7 +54,7 @@ class ErasureProgress(StrEnum):
 
 
 class EvidenceSurface(StrEnum):
-    """Every place a Tenant's evidence or its derivatives can be.
+    """Every place an Organization's evidence or its derivatives can be.
 
     Enumerated rather than described, so "did we get all of it?" has an answer
     a test can check. A surface added to the schema and not to this list is a
@@ -87,7 +87,7 @@ class EvidenceSurface(StrEnum):
 
 #: Not a surface, and said so rather than left looking covered: this system
 #: has no cached-response store. The only cache is the in-process Semantic
-#: catalog, which holds governed metric definitions and no Tenant data. If one
+#: catalog, which holds governed metric definitions and no Organization data. If one
 #: is ever introduced it belongs in `EvidenceSurface` above.
 NO_CACHED_RESPONSE_STORE = True
 
@@ -108,7 +108,7 @@ class ErasureOperation:
     """One request to erase one Investigation's evidence."""
 
     erasure_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     category: DeletionCategory
     progress: ErasureProgress

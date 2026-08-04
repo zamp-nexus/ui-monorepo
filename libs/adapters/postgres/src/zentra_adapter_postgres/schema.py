@@ -69,11 +69,11 @@ def _role_check() -> str:
     return f"role IN ({values})"
 
 
-tenants = Table(
-    "tenants",
+organizations = Table(
+    "organizations",
     metadata,
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
@@ -93,12 +93,12 @@ tenants = Table(
     ),
     CheckConstraint(
         "confidence_threshold >= 0 AND confidence_threshold <= 1",
-        name="ck_tenants_confidence_threshold",
+        name="ck_organizations_confidence_threshold",
     ),
-    CheckConstraint("cost_ceiling_usd >= 0", name="ck_tenants_cost_ceiling"),
+    CheckConstraint("cost_ceiling_usd >= 0", name="ck_organizations_cost_ceiling"),
     CheckConstraint(
         "model_tier IN ('free', 'premium')",
-        name="ck_tenants_model_tier",
+        name="ck_organizations_model_tier",
     ),
 )
 
@@ -141,15 +141,15 @@ identity_subjects = Table(
     UniqueConstraint("provider", "user_id", name="uq_identity_subject_provider_user"),
 )
 
-tenant_identity_bindings = Table(
-    "tenant_identity_bindings",
+organization_identity_bindings = Table(
+    "organization_identity_bindings",
     metadata,
     Column("provider", String(32), primary_key=True),
-    Column("external_tenant_id", Text, primary_key=True),
+    Column("external_organization_id", Text, primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     ),
@@ -161,13 +161,13 @@ tenant_identity_bindings = Table(
     ),
 )
 
-tenant_memberships = Table(
-    "tenant_memberships",
+organization_memberships = Table(
+    "organization_memberships",
     metadata,
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
@@ -185,7 +185,7 @@ tenant_memberships = Table(
     ),
     CheckConstraint(
         "role IN ('owner', 'admin', 'member', 'viewer')",
-        name="ck_tenant_memberships_role",
+        name="ck_organization_memberships_role",
     ),
 )
 
@@ -199,9 +199,9 @@ analysis_runs = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("question", Text, nullable=False),
@@ -248,31 +248,31 @@ analysis_runs = Table(
         name="ck_analysis_runs_chat_session_link",
     ),
     ForeignKeyConstraint(
-        ("chat_session_id", "tenant_id"),
-        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
-        name="fk_analysis_runs_chat_session_tenant",
+        ("chat_session_id", "organization_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.organization_id"),
+        name="fk_analysis_runs_chat_session_organization",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("initiating_message_id", "chat_session_id", "tenant_id"),
+        ("initiating_message_id", "chat_session_id", "organization_id"),
         (
             "messages.message_id",
             "messages.chat_session_id",
-            "messages.tenant_id",
+            "messages.organization_id",
         ),
         name="fk_analysis_runs_initiating_message",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("parent_analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_analysis_runs_parent_tenant",
+        ("parent_analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_analysis_runs_parent_organization",
         ondelete="RESTRICT",
     ),
     ForeignKeyConstraint(
-        ("retry_of_analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_analysis_runs_retry_tenant",
+        ("retry_of_analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_analysis_runs_retry_organization",
         ondelete="RESTRICT",
     ),
     UniqueConstraint(
@@ -280,13 +280,13 @@ analysis_runs = Table(
     ),
     UniqueConstraint(
         "analysis_run_id",
-        "tenant_id",
-        name="uq_analysis_runs_tenant_identity",
+        "organization_id",
+        name="uq_analysis_runs_organization_identity",
     ),
 )
 Index(
-    "ix_analysis_runs_tenant_created",
-    analysis_runs.c.tenant_id,
+    "ix_analysis_runs_organization_created",
+    analysis_runs.c.organization_id,
     analysis_runs.c.created_at,
 )
 
@@ -296,9 +296,9 @@ Index(
 # for the same reason: a circular reference between the two tables.
 messages.append_constraint(
     ForeignKeyConstraint(
-        ("analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_messages_analysis_run_tenant",
+        ("analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_messages_analysis_run_organization",
         ondelete="RESTRICT",
         deferrable=True,
         initially="DEFERRED",
@@ -322,9 +322,9 @@ agent_executions = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("agent_id", Text, nullable=False),
@@ -380,8 +380,8 @@ agent_executions = Table(
     ),
 )
 Index(
-    "ix_agent_executions_tenant_analysis_run_step",
-    agent_executions.c.tenant_id,
+    "ix_agent_executions_organization_analysis_run_step",
+    agent_executions.c.organization_id,
     agent_executions.c.analysis_run_id,
     agent_executions.c.step,
 )
@@ -406,9 +406,9 @@ human_approvals = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("reason", String(64), nullable=False),
@@ -427,7 +427,7 @@ human_approvals = Table(
     Column("failed_conditions", JSON, nullable=False, server_default="[]"),
     CheckConstraint(
         "reason IN ('low_confidence', 'irreversible_action', "
-        "'contradiction_unresolved', 'regulatory_exposure', 'tenant_policy', "
+        "'contradiction_unresolved', 'regulatory_exposure', 'organization_policy', "
         "'evidence_incomplete')",
         name="ck_human_approvals_reason",
     ),
@@ -443,13 +443,13 @@ human_approvals = Table(
     ),
 )
 Index(
-    "ix_human_approvals_tenant_status",
-    human_approvals.c.tenant_id,
+    "ix_human_approvals_organization_status",
+    human_approvals.c.organization_id,
     human_approvals.c.status,
 )
 Index(
     "uq_human_approvals_one_pending",
-    human_approvals.c.tenant_id,
+    human_approvals.c.organization_id,
     human_approvals.c.analysis_run_id,
     unique=True,
     postgresql_where=human_approvals.c.status == "pending",
@@ -460,9 +460,9 @@ audit_outbox = Table(
     metadata,
     Column("event_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -492,8 +492,8 @@ Index(
     audit_outbox.c.created_at,
 )
 Index(
-    "ix_audit_outbox_tenant_pending",
-    audit_outbox.c.tenant_id,
+    "ix_audit_outbox_organization_pending",
+    audit_outbox.c.organization_id,
     audit_outbox.c.dispatched_at,
     audit_outbox.c.created_at,
 )
@@ -508,9 +508,9 @@ semantic_metrics = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("name", Text, nullable=False),
@@ -523,7 +523,9 @@ semantic_metrics = Table(
         nullable=False,
         server_default=text("now()"),
     ),
-    UniqueConstraint("tenant_id", "name", name="uq_semantic_metrics_tenant_name"),
+    UniqueConstraint(
+        "organization_id", "name", name="uq_semantic_metrics_organization_name"
+    ),
 )
 
 agent_registry = Table(
@@ -555,7 +557,7 @@ agent_registry = Table(
 )
 
 # Imported after `analysis_runs` is registered because the job table carries
-# a composite Tenant-safe foreign key to it.
+# a composite Organization-safe foreign key to it.
 from .schema_chat import (  # noqa: E402
     activity_events as activity_events,
 )
@@ -598,9 +600,9 @@ __all__ = [
     "sequence_runs",
     "sequence_steps",
     "sequences",
-    "tenant_identity_bindings",
-    "tenant_memberships",
-    "tenants",
+    "organization_identity_bindings",
+    "organization_memberships",
+    "organizations",
     "users",
     "visualization_actions",
     "visualization_artifacts",

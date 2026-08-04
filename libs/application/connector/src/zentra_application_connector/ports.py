@@ -100,7 +100,7 @@ class FileLandingZone(Protocol):
         self,
         stream: AsyncIterator[bytes],
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         upload_id: UUID,
         upload_format: UploadFormat,
         columns: Sequence[SourceFieldDescriptor],
@@ -136,45 +136,47 @@ class DataSourceRepository(Protocol):
     async def add(self, source: DataSource) -> None: ...
 
     async def get(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> DataSource | None: ...
 
-    async def list(self, *, tenant_id: UUID) -> Sequence[DataSource]: ...
+    async def list(self, *, organization_id: UUID) -> Sequence[DataSource]: ...
 
     async def save(self, source: DataSource) -> None: ...
 
-    async def delete(self, data_source_id: UUID, *, tenant_id: UUID) -> None: ...
+    async def delete(self, data_source_id: UUID, *, organization_id: UUID) -> None: ...
 
 
 class CatalogRepository(Protocol):
     async def add_version(self, version: CatalogVersion) -> None: ...
 
     async def get_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None: ...
 
     async def latest_version(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None: ...
 
     async def list_versions(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogVersion]: ...
 
 
 class RelationRepository(Protocol):
     async def add_many(self, relations: Sequence[Relation]) -> None: ...
 
-    async def get(self, relation_id: UUID, *, tenant_id: UUID) -> Relation | None: ...
+    async def get(
+        self, relation_id: UUID, *, organization_id: UUID
+    ) -> Relation | None: ...
 
     async def save(self, relation: Relation) -> None: ...
 
     async def list_for_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]: ...
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]: ...
 
 
@@ -182,17 +184,17 @@ class HarvestRunRepository(Protocol):
     async def add(self, run: HarvestRun) -> None: ...
 
     async def get(
-        self, harvest_run_id: UUID, *, tenant_id: UUID
+        self, harvest_run_id: UUID, *, organization_id: UUID
     ) -> HarvestRun | None: ...
 
     async def save(self, run: HarvestRun) -> None: ...
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[HarvestRun]: ...
 
     async def active_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> HarvestRun | None: ...
 
 
@@ -206,7 +208,7 @@ class AgentAccessRepository(Protocol):
     async def upsert(self, override: CatalogAccessOverride) -> None: ...
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogAccessOverride]: ...
 
 

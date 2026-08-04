@@ -52,7 +52,7 @@ from zentra_domain_agent_execution import (
 
 EVALS_ROOT = Path(__file__).resolve().parents[2] / "evals"
 INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
-TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
+ORGANIZATION_ID = UUID("22000000-0000-0000-0000-000000000002")
 
 # Every agent here is required: the run only succeeds when all of them have a
 # suite and every case in it passes. Adding a key is what makes an agent
@@ -255,7 +255,7 @@ async def _run_case(path: Path) -> CaseResult:
         output = await _build_agent(case).invoke(
             AgentInput(
                 investigation_id=INVESTIGATION_ID,
-                tenant_id=TENANT_ID,
+                organization_id=ORGANIZATION_ID,
                 state=state,
             )
         )

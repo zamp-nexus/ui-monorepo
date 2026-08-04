@@ -95,11 +95,13 @@
       },
       "AgentRole": {
         "enum": [
+          "intake",
           "orchestrator",
           "data_intake",
           "data_quality",
           "data_preparation",
           "semantic_modeling",
+          "cube_analyst",
           "sql_analyst",
           "evaluator",
           "statistician",
@@ -109,7 +111,8 @@
           "forecaster",
           "visualization",
           "executive_report_writer",
-          "knowledge"
+          "knowledge",
+          "conversational"
         ],
         "title": "AgentRole",
         "type": "string"
@@ -583,6 +586,43 @@
         "title": "CatalogDiffResponse",
         "type": "object"
       },
+      "CatalogMemberResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "CatalogMemberResponse",
+        "type": "object"
+      },
       "CatalogResponse": {
         "additionalProperties": false,
         "properties": {
@@ -628,6 +668,230 @@
           "created_at"
         ],
         "title": "CatalogResponse",
+        "type": "object"
+      },
+      "CatalogSummaryResponse": {
+        "additionalProperties": false,
+        "description": "What this Organization can actually be asked about.\n\nReplaces the fixed list of governed scenarios (ADR-0023). A client that has\nto offer the user a starting question needs the Organization's own vocabulary,\nand this is the same governed catalog the Cube Analyst reasons over \u2014 so a\nsuggestion the UI makes is one the agent can genuinely answer.",
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogMemberResponse"
+            },
+            "title": "Measures",
+            "type": "array"
+          }
+        },
+        "required": [
+          "measures",
+          "dimensions"
+        ],
+        "title": "CatalogSummaryResponse",
+        "type": "object"
+      },
+      "ChatMessageRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "message": "Why did EU refunds increase from June to July 2026?"
+          }
+        ],
+        "properties": {
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatMessageRequest",
+        "type": "object"
+      },
+      "ChatPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadSummaryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ChatPageResponse",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "actions": {
+              "can_append_message": true,
+              "can_archive": true,
+              "can_cancel": false,
+              "can_delete": true,
+              "can_restore": false,
+              "can_retry": false
+            },
+            "created_at": "2026-08-01T09:00:00Z",
+            "latest_activity_at": "2026-08-01T09:00:00Z",
+            "messages": [
+              {
+                "authored_by_user": true,
+                "content": "How is the business doing?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "user_question",
+                "message_id": "44000000-0000-0000-0000-000000000001"
+              },
+              {
+                "authored_by_user": false,
+                "content": "I could not map that message to a governed question. Please choose or rephrase one supported question.\n- Why did EU refunds increase from June to July 2026?\n- Which sales channel accounted for the increase in North America revenue from October to November 2026?",
+                "created_at": "2026-08-01T09:00:00Z",
+                "kind": "router_clarification",
+                "message_id": "44000000-0000-0000-0000-000000000002"
+              }
+            ],
+            "project_id": "42000000-0000-0000-0000-000000000001",
+            "routing": {
+              "clarification": "I could not map that message to a governed question. Please choose or rephrase one supported question.",
+              "disposition": "unsupported",
+              "suggestions": [
+                "Why did EU refunds increase from June to July 2026?",
+                "Which sales channel accounted for the increase in North America revenue from October to November 2026?"
+              ]
+            },
+            "status": "draft",
+            "thread_id": "43000000-0000-0000-0000-000000000001",
+            "title": "How is the business doing?",
+            "updated_at": "2026-08-01T09:00:00Z",
+            "usage": {
+              "input_tokens": 0,
+              "latency_ms": 0,
+              "output_tokens": 0,
+              "total_cost_usd": "0"
+            }
+          }
+        ],
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/ThreadActionsResponse"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_cursor": {
+            "default": 0,
+            "title": "Event Cursor",
+            "type": "integer"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "investigations": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadInvestigationResponse"
+            },
+            "title": "Investigations",
+            "type": "array"
+          },
+          "latest_activity_at": {
+            "format": "date-time",
+            "title": "Latest Activity At",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "routing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageResponse"
+          }
+        },
+        "required": [
+          "thread_id",
+          "project_id",
+          "title",
+          "status",
+          "created_at",
+          "updated_at",
+          "latest_activity_at",
+          "messages",
+          "usage",
+          "actions"
+        ],
+        "title": "ChatResponse",
         "type": "object"
       },
       "CitationFilterResponse": {
@@ -871,6 +1135,17 @@
             "title": "Cubetype",
             "type": "string"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -917,9 +1192,47 @@
         "title": "ConnectorJoinSchema",
         "type": "object"
       },
+      "ConnectorSourceTableRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog_version_id": {
+            "minLength": 1,
+            "title": "Catalog Version Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "connector_source_table",
+            "default": "connector_source_table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_table_name": {
+            "minLength": 1,
+            "title": "Source Table Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalog_version_id",
+          "source_table_name"
+        ],
+        "title": "ConnectorSourceTableRequest",
+        "type": "object"
+      },
       "ConnectorTableSchema": {
         "additionalProperties": false,
         "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "fields": {
             "items": {
               "$ref": "#/components/schemas/ConnectorFieldModel"
@@ -951,17 +1264,17 @@
             "title": "Email",
             "type": "string"
           },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "organization_name": {
+            "title": "Organization Name",
+            "type": "string"
+          },
           "role": {
             "title": "Role",
-            "type": "string"
-          },
-          "tenant_id": {
-            "format": "uuid",
-            "title": "Tenant Id",
-            "type": "string"
-          },
-          "tenant_name": {
-            "title": "Tenant Name",
             "type": "string"
           },
           "user_id": {
@@ -972,9 +1285,9 @@
         },
         "required": [
           "user_id",
-          "tenant_id",
+          "organization_id",
           "email",
-          "tenant_name",
+          "organization_name",
           "role"
         ],
         "title": "ContextResponse",
@@ -997,6 +1310,77 @@
           "resolved"
         ],
         "title": "ContradictionResponse",
+        "type": "object"
+      },
+      "CreateSequenceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "raw_table": {
+            "discriminator": {
+              "mapping": {
+                "connector_source_table": "#/components/schemas/ConnectorSourceTableRequest",
+                "dataset_table_version": "#/components/schemas/DatasetTableVersionRequest"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConnectorSourceTableRequest"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetTableVersionRequest"
+              }
+            ],
+            "title": "Raw Table"
+          }
+        },
+        "required": [
+          "project_id",
+          "raw_table",
+          "message"
+        ],
+        "title": "CreateSequenceRequest",
+        "type": "object"
+      },
+      "DatasetTableVersionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "file_format": {
+            "enum": [
+              "csv",
+              "parquet"
+            ],
+            "title": "File Format",
+            "type": "string"
+          },
+          "kind": {
+            "const": "dataset_table_version",
+            "default": "dataset_table_version",
+            "title": "Kind",
+            "type": "string"
+          },
+          "storage_locator": {
+            "minLength": 1,
+            "title": "Storage Locator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "storage_locator",
+          "file_format"
+        ],
+        "title": "DatasetTableVersionRequest",
         "type": "object"
       },
       "DeclareRelationRequest": {
@@ -1289,6 +1673,50 @@
         "title": "EvidenceDeletionRequest",
         "type": "object"
       },
+      "FailedRunResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Prepared Table Id"
+          },
+          "attempted_at": {
+            "format": "date-time",
+            "title": "Attempted At",
+            "type": "string"
+          },
+          "failure_detail": {
+            "title": "Failure Detail",
+            "type": "string"
+          },
+          "failure_reason": {
+            "title": "Failure Reason",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempted_at",
+          "failure_reason",
+          "failure_detail",
+          "anchor_prepared_table_id"
+        ],
+        "title": "FailedRunResponse",
+        "type": "object"
+      },
       "FieldProfileResponse": {
         "additionalProperties": false,
         "description": "Statistics, always accompanied by the size of the sample behind them.",
@@ -1443,6 +1871,27 @@
           "evidence_references"
         ],
         "title": "FindingResponse",
+        "type": "object"
+      },
+      "GroupNameRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "name": "Finance Operations"
+          }
+        ],
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "GroupNameRequest",
         "type": "object"
       },
       "GroupPageResponse": {
@@ -1715,13 +2164,27 @@
       "InvestigationCreateRequest": {
         "additionalProperties": false,
         "properties": {
-          "scenario_key": {
-            "title": "Scenario Key",
+          "data_connection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Connection Id"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
             "type": "string"
           }
         },
         "required": [
-          "scenario_key"
+          "question"
         ],
         "title": "InvestigationCreateRequest",
         "type": "object"
@@ -1823,8 +2286,15 @@
             ]
           },
           "scenario_key": {
-            "title": "Scenario Key",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Key"
           },
           "status": {
             "title": "Status",
@@ -1908,6 +2378,7 @@
         "title": "JoinGraphResponse",
         "type": "object"
       },
+      "JsonValue": {},
       "MetricComparisonResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1959,127 +2430,115 @@
         "title": "MetricComparisonResponse",
         "type": "object"
       },
-      "OrganizationNameRequest": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "name": "Finance Operations"
-          }
-        ],
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "OrganizationNameRequest",
-        "type": "object"
-      },
-      "ProjectPageResponse": {
+      "PreparedTablePreviewResponse": {
         "additionalProperties": false,
         "properties": {
-          "items": {
+          "columns": {
             "items": {
-              "$ref": "#/components/schemas/ProjectResponse"
+              "type": "string"
             },
-            "title": "Items",
+            "title": "Columns",
             "type": "array"
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Cursor"
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
-        "title": "ProjectPageResponse",
-        "type": "object"
-      },
-      "ProjectResponse": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "can_manage": true,
-            "created_at": "2026-08-01T09:00:00Z",
-            "group_id": "41000000-0000-0000-0000-000000000001",
-            "latest_activity_at": "2026-08-01T09:00:00Z",
-            "name": "Monthly Forecast",
-            "project_id": "42000000-0000-0000-0000-000000000001",
-            "updated_at": "2026-08-01T09:00:00Z"
-          }
-        ],
-        "properties": {
-          "archived_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Archived At"
-          },
-          "can_manage": {
-            "title": "Can Manage",
-            "type": "boolean"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "group_id": {
+          "is_final": {
+            "title": "Is Final",
+            "type": "boolean"
+          },
+          "prepared_table_id": {
             "format": "uuid",
-            "title": "Group Id",
+            "title": "Prepared Table Id",
             "type": "string"
           },
-          "latest_activity_at": {
-            "format": "date-time",
-            "title": "Latest Activity At",
-            "type": "string"
+          "produced_by": {
+            "$ref": "#/components/schemas/SequenceOperationResponse"
           },
-          "name": {
-            "title": "Name",
-            "type": "string"
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
           },
-          "project_id": {
+          "sample_rows": {
+            "title": "Sample Rows",
+            "type": "null"
+          },
+          "step_id": {
             "format": "uuid",
-            "title": "Project Id",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
+            "title": "Step Id",
             "type": "string"
           }
         },
         "required": [
-          "project_id",
-          "group_id",
-          "name",
+          "prepared_table_id",
+          "step_id",
+          "row_count",
+          "columns",
+          "is_final",
           "created_at",
-          "updated_at",
-          "latest_activity_at",
-          "archived_at",
-          "can_manage"
+          "produced_by"
         ],
-        "title": "ProjectResponse",
+        "title": "PreparedTablePreviewResponse",
+        "type": "object"
+      },
+      "PreparedTableResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "is_final": {
+            "title": "Is Final",
+            "type": "boolean"
+          },
+          "parent_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Prepared Table Id"
+          },
+          "prepared_table_id": {
+            "format": "uuid",
+            "title": "Prepared Table Id",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prepared_table_id",
+          "step_id",
+          "parent_prepared_table_id",
+          "row_count",
+          "columns",
+          "created_at",
+          "is_final"
+        ],
+        "title": "PreparedTableResponse",
         "type": "object"
       },
       "PublicAgent": {
@@ -2141,6 +2600,25 @@
           "capabilities"
         ],
         "title": "PublicAgent",
+        "type": "object"
+      },
+      "RawTableResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "RawTableResponse",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -2424,31 +2902,236 @@
         "title": "RoutingResponse",
         "type": "object"
       },
-      "ScenarioResponse": {
+      "SequenceGraphResponse": {
         "additionalProperties": false,
         "properties": {
-          "facts": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Facts",
-            "type": "array"
-          },
-          "key": {
-            "title": "Key",
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
             "type": "string"
           },
-          "question": {
-            "title": "Question",
+          "dataset_workspace_id": {
+            "format": "uuid",
+            "title": "Dataset Workspace Id",
+            "type": "string"
+          },
+          "failed_runs": {
+            "items": {
+              "$ref": "#/components/schemas/FailedRunResponse"
+            },
+            "title": "Failed Runs",
+            "type": "array"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "prepared_tables": {
+            "items": {
+              "$ref": "#/components/schemas/PreparedTableResponse"
+            },
+            "title": "Prepared Tables",
+            "type": "array"
+          },
+          "raw_table": {
+            "$ref": "#/components/schemas/RawTableResponse"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SequenceStepResponse"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
             "type": "string"
           }
         },
         "required": [
-          "key",
-          "question",
-          "facts"
+          "sequence_id",
+          "dataset_workspace_id",
+          "thread_id",
+          "origin",
+          "raw_table",
+          "created_at",
+          "updated_at",
+          "steps",
+          "prepared_tables",
+          "failed_runs"
         ],
-        "title": "ScenarioResponse",
+        "title": "SequenceGraphResponse",
+        "type": "object"
+      },
+      "SequenceListItemResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failed_run_count": {
+            "title": "Failed Run Count",
+            "type": "integer"
+          },
+          "final_table_count": {
+            "title": "Final Table Count",
+            "type": "integer"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "raw_table": {
+            "$ref": "#/components/schemas/RawTableResponse"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence_id",
+          "thread_id",
+          "origin",
+          "raw_table",
+          "step_count",
+          "final_table_count",
+          "failed_run_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SequenceListItemResponse",
+        "type": "object"
+      },
+      "SequenceListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_workspace_id": {
+            "format": "uuid",
+            "title": "Dataset Workspace Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SequenceListItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dataset_workspace_id",
+          "items"
+        ],
+        "title": "SequenceListResponse",
+        "type": "object"
+      },
+      "SequenceOperationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "SequenceOperationResponse",
+        "type": "object"
+      },
+      "SequenceStepResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "input_prepared_table_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Prepared Table Id"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/SequenceOperationResponse"
+          },
+          "produced_table_id": {
+            "format": "uuid",
+            "title": "Produced Table Id",
+            "type": "string"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "operation",
+          "input_prepared_table_id",
+          "produced_table_id",
+          "created_at"
+        ],
+        "title": "SequenceStepResponse",
         "type": "object"
       },
       "SetAgentAccessRequest": {
@@ -3051,27 +3734,6 @@
         "title": "ThreadInvestigationResponse",
         "type": "object"
       },
-      "ThreadMessageRequest": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "message": "Why did EU refunds increase from June to July 2026?"
-          }
-        ],
-        "properties": {
-          "message": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "ThreadMessageRequest",
-        "type": "object"
-      },
       "ThreadMessageResponse": {
         "additionalProperties": false,
         "properties": {
@@ -3106,177 +3768,6 @@
           "authored_by_user"
         ],
         "title": "ThreadMessageResponse",
-        "type": "object"
-      },
-      "ThreadPageResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadSummaryResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Cursor"
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
-        "title": "ThreadPageResponse",
-        "type": "object"
-      },
-      "ThreadResponse": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "actions": {
-              "can_append_message": true,
-              "can_archive": true,
-              "can_cancel": false,
-              "can_delete": true,
-              "can_restore": false,
-              "can_retry": false
-            },
-            "created_at": "2026-08-01T09:00:00Z",
-            "latest_activity_at": "2026-08-01T09:00:00Z",
-            "messages": [
-              {
-                "authored_by_user": true,
-                "content": "How is the business doing?",
-                "created_at": "2026-08-01T09:00:00Z",
-                "kind": "user_question",
-                "message_id": "44000000-0000-0000-0000-000000000001"
-              },
-              {
-                "authored_by_user": false,
-                "content": "I could not map that message to a governed question. Please choose or rephrase one supported question.\n- Why did EU refunds increase from June to July 2026?\n- Which sales channel accounted for the increase in North America revenue from October to November 2026?",
-                "created_at": "2026-08-01T09:00:00Z",
-                "kind": "router_clarification",
-                "message_id": "44000000-0000-0000-0000-000000000002"
-              }
-            ],
-            "project_id": "42000000-0000-0000-0000-000000000001",
-            "routing": {
-              "clarification": "I could not map that message to a governed question. Please choose or rephrase one supported question.",
-              "disposition": "unsupported",
-              "suggestions": [
-                "Why did EU refunds increase from June to July 2026?",
-                "Which sales channel accounted for the increase in North America revenue from October to November 2026?"
-              ]
-            },
-            "status": "draft",
-            "thread_id": "43000000-0000-0000-0000-000000000001",
-            "title": "How is the business doing?",
-            "updated_at": "2026-08-01T09:00:00Z"
-          }
-        ],
-        "properties": {
-          "actions": {
-            "$ref": "#/components/schemas/ThreadActionsResponse"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "event_cursor": {
-            "default": 0,
-            "title": "Event Cursor",
-            "type": "integer"
-          },
-          "investigation_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Investigation Id"
-          },
-          "investigations": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadInvestigationResponse"
-            },
-            "title": "Investigations",
-            "type": "array"
-          },
-          "latest_activity_at": {
-            "format": "date-time",
-            "title": "Latest Activity At",
-            "type": "string"
-          },
-          "messages": {
-            "items": {
-              "$ref": "#/components/schemas/ThreadMessageResponse"
-            },
-            "title": "Messages",
-            "type": "array"
-          },
-          "project_id": {
-            "format": "uuid",
-            "title": "Project Id",
-            "type": "string"
-          },
-          "routing": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RoutingResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "thread_id": {
-            "format": "uuid",
-            "title": "Thread Id",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          },
-          "usage": {
-            "$ref": "#/components/schemas/UsageResponse"
-          }
-        },
-        "required": [
-          "thread_id",
-          "project_id",
-          "title",
-          "status",
-          "created_at",
-          "updated_at",
-          "latest_activity_at",
-          "messages",
-          "usage",
-          "actions"
-        ],
-        "title": "ThreadResponse",
         "type": "object"
       },
       "ThreadSummaryResponse": {
@@ -5141,7 +5632,7 @@
     },
     "/v1/connector/sources/{data_source_id}/deletion-preview": {
       "get": {
-        "description": "What DELETE would destroy, so it is known beforehand.\n\nA read. Deletion itself stays unconditional \u2014 a Tenant who wants their data\ngone should not be argued with, only informed.",
+        "description": "What DELETE would destroy, so it is known beforehand.\n\nA read. Deletion itself stays unconditional \u2014 an Organization who wants their data\ngone should not be argued with, only informed.",
         "operationId": "preview_source_deletion_v1_connector_sources__data_source_id__deletion_preview_get",
         "parameters": [
           {

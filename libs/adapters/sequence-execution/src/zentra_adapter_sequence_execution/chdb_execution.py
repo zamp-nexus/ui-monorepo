@@ -48,7 +48,7 @@ _CHDB_CAST_TYPES = {
 
 class RawTableLookup(Protocol):
     async def resolve(
-        self, *, tenant_id: UUID, sequence_id: UUID
+        self, *, organization_id: UUID, sequence_id: UUID
     ) -> RawTableReference | None: ...
 
 
@@ -136,8 +136,12 @@ class ChdbSequenceExecutionPort:
         self._storage_root = storage_root
         self._sequence_lookup = sequence_lookup
 
-    def _prepared_table_path(self, *, tenant_id: UUID, prepared_table_id: UUID) -> Path:
-        return self._storage_root / str(tenant_id) / f"{prepared_table_id}.parquet"
+    def _prepared_table_path(
+        self, *, organization_id: UUID, prepared_table_id: UUID
+    ) -> Path:
+        return (
+            self._storage_root / str(organization_id) / f"{prepared_table_id}.parquet"
+        )
 
     async def _resolve_from_sql(
         self, request: SequenceStepExecutionRequest
@@ -146,7 +150,7 @@ class ChdbSequenceExecutionPort:
             if self._sequence_lookup is None:
                 return None
             raw_table = await self._sequence_lookup.resolve(
-                tenant_id=request.tenant_id, sequence_id=request.sequence_id
+                organization_id=request.organization_id, sequence_id=request.sequence_id
             )
             if raw_table is None:
                 return None
@@ -155,7 +159,7 @@ class ChdbSequenceExecutionPort:
             )
 
         path = self._prepared_table_path(
-            tenant_id=request.tenant_id,
+            organization_id=request.organization_id,
             prepared_table_id=request.input_table.reference_id,
         )
         if not path.exists():
@@ -184,12 +188,15 @@ class ChdbSequenceExecutionPort:
             return SequenceStepExecutionFailure(
                 request=request,
                 reason=SequenceExecutionFailureReason.UNKNOWN_TABLE,
-                detail=f"No table {request.input_table.reference_id} for this Tenant",
+                detail=(
+                    f"No table {request.input_table.reference_id} "
+                    "for this Organization"
+                ),
             )
 
         output_id = uuid4()
         output_path = self._prepared_table_path(
-            tenant_id=request.tenant_id, prepared_table_id=output_id
+            organization_id=request.organization_id, prepared_table_id=output_id
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -225,7 +232,9 @@ class ChdbSequenceExecutionPort:
         return SequenceStepExecutionResult(
             request=request,
             output_table=SequenceTableReference(
-                tenant_id=request.tenant_id, reference_id=output_id, kind="prepared"
+                organization_id=request.organization_id,
+                reference_id=output_id,
+                kind="prepared",
             ),
             row_count=row_count,
             columns=columns,

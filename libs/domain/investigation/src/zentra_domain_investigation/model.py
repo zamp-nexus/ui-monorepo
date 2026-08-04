@@ -47,7 +47,7 @@ class EvaluationDirective(StrEnum):
 class ApprovalReason(StrEnum):
     LOW_CONFIDENCE = "low_confidence"
     IRREVERSIBLE_ACTION = "irreversible_action"
-    TENANT_POLICY = "tenant_policy"
+    ORGANIZATION_POLICY = "organization_policy"
     CONTRADICTION_UNRESOLVED = "contradiction_unresolved"
     REGULATORY_EXPOSURE = "regulatory_exposure"
     #: A substantive claim cites nothing, or cites evidence that cannot be
@@ -116,7 +116,7 @@ class Finding:
 # observations gates.
 #
 # Starting values, chosen to be defensible rather than precise; the natural home
-# for tenant configuration later.
+# for organization configuration later.
 _SAMPLE_CEILINGS: tuple[tuple[int, float], ...] = (
     (5, 0.50),
     (30, 0.65),
@@ -172,7 +172,7 @@ class DomainEvent:
     event_id: UUID
     event_type: str
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     status: InvestigationStatus
     occurred_at: datetime
     artifact_refs: tuple[EvidenceReference, ...] = ()
@@ -183,7 +183,7 @@ class DomainEvent:
 class HumanApproval:
     approval_id: UUID
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     reason: ApprovalReason
     status: HumanApprovalStatus
     requested_at: datetime
@@ -232,7 +232,7 @@ class HumanApproval:
 @dataclass(slots=True)
 class Investigation:
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     question: str
     status: InvestigationStatus
     version: int
@@ -267,7 +267,7 @@ class Investigation:
         cls,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         now: datetime,
         data_connection_id: UUID | None = None,
@@ -288,7 +288,7 @@ class Investigation:
             )
         investigation = cls(
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             question=question,
             status=InvestigationStatus.PENDING,
             version=1,
@@ -555,7 +555,7 @@ class Investigation:
             return ApprovalReason.CONTRADICTION_UNRESOLVED
         if isinstance(outcome, ConfidenceOutcome):
             return ApprovalReason.LOW_CONFIDENCE
-        return ApprovalReason.TENANT_POLICY
+        return ApprovalReason.ORGANIZATION_POLICY
 
     def _require_status(self, expected: set[InvestigationStatus]) -> None:
         if self.status not in expected:
@@ -599,7 +599,7 @@ class Investigation:
                 event_id=uuid4(),
                 event_type=event_type,
                 investigation_id=self.investigation_id,
-                tenant_id=self.tenant_id,
+                organization_id=self.organization_id,
                 status=self.status,
                 occurred_at=occurred_at,
                 artifact_refs=artifact_refs,

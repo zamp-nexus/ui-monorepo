@@ -9,22 +9,22 @@ from sqlalchemy import insert, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 from zentra_application_investigation import (
-    OrganizationCursor,
-    OrganizationNameConflictError,
-    OrganizationSlice,
+    GroupCursor,
+    GroupNameConflictError,
+    GroupSlice,
 )
 from zentra_domain_investigation import Group
 
-from .database import Database, set_tenant_context
+from .database import Database, set_organization_context
 from .schema import workspace_groups
 
-_NAME_CONSTRAINTS = frozenset({"uq_workspace_groups_tenant_name"})
+_NAME_CONSTRAINTS = frozenset({"uq_workspace_groups_organization_name"})
 
 
 def _translate_integrity(error: IntegrityError) -> None:
     diagnostic = getattr(error.orig, "diag", None)
     if getattr(diagnostic, "constraint_name", None) in _NAME_CONSTRAINTS:
-        raise OrganizationNameConflictError(
+        raise GroupNameConflictError(
             "A workspace with this name already exists in its parent"
         ) from error
     raise error
@@ -34,7 +34,7 @@ def _group_from_row(row: Any) -> Group:
     value = row._mapping
     return Group(
         group_id=value["group_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         name=value["name"],
         normalized_name=value["normalized_name"],
         created_at=value["created_at"],
@@ -43,7 +43,7 @@ def _group_from_row(row: Any) -> Group:
     )
 
 
-class PostgresOrganizationRepository:
+class PostgresGroupRepository:
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
 
@@ -52,7 +52,7 @@ class PostgresOrganizationRepository:
             await self._connection.execute(
                 insert(workspace_groups).values(
                     group_id=group.group_id,
-                    tenant_id=group.tenant_id,
+                    organization_id=group.organization_id,
                     name=group.name,
                     normalized_name=group.normalized_name,
                     created_at=group.created_at,
@@ -94,8 +94,8 @@ class PostgresOrganizationRepository:
         *,
         include_archived: bool,
         limit: int,
-        after: OrganizationCursor | None,
-    ) -> OrganizationSlice[Group]:
+        after: GroupCursor | None,
+    ) -> GroupSlice[Group]:
         statement = select(workspace_groups)
         if not include_archived:
             statement = statement.where(workspace_groups.c.archived_at.is_(None))
@@ -110,39 +110,39 @@ class PostgresOrganizationRepository:
         rows = (await self._connection.execute(statement)).all()
         groups = tuple(_group_from_row(row) for row in rows)
         if len(groups) <= limit:
-            return OrganizationSlice(groups, None)
+            return GroupSlice(groups, None)
         visible = groups[:limit]
         last = visible[-1]
-        return OrganizationSlice(
-            visible, OrganizationCursor(last.updated_at, last.group_id)
+        return GroupSlice(
+            visible, GroupCursor(last.updated_at, last.group_id)
         )
 
 
-class PostgresOrganizationUnitOfWork:
+class PostgresGroupUnitOfWork:
     def __init__(self, connection: AsyncConnection) -> None:
-        self.organization = PostgresOrganizationRepository(connection)
+        self.groups = PostgresGroupRepository(connection)
         self.should_commit = False
 
     async def commit(self) -> None:
         self.should_commit = True
 
 
-class PostgresOrganizationUnitOfWorkFactory:
+class PostgresGroupUnitOfWorkFactory:
     def __init__(self, database: Database) -> None:
         self._database = database
 
     @asynccontextmanager
     async def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
-    ) -> AsyncIterator[PostgresOrganizationUnitOfWork]:
+    ) -> AsyncIterator[PostgresGroupUnitOfWork]:
         del trace_id, span_id
         async with self._database.engine.connect() as connection:
             transaction = await connection.begin()
-            await set_tenant_context(connection, tenant_id)
-            unit_of_work = PostgresOrganizationUnitOfWork(connection)
+            await set_organization_context(connection, organization_id)
+            unit_of_work = PostgresGroupUnitOfWork(connection)
             try:
                 yield unit_of_work
             except Exception:

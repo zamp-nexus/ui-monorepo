@@ -25,7 +25,7 @@ from opentelemetry.sdk.resources import Resource
 
 #: Every dimension a Phase 2 metric may carry. Bounded sets only: a status, a
 #: provider, a policy condition. Nothing that varies per Investigation, per
-#: Tenant, or per erasure — those are span attributes, where they cost one
+#: Organization, or per erasure — those are span attributes, where they cost one
 #: write instead of one time series.
 SAFE_DIMENSIONS: frozenset[str] = frozenset(
     {

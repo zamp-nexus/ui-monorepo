@@ -132,7 +132,7 @@ class AgentInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     state: dict[str, JsonValue]
 
 

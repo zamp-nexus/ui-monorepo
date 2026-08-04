@@ -5,27 +5,27 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-MAX_ORGANIZATION_NAME_LENGTH = 100
+MAX_GROUP_NAME_LENGTH = 100
 
 
-class OrganizationNameError(ValueError):
+class GroupNameError(ValueError):
     """A Group or Project name cannot be stored safely."""
 
 
-def normalize_organization_name(value: str) -> tuple[str, str]:
+def normalize_group_name(value: str) -> tuple[str, str]:
     """Return the display name and its parent-scoped uniqueness key."""
     normalized = unicodedata.normalize("NFKC", value)
     if any(unicodedata.category(character).startswith("C") for character in normalized):
-        raise OrganizationNameError(
+        raise GroupNameError(
             "Group and Project names cannot contain control characters"
         )
     display_name = " ".join(normalized.split())
     if not display_name:
-        raise OrganizationNameError("Group and Project names cannot be empty")
-    if len(display_name) > MAX_ORGANIZATION_NAME_LENGTH:
-        raise OrganizationNameError(
+        raise GroupNameError("Group and Project names cannot be empty")
+    if len(display_name) > MAX_GROUP_NAME_LENGTH:
+        raise GroupNameError(
             "Group and Project names cannot exceed "
-            f"{MAX_ORGANIZATION_NAME_LENGTH} characters"
+            f"{MAX_GROUP_NAME_LENGTH} characters"
         )
     return display_name, display_name.casefold()
 
@@ -33,7 +33,7 @@ def normalize_organization_name(value: str) -> tuple[str, str]:
 @dataclass(slots=True)
 class Group:
     group_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     name: str
     normalized_name: str
     created_at: datetime
@@ -45,14 +45,14 @@ class Group:
         cls,
         *,
         group_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         name: str,
         now: datetime,
     ) -> Group:
-        display_name, normalized_name = normalize_organization_name(name)
+        display_name, normalized_name = normalize_group_name(name)
         return cls(
             group_id=group_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             name=display_name,
             normalized_name=normalized_name,
             created_at=now,
@@ -60,7 +60,7 @@ class Group:
         )
 
     def rename(self, name: str, now: datetime) -> None:
-        self.name, self.normalized_name = normalize_organization_name(name)
+        self.name, self.normalized_name = normalize_group_name(name)
         self.updated_at = now
 
     def archive(self, now: datetime) -> None:
@@ -77,7 +77,7 @@ class Group:
 @dataclass(slots=True)
 class Project:
     project_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     group_id: UUID
     name: str
     normalized_name: str
@@ -91,15 +91,15 @@ class Project:
         cls,
         *,
         project_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         group_id: UUID,
         name: str,
         now: datetime,
     ) -> Project:
-        display_name, normalized_name = normalize_organization_name(name)
+        display_name, normalized_name = normalize_group_name(name)
         return cls(
             project_id=project_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             group_id=group_id,
             name=display_name,
             normalized_name=normalized_name,
@@ -109,7 +109,7 @@ class Project:
         )
 
     def rename(self, name: str, now: datetime) -> None:
-        self.name, self.normalized_name = normalize_organization_name(name)
+        self.name, self.normalized_name = normalize_group_name(name)
         self.updated_at = now
 
     def archive(self, now: datetime) -> None:

@@ -9,9 +9,9 @@ from zentra_domain_investigation import Group
 
 from zentra_application_investigation import (
     AuthenticatedActor,
-    OrganizationCursor,
-    OrganizationService,
-    OrganizationSlice,
+    GroupCursor,
+    GroupService,
+    GroupSlice,
     PermissionDeniedError,
     Role,
 )
@@ -39,8 +39,8 @@ class Repository:
         *,
         include_archived: bool,
         limit: int,
-        after: OrganizationCursor | None,
-    ) -> OrganizationSlice[Group]:
+        after: GroupCursor | None,
+    ) -> GroupSlice[Group]:
         values = tuple(
             sorted(
                 (
@@ -61,16 +61,16 @@ class Repository:
             )
         page = values[: limit + 1]
         if len(page) <= limit:
-            return OrganizationSlice(page, None)
+            return GroupSlice(page, None)
         last = page[limit - 1]
-        return OrganizationSlice(
-            page[:limit], OrganizationCursor(last.updated_at, last.group_id)
+        return GroupSlice(
+            page[:limit], GroupCursor(last.updated_at, last.group_id)
         )
 
 
 class UnitOfWork:
     def __init__(self, repository: Repository) -> None:
-        self.organization = repository
+        self.groups = repository
         self.committed = False
 
     async def __aenter__(self) -> UnitOfWork:
@@ -103,8 +103,8 @@ def actor(role: Role) -> AuthenticatedActor:
     )
 
 
-def service(repository: Repository | None = None) -> OrganizationService:
-    return OrganizationService(
+def service(repository: Repository | None = None) -> GroupService:
+    return GroupService(
         unit_of_work_factory=UnitOfWorkFactory(repository or Repository()),
         now=lambda: NOW,
         new_id=uuid4,

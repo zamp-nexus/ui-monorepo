@@ -29,9 +29,10 @@ from zentra_adapter_postgres import (
     PostgresAgentAccessRepository,
     PostgresCatalogRepository,
     PostgresDataSourceRepository,
+    PostgresGroupUnitOfWorkFactory,
     PostgresHarvestRunRepository,
     PostgresInvestigationUnitOfWorkFactory,
-    PostgresOrganizationUnitOfWorkFactory,
+    PostgresOrganizationProvisioningUnitOfWorkFactory,
     PostgresRelationRepository,
     PostgresSequenceUnitOfWorkFactory,
     PostgresThreadUnitOfWorkFactory,
@@ -46,9 +47,10 @@ from zentra_application_connector import ConnectorService
 from zentra_application_investigation import (
     ConversationalService,
     ExecutionJobWorker,
+    GroupService,
     IntakeService,
     InvestigationService,
-    OrganizationService,
+    OrganizationProvisioningService,
     ThreadService,
     VisualizationService,
 )
@@ -95,7 +97,11 @@ class AppDependencies:
     jwt_verifier: ClerkJwtVerifier
     investigations: InvestigationService
     audit_delivery: AuditDeliveryCoordinator
-    organization: OrganizationService
+    groups: GroupService
+    #: Provisions Organizations/Users from Clerk webhook events. Named
+    #: `organizations` rather than `organization_provisioning` to match the
+    #: one-word-plural-noun convention `groups`/`threads` already use here.
+    organizations: OrganizationProvisioningService
     threads: ThreadService
     execution_worker: ExecutionJobWorker
     execution_worker_enabled: bool
@@ -148,11 +154,11 @@ class AppDependencies:
         connector: ConnectorService | None = None
 
         async def resolve_relation_fingerprint(
-            tenant_id: UUID, data_connection_id: UUID
+            organization_id: UUID, data_connection_id: UUID
         ) -> str:
             return await relation_fingerprint(
                 connector,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 data_connection_id=data_connection_id,
             )
 
@@ -199,8 +205,15 @@ class AppDependencies:
             publication_observer=record_publication_decision,
             erasure_observer=record_evidence_deletion,
         )
-        organization = OrganizationService(
-            unit_of_work_factory=PostgresOrganizationUnitOfWorkFactory(database),
+        groups = GroupService(
+            unit_of_work_factory=PostgresGroupUnitOfWorkFactory(database),
+            now=lambda: datetime.now(UTC),
+            new_id=uuid4,
+        )
+        organizations = OrganizationProvisioningService(
+            unit_of_work_factory=PostgresOrganizationProvisioningUnitOfWorkFactory(
+                database
+            ),
             now=lambda: datetime.now(UTC),
             new_id=uuid4,
         )
@@ -216,10 +229,10 @@ class AppDependencies:
             return IntakeAgent(model=intake_model, semantic_layer=semantic_layer)
 
         async def _resolve_intake_semantic_layer(
-            tenant_id: UUID, data_connection_id: UUID | None
+            organization_id: UUID, data_connection_id: UUID | None
         ) -> SemanticLayerPort:
             return await semantic_layers.resolve(
-                tenant_id=tenant_id, data_connection_id=data_connection_id
+                organization_id=organization_id, data_connection_id=data_connection_id
             )
 
         def _build_conversational_agent() -> ConversationalAgent:
@@ -318,7 +331,8 @@ class AppDependencies:
             ),
             investigations=investigations,
             audit_delivery=audit_delivery,
-            organization=organization,
+            groups=groups,
+            organizations=organizations,
             threads=threads,
             execution_worker=execution_worker,
             execution_worker_enabled=settings.execution_worker_enabled,

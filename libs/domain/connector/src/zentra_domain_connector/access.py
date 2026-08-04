@@ -2,8 +2,8 @@
 
 Every table and field a Harvest Run finds is visible to agents by default —
 that default lives here as an absence, not a row. A ``CatalogAccessOverride``
-only ever records a *departure* from that default, one Tenant decision at a
-time.
+only ever records a *departure* from that default, one Organization decision
+at a time.
 
 Pinned to ``table_name``/``field_name`` rather than to a Catalog Version or a
 field id, for the same reason a ``Relation`` is pinned to a ``FieldIdentity``:
@@ -22,14 +22,15 @@ from .catalog import CatalogVersion, SourceField, SourceTable
 
 @dataclass(frozen=True, slots=True)
 class CatalogAccessOverride:
-    """One Tenant decision that a table, or one field within it, is not for agents.
+    """One Organization decision that a table, or one field within it, is not
+    for agents.
 
     ``field_name`` absent means the override is table-level: every field in
     that table is hidden, not just the ones with their own override.
     """
 
     override_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     data_source_id: UUID
     table_name: str
     field_name: str | None
@@ -108,7 +109,7 @@ class AccessOverrides:
         return CatalogVersion(
             catalog_version_id=version.catalog_version_id,
             data_source_id=version.data_source_id,
-            tenant_id=version.tenant_id,
+            organization_id=version.organization_id,
             harvest_run_id=version.harvest_run_id,
             created_at=version.created_at,
             tables=tuple(visible_tables),

@@ -83,7 +83,7 @@ async def prepare_published_visualization(
     )
     artifact = VisualizationArtifact(
         visualization_id=visualization_id,
-        tenant_id=investigation.tenant_id,
+        organization_id=investigation.organization_id,
         investigation_id=investigation.investigation_id,
         brief_id=brief_id,
         status=VisualizationArtifactStatus.PENDING,
@@ -100,7 +100,7 @@ async def prepare_published_visualization(
     await unit_of_work.jobs.add_job(
         ExecutionJob.create(
             job_id=uuid5(_IDENTITY_NAMESPACE, f"job:{visualization_id}"),
-            tenant_id=investigation.tenant_id,
+            organization_id=investigation.organization_id,
             investigation_id=investigation.investigation_id,
             visualization_id=visualization_id,
             job_kind=ExecutionJobKind.VISUALIZATION,
@@ -109,7 +109,7 @@ async def prepare_published_visualization(
         )
     )
     await unit_of_work.work_feed.append_for_investigation(
-        tenant_id=investigation.tenant_id,
+        organization_id=investigation.organization_id,
         investigation_id=investigation.investigation_id,
         kind=WorkFeedEventKind.AGENT_HANDOFF,
         payload=AgentEventPayload(
@@ -124,7 +124,7 @@ async def prepare_published_visualization(
         event_id=uuid5(_IDENTITY_NAMESPACE, f"handoff:{visualization_id}"),
     )
     await unit_of_work.work_feed.append_for_investigation(
-        tenant_id=investigation.tenant_id,
+        organization_id=investigation.organization_id,
         investigation_id=investigation.investigation_id,
         kind=WorkFeedEventKind.VISUALIZATION_REQUESTED,
         payload=VisualizationEventPayload(
@@ -153,7 +153,7 @@ def _actions(
                     _IDENTITY_NAMESPACE,
                     f"citation:{investigation.investigation_id}:{citations[0].citation_id}",
                 ),
-                tenant_id=investigation.tenant_id,
+                organization_id=investigation.organization_id,
                 visualization_id=UUID(int=0),
                 thread_id=investigation.thread_id,
                 investigation_id=investigation.investigation_id,
@@ -169,7 +169,7 @@ def _actions(
                 _IDENTITY_NAMESPACE,
                 f"continue:{investigation.investigation_id}:{investigation.version}",
             ),
-            tenant_id=investigation.tenant_id,
+            organization_id=investigation.organization_id,
             visualization_id=UUID(int=0),
             thread_id=investigation.thread_id,
             investigation_id=investigation.investigation_id,

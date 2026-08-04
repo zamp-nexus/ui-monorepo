@@ -268,7 +268,11 @@ async def test_a_claim_citing_an_earlier_point_in_a_breakdown_is_not_ungrounded(
             state={
                 "question": "What is the count of started applications by date "
                 "for the last month?",
-                "analyst": {"metrics": daily, "result_summary": "", "evidence_refs": []},
+                "analyst": {
+                    "metrics": daily,
+                    "result_summary": "",
+                    "evidence_refs": [],
+                },
                 "evaluator": {"recheck_passed": True, "issues": []},
             },
         )

@@ -9,9 +9,21 @@ import App from './app';
 const authMocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useAuthSession: vi.fn(),
+  useAuthTenant: vi.fn(() => ({ setActiveTenant: vi.fn() })),
 }));
 
 vi.mock('@open-zentra/foundation-auth', () => authMocks);
+
+const clerkUiMocks = vi.hoisted(() => ({
+  useOrganizationMemberships: vi.fn(() => ({ isLoaded: true, memberships: [] })),
+}));
+
+vi.mock('@open-zentra/foundation-auth/clerk-ui', () => ({
+  ...clerkUiMocks,
+  SignIn: () => null,
+  SignUp: () => null,
+  CreateOrganization: () => null,
+}));
 
 const readyResponse = {
   status: 'ready',
@@ -24,9 +36,9 @@ const readyResponse = {
 
 const contextResponse = {
   user_id: '10000000-0000-0000-0000-000000000001',
-  tenant_id: '20000000-0000-0000-0000-000000000002',
+  organization_id: '20000000-0000-0000-0000-000000000002',
   email: 'owner@example.com',
-  tenant_name: 'Acme Europe',
+  organization_name: 'Acme Europe',
   role: 'owner',
 };
 
@@ -234,7 +246,7 @@ describe('App', () => {
     ).toBeTruthy();
   });
 
-  it('denies access without an active organization', () => {
+  it('offers to create an organization when the user has none', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -243,10 +255,35 @@ describe('App', () => {
       tenant: null,
       user: { email: 'owner@example.com' },
     });
+    clerkUiMocks.useOrganizationMemberships.mockReturnValue({
+      isLoaded: true,
+      memberships: [],
+    });
+    renderApp();
+    // `NoOrganizations` renders Clerk's own `<CreateOrganization/>` full-page
+    // (stubbed to null above) -- there is no app-owned heading to assert on
+    // here, so the meaningful assertion is what it does NOT do: no API call.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('offers a picker when the user has organizations but none active', () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      isInitializing: false,
+      logout: vi.fn(),
+      tenant: null,
+      user: { email: 'owner@example.com' },
+    });
+    clerkUiMocks.useOrganizationMemberships.mockReturnValue({
+      isLoaded: true,
+      memberships: [{ id: 'org_123', name: 'Acme' }],
+    });
     renderApp();
     expect(
-      screen.getByRole('heading', { name: /select a clerk organization/i }),
+      screen.getByRole('heading', { name: /choose an organization/i }),
     ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Acme' })).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

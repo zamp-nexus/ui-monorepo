@@ -22,9 +22,9 @@ const getToken = async () => 'test-token';
 
 const identity: IdentityContext = {
   user_id: '10000000-0000-0000-0000-000000000001',
-  tenant_id: '20000000-0000-0000-0000-000000000002',
+  organization_id: '20000000-0000-0000-0000-000000000002',
   email: 'owner@example.com',
-  tenant_name: 'Acme Europe',
+  organization_name: 'Acme Europe',
   role: 'owner',
 };
 

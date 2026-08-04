@@ -43,9 +43,9 @@ class ContextResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     user_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     email: str
-    tenant_name: str
+    organization_name: str
     role: str
 
 
@@ -61,10 +61,10 @@ class CatalogMemberResponse(BaseModel):
 
 
 class CatalogSummaryResponse(BaseModel):
-    """What this tenant can actually be asked about.
+    """What this Organization can actually be asked about.
 
     Replaces the fixed list of governed scenarios (ADR-0023). A client that has
-    to offer the user a starting question needs the tenant's own vocabulary,
+    to offer the user a starting question needs the Organization's own vocabulary,
     and this is the same governed catalog the Cube Analyst reasons over — so a
     suggestion the UI makes is one the agent can genuinely answer.
     """
@@ -83,8 +83,8 @@ class InvestigationCreateRequest(BaseModel):
     #: path reaches the same service without passing through this model.
     question: str = Field(min_length=1, max_length=4000)
     #: Which Data Connection to ask it against. Omitted resolves to the
-    #: tenant's only connection, or the demo warehouse when it has none; a
-    #: tenant with several is asked to choose rather than guessed at.
+    #: Organization's only connection, or the demo warehouse when it has none;
+    #: an Organization with several is asked to choose rather than guessed at.
     data_connection_id: UUID | None = None
 
 

@@ -38,7 +38,7 @@ class CompletionBlocker(StrEnum):
     EVIDENCE_UNVALIDATED = "evidence_unvalidated"
     #: Two measurements disagree and nobody has resolved or documented it.
     CONFLICT_UNSETTLED = "conflict_unsettled"
-    #: No confidence recorded, or it sits below the Tenant's threshold.
+    #: No confidence recorded, or it sits below the Organization's threshold.
     CONFIDENCE_BELOW_THRESHOLD = "confidence_below_threshold"
 
 

@@ -50,6 +50,7 @@ dependencies = [
  "pydantic-settings>=2.11,<3",
  "pyjwt[crypto]>=2.10,<3",
  "python-multipart>=0.0.20,<0.1",
+ "svix>=1.61,<2",
  "uvicorn[standard]>=0.37,<1",
  "zentra-adapter-clickhouse",
  "zentra-adapter-cube",

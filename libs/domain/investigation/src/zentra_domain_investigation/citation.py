@@ -30,7 +30,7 @@ class CitationState(StrEnum):
     """Whether the evidence behind a citation can still be reached.
 
     Three states, kept apart on purpose. `unavailable` is a fault — evidence
-    that should be there and is not. `tombstoned` is a Tenant's deliberate
+    that should be there and is not. `tombstoned` is an Organization's deliberate
     erasure. Collapsing them would either alarm a reader about a deletion they
     asked for, or quietly reassure them about data loss.
     """
@@ -81,7 +81,7 @@ class EvidenceCitation:
     """
 
     citation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     # The governed Semantic Metric, and how it was scoped.
     metric: str

@@ -125,7 +125,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         now = self._clock.now()
         source = DataSource(
             data_source_id=uuid4(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             name=name,
             kind=SourceKind.CONNECTED,
             sealed_credentials=self._cipher.seal(credentials),
@@ -142,7 +142,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     async def list_sources(
         self, actor: AuthenticatedActor
     ) -> tuple[SourceSummary, ...]:
-        sources = await self._sources.list(tenant_id=actor.tenant_id)
+        sources = await self._sources.list(organization_id=actor.organization_id)
         return tuple(to_summary(s) for s in sources)
 
     async def get_source(
@@ -157,7 +157,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
 
         Every other method here works with a source's identity, never its
         secret — `SourceCredentials` otherwise never leaves this layer. This
-        is a deliberate, narrow exception for Cube's dynamic per-tenant
+        is a deliberate, narrow exception for Cube's dynamic per-organization
         schema generator, which needs a live database connection to build a
         driver config inside a Node process this application does not
         control. Callers must not log or persist what this returns.
@@ -221,10 +221,10 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         """
         source = await self._load_source(actor, data_source_id)
         versions = await self._catalogs.list_versions(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         relations = await self._relations.list_for_source(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         confirmed = [r for r in relations if r.state is RelationState.CONFIRMED]
         return DeletionPreview(
@@ -249,7 +249,9 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         if source.kind is SourceKind.UPLOADED and source.landed_table:
             database, _, table = source.landed_table.partition(".")
             await self._landing.drop(database=database, table=table)
-        await self._sources.delete(data_source_id, tenant_id=actor.tenant_id)
+        await self._sources.delete(
+            data_source_id, organization_id=actor.organization_id
+        )
 
     # --------------------------------------------------------------- harvests
 
@@ -270,7 +272,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         self._require(actor, HARVEST_ROLES)
         source = await self._load_source(actor, data_source_id)
         active = await self._runs.active_for_source(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         if active is not None:
             raise ConflictError("A harvest is already running for this data source")
@@ -278,7 +280,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         run = HarvestRun(
             harvest_run_id=uuid4(),
             data_source_id=source.data_source_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             scope=scope or HarvestScope(),
             budget=budget or HarvestBudget(),
         )
@@ -324,7 +326,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         unreadable: tuple[tuple[str, str], ...] = ()
         if run.catalog_version_id is not None:
             version = await self._catalogs.get_version(
-                run.catalog_version_id, tenant_id=actor.tenant_id
+                run.catalog_version_id, organization_id=actor.organization_id
             )
             if version is not None:
                 unreadable = tuple(
@@ -348,7 +350,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     ) -> tuple[HarvestStatus, ...]:
         await self._load_source(actor, data_source_id)
         runs = await self._runs.list_for_source(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         return tuple(to_status(r) for r in runs)
 
@@ -362,7 +364,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         state: RelationState | None = None,
     ) -> tuple[RelationView, ...]:
         relations = await self._relations.list_for_version(
-            catalog_version_id, tenant_id=actor.tenant_id
+            catalog_version_id, organization_id=actor.organization_id
         )
         selected = [r for r in relations if state is None or r.state is state]
         selected.sort(key=lambda r: r.confidence, reverse=True)
@@ -390,9 +392,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         self._require(actor, WRITE_ROLES)
         relation = await self._load_relation(actor, relation_id)
         try:
-            relation.reject(
-                actor_id=actor.user_id, reason=reason, at=self._clock.now()
-            )
+            relation.reject(actor_id=actor.user_id, reason=reason, at=self._clock.now())
         except RelationTransitionError as exc:
             raise ConflictError(str(exc)) from exc
         await self._relations.save(relation)
@@ -418,7 +418,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         left_field_id: UUID,
         right_field_id: UUID,
     ) -> RelationView:
-        """Record a join only the Tenant knows about — after checking it holds.
+        """Record a join only the Organization knows about — after checking it holds.
 
         Validated against real data rather than taken on trust. The reviewer's
         own typo is as capable of producing a wrong Finding as the system's own
@@ -437,7 +437,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         left_table, left_field = left
         right_table, right_field = right
         source = await self._sources.get(
-            version.data_source_id, tenant_id=actor.tenant_id
+            version.data_source_id, organization_id=actor.organization_id
         )
         if source is None:
             raise DataSourceNotFoundError(str(version.data_source_id))
@@ -470,7 +470,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         now = self._clock.now()
         relation = Relation(
             relation_id=uuid4(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             catalog_version_id=catalog_version_id,
             left_field_id=left_field_id,
             right_field_id=right_field_id,
@@ -500,7 +500,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         """
         version = await self.get_catalog(actor, catalog_version_id)
         relations = await self._relations.list_for_version(
-            catalog_version_id, tenant_id=actor.tenant_id
+            catalog_version_id, organization_id=actor.organization_id
         )
         graph = JoinGraph.build(catalog_version_id, tuple(relations))
 
@@ -538,7 +538,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         assert.
         """
         relations = await self._relations.list_for_version(
-            catalog_version_id, tenant_id=actor.tenant_id
+            catalog_version_id, organization_id=actor.organization_id
         )
         graph = JoinGraph.build(catalog_version_id, tuple(relations))
         return graph.permits(left_field_id, right_field_id)
@@ -566,7 +566,9 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     async def _load_source(
         self, actor: AuthenticatedActor, data_source_id: UUID
     ) -> DataSource:
-        source = await self._sources.get(data_source_id, tenant_id=actor.tenant_id)
+        source = await self._sources.get(
+            data_source_id, organization_id=actor.organization_id
+        )
         if source is None:
             raise DataSourceNotFoundError(str(data_source_id))
         return source
@@ -574,7 +576,9 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     async def _load_run(
         self, actor: AuthenticatedActor, harvest_run_id: UUID
     ) -> HarvestRun:
-        run = await self._runs.get(harvest_run_id, tenant_id=actor.tenant_id)
+        run = await self._runs.get(
+            harvest_run_id, organization_id=actor.organization_id
+        )
         if run is None:
             raise HarvestRunNotFoundError(str(harvest_run_id))
         return run
@@ -582,7 +586,9 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     async def _load_relation(
         self, actor: AuthenticatedActor, relation_id: UUID
     ) -> Relation:
-        relation = await self._relations.get(relation_id, tenant_id=actor.tenant_id)
+        relation = await self._relations.get(
+            relation_id, organization_id=actor.organization_id
+        )
         if relation is None:
             raise RelationNotFoundError(str(relation_id))
         return relation
@@ -592,14 +598,13 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
     ) -> tuple[tuple[UUID, CatalogVersion, SourceCredentials], ...]:
         """The other sources' latest catalogs, so inference can span them."""
         peers: list[tuple[UUID, CatalogVersion, SourceCredentials]] = []
-        for other in await self._sources.list(tenant_id=actor.tenant_id):
+        for other in await self._sources.list(organization_id=actor.organization_id):
             if other.data_source_id == exclude:
                 continue
             version = await self._catalogs.latest_version(
-                other.data_source_id, tenant_id=actor.tenant_id
+                other.data_source_id, organization_id=actor.organization_id
             )
             if version is None:
                 continue
             peers.append((other.data_source_id, version, self._open(other)))
         return tuple(peers)
-

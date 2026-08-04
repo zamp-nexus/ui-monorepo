@@ -1,7 +1,7 @@
 """Tuning constants for connector discovery and relation inference.
 
 Gathered here rather than inlined so that the numbers a reviewer will argue
-about are all in one place, and so that the natural home for per-Tenant
+about are all in one place, and so that the natural home for per-Organization
 configuration later is obvious.
 
 The ceiling tables deliberately mirror the shape of

@@ -97,7 +97,7 @@ class Relation:
     """
 
     relation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     catalog_version_id: UUID
     left_field_id: UUID
     right_field_id: UUID

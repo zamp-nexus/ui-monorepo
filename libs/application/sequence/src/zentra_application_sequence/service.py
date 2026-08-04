@@ -41,10 +41,10 @@ class SequenceService:
         self._new_id = new_id
 
     async def list(self, actor: AuthenticatedActor) -> SequenceSlice:
-        dataset_workspace_id = dataset_workspace_id_for(actor.tenant_id)
+        dataset_workspace_id = dataset_workspace_id_for(actor.organization_id)
         async with self._uow(actor) as unit_of_work:
             items = await unit_of_work.sequences.list_sequences(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 dataset_workspace_id=dataset_workspace_id,
             )
         return SequenceSlice(
@@ -77,7 +77,7 @@ class SequenceService:
         `unknown_table` would leave someone unsure whether they mistyped the
         table or misunderstood the picker.
         """
-        label = await self._raw_tables.label(actor.tenant_id, raw_table)
+        label = await self._raw_tables.label(actor.organization_id, raw_table)
         if label is None:
             raise RawTableNotFoundError(
                 "The selected Raw Table could not be found"
@@ -85,8 +85,8 @@ class SequenceService:
         now = self._now()
         sequence = Sequence.create(
             sequence_id=self._new_id(),
-            tenant_id=actor.tenant_id,
-            dataset_workspace_id=dataset_workspace_id_for(actor.tenant_id),
+            organization_id=actor.organization_id,
+            dataset_workspace_id=dataset_workspace_id_for(actor.organization_id),
             raw_table_reference=raw_table,
             now=now,
             thread_id=thread_id,
@@ -99,11 +99,11 @@ class SequenceService:
     async def _load(self, actor: AuthenticatedActor, sequence_id: UUID) -> Sequence:
         async with self._uow(actor) as unit_of_work:
             sequence = await unit_of_work.sequences.get_sequence(sequence_id)
-        if sequence is None or sequence.tenant_id != actor.tenant_id:
+        if sequence is None or sequence.organization_id != actor.organization_id:
             raise SequenceNotFoundError(f"No Sequence {sequence_id} found")
         return sequence
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
-            actor.tenant_id, self._new_id(), self._new_id()
+            actor.organization_id, self._new_id(), self._new_id()
         )

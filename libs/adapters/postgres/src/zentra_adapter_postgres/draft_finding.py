@@ -44,9 +44,9 @@ from .schema import (
 
 
 class PostgresDraftFindingRepository:
-    """Tenant-scoped like every other repository here: the connection carries
-    `app.tenant_id`, and RLS is what makes a cross-Tenant read return nothing
-    rather than raise.
+    """Organization-scoped like every other repository here: the connection
+    carries `app.organization_id`, and RLS is what makes a cross-Organization
+    read return nothing rather than raise.
     """
 
     def __init__(self, connection: AsyncConnection) -> None:
@@ -58,7 +58,7 @@ class PostgresDraftFindingRepository:
             insert(draft_findings).values(
                 draft_finding_id=draft.draft_finding_id,
                 analysis_run_id=draft.investigation_id,
-                tenant_id=draft.tenant_id,
+                organization_id=draft.organization_id,
                 version=draft.version,
                 produced_by_execution_id=draft.produced_by_execution_id,
                 headline=draft.headline,
@@ -68,9 +68,7 @@ class PostgresDraftFindingRepository:
                     for c in draft.contradictions
                 ],
                 root_cause=draft.root_cause.value,
-                confidence=(
-                    Decimal(str(confidence.score)) if confidence else None
-                ),
+                confidence=(Decimal(str(confidence.score)) if confidence else None),
                 confidence_method=(
                     confidence.calibration_method if confidence else None
                 ),
@@ -85,7 +83,7 @@ class PostgresDraftFindingRepository:
                 {
                     "claim_id": claim.claim_id,
                     "draft_finding_id": draft.draft_finding_id,
-                    "tenant_id": draft.tenant_id,
+                    "organization_id": draft.organization_id,
                     "kind": claim.kind.value,
                     "claim_text": claim.text,
                     "metric": claim.metric,
@@ -100,16 +98,14 @@ class PostgresDraftFindingRepository:
             {
                 "claim_id": claim.claim_id,
                 "citation_id": citation_id,
-                "tenant_id": draft.tenant_id,
+                "organization_id": draft.organization_id,
                 "position": position,
             }
             for claim in draft.claims
             for position, citation_id in enumerate(claim.citation_ids)
         ]
         if links:
-            await self._connection.execute(
-                insert(draft_finding_claim_citations), links
-            )
+            await self._connection.execute(insert(draft_finding_claim_citations), links)
 
     async def latest_for_investigation(
         self,
@@ -135,10 +131,7 @@ class PostgresDraftFindingRepository:
         claim_rows = (
             await self._connection.execute(
                 select(draft_finding_claims)
-                .where(
-                    draft_finding_claims.c.draft_finding_id
-                    == row.draft_finding_id
-                )
+                .where(draft_finding_claims.c.draft_finding_id == row.draft_finding_id)
                 .order_by(draft_finding_claims.c.position)
             )
         ).all()
@@ -164,7 +157,7 @@ class PostgresDraftFindingRepository:
 
         return DraftFinding(
             draft_finding_id=row.draft_finding_id,
-            tenant_id=row.tenant_id,
+            organization_id=row.organization_id,
             investigation_id=row.analysis_run_id,
             version=row.version,
             created_at=row.created_at,
@@ -204,8 +197,8 @@ class PostgresDraftFindingRepository:
 
 
 class PostgresEvidenceCitationRepository:
-    """Tenant-scoped like everything else here; RLS is what makes another
-    Tenant's citation not exist rather than merely be filtered out."""
+    """Organization-scoped like everything else here; RLS is what makes another
+    Organization's citation not exist rather than merely be filtered out."""
 
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
@@ -219,7 +212,7 @@ class PostgresEvidenceCitationRepository:
                 {
                     "citation_id": citation.citation_id,
                     "analysis_run_id": citation.investigation_id,
-                    "tenant_id": citation.tenant_id,
+                    "organization_id": citation.organization_id,
                     "metric": citation.metric,
                     "filters": [
                         {
@@ -252,12 +245,12 @@ class PostgresEvidenceCitationRepository:
         """One citation, with its state decided against the evidence itself.
 
         `None` means the citation is not visible to this connection — which
-        covers "belongs to another Tenant", "belongs to another Investigation",
+        covers "belongs to another Organization", "belongs to another Investigation",
         and "does not exist". They must be indistinguishable: telling a caller
         which one applies confirms that somebody else's evidence exists.
 
         A citation whose producing execution is gone resolves `unavailable`.
-        That is a fault, not a Tenant's deliberate erasure, so it is never
+        That is a fault, not an Organization's deliberate erasure, so it is never
         reported as a Tombstone.
         """
         row = (
@@ -281,7 +274,7 @@ class PostgresEvidenceCitationRepository:
                 category=(
                     erasure[0]
                     if erasure
-                    else DeletionCategory.TENANT_REQUEST.value
+                    else DeletionCategory.ORGANIZATION_REQUEST.value
                 ),
                 erased_at=erasure[1] if erasure else row.created_at,
             )
@@ -366,7 +359,7 @@ def _resolvable():
 def _citation_from_row(row: Any) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=row.citation_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         investigation_id=row.analysis_run_id,
         metric=row.metric,
         filters=tuple(

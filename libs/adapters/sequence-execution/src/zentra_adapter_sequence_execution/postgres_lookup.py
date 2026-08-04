@@ -14,10 +14,10 @@ class PostgresRawTableLookup:
         self._unit_of_work_factory = unit_of_work_factory
 
     async def resolve(
-        self, *, tenant_id: UUID, sequence_id: UUID
+        self, *, organization_id: UUID, sequence_id: UUID
     ) -> RawTableReference | None:
         async with self._unit_of_work_factory(
-            tenant_id, UUID(int=0), UUID(int=0)
+            organization_id, UUID(int=0), UUID(int=0)
         ) as unit_of_work:
             sequence = await unit_of_work.sequences.get_sequence(sequence_id)
         return sequence.raw_table_reference if sequence is not None else None

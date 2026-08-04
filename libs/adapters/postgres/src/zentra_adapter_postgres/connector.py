@@ -4,12 +4,13 @@ Unlike the Investigation repositories, these open their own connections rather
 than being handed one. `ConnectorService` is built once at startup and holds its
 repositories for the process lifetime — it has no unit of work to enlist in — so
 a connection captured at construction would be a single connection shared by
-every request. Each method takes a tenant-scoped connection for its own work and
-gives it back.
+every request. Each method takes an organization-scoped connection for its own
+work and gives it back.
 
-Every method is tenant-scoped through `Database.tenant_connection`, which sets
-`app.tenant_id` for RLS. The explicit `tenant_id` predicates are belt and braces:
-a missing policy should mean a query returns nothing, not a cross-tenant read.
+Every method is organization-scoped through `Database.organization_connection`,
+which sets `app.organization_id` for RLS. The explicit `organization_id`
+predicates are belt and braces: a missing policy should mean a query returns
+nothing, not a cross-organization read.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ def _to_entity(row: object) -> DataSource:
     """
     return DataSource(
         data_source_id=row.data_source_id,  # type: ignore[attr-defined]
-        tenant_id=row.tenant_id,  # type: ignore[attr-defined]
+        organization_id=row.organization_id,  # type: ignore[attr-defined]
         name=row.name,  # type: ignore[attr-defined]
         kind=SourceKind(row.kind),  # type: ignore[attr-defined]
         sealed_credentials=(
@@ -55,7 +56,7 @@ def _mutable_values(source: DataSource) -> dict[str, object]:
     """The columns a save may change.
 
     Identity and `created_at` are absent by construction: a save that could move
-    a row to another tenant is a save that could be made to leak one.
+    a row to another organization is a save that could be made to leak one.
     """
     return {
         "name": source.name,
@@ -77,57 +78,69 @@ class PostgresDataSourceRepository:
         self._database = database
 
     async def add(self, source: DataSource) -> None:
-        async with self._database.tenant_connection(source.tenant_id) as connection:
+        async with self._database.organization_connection(
+            source.organization_id
+        ) as connection:
             await connection.execute(
                 insert(data_sources).values(
                     data_source_id=source.data_source_id,
-                    tenant_id=source.tenant_id,
+                    organization_id=source.organization_id,
                     kind=source.kind.value,
                     created_at=source.created_at,
                     **_mutable_values(source),
                 )
             )
 
-    async def get(self, data_source_id: UUID, *, tenant_id: UUID) -> DataSource | None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+    async def get(
+        self, data_source_id: UUID, *, organization_id: UUID
+    ) -> DataSource | None:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(data_sources).where(
                         data_sources.c.data_source_id == data_source_id,
-                        data_sources.c.tenant_id == tenant_id,
+                        data_sources.c.organization_id == organization_id,
                     )
                 )
             ).one_or_none()
         return None if row is None else _to_entity(row)
 
-    async def list(self, *, tenant_id: UUID) -> Sequence[DataSource]:
-        async with self._database.tenant_connection(tenant_id) as connection:
+    async def list(self, *, organization_id: UUID) -> Sequence[DataSource]:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(data_sources)
-                    .where(data_sources.c.tenant_id == tenant_id)
+                    .where(data_sources.c.organization_id == organization_id)
                     .order_by(data_sources.c.created_at.desc())
                 )
             ).all()
         return [_to_entity(row) for row in rows]
 
     async def save(self, source: DataSource) -> None:
-        async with self._database.tenant_connection(source.tenant_id) as connection:
+        async with self._database.organization_connection(
+            source.organization_id
+        ) as connection:
             await connection.execute(
                 update(data_sources)
                 .where(
                     data_sources.c.data_source_id == source.data_source_id,
-                    data_sources.c.tenant_id == source.tenant_id,
+                    data_sources.c.organization_id == source.organization_id,
                 )
                 .values(**_mutable_values(source))
             )
 
-    async def delete(self, data_source_id: UUID, *, tenant_id: UUID) -> None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+    async def delete(self, data_source_id: UUID, *, organization_id: UUID) -> None:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             await connection.execute(
                 delete(data_sources).where(
                     data_sources.c.data_source_id == data_source_id,
-                    data_sources.c.tenant_id == tenant_id,
+                    data_sources.c.organization_id == organization_id,
                 )
             )
 

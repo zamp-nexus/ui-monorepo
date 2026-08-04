@@ -24,14 +24,14 @@ class ConversationalService:
         self._agent_factory = agent_factory
         self._new_id = new_id
 
-    async def reply(self, message: str, *, tenant_id: UUID) -> str:
+    async def reply(self, message: str, *, organization_id: UUID) -> str:
         agent = self._agent_factory()
         output = await agent.invoke(
             AgentInput(
                 # Discarded: a conversational reply never becomes an
                 # Investigation, so there is nothing for this id to name.
                 investigation_id=self._new_id(),
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 state={"message": message},
             )
         )

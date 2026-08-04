@@ -1,6 +1,6 @@
 """Drive one real investigation end to end.
 
-Builds the same graph the API composition root builds, but seeds a tenant
+Builds the same graph the API composition root builds, but seeds an Organization
 directly and calls the service with a hand-made actor, so no Clerk setup is
 needed. Everything downstream of that — agents, routing, Cube, the confidence
 gate, agent_executions, the ClickHouse ledger — is the real thing.
@@ -51,8 +51,8 @@ from zentra_adapter_model_providers import (
 from zentra_adapter_postgres import Database, PostgresInvestigationUnitOfWorkFactory
 from zentra_adapter_postgres.schema import (
     agent_registry,
-    tenant_memberships,
-    tenants,
+    organization_memberships,
+    organizations,
     users,
 )
 from zentra_api.audit_delivery import AuditDeliveryCoordinator
@@ -80,14 +80,14 @@ RUNTIME_URL = os.environ.get(
 )
 
 
-async def seed_tenant(tier: str) -> tuple[UUID, UUID]:
-    """A tenant, a user, and an owner membership. Idempotent per run."""
-    tenant_id, user_id = uuid4(), uuid4()
+async def seed_organization(tier: str) -> tuple[UUID, UUID]:
+    """An Organization, a user, and an owner membership. Idempotent per run."""
+    organization_id, user_id = uuid4(), uuid4()
     engine = create_async_engine(OWNER_URL)
     async with engine.begin() as connection:
         await connection.execute(
-            insert(tenants).values(
-                tenant_id=tenant_id,
+            insert(organizations).values(
+                organization_id=organization_id,
                 name=f"Live run ({tier})",
                 model_tier=tier,
             )
@@ -96,7 +96,9 @@ async def seed_tenant(tier: str) -> tuple[UUID, UUID]:
             insert(users).values(user_id=user_id, email=f"{user_id}@live.test")
         )
         await connection.execute(
-            insert(tenant_memberships).values(tenant_id=tenant_id, user_id=user_id, role="owner")
+            insert(organization_memberships).values(
+                organization_id=organization_id, user_id=user_id, role="owner"
+            )
         )
         enabled = (
             (
@@ -114,7 +116,7 @@ async def seed_tenant(tier: str) -> tuple[UUID, UUID]:
             f"since the Orchestrator stopped synthesising. Run:\n"
             "  DATABASE_OWNER_URL=... npx nx run evals:promote"
         )
-    return tenant_id, user_id
+    return organization_id, user_id
 
 
 def build(
@@ -179,7 +181,7 @@ def _assemble(
     """Everything below the model seam, identical whichever client is above it."""
     uow = PostgresInvestigationUnitOfWorkFactory(database)
 
-    async def _unreachable_fingerprint(tenant_id, data_connection_id):
+    async def _unreachable_fingerprint(organization_id, data_connection_id):
         # live_run.py never targets a Data Connection — every investigation
         # here runs against the demo warehouse — so this resolver is never
         # actually called.
@@ -308,7 +310,7 @@ async def main() -> int:
         args.question = expected["question"]
 
     tier = ModelTier(args.tier)
-    tenant_id, user_id = await seed_tenant(args.tier)
+    organization_id, user_id = await seed_organization(args.tier)
 
     database = Database(RUNTIME_URL)
     service, models, audit = build(
@@ -321,7 +323,7 @@ async def main() -> int:
     )
     actor = AuthenticatedActor(
         user_id=user_id,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),

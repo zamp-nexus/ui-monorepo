@@ -120,7 +120,7 @@ class ThreadEvent(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     event_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     thread_id: UUID
     sequence: int = Field(ge=1)
     kind: WorkFeedEventKind

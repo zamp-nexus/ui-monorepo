@@ -154,7 +154,7 @@ def _seed(client, *, agent_id: str) -> None:
                 "running", [], "{}", now,
             ]],
             column_names=[
-                "entry_id", "trace_id", "span_id", "tenant_id",
+                "entry_id", "trace_id", "span_id", "organization_id",
                 "investigation_id", "event_type", "agent_id", "execution_id",
                 "step", "started_at", "completed_at", "latency_ms",
                 "input_tokens", "output_tokens", "total_cost_usd", "input_hash",

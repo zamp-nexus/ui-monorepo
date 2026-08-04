@@ -22,19 +22,26 @@ code_refs:
 
 # Identity and Tenancy
 
-A Tenant is the isolated customer organization. A User is a global human
-identity. A Membership relates one User to one Tenant with exactly one role:
-owner, admin, member, or viewer.
+An Organization is the isolated customer account. A User is a global human
+identity. A Membership relates one User to one Organization with exactly one
+role: owner, admin, member, or viewer.
 
 Clerk is the current provider, but provider subject and organization IDs remain
 bindings. Internal UUIDs own all product relationships. One User may hold
-Memberships in multiple Tenants.
+Memberships in multiple Organizations.
 
-The API establishes Tenant context from a verified token and active provider
-organization. Caller-supplied tenant identifiers are never authoritative.
+The API establishes Organization context from a verified token and active
+provider organization. Caller-supplied organization identifiers are never
+authoritative.
 
-Avoid “account,” “Clerk organization,” “tenant user,” and “guest membership”
-when naming domain facts. Canonical definitions:
-[ZentraOS domain context](../../libs/domain/CONTEXT.md).
+**Disambiguation:** "Organization" is overloaded — Clerk has its own external
+organization concept, with its own ID. Internal code and the schema keep these
+distinguishable by prefix: `external_organization_id` names Clerk's own ID;
+bare `organization_id` names this system's internal UUID. Never conflate the
+two, and never introduce a second naming scheme for the same distinction.
+
+Avoid “account,” “Clerk organization” (when the internal UUID is meant),
+“organization user,” and “guest membership” when naming domain facts.
+Canonical definitions: [ZentraOS domain context](../../libs/domain/CONTEXT.md).
 
 Parent: [[Domains MOC]]

@@ -56,7 +56,7 @@ def normalize_message_content(value: str) -> str:
 class ThreadMessage:
     message_id: UUID
     thread_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     author_id: UUID | None
     kind: ThreadMessageKind
     content: str
@@ -68,7 +68,7 @@ class ThreadMessage:
         *,
         message_id: UUID,
         thread_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         author_id: UUID | None,
         kind: ThreadMessageKind,
         content: str,
@@ -77,7 +77,7 @@ class ThreadMessage:
         return cls(
             message_id=message_id,
             thread_id=thread_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             author_id=author_id,
             kind=kind,
             content=normalize_message_content(content),
@@ -88,7 +88,7 @@ class ThreadMessage:
 @dataclass(slots=True)
 class InvestigationThread:
     thread_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     project_id: UUID
     initiating_message_id: UUID
     title: str
@@ -105,7 +105,7 @@ class InvestigationThread:
         cls,
         *,
         thread_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         project_id: UUID,
         initiating_message_id: UUID,
         title: str,
@@ -117,7 +117,7 @@ class InvestigationThread:
             raise ThreadMessageError("A Thread title is invalid")
         return cls(
             thread_id=thread_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             project_id=project_id,
             initiating_message_id=initiating_message_id,
             title=normalized_title,

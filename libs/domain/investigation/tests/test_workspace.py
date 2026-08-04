@@ -7,16 +7,16 @@ import pytest
 
 from zentra_domain_investigation import (
     Group,
-    OrganizationNameError,
+    GroupNameError,
     Project,
-    normalize_organization_name,
+    normalize_group_name,
 )
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
 
 
 def test_workspace_names_are_display_safe_and_normalized_for_uniqueness() -> None:
-    assert normalize_organization_name("  Revenue\u00a0  Operations  ") == (
+    assert normalize_group_name("  Revenue\u00a0  Operations  ") == (
         "Revenue Operations",
         "revenue operations",
     )
@@ -24,8 +24,8 @@ def test_workspace_names_are_display_safe_and_normalized_for_uniqueness() -> Non
 
 @pytest.mark.parametrize("name", ["", "   ", "x" * 101, "bad\x00name"])
 def test_workspace_names_reject_invalid_values(name: str) -> None:
-    with pytest.raises(OrganizationNameError):
-        normalize_organization_name(name)
+    with pytest.raises(GroupNameError):
+        normalize_group_name(name)
 
 
 def test_group_archive_and_restore_preserve_identity_and_name() -> None:

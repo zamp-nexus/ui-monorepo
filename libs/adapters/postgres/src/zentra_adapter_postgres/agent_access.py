@@ -23,7 +23,7 @@ from .schema_connector import catalog_agent_access
 def _from_row(row: Any) -> CatalogAccessOverride:
     return CatalogAccessOverride(
         override_id=row.override_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         data_source_id=row.data_source_id,
         table_name=row.table_name,
         field_name=row.field_name,
@@ -47,7 +47,7 @@ class PostgresAgentAccessRepository:
     async def upsert(self, override: CatalogAccessOverride) -> None:
         values = {
             "override_id": override.override_id,
-            "tenant_id": override.tenant_id,
+            "organization_id": override.organization_id,
             "data_source_id": override.data_source_id,
             "table_name": override.table_name,
             "field_name": override.field_name,
@@ -56,13 +56,20 @@ class PostgresAgentAccessRepository:
             "decided_at": override.decided_at,
         }
         if override.is_table_level:
-            index_elements = ["tenant_id", "data_source_id", "table_name"]
+            index_elements = ["organization_id", "data_source_id", "table_name"]
             index_where = text("field_name IS NULL")
         else:
-            index_elements = ["tenant_id", "data_source_id", "table_name", "field_name"]
+            index_elements = [
+                "organization_id",
+                "data_source_id",
+                "table_name",
+                "field_name",
+            ]
             index_where = text("field_name IS NOT NULL")
 
-        async with self._database.tenant_connection(override.tenant_id) as connection:
+        async with self._database.organization_connection(
+            override.organization_id
+        ) as connection:
             await connection.execute(
                 insert(catalog_agent_access)
                 .values(**values)
@@ -78,14 +85,16 @@ class PostgresAgentAccessRepository:
             )
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogAccessOverride]:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(catalog_agent_access).where(
                         catalog_agent_access.c.data_source_id == data_source_id,
-                        catalog_agent_access.c.tenant_id == tenant_id,
+                        catalog_agent_access.c.organization_id == organization_id,
                     )
                 )
             ).all()

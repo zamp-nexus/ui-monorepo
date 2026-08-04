@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.mark.asyncio
 async def test_append_replay_order_and_restricted_grants() -> None:
     assert CLICKHOUSE_HOST is not None
-    tenant_id = uuid4()
+    organization_id = uuid4()
     investigation_id = uuid4()
     now = datetime.now(UTC)
     repository = AuditRepository.connect(
@@ -37,7 +37,7 @@ async def test_append_replay_order_and_restricted_grants() -> None:
         entry_id=UUID("81000000-0000-0000-0000-000000000002"),
         trace_id=uuid4(),
         span_id=uuid4(),
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         investigation_id=investigation_id,
         event_type="integration.replay",
         started_at=now + timedelta(seconds=1),
@@ -61,7 +61,7 @@ async def test_append_replay_order_and_restricted_grants() -> None:
     await repository.append(earlier_entry)
 
     replay = await repository.list_for_investigation(
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         investigation_id=investigation_id,
     )
     assert [row["input_hash"] for row in replay] == [
@@ -80,6 +80,6 @@ async def test_append_replay_order_and_restricted_grants() -> None:
     with pytest.raises(DatabaseError, match="Not enough privileges"):
         runtime_client.command(
             "ALTER TABLE audit_entries UPDATE status = 'tampered' "
-            f"WHERE tenant_id = '{tenant_id}'"
+            f"WHERE organization_id = '{organization_id}'"
         )
     runtime_client.close()

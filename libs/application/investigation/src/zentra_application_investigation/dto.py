@@ -62,7 +62,7 @@ class ScenarioUnavailableError(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class AuthenticatedActor:
     user_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     role: Role
     trace_id: UUID
     span_id: UUID

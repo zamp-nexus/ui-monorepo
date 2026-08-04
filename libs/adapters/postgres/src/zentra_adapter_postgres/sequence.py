@@ -29,7 +29,7 @@ from zentra_domain_sequence import (
     build_sequence_operation,
 )
 
-from .database import Database, set_tenant_context
+from .database import Database, set_organization_context
 from .schema import (
     prepared_tables,
     sequence_final_tables,
@@ -88,7 +88,7 @@ def _sequence_from_row(row: Any) -> Sequence:
     value = row._mapping
     return Sequence(
         sequence_id=value["sequence_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         dataset_workspace_id=value["dataset_workspace_id"],
         raw_table_reference=_raw_table_from_row(
             value["raw_table_kind"], value["raw_table_payload"]
@@ -104,14 +104,14 @@ def _step_from_row(row: Any) -> SequenceStep:
     input_reference = None
     if value["input_reference_id"] is not None:
         input_reference = SequenceTableReference(
-            tenant_id=value["tenant_id"],
+            organization_id=value["organization_id"],
             reference_id=value["input_reference_id"],
             kind="prepared",
         )
     return SequenceStep(
         step_id=value["step_id"],
         sequence_id=value["sequence_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         operation=build_sequence_operation(
             value["operation_kind"], value["operation_parameters"]
         ),
@@ -126,13 +126,13 @@ def _prepared_table_from_row(row: Any) -> PreparedTable:
     parent_reference = None
     if value["parent_prepared_table_id"] is not None:
         parent_reference = SequenceTableReference(
-            tenant_id=value["tenant_id"],
+            organization_id=value["organization_id"],
             reference_id=value["parent_prepared_table_id"],
             kind="prepared",
         )
     return PreparedTable(
         prepared_table_id=value["prepared_table_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         sequence_id=value["sequence_id"],
         step_id=value["step_id"],
         parent_table_reference=parent_reference,
@@ -147,7 +147,7 @@ def _run_from_row(row: Any) -> SequenceRun:
     return SequenceRun(
         run_id=value["run_id"],
         sequence_id=value["sequence_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         step_id=value["step_id"],
         outcome=_run_outcome_from_row(value),
         attempted_at=value["attempted_at"],
@@ -169,7 +169,7 @@ class PostgresSequenceRepository:
         await self._connection.execute(
             insert(sequences).values(
                 sequence_id=sequence.sequence_id,
-                tenant_id=sequence.tenant_id,
+                organization_id=sequence.organization_id,
                 dataset_workspace_id=sequence.dataset_workspace_id,
                 thread_id=sequence.thread_id,
                 raw_table_kind=raw_table_kind,
@@ -230,7 +230,7 @@ class PostgresSequenceRepository:
         return sequence
 
     async def list_sequences(
-        self, *, tenant_id: UUID, dataset_workspace_id: UUID
+        self, *, organization_id: UUID, dataset_workspace_id: UUID
     ) -> tuple[SequenceListItem, ...]:
         """The Dataset Workspace's Sequences, most recently active first.
 
@@ -272,7 +272,7 @@ class PostgresSequenceRepository:
                 failed_run_count.label("failed_run_count"),
             )
             .where(
-                sequences.c.tenant_id == tenant_id,
+                sequences.c.organization_id == organization_id,
                 sequences.c.dataset_workspace_id == dataset_workspace_id,
             )
             .order_by(sequences.c.updated_at.desc(), sequences.c.sequence_id.desc())
@@ -310,7 +310,7 @@ class PostgresSequenceRepository:
             insert(sequence_steps).values(
                 step_id=step.step_id,
                 sequence_id=step.sequence_id,
-                tenant_id=step.tenant_id,
+                organization_id=step.organization_id,
                 operation_kind=operation_kind,
                 operation_parameters=operation_parameters,
                 input_reference_id=(
@@ -325,7 +325,7 @@ class PostgresSequenceRepository:
         await self._connection.execute(
             insert(prepared_tables).values(
                 prepared_table_id=table.prepared_table_id,
-                tenant_id=table.tenant_id,
+                organization_id=table.organization_id,
                 sequence_id=table.sequence_id,
                 step_id=table.step_id,
                 parent_prepared_table_id=(
@@ -344,7 +344,7 @@ class PostgresSequenceRepository:
             insert(sequence_runs).values(
                 run_id=run.run_id,
                 sequence_id=run.sequence_id,
-                tenant_id=run.tenant_id,
+                organization_id=run.organization_id,
                 step_id=run.step_id,
                 attempted_at=run.attempted_at,
                 **_run_outcome_to_row(run.outcome),
@@ -356,14 +356,14 @@ class PostgresSequenceRepository:
         *,
         sequence_id: UUID,
         prepared_table_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         marked_at: datetime,
     ) -> None:
         await self._connection.execute(
             insert(sequence_final_tables).values(
                 sequence_id=sequence_id,
                 prepared_table_id=prepared_table_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 marked_at=marked_at,
             )
         )
@@ -393,14 +393,14 @@ class PostgresSequenceUnitOfWorkFactory:
     @asynccontextmanager
     async def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
     ) -> AsyncIterator[PostgresSequenceUnitOfWork]:
         del trace_id, span_id
         async with self._database.engine.connect() as connection:
             transaction = await connection.begin()
-            await set_tenant_context(connection, tenant_id)
+            await set_organization_context(connection, organization_id)
             unit_of_work = PostgresSequenceUnitOfWork(connection)
             try:
                 yield unit_of_work

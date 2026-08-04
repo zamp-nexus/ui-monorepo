@@ -120,9 +120,9 @@ async def context(
     identity = resolved.identity
     return ContextResponse(
         user_id=identity.user_id,
-        tenant_id=identity.tenant_id,
+        organization_id=identity.organization_id,
         email=identity.email,
-        tenant_name=identity.tenant_name,
+        organization_name=identity.organization_name,
         role=identity.role,
     )
 
@@ -132,16 +132,17 @@ async def catalog(
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> CatalogSummaryResponse:
-    """The governed vocabulary this tenant may ask questions about.
+    """The governed vocabulary this Organization may ask questions about.
 
-    Resolved per tenant, so it is the tenant's own catalog and never another's
+    Resolved per Organization, so it is the Organization's own catalog and never
+    another's
     — the whole reason `ScopedCubeSemanticLayers` exists. Measures and
     dimensions only: no rows, and no physical schema.
     """
     dependencies = request.app.state.dependencies
     semantic_layer = await dependencies.semantic_layers.resolve(
-        tenant_id=resolved.actor.tenant_id,
-        # The tenant's own connection, not the demo warehouse. Serving the demo
+        organization_id=resolved.actor.organization_id,
+        # The Organization's own connection, not the demo warehouse. Serving the demo
         # catalog here would offer a question the Investigation cannot answer.
         data_connection_id=await _active_connection(dependencies, resolved.actor),
     )
@@ -337,7 +338,7 @@ async def execute_visualization_action(
     resolved: AuthenticatedRequest,
 ) -> VisualizationActionResponse:
     # C1-generated parameters are intentionally ignored. The opaque action ID
-    # resolves to the server-stored mapping after tenant reauthorization.
+    # resolves to the server-stored mapping after Organization reauthorization.
     del body
     try:
         result = await request.app.state.dependencies.visualizations.execute_action(
@@ -375,7 +376,7 @@ async def resolve_citation(
     checked first: a citation id must not become a way to probe an
     Investigation the caller cannot read.
 
-    There is no Tenant parameter, here or anywhere below. Identity comes from
+    There is no Organization parameter, here or anywhere below. Identity comes from
     the verified token, so there is nothing for a caller to supply or override.
     """
     started = perf_counter()
@@ -392,8 +393,8 @@ async def resolve_citation(
         )
     except InvestigationNotFoundError as error:
         state = "inaccessible"
-        failure_category = "not_visible_to_tenant"
-        # Same answer for another Tenant's, another Investigation's, and
+        failure_category = "not_visible_to_organization"
+        # Same answer for another Organization's, another Investigation's, and
         # nonexistent. A caller who could tell them apart could confirm that
         # somebody else's evidence exists.
         raise HTTPException(status_code=404, detail="Evidence was not found") from error

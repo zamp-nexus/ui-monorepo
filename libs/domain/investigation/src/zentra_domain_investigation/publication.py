@@ -32,7 +32,7 @@ class PublicationCondition(StrEnum):
 
     #: The Evaluator's independent recheck agreed with the Analyst.
     CONVERGED = "converged"
-    #: Bounded confidence cleared the Tenant's threshold. Bounded, not
+    #: Bounded confidence cleared the Organization's threshold. Bounded, not
     #: reported: the ceilings for sample size and model independence have
     #: already been applied.
     CONFIDENT = "confident"

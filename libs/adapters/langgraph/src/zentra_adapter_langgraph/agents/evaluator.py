@@ -154,7 +154,9 @@ class EvaluatorAgent:
             score = min(score, 0.49)
 
         # Whichever tool actually ran the query this Citation must name.
-        ran_tool = raw_query_tool if raw_query_tool.last_query is not None else query_tool
+        ran_tool = (
+            raw_query_tool if raw_query_tool.last_query is not None else query_tool
+        )
 
         return validate_agent_output(
             self,

@@ -153,7 +153,9 @@ class CubeAnalystAgent:
         # cannot run "first" in a way that matters here — an invocation reaches
         # for one or the other, never a meaningful mix — so the one that has a
         # last_query at all is the one that answered.
-        ran_tool = raw_query_tool if raw_query_tool.last_query is not None else query_tool
+        ran_tool = (
+            raw_query_tool if raw_query_tool.last_query is not None else query_tool
+        )
 
         return validate_agent_output(
             self,

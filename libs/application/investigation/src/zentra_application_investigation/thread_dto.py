@@ -36,7 +36,7 @@ class ThreadCursorError(ValueError):
 class RoutingDisposition(StrEnum):
     RESOLVED = "resolved"
     # Read-compatibility only (ADR-0023). Routing matched free text against two
-    # governed scenarios and refused everything else; a tenant's questions are
+    # governed scenarios and refused everything else; an organization's questions are
     # its own now, so nothing produces these. Threads and Work Feed events
     # written before that carry them and must stay readable.
     AMBIGUOUS = "ambiguous"
