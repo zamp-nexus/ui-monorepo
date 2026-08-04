@@ -21,6 +21,7 @@ export interface NavItem {
  */
 export const navItems: readonly NavItem[] = [
   { label: 'Analyze', to: '/chats', icon: 'message_square' },
+  { label: 'Workflows', to: '/workflows', icon: 'network' },
   {
     label: 'Data',
     to: '/datasets',

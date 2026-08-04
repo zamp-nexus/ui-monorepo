@@ -290,6 +290,76 @@ Index(
     analysis_runs.c.created_at,
 )
 
+# Workflow Studio V1 keeps the editable canvas separate from immutable
+# published snapshots. Custom Workflows are intentionally not connected to the
+# Analysis Run runtime yet; these tables persist authored definitions only.
+workflow_definitions = Table(
+    "workflow_definitions",
+    metadata,
+    Column(
+        "workflow_id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    ),
+    Column(
+        "organization_id",
+        UUID(as_uuid=True),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("name", Text, nullable=False),
+    Column("draft_definition", JSON, nullable=False),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column(
+        "updated_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    UniqueConstraint("workflow_id", "organization_id", name="uq_workflows_organization_identity"),
+)
+Index("ix_workflows_organization_updated", workflow_definitions.c.organization_id, workflow_definitions.c.updated_at)
+
+workflow_versions = Table(
+    "workflow_versions",
+    metadata,
+    Column(
+        "workflow_version_id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    ),
+    Column(
+        "workflow_id",
+        UUID(as_uuid=True),
+        ForeignKey("workflow_definitions.workflow_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "organization_id",
+        UUID(as_uuid=True),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("version", Integer, nullable=False),
+    Column("definition", JSON, nullable=False),
+    Column("published_by_user_id", UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False),
+    Column(
+        "published_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    UniqueConstraint("workflow_id", "version", name="uq_workflow_versions_number"),
+)
+Index("ix_workflow_versions_organization_published", workflow_versions.c.organization_id, workflow_versions.c.published_at)
+
 # `messages.analysis_run_id` is declared in schema_threads.py, before this
 # table exists — added here with the same deferred, use_alter pattern
 # `chat_sessions.initiating_message_id` already uses against `messages`,

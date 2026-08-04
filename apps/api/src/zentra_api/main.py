@@ -19,6 +19,7 @@ from .sequence_routes import router as sequence_router
 from .settings_routes import router as settings_router
 from .settings import Settings
 from .webhook_routes import router as webhook_router
+from .workflow_routes import router as workflow_router
 from .workspace_routes import router as workspace_router
 
 
@@ -110,6 +111,7 @@ def create_app(
     api.include_router(sequence_router)
     api.include_router(settings_router)
     api.include_router(webhook_router)
+    api.include_router(workflow_router)
     configure_telemetry(
         api,
         TelemetrySettings(

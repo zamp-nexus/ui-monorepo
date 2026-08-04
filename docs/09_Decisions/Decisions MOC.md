@@ -44,6 +44,7 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0025-the-sql-analyst-is-renamed-the-cube-analyst]]
 - [[adr/0026-investigation-engine-owns-orchestration]] (amends 0011, 0018)
 - [[adr/0027-analytical-scope-replaces-scenario-whitelist]] (amends Investigation Domain routing invariant)
+- [[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]
 
 ## Governance
 

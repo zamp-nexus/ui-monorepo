@@ -27,6 +27,7 @@ import {
 import { SequenceDetailPage } from './pages/sequences/sequence-detail-page';
 import { SequencesPage } from './pages/sequences/sequences-page';
 import { SettingsPage } from './pages/settings/settings-page';
+import { WorkflowStudioPage } from './pages/workflows/workflow-studio-page';
 import { AppShell } from './shell/app-shell';
 import type { IdentityContext, ReadinessResponse } from './types';
 
@@ -129,6 +130,10 @@ const AuthenticatedWorkspace = () => {
         <Route
           path="/chats/:chatId"
           element={<ChatPage getToken={getToken} identity={identity.data} />}
+        />
+        <Route
+          path="/workflows"
+          element={<WorkflowStudioPage getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/datasets"
