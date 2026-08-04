@@ -1143,7 +1143,7 @@ async def test_an_owner_deletes_and_it_is_recorded_once() -> None:
         if event.event_type == "analysis_run.evidence_erased"
     ]
     assert len(erased) == 1
-    assert erased[0].metadata == {"category": "tenant_request"}
+    assert erased[0].metadata == {"category": "organization_request"}
 
 
 @pytest.mark.asyncio

@@ -102,7 +102,7 @@ def test_canonical_analysis_run_requires_human_approval() -> None:
 
     assert analysis_run.status is AnalysisRunStatus.AWAITING_APPROVAL
     assert analysis_run.evaluation_attempts == 1
-    assert approval_reason == "tenant_policy"
+    assert approval_reason == "organization_policy"
     assert [event.event_type for event in analysis_run.events] == [
         "analysis_run.created",
         "analysis_run.started",
@@ -269,7 +269,7 @@ def test_same_decision_is_idempotent_but_conflicting_decision_is_rejected() -> N
         approval_id=UUID("33000000-0000-0000-0000-000000000003"),
         analysis_run_id=ANALYSIS_RUN_ID,
         organization_id=TENANT_ID,
-        reason="tenant_policy",
+        reason="organization_policy",
         status=HumanApprovalStatus.PENDING,
         requested_at=NOW,
     )

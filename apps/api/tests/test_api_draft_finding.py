@@ -545,7 +545,7 @@ def test_a_tombstone_response_carries_nothing_but_identity_and_time(
         AnalysisRunServiceStub(),
         Tombstone(
             citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
-            category="tenant_request",
+            category="organization_request",
             erased_at=datetime(2026, 7, 31, 14, 0, tzinfo=_UTC),
         ),
     )
