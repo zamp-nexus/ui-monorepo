@@ -45,6 +45,9 @@ interface Line {
   readonly role: string | null;
   readonly text: string;
   readonly done: boolean;
+  /** The Agent's own account of why, from `agent.completed`. Distinct from
+   * `text` (a status sentence) -- rendered as its own, visually lighter line. */
+  readonly reasoning: string | null;
 }
 
 const isAgentPayload = (
@@ -70,6 +73,7 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
         role: null,
         text: 'Analysis Run queued.',
         done: true,
+        reasoning: null,
       });
       continue;
     }
@@ -80,6 +84,7 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
         role: 'insight',
         text: `Finding published with ${event.payload.citation_count} citations.`,
         done: true,
+        reasoning: null,
       });
       continue;
     }
@@ -93,6 +98,7 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
         role: payload.role,
         text: payload.summary ?? 'Working…',
         done: false,
+        reasoning: null,
       });
       continue;
     }
@@ -103,6 +109,7 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
         role: payload.role,
         text: payload.summary,
         done: false,
+        reasoning: null,
       });
       continue;
     }
@@ -113,17 +120,40 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
         role: payload.role,
         text: payload.summary ?? 'Handed the work on.',
         done: false,
+        reasoning: null,
       });
       continue;
     }
     if (event.kind === 'agent.completed') {
-      // Close out this agent's open lines rather than adding another.
+      // Close out this agent's open lines rather than adding another. The
+      // reasoning (if any) belongs on the most recent of them, not repeated
+      // across every line this agent wrote.
+      let reasoningAssigned = false;
       for (let index = lines.length - 1; index >= 0; index -= 1) {
-        if (lines[index].agentId === payload.agent_id)
+        if (lines[index].agentId === payload.agent_id) {
           lines[index] = {
             ...lines[index],
             done: true,
+            reasoning:
+              !reasoningAssigned && payload.reasoning
+                ? payload.reasoning
+                : lines[index].reasoning,
           };
+          reasoningAssigned = true;
+        }
+      }
+      // No open line to close -- this agent never had a `started` line on
+      // this feed (a resumed stream, or one that dropped it). Its completion
+      // still deserves a line rather than vanishing silently.
+      if (!reasoningAssigned) {
+        lines.push({
+          id: event.event_id,
+          agentId: payload.agent_id,
+          role: payload.role,
+          text: payload.summary ?? 'Completed.',
+          done: true,
+          reasoning: payload.reasoning,
+        });
       }
     }
   }
@@ -212,6 +242,11 @@ export const AgentProgress = ({
                     {line.text}
                   </motion.span>
                 )}
+                {line.reasoning ? (
+                  <span className="mt-0.5 block text-xs italic text-foreground-muted">
+                    {line.reasoning}
+                  </span>
+                ) : null}
               </span>
             </motion.li>
           ))}

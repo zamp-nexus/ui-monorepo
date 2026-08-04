@@ -77,6 +77,7 @@ class IntakeAgent:
         resolved = decision.get("disposition") == "resolved" and bool(
             decision.get("normalized_question")
         )
+        reasoning = str(decision.get("reasoning", ""))
 
         return validate_agent_output(
             self,
@@ -85,8 +86,9 @@ class IntakeAgent:
                     "disposition": decision.get("disposition", "unsupported"),
                     "normalized_question": decision.get("normalized_question"),
                     "clarification": decision.get("clarification"),
-                    "reasoning": decision.get("reasoning", ""),
+                    "reasoning": reasoning,
                 },
+                reasoning=reasoning or None,
                 outcome=ValidationOutcome(
                     passed=resolved,
                     checks=("The question resolves inside the Analytical Scope.",),

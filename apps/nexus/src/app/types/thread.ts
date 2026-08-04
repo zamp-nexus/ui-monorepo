@@ -242,6 +242,9 @@ export interface AgentEventPayload {
   readonly to_agent_id: string | null;
   /** The public sentence. Never a prompt, a row, or a credential. */
   readonly summary: string | null;
+  /** The Agent's own account of why, in its own words. Present only when the
+   * Agent produced one -- distinct from `summary`, which is a status line. */
+  readonly reasoning: string | null;
   readonly provider: string | null;
   readonly model: string | null;
   readonly fallback_count: number;

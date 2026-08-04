@@ -72,6 +72,10 @@ class AgentEventPayload(_Payload):
     from_agent_id: str | None = Field(default=None, max_length=128)
     to_agent_id: str | None = Field(default=None, max_length=128)
     summary: str | None = Field(default=None, max_length=280)
+    # The Agent's own account of why it answered this way. Distinct from
+    # `summary` (a status sentence written for the feed): this is the Agent's
+    # sentence about its reasoning, present only when the Agent produced one.
+    reasoning: str | None = Field(default=None, max_length=1_000)
     provider: str | None = Field(default=None, max_length=64)
     model: str | None = Field(default=None, max_length=160)
     fallback_count: int = Field(default=0, ge=0, le=16)

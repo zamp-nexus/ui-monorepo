@@ -295,6 +295,10 @@ class AgentExecutionRecord(BaseModel):
     # Agent that searched the catalog four times and queried twice is
     # indistinguishable in Replay from one that answered in a single shot.
     tool_calls: tuple[ToolInvocation, ...] = ()
+    # Mirrors `AgentOutput.reasoning`: the Agent's own sentence about why,
+    # carried onto the record so the chat surface can show it without
+    # reaching into `output`, which may hold more than ADR-0006 allows there.
+    reasoning: str | None = None
     started_at: datetime
     completed_at: datetime
 

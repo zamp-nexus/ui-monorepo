@@ -172,6 +172,11 @@ class AgentOutput(BaseModel):
     outcome: OutcomeSignal
     usage: ExecutionUsage = ExecutionUsage()
     fallbacks: tuple[str, ...] = ()
+    # The Agent's own account of why it answered as it did, in its own words.
+    # Distinct from `fields`: this is the one piece of an Agent's internal
+    # account that ADR-0006 permits onto the chat surface, never a Tool's
+    # arguments or the rows a query returned.
+    reasoning: str | None = None
     # Which tools the Agent ran to get here. Empty for an Agent that holds
     # none, which is most of them. Carried on the output rather than returned
     # separately so the record written for this step cannot disagree with the
