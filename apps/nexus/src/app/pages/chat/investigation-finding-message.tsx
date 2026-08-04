@@ -20,7 +20,6 @@ import { useState } from 'react';
 
 import type { ToolCallMessagePartComponent } from '@assistant-ui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 
 import { Badge, Button, Card } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
@@ -28,6 +27,8 @@ import { Icon } from '@open-zentra/foundation-icons';
 import { AgentActivityBlock } from './agent-activity-block';
 import { cancelAnalysisRun, decideApproval, retryAnalysisRun } from './api';
 import { useChatContext } from './chat-context';
+import { CitationsDisclosure } from './citations-disclosure';
+import { OutcomeBadge } from './outcome-badge';
 import type { AnalysisRunFindingResult } from './to-chat-message';
 import { VisualizationAnswer } from './visualization-answer';
 
@@ -122,6 +123,14 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
           </>
         ) : null}
 
+        <OutcomeBadge outcome={analysisRun.outcome} />
+
+        <CitationsDisclosure
+          getToken={getToken}
+          analysisRunId={analysisRun.analysis_run_id}
+          citations={analysisRun.citations ?? []}
+        />
+
         {working ? (
           <p
             className="font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted"
@@ -143,14 +152,6 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
           analysisRunId={analysisRun.analysis_run_id}
           onFollowUp={onFollowUp}
         />
-
-        <Link
-          className="mt-4 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-primary no-underline hover:underline"
-          to={`/analysis-runs/${analysisRun.analysis_run_id}`}
-        >
-          <Icon name="search" size="sm" />
-          Open the evidence trace
-        </Link>
 
         {isLatest && (awaitingDecision || threadActions.can_cancel || threadActions.can_retry) ? (
           <div className="mt-4 flex flex-col gap-3">

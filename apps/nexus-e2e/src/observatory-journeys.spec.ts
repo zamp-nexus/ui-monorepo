@@ -11,6 +11,14 @@
  * Fixtures come from `tools/e2e/fixtures.py` and are addressed by fixed id, so
  * a deep link is a literal a spec can write down — which is also what
  * criterion 9 asks the product to support.
+ *
+ * The standalone `/investigations/:id` (later `/analysis-runs/:id`) page this
+ * file exercised was removed in #117 -- citations, outcome and approval now
+ * render inline in the Chat surface instead. Every suite below is skipped
+ * rather than rewritten: a Playwright rewrite for the inline surface is out
+ * of scope for #117 (covered instead by `chat.spec.tsx`), so these are left
+ * in place, disabled, as a record of the journeys that still need an
+ * equivalent once an inline e2e pass is scoped.
  */
 
 import AxeBuilder from '@axe-core/playwright';
@@ -33,7 +41,7 @@ const open = async (page: Page, id: string) => {
   await expect(page.locator('[data-state="structured"]')).toBeVisible();
 };
 
-test.describe('an automatically publishable Investigation', () => {
+test.describe.skip('an automatically publishable Investigation', () => {
   test('exposes each claim with its own measurement', async ({ owner }) => {
     await open(owner, PUBLISHED);
 
@@ -64,7 +72,7 @@ test.describe('an automatically publishable Investigation', () => {
   });
 });
 
-test.describe('an Investigation held back from publication', () => {
+test.describe.skip('an Investigation held back from publication', () => {
   test('shows the contradiction rather than smoothing it away', async ({ owner }) => {
     await open(owner, CONTRADICTED);
 
@@ -85,7 +93,7 @@ test.describe('an Investigation held back from publication', () => {
   });
 });
 
-test.describe('authorization is the server’s answer, not the browser’s', () => {
+test.describe.skip('authorization is the server’s answer, not the browser’s', () => {
   for (const role of ['viewer', 'member'] as const) {
     test(`a ${role} gets no decision controls`, async ({ page, baseURL }) => {
       const { origin } = new URL(baseURL ?? 'http://localhost:4200');
@@ -103,7 +111,7 @@ test.describe('authorization is the server’s answer, not the browser’s', () 
   }
 });
 
-test.describe('reconstruction', () => {
+test.describe.skip('reconstruction', () => {
   test('a deep link and a refresh show the same Finding', async ({ owner }) => {
     await open(owner, PUBLISHED);
     const panel = owner.locator('[data-state="structured"]');
@@ -118,7 +126,7 @@ test.describe('reconstruction', () => {
   });
 });
 
-test.describe('nothing a Tenant owns leaks into the page', () => {
+test.describe.skip('nothing a Tenant owns leaks into the page', () => {
   for (const [name, id] of [
     ['published', PUBLISHED],
     ['gated', GATED],
@@ -144,7 +152,7 @@ test.describe('nothing a Tenant owns leaks into the page', () => {
   }
 });
 
-test.describe('accessibility', () => {
+test.describe.skip('accessibility', () => {
   for (const [name, id] of [
     ['published', PUBLISHED],
     ['gated', GATED],
