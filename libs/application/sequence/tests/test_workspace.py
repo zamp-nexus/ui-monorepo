@@ -6,8 +6,8 @@ from zentra_application_sequence import dataset_workspace_id_for
 
 
 def test_the_same_tenant_always_derives_the_same_workspace_id() -> None:
-    tenant_id = uuid4()
-    assert dataset_workspace_id_for(tenant_id) == dataset_workspace_id_for(tenant_id)
+    organization_id = uuid4()
+    assert dataset_workspace_id_for(organization_id) == dataset_workspace_id_for(organization_id)
 
 
 def test_different_tenants_derive_different_workspace_ids() -> None:

@@ -32,36 +32,36 @@ def test_every_table_is_tenant_scoped() -> None:
         sequence_runs,
         sequence_final_tables,
     ):
-        assert "tenant_id" in table.c, f"{table.name} has no tenant_id column"
+        assert "organization_id" in table.c, f"{table.name} has no organization_id column"
 
 
 def test_sequences_carries_its_own_tenant_identity_for_children_to_target() -> None:
-    assert "uq_sequences_tenant_identity" in _unique_names(sequences)
+    assert "uq_sequences_organization_identity" in _unique_names(sequences)
 
 
 def test_sequence_steps_are_tenant_scoped_to_their_sequence() -> None:
-    assert ("sequences.sequence_id", "sequences.tenant_id") in _fk_targets(
+    assert ("sequences.sequence_id", "sequences.organization_id") in _fk_targets(
         sequence_steps
     )
-    assert "uq_sequence_steps_tenant_identity" in _unique_names(sequence_steps)
+    assert "uq_sequence_steps_organization_identity" in _unique_names(sequence_steps)
 
 
 def test_prepared_tables_are_tenant_scoped_to_their_sequence_and_step() -> None:
     fk_targets = _fk_targets(prepared_tables)
-    assert ("sequences.sequence_id", "sequences.tenant_id") in fk_targets
-    assert ("sequence_steps.step_id", "sequence_steps.tenant_id") in fk_targets
-    assert "uq_prepared_tables_tenant_identity" in _unique_names(prepared_tables)
+    assert ("sequences.sequence_id", "sequences.organization_id") in fk_targets
+    assert ("sequence_steps.step_id", "sequence_steps.organization_id") in fk_targets
+    assert "uq_prepared_tables_organization_identity" in _unique_names(prepared_tables)
 
 
 def test_prepared_tables_self_reference_their_parent_for_lineage() -> None:
     fk_targets = _fk_targets(prepared_tables)
-    assert ("prepared_tables.prepared_table_id", "prepared_tables.tenant_id") in (
+    assert ("prepared_tables.prepared_table_id", "prepared_tables.organization_id") in (
         fk_targets
     )
 
 
 def test_sequence_runs_are_tenant_scoped_to_their_sequence() -> None:
-    assert ("sequences.sequence_id", "sequences.tenant_id") in _fk_targets(
+    assert ("sequences.sequence_id", "sequences.organization_id") in _fk_targets(
         sequence_runs
     )
 
@@ -78,10 +78,10 @@ def test_sequence_runs_encode_a_typed_succeeded_or_failed_outcome() -> None:
 
 def test_sequence_final_tables_is_a_join_table_scoped_to_both_parents() -> None:
     fk_targets = _fk_targets(sequence_final_tables)
-    assert ("sequences.sequence_id", "sequences.tenant_id") in fk_targets
+    assert ("sequences.sequence_id", "sequences.organization_id") in fk_targets
     assert (
         "prepared_tables.prepared_table_id",
-        "prepared_tables.tenant_id",
+        "prepared_tables.organization_id",
     ) in fk_targets
 
 

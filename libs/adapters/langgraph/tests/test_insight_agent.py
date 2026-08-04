@@ -113,7 +113,7 @@ async def test_a_refusal_never_carries_the_content_it_refused(payload: object) -
         await agent.invoke(
             AgentInput(
                 analysis_run_id=ANALYSIS_RUN_ID,
-                tenant_id=TENANT_ID,
+                organization_id=TENANT_ID,
                 state=UPSTREAM,
             )
         )
@@ -137,7 +137,7 @@ async def test_no_metrics_with_a_summary_drafts_an_informational_finding() -> No
     output = await agent.invoke(
         AgentInput(
             analysis_run_id=ANALYSIS_RUN_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What tables are available in the catalog?",
                 "analyst": {
@@ -186,7 +186,7 @@ async def test_a_long_summary_yields_a_headline_within_the_brief_bound() -> None
     output = await agent.invoke(
         AgentInput(
             analysis_run_id=ANALYSIS_RUN_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What tables are available in the catalog?",
                 "analyst": {
@@ -212,7 +212,7 @@ async def test_no_metrics_and_no_summary_still_refuses() -> None:
         await agent.invoke(
             AgentInput(
                 analysis_run_id=ANALYSIS_RUN_ID,
-                tenant_id=TENANT_ID,
+                organization_id=TENANT_ID,
                 state={
                     "question": QUESTION,
                     "analyst": {"metrics": [], "result_summary": ""},
@@ -264,7 +264,7 @@ async def test_a_claim_citing_an_earlier_point_in_a_breakdown_is_not_ungrounded(
     output = await agent.invoke(
         AgentInput(
             analysis_run_id=ANALYSIS_RUN_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             state={
                 "question": "What is the count of started applications by date "
                 "for the last month?",

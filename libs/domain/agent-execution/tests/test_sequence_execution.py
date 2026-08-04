@@ -22,13 +22,13 @@ TABLE_ID = UUID("60000000-0000-0000-0000-000000000003")
 
 def _request(**overrides: object) -> SequenceStepExecutionRequest:
     fields: dict[str, object] = {
-        "tenant_id": TENANT_ID,
+        "organization_id": TENANT_ID,
         "sequence_id": SEQUENCE_ID,
         "step_id": STEP_ID,
         "operation_kind": "drop_nulls",
         "operation_parameters": {"columns": ["email"], "strategy": "any"},
         "input_table": SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=TABLE_ID, kind="raw"
+            organization_id=TENANT_ID, reference_id=TABLE_ID, kind="raw"
         ),
     }
     fields.update(overrides)
@@ -46,7 +46,7 @@ def test_request_is_frozen_and_forbids_unknown_fields() -> None:
 
 def test_table_reference_is_scoped_and_tagged() -> None:
     reference = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=TABLE_ID, kind="prepared"
+        organization_id=TENANT_ID, reference_id=TABLE_ID, kind="prepared"
     )
     assert reference.kind == "prepared"
 
@@ -55,7 +55,7 @@ def test_success_result_carries_the_new_table_and_metadata() -> None:
     result = SequenceStepExecutionResult(
         request=_request(),
         output_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=TABLE_ID, kind="prepared"
+            organization_id=TENANT_ID, reference_id=TABLE_ID, kind="prepared"
         ),
         row_count=41,
         columns=("email", "amount"),

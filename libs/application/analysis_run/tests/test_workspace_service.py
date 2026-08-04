@@ -88,7 +88,7 @@ class UnitOfWorkFactory:
         self.repository = repository
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[UnitOfWork]:
         return UnitOfWork(self.repository)
 
@@ -96,7 +96,7 @@ class UnitOfWorkFactory:
 def actor(role: Role) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         role=role,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -146,7 +146,7 @@ async def test_member_and_viewer_receive_read_only_permissions(role: Role) -> No
     reader = actor(role)
     repository.groups[UUID(int=1)] = Group.create(
         group_id=UUID(int=1),
-        tenant_id=reader.tenant_id,
+        organization_id=reader.organization_id,
         name="Finance",
         now=NOW,
     )

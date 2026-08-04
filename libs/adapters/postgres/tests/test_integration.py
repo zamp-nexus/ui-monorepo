@@ -12,15 +12,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from zentra_adapter_postgres import resolve_identity_context
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.schema import (
     agent_executions,
     agent_registry,
     analysis_runs,
     identity_subjects,
-    tenant_identity_bindings,
-    tenant_memberships,
-    tenants,
+    organization_identity_bindings,
+    organization_memberships,
+    organizations,
     users,
 )
 
@@ -43,11 +43,11 @@ async def seed(owner_url: str) -> None:
     owner = create_async_engine(owner_url)
     async with owner.begin() as connection:
         await connection.execute(
-            postgres_insert(tenants)
+            postgres_insert(organizations)
             .values(
                 [
-                    {"tenant_id": TENANT_A, "name": "Integration A"},
-                    {"tenant_id": TENANT_B, "name": "Integration B"},
+                    {"organization_id": TENANT_A, "name": "Integration A"},
+                    {"organization_id": TENANT_B, "name": "Integration B"},
                 ]
             )
             .on_conflict_do_nothing()
@@ -72,29 +72,29 @@ async def seed(owner_url: str) -> None:
             .on_conflict_do_nothing()
         )
         await connection.execute(
-            postgres_insert(tenant_identity_bindings)
+            postgres_insert(organization_identity_bindings)
             .values(
                 [
                     {
                         "provider": "clerk",
-                        "external_tenant_id": "org_integration_a",
-                        "tenant_id": TENANT_A,
+                        "external_organization_id": "org_integration_a",
+                        "organization_id": TENANT_A,
                     },
                     {
                         "provider": "clerk",
-                        "external_tenant_id": "org_integration_b",
-                        "tenant_id": TENANT_B,
+                        "external_organization_id": "org_integration_b",
+                        "organization_id": TENANT_B,
                     },
                 ]
             )
             .on_conflict_do_nothing()
         )
         await connection.execute(
-            postgres_insert(tenant_memberships)
+            postgres_insert(organization_memberships)
             .values(
                 [
-                    {"tenant_id": TENANT_A, "user_id": USER_ID, "role": "owner"},
-                    {"tenant_id": TENANT_B, "user_id": USER_ID, "role": "viewer"},
+                    {"organization_id": TENANT_A, "user_id": USER_ID, "role": "owner"},
+                    {"organization_id": TENANT_B, "user_id": USER_ID, "role": "viewer"},
                 ]
             )
             .on_conflict_do_nothing()
@@ -103,7 +103,7 @@ async def seed(owner_url: str) -> None:
             postgres_insert(analysis_runs)
             .values(
                 analysis_run_id=ANALYSIS_RUN_ID,
-                tenant_id=TENANT_A,
+                organization_id=TENANT_A,
                 question="Integration fixture",
                 status="running",
             )
@@ -121,7 +121,7 @@ async def test_rls_identity_and_constraints() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     async with runtime.begin() as connection:
         without_context = await connection.scalar(
-            select(func.count()).select_from(tenants)
+            select(func.count()).select_from(organizations)
         )
     assert without_context == 0
 
@@ -130,30 +130,30 @@ async def test_rls_identity_and_constraints() -> None:
             connection,
             provider="clerk",
             external_subject_id="user_integration",
-            external_tenant_id="org_integration_a",
+            external_organization_id="org_integration_a",
         )
         visible_memberships = await connection.scalar(
-            select(func.count()).select_from(tenant_memberships)
+            select(func.count()).select_from(organization_memberships)
         )
     assert identity.user_id == USER_ID
-    assert identity.tenant_id == TENANT_A
+    assert identity.organization_id == TENANT_A
     assert identity.role == "owner"
     assert visible_memberships == 1
 
     async with runtime.begin() as connection:
-        await set_tenant_context(connection, TENANT_B)
+        await set_organization_context(connection, TENANT_B)
         visible_tenants = (
-            (await connection.execute(select(tenants.c.tenant_id))).scalars().all()
+            (await connection.execute(select(organizations.c.organization_id))).scalars().all()
         )
     assert visible_tenants == [TENANT_B]
     await runtime.dispose()
 
     owner = create_async_engine(OWNER_URL)
-    with pytest.raises(IntegrityError, match="ck_tenant_memberships_role"):
+    with pytest.raises(IntegrityError, match="ck_organization_memberships_role"):
         async with owner.begin() as connection:
             await connection.execute(
-                insert(tenant_memberships).values(
-                    tenant_id=TENANT_A,
+                insert(organization_memberships).values(
+                    organization_id=TENANT_A,
                     user_id=INVALID_USER_ID,
                     role="guest",
                 )
@@ -164,7 +164,7 @@ async def test_rls_identity_and_constraints() -> None:
             await connection.execute(
                 insert(agent_executions).values(
                     analysis_run_id=ANALYSIS_RUN_ID,
-                    tenant_id=TENANT_A,
+                    organization_id=TENANT_A,
                     agent_id="deterministic-validator",
                     step=0,
                     input={},

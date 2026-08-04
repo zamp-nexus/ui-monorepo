@@ -20,7 +20,7 @@ NOW = datetime(2026, 8, 1, tzinfo=UTC)
 def test_thread_requires_its_first_message_identity() -> None:
     thread = AnalysisRunThread.create(
         thread_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         project_id=uuid4(),
         initiating_message_id=uuid4(),
         title="Why did EU refunds increase?",
@@ -37,7 +37,7 @@ def test_message_rejects_empty_oversized_or_unsafe_text(content: str) -> None:
         ThreadMessage.create(
             message_id=uuid4(),
             thread_id=uuid4(),
-            tenant_id=uuid4(),
+            organization_id=uuid4(),
             author_id=uuid4(),
             kind=ThreadMessageKind.USER_QUESTION,
             content=content,
@@ -49,7 +49,7 @@ def test_messages_are_immutable_values() -> None:
     message = ThreadMessage.create(
         message_id=uuid4(),
         thread_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         author_id=uuid4(),
         kind=ThreadMessageKind.USER_QUESTION,
         content="  Why did refunds increase?  ",
@@ -64,7 +64,7 @@ def test_messages_are_immutable_values() -> None:
 def test_archive_and_restore_preserve_the_previous_thread_state() -> None:
     thread = AnalysisRunThread.create(
         thread_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         project_id=uuid4(),
         initiating_message_id=uuid4(),
         title="Refunds",
@@ -84,7 +84,7 @@ def test_archive_and_restore_preserve_the_previous_thread_state() -> None:
 def test_only_draft_threads_without_analytical_work_can_be_deleted() -> None:
     thread = AnalysisRunThread.create(
         thread_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         project_id=uuid4(),
         initiating_message_id=uuid4(),
         title="Refunds",
@@ -99,7 +99,7 @@ def test_only_draft_threads_without_analytical_work_can_be_deleted() -> None:
 def test_archived_threads_are_not_writable() -> None:
     thread = AnalysisRunThread.create(
         thread_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         project_id=uuid4(),
         initiating_message_id=uuid4(),
         title="Refunds",

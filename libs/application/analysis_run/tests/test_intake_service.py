@@ -65,9 +65,9 @@ class FakeIntakeAgent:
 
 def _service(agent: FakeIntakeAgent) -> IntakeService:
     async def resolve_semantic_layer(
-        tenant_id: UUID, data_connection_id: UUID | None
+        organization_id: UUID, data_connection_id: UUID | None
     ) -> SemanticLayerPort:
-        del tenant_id, data_connection_id
+        del organization_id, data_connection_id
         return FakeSemanticLayer()
 
     def agent_factory(semantic_layer: SemanticLayerPort) -> FakeIntakeAgent:
@@ -92,13 +92,13 @@ async def test_resolved_disposition_derives_a_bounded_scenario_key() -> None:
         }
     )
 
-    result = await _service(agent).resolve("why eu refunds up", tenant_id=TENANT_ID)
+    result = await _service(agent).resolve("why eu refunds up", organization_id=TENANT_ID)
 
     assert result.disposition is RoutingDisposition.RESOLVED
     assert result.canonical_question == "Why did EU refunds rise in July 2026?"
     assert result.scenario_key == "why_did_eu_refunds_rise_in_july_2026"
     assert agent.received is not None
-    assert agent.received.tenant_id == TENANT_ID
+    assert agent.received.organization_id == TENANT_ID
     assert agent.received.state == {"question": "why eu refunds up"}
     assert agent.semantic_layer is not None
 
@@ -116,7 +116,7 @@ async def test_resolved_without_a_normalized_question_falls_back_to_unsupported(
         }
     )
 
-    result = await _service(agent).resolve("garbled", tenant_id=TENANT_ID)
+    result = await _service(agent).resolve("garbled", organization_id=TENANT_ID)
 
     assert result.disposition is RoutingDisposition.UNSUPPORTED
 
@@ -145,10 +145,10 @@ async def test_ambiguous_and_unsupported_dispositions_carry_a_clarification() ->
     )
 
     ambiguous_result = await ambiguous.resolve(
-        "channel or refunds?", tenant_id=TENANT_ID
+        "channel or refunds?", organization_id=TENANT_ID
     )
     unsupported_result = await unsupported.resolve(
-        "what's the weather", tenant_id=TENANT_ID
+        "what's the weather", organization_id=TENANT_ID
     )
 
     assert ambiguous_result.disposition is RoutingDisposition.AMBIGUOUS
@@ -168,7 +168,7 @@ async def test_not_analytical_disposition_carries_no_clarification() -> None:
         }
     )
 
-    result = await _service(agent).resolve("hi there", tenant_id=TENANT_ID)
+    result = await _service(agent).resolve("hi there", organization_id=TENANT_ID)
 
     assert result.disposition is RoutingDisposition.NOT_ANALYTICAL
     assert result.clarification is None

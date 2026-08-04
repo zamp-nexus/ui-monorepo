@@ -6,7 +6,7 @@ from opentelemetry import trace
 from zentra_adapter_telemetry import (
     TelemetrySettings,
     configure_telemetry,
-    correlate_tenant,
+    correlate_organization,
     correlate_thread,
 )
 
@@ -30,11 +30,11 @@ def test_correlates_internal_tenant_on_the_active_span(monkeypatch) -> None:
         "zentra_adapter_telemetry.tracing.trace.get_current_span",
         lambda: Span(),
     )
-    tenant_id = UUID("91000000-0000-0000-0000-000000000001")
+    organization_id = UUID("91000000-0000-0000-0000-000000000001")
 
-    correlate_tenant(tenant_id)
+    correlate_organization(organization_id)
 
-    assert attributes == {"zentra.tenant_id": str(tenant_id)}
+    assert attributes == {"zentra.organization_id": str(organization_id)}
 
 
 def test_correlates_a_chat_session_on_the_active_span(monkeypatch) -> None:

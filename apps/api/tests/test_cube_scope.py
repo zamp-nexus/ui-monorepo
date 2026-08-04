@@ -35,7 +35,7 @@ def _cache(
 ):
     fingerprints = fingerprints or {}
 
-    async def resolve(tenant_id, data_connection_id):
+    async def resolve(organization_id, data_connection_id):
         return fingerprints[str(data_connection_id)]
 
     return ScopedCubeSemanticLayers(
@@ -50,8 +50,8 @@ def _cache(
 async def test_two_data_connections_never_share_an_instance() -> None:
     cache = _cache(fingerprints={str(CONNECTION_A): "fp-a", str(CONNECTION_B): "fp-b"})
 
-    a = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
-    b = await cache.resolve(tenant_id=TENANT_B, data_connection_id=CONNECTION_B)
+    a = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
+    b = await cache.resolve(organization_id=TENANT_B, data_connection_id=CONNECTION_B)
 
     assert a is not b
 
@@ -60,8 +60,8 @@ async def test_two_data_connections_never_share_an_instance() -> None:
 async def test_same_scope_within_ttl_reuses_the_cached_instance() -> None:
     cache = _cache(fingerprints={str(CONNECTION_A): "fp-a"})
 
-    first = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
-    second = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
+    first = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
+    second = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
 
     assert first is second
 
@@ -74,9 +74,9 @@ async def test_a_confirmed_relation_invalidates_the_cache_even_within_ttl() -> N
     fingerprints = {str(CONNECTION_A): "fp-before"}
     cache = _cache(fingerprints=fingerprints)
 
-    before = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
+    before = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
     fingerprints[str(CONNECTION_A)] = "fp-after"
-    after = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
+    after = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
 
     assert before is not after
 
@@ -86,9 +86,9 @@ async def test_ttl_expiry_invalidates_even_with_an_unchanged_fingerprint() -> No
     clock = FakeClock()
     cache = _cache(fingerprints={str(CONNECTION_A): "fp-a"}, clock=clock)
 
-    before = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
+    before = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
     clock.value += 301.0  # past the 300s TTL
-    after = await cache.resolve(tenant_id=TENANT_A, data_connection_id=CONNECTION_A)
+    after = await cache.resolve(organization_id=TENANT_A, data_connection_id=CONNECTION_A)
 
     assert before is not after
 
@@ -98,7 +98,7 @@ async def test_the_demo_warehouse_path_never_calls_the_fingerprint_resolver() ->
     """data_connection_id=None must not trigger a Connector lookup at all —
     it is the only path reachable before any Data Connection exists."""
 
-    async def _unreachable(tenant_id, data_connection_id):
+    async def _unreachable(organization_id, data_connection_id):
         raise AssertionError("must not be called for the demo warehouse path")
 
     cache = ScopedCubeSemanticLayers(
@@ -107,4 +107,4 @@ async def test_the_demo_warehouse_path_never_calls_the_fingerprint_resolver() ->
         resolve_relation_fingerprint=_unreachable,
     )
 
-    await cache.resolve(tenant_id=TENANT_A, data_connection_id=None)
+    await cache.resolve(organization_id=TENANT_A, data_connection_id=None)

@@ -37,8 +37,8 @@ class _FixedRawTableLookup:
     def __init__(self, reference) -> None:
         self._reference = reference
 
-    async def resolve(self, *, tenant_id, sequence_id):
-        del tenant_id, sequence_id
+    async def resolve(self, *, organization_id, sequence_id):
+        del organization_id, sequence_id
         return self._reference
 
 
@@ -47,7 +47,7 @@ async def _run_chain(
 ) -> SequenceStepExecutionResult:
     step_1 = await port.apply_operation(
         SequenceStepExecutionRequest(
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             sequence_id=SEQUENCE_ID,
             step_id=uuid4(),
             operation_kind="drop_nulls",
@@ -59,7 +59,7 @@ async def _run_chain(
 
     step_2 = await port.apply_operation(
         SequenceStepExecutionRequest(
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             sequence_id=SEQUENCE_ID,
             step_id=uuid4(),
             operation_kind="dedupe",
@@ -71,7 +71,7 @@ async def _run_chain(
 
     step_3 = await port.apply_operation(
         SequenceStepExecutionRequest(
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             sequence_id=SEQUENCE_ID,
             step_id=uuid4(),
             operation_kind="filter_rows",
@@ -105,7 +105,7 @@ async def test_chain_via_an_uploaded_dataset_table_version(tmp_path: Path) -> No
     result = await _run_chain(
         port,
         first_input=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
         ),
     )
 
@@ -163,7 +163,7 @@ async def test_chain_via_a_live_connector_source_table(tmp_path: Path) -> None:
         result = await _run_chain(
             port,
             first_input=SequenceTableReference(
-                tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+                organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
             ),
         )
 

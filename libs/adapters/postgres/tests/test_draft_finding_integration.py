@@ -27,7 +27,7 @@ from zentra_domain_analysis_run import (
     RootCauseState,
 )
 
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.draft_finding import (
     PostgresDraftFindingRepository,
     PostgresEvidenceCitationRepository,
@@ -37,7 +37,7 @@ from zentra_adapter_postgres.schema import (
     draft_finding_claims,
     draft_findings,
     evidence_citations,
-    tenants,
+    organizations,
 )
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
@@ -60,11 +60,11 @@ async def seed(owner_url: str) -> None:
     owner = create_async_engine(owner_url)
     async with owner.begin() as connection:
         await connection.execute(
-            postgres_insert(tenants)
+            postgres_insert(organizations)
             .values(
                 [
-                    {"tenant_id": TENANT_A, "name": "Draft A"},
-                    {"tenant_id": TENANT_B, "name": "Draft B"},
+                    {"organization_id": TENANT_A, "name": "Draft A"},
+                    {"organization_id": TENANT_B, "name": "Draft B"},
                 ]
             )
             .on_conflict_do_nothing()
@@ -73,7 +73,7 @@ async def seed(owner_url: str) -> None:
             postgres_insert(analysis_runs)
             .values(
                 analysis_run_id=ANALYSIS_RUN_A,
-                tenant_id=TENANT_A,
+                organization_id=TENANT_A,
                 question="Why did EU refunds increase?",
                 status="completed",
             )
@@ -89,7 +89,7 @@ def citations() -> tuple[EvidenceCitation, ...]:
     return tuple(
         EvidenceCitation(
             citation_id=citation_id,
-            tenant_id=TENANT_A,
+            organization_id=TENANT_A,
             analysis_run_id=ANALYSIS_RUN_A,
             metric=metric,
             filters=(
@@ -113,7 +113,7 @@ def citations() -> tuple[EvidenceCitation, ...]:
 def draft(version: int = 1) -> DraftFinding:
     return DraftFinding(
         draft_finding_id=uuid4(),
-        tenant_id=TENANT_A,
+        organization_id=TENANT_A,
         analysis_run_id=ANALYSIS_RUN_A,
         version=version,
         created_at=NOW,
@@ -183,12 +183,12 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
     try:
         stored = draft()
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(stored)
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
             ).latest_for_analysis_run(ANALYSIS_RUN_A)
@@ -230,14 +230,14 @@ async def test_a_refresh_returns_the_latest_stored_draft() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(citations())
             repository = PostgresDraftFindingRepository(connection)
             await repository.add(draft(version=1))
             await repository.add(draft(version=2))
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
             ).latest_for_analysis_run(ANALYSIS_RUN_A)
@@ -261,12 +261,12 @@ async def test_another_tenants_draft_is_invisible_rather_than_filtered() -> None
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(draft())
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_B)
+            await set_organization_context(connection, TENANT_B)
             intruder = await PostgresDraftFindingRepository(
                 connection
             ).latest_for_analysis_run(ANALYSIS_RUN_A)
@@ -306,7 +306,7 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
     try:
         forged = DraftFinding(
             draft_finding_id=uuid4(),
-            tenant_id=TENANT_A,
+            organization_id=TENANT_A,
             analysis_run_id=ANALYSIS_RUN_A,
             version=1,
             created_at=NOW,
@@ -321,11 +321,11 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
         with pytest.raises(DBAPIError):
             async with runtime.begin() as connection:
                 # Acting as B, writing a row owned by A.
-                await set_tenant_context(connection, TENANT_B)
+                await set_organization_context(connection, TENANT_B)
                 await PostgresDraftFindingRepository(connection).add(forged)
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             assert (
                 await PostgresDraftFindingRepository(
                     connection
@@ -339,7 +339,7 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
 
 @pytest.mark.asyncio
 async def test_a_claim_cannot_be_written_into_another_tenants_draft() -> None:
-    """The same guarantee one level down. Claims carry their own `tenant_id`,
+    """The same guarantee one level down. Claims carry their own `organization_id`,
     so the child table needs its own proof, not the parent's."""
     assert OWNER_URL is not None and RUNTIME_URL is not None
     await seed(OWNER_URL)
@@ -349,18 +349,18 @@ async def test_a_claim_cannot_be_written_into_another_tenants_draft() -> None:
     try:
         stored = draft()
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(citations())
             await PostgresDraftFindingRepository(connection).add(stored)
 
         with pytest.raises(DBAPIError):
             async with runtime.begin() as connection:
-                await set_tenant_context(connection, TENANT_B)
+                await set_organization_context(connection, TENANT_B)
                 await connection.execute(
                     draft_finding_claims.insert().values(
                         claim_id=uuid4(),
                         draft_finding_id=stored.draft_finding_id,
-                        tenant_id=TENANT_A,
+                        organization_id=TENANT_A,
                         kind="observed",
                         claim_text="Planted claim.",
                         metric="refund_amount",

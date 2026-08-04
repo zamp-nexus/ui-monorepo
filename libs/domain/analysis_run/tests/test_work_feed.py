@@ -29,7 +29,7 @@ def test_thread_event_requires_positive_resume_sequence() -> None:
     with pytest.raises(ValidationError, match="greater than or equal to 1"):
         ThreadEvent(
             event_id=uuid4(),
-            tenant_id=uuid4(),
+            organization_id=uuid4(),
             thread_id=uuid4(),
             sequence=0,
             kind=WorkFeedEventKind.AGENT_STARTED,

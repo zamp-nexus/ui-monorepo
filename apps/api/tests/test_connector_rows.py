@@ -42,7 +42,7 @@ def _version(*tables: SourceTable) -> CatalogVersion:
     return CatalogVersion(
         catalog_version_id=uuid4(),
         data_source_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         harvest_run_id=uuid4(),
         created_at=datetime.now(UTC),
         tables=tuple(tables),

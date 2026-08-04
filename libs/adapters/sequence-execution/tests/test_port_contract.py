@@ -31,8 +31,8 @@ class _SingleFixtureLookup:
     def __init__(self) -> None:
         self.reference: DatasetTableVersionReference | None = None
 
-    async def resolve(self, *, tenant_id, sequence_id):
-        del tenant_id, sequence_id
+    async def resolve(self, *, organization_id, sequence_id):
+        del organization_id, sequence_id
         return self.reference
 
 
@@ -63,12 +63,12 @@ async def test_chdb_port_satisfies_the_shared_contract_suite(tmp_path: Path) -> 
             storage_locator=str(fixture_path), file_format="csv"
         )
         return SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
         )
 
     await assert_port_satisfies_contract(
         apply_operation=port.apply_operation,
         seed_raw_table=seed_raw_table,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
     )

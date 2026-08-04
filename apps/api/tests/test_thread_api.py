@@ -112,9 +112,9 @@ def bind_identity(monkeypatch, *, role: str = "member") -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="member@example.com",
-            tenant_name="Acme",
+            organization_name="Acme",
             role=role,
         )
 

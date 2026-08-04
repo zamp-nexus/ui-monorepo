@@ -47,7 +47,7 @@ class Request:
 def _event(sequence: int) -> ThreadEvent:
     return ThreadEvent(
         event_id=UUID(int=sequence),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000001"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000001"),
         thread_id=THREAD_ID,
         sequence=sequence,
         kind=WorkFeedEventKind.MESSAGE_ADDED,

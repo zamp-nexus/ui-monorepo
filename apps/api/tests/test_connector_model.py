@@ -103,7 +103,7 @@ class FakeConnectorService:
         return CatalogVersion(
             catalog_version_id=CATALOG_VERSION_ID,
             data_source_id=data_source_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             harvest_run_id=uuid4(),
             created_at=datetime.now(UTC),
             tables=self._tables,
@@ -147,7 +147,7 @@ def _override(
 ) -> CatalogAccessOverride:
     return CatalogAccessOverride(
         override_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_source_id=DATA_CONNECTION_ID,
         table_name=table_name,
         field_name=field_name,
@@ -215,7 +215,7 @@ async def test_unconfirmed_relation_never_reaches_the_cube_model() -> None:
     connector = _connector(pending_relation=True)
 
     model = await connector_cube_model(
-        connector, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+        connector, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
     )
 
     assert len(model.joins) == 1
@@ -228,7 +228,7 @@ async def test_credentials_are_carried_but_never_logged_by_this_function() -> No
     connector = _connector(pending_relation=False)
 
     model = await connector_cube_model(
-        connector, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+        connector, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
     )
 
     assert model.clickhouse["host"] == "clickhouse.tenant.example"
@@ -276,7 +276,7 @@ async def test_fingerprint_changes_when_a_relation_is_confirmed() -> None:
             relations=(relation(RelationState.PROPOSED),),
             credentials=credentials,
         ),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
     after = await relation_fingerprint(
@@ -285,7 +285,7 @@ async def test_fingerprint_changes_when_a_relation_is_confirmed() -> None:
             relations=(relation(RelationState.CONFIRMED),),
             credentials=credentials,
         ),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
 
@@ -308,10 +308,10 @@ async def test_fingerprint_changes_when_the_confirmed_relation_is_rejected() -> 
     )
 
     confirmed_fingerprint = await relation_fingerprint(
-        confirmed_connector, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+        confirmed_connector, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
     )
     rejected_fingerprint = await relation_fingerprint(
-        rejected_connector, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+        rejected_connector, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
     )
 
     assert confirmed_fingerprint != rejected_fingerprint
@@ -344,7 +344,7 @@ async def test_many_to_many_relations_are_not_emitted_as_a_cube_join() -> None:
     )
 
     model = await connector_cube_model(
-        connector, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+        connector, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
     )
 
     assert model.joins == ()
@@ -354,11 +354,11 @@ async def test_many_to_many_relations_are_not_emitted_as_a_cube_join() -> None:
 async def test_no_connector_configured_fails_clearly_not_with_attribute_error() -> None:
     with pytest.raises(ConnectorNotConfiguredError):
         await connector_cube_model(
-            None, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+            None, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
         )
     with pytest.raises(ConnectorNotConfiguredError):
         await relation_fingerprint(
-            None, tenant_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
+            None, organization_id=TENANT_ID, data_connection_id=DATA_CONNECTION_ID
         )
 
 
@@ -387,7 +387,7 @@ async def test_a_hidden_table_is_absent_from_the_compiled_model() -> None:
 
     model = await connector_cube_model(
         connector,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
 
@@ -406,7 +406,7 @@ async def test_a_hidden_field_leaves_its_table_reachable() -> None:
 
     model = await connector_cube_model(
         connector,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
 
@@ -426,7 +426,7 @@ async def test_visibility_changes_move_the_fingerprint() -> None:
     """
     unchanged = await relation_fingerprint(
         _connector(pending_relation=False),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
     hidden = await relation_fingerprint(
@@ -434,7 +434,7 @@ async def test_visibility_changes_move_the_fingerprint() -> None:
             pending_relation=False,
             overrides=(_override("customers", None, agent_visible=False),),
         ),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
 
@@ -450,7 +450,7 @@ async def test_field_descriptions_reach_the_model_without_sampled_values() -> No
 
     model = await connector_cube_model(
         connector,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         data_connection_id=DATA_CONNECTION_ID,
     )
 

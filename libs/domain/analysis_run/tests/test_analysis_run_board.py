@@ -26,7 +26,7 @@ def new_board() -> AnalysisRunBoard:
     return AnalysisRunBoard.create(
         board_id=BOARD_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         now=NOW,
     )
 

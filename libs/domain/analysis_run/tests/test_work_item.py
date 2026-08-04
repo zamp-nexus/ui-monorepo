@@ -21,7 +21,7 @@ def pending_item(**overrides: object) -> WorkItem:
     defaults: dict[str, object] = dict(
         work_item_id=WORK_ITEM_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         role=AgentRole.SQL_ANALYST,
         objective="Measure EU refund amount for June and July 2026",
         now=NOW,

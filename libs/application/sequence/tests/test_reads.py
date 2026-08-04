@@ -41,8 +41,8 @@ def _service(repository: FakeSequenceRepository) -> SequenceService:
     )
 
 
-def _actor(tenant_id: UUID = TENANT_ID) -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=uuid4(), tenant_id=tenant_id, role=Role.MEMBER)
+def _actor(organization_id: UUID = TENANT_ID) -> AuthenticatedActor:
+    return AuthenticatedActor(user_id=uuid4(), organization_id=organization_id, role=Role.MEMBER)
 
 
 @pytest.mark.asyncio
@@ -50,14 +50,14 @@ async def test_list_returns_only_this_tenants_workspace_sequences() -> None:
     repository = FakeSequenceRepository()
     mine = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,
     )
     someone_elses = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=OTHER_TENANT_ID,
+        organization_id=OTHER_TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(OTHER_TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,
@@ -76,14 +76,14 @@ async def test_list_orders_most_recently_active_first() -> None:
     repository = FakeSequenceRepository()
     older = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,
     )
     newer = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE + timedelta(hours=1),
@@ -104,7 +104,7 @@ async def test_get_returns_the_full_graph_for_an_owned_sequence() -> None:
     repository = FakeSequenceRepository()
     sequence = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,
@@ -122,7 +122,7 @@ async def test_get_refuses_a_sequence_belonging_to_another_tenant() -> None:
     repository = FakeSequenceRepository()
     sequence = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=OTHER_TENANT_ID,
+        organization_id=OTHER_TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(OTHER_TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,
@@ -144,7 +144,7 @@ async def test_preview_raises_for_an_unknown_prepared_table() -> None:
     repository = FakeSequenceRepository()
     sequence = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=dataset_workspace_id_for(TENANT_ID),
         raw_table_reference=_raw_table(),
         now=BASE,

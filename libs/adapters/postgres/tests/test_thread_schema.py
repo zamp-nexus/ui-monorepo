@@ -19,11 +19,11 @@ def test_thread_tables_have_tenant_hierarchy_and_immutable_message_shape() -> No
 
     assert (
         "workspace_groups.group_id",
-        "workspace_groups.tenant_id",
+        "workspace_groups.organization_id",
     ) in session_foreign_keys
     assert (
         "chat_sessions.chat_session_id",
-        "chat_sessions.tenant_id",
+        "chat_sessions.organization_id",
     ) in message_foreign_keys
     assert "updated_at" not in messages.c
 
@@ -64,5 +64,5 @@ def test_analysis_runs_link_to_one_message_and_sequence_in_a_thread() -> None:
     }
 
     assert "uq_analysis_runs_chat_sequence" in uniques
-    assert "fk_analysis_runs_chat_session_tenant" in foreign_keys
+    assert "fk_analysis_runs_chat_session_organization" in foreign_keys
     assert "fk_analysis_runs_initiating_message" in foreign_keys

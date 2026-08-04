@@ -27,12 +27,12 @@ from zentra_adapter_postgres import (
     Database,
     PostgresAnalysisRunUnitOfWorkFactory,
 )
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.schema import (
     agent_executions,
     audit_outbox,
-    tenant_memberships,
-    tenants,
+    organization_memberships,
+    organizations,
     users,
 )
 
@@ -81,16 +81,16 @@ class PendingAudit:
 async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> None:
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
-    tenant_id = uuid4()
+    organization_id = uuid4()
     other_tenant_id = uuid4()
     user_id = uuid4()
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
         await connection.execute(
-            insert(tenants),
+            insert(organizations),
             [
-                {"tenant_id": tenant_id, "name": "Phase 1A Tenant"},
-                {"tenant_id": other_tenant_id, "name": "Other Tenant"},
+                {"organization_id": organization_id, "name": "Phase 1A Tenant"},
+                {"organization_id": other_tenant_id, "name": "Other Tenant"},
             ],
         )
         await connection.execute(
@@ -100,8 +100,8 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
             )
         )
         await connection.execute(
-            insert(tenant_memberships).values(
-                tenant_id=tenant_id,
+            insert(organization_memberships).values(
+                organization_id=organization_id,
                 user_id=user_id,
                 role="owner",
             )
@@ -119,7 +119,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
     )
     actor = AuthenticatedActor(
         user_id=user_id,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -141,7 +141,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
 
     runtime = create_async_engine(RUNTIME_URL)
     async with runtime.begin() as connection:
-        await set_tenant_context(connection, tenant_id)
+        await set_organization_context(connection, organization_id)
         outbox_count = await connection.scalar(
             select(func.count()).select_from(audit_outbox)
         )
@@ -173,7 +173,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
 
     invisible_actor = AuthenticatedActor(
         user_id=user_id,
-        tenant_id=other_tenant_id,
+        organization_id=other_tenant_id,
         role=Role.OWNER,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -182,7 +182,7 @@ async def test_transactional_lifecycle_outbox_rls_and_idempotent_approval() -> N
         await service.get(invisible_actor, started.analysis_run_id)
 
     async with runtime.begin() as connection:
-        await set_tenant_context(connection, other_tenant_id)
+        await set_organization_context(connection, other_tenant_id)
         visible_outbox = await connection.scalar(
             select(func.count()).select_from(audit_outbox)
         )

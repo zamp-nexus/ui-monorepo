@@ -50,15 +50,15 @@ class FakeSequenceExecutionPort:
     def seed_table(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         reference_id: UUID,
         kind: str,
         rows: list[Row],
         columns: tuple[str, ...],
     ) -> None:
-        # kind is caller-facing only; the lookup key is (tenant_id, reference_id).
+        # kind is caller-facing only; the lookup key is (organization_id, reference_id).
         _ = kind
-        self._tables[(tenant_id, reference_id)] = _TableSnapshot(
+        self._tables[(organization_id, reference_id)] = _TableSnapshot(
             rows=[dict(row) for row in rows], columns=columns
         )
 
@@ -66,7 +66,7 @@ class FakeSequenceExecutionPort:
         self, request: SequenceStepExecutionRequest
     ) -> SequenceStepExecutionResult | SequenceStepExecutionFailure:
         snapshot = self._tables.get(
-            (request.tenant_id, request.input_table.reference_id)
+            (request.organization_id, request.input_table.reference_id)
         )
         if snapshot is None:
             return SequenceStepExecutionFailure(
@@ -99,13 +99,13 @@ class FakeSequenceExecutionPort:
             )
 
         output_id = uuid4()
-        self._tables[(request.tenant_id, output_id)] = _TableSnapshot(
+        self._tables[(request.organization_id, output_id)] = _TableSnapshot(
             rows=rows, columns=columns
         )
         return SequenceStepExecutionResult(
             request=request,
             output_table=SequenceTableReference(
-                tenant_id=request.tenant_id, reference_id=output_id, kind="prepared"
+                organization_id=request.organization_id, reference_id=output_id, kind="prepared"
             ),
             row_count=len(rows),
             columns=columns,

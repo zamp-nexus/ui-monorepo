@@ -3,11 +3,11 @@ from zentra_adapter_postgres.schema import agent_registry, metadata
 
 def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
     assert {
-        "tenants",
+        "organizations",
         "users",
         "identity_subjects",
-        "tenant_identity_bindings",
-        "tenant_memberships",
+        "organization_identity_bindings",
+        "organization_memberships",
         "analysis_runs",
         "agent_executions",
         "human_approvals",

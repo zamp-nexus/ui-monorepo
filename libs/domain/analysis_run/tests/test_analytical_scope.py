@@ -30,7 +30,7 @@ def test_unrestricted_scope_returns_the_full_catalog() -> None:
 
 
 def test_scope_narrows_to_only_the_allowed_cube() -> None:
-    scope = AnalyticalScope(tenant_id=TENANT_ID, cubes=frozenset({"Commerce"}))
+    scope = AnalyticalScope(organization_id=TENANT_ID, cubes=frozenset({"Commerce"}))
 
     narrowed = scope.narrow(CATALOG)
 
@@ -41,7 +41,7 @@ def test_scope_narrows_to_only_the_allowed_cube() -> None:
 
 def test_member_override_grants_one_member_from_an_out_of_scope_cube() -> None:
     scope = AnalyticalScope(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         cubes=frozenset({"Commerce"}),
         member_overrides=frozenset({"Channel.revenue"}),
     )
@@ -55,7 +55,7 @@ def test_member_override_grants_one_member_from_an_out_of_scope_cube() -> None:
 
 def test_scope_never_widens_past_the_source_catalog() -> None:
     scope = AnalyticalScope(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         cubes=frozenset({"Commerce", "DoesNotExist"}),
         member_overrides=frozenset({"Nonexistent.member"}),
     )
