@@ -94,7 +94,7 @@ async def execute_harvest(
         version = CatalogVersion(
             catalog_version_id=uuid4(),
             data_source_id=source.data_source_id,
-            tenant_id=source.tenant_id,
+            organization_id=source.organization_id,
             harvest_run_id=run.harvest_run_id,
             created_at=now(),
             tables=tables,
@@ -285,7 +285,7 @@ async def _reconcile_previous(
     it again every week.
     """
     previous = await deps.relations.list_for_source(
-        source.data_source_id, tenant_id=source.tenant_id
+        source.data_source_id, organization_id=source.organization_id
     )
     if not previous:
         return frozenset()
@@ -339,7 +339,7 @@ async def _infer_relations(
     carried = {
         r.pinned_identities
         for r in await deps.relations.list_for_source(
-            source.data_source_id, tenant_id=source.tenant_id
+            source.data_source_id, organization_id=source.organization_id
         )
         if r.state in (RelationState.CONFIRMED, RelationState.STALE)
     }
@@ -383,7 +383,7 @@ async def _infer_relations(
         proposals.append(
             Relation(
                 relation_id=uuid4(),
-                tenant_id=source.tenant_id,
+                organization_id=source.organization_id,
                 catalog_version_id=version.catalog_version_id,
                 left_field_id=candidate.left_field.field_id,
                 right_field_id=candidate.right_field.field_id,

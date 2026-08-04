@@ -3,7 +3,7 @@
 Split from ``service.py`` for the same reason as ``catalog_reads.py`` and
 ``uploads.py``: the service crossed the repository's 600-line limit once this
 resource group landed in it. A mixin rather than a collaborator because every
-method here needs the same tenant-scoping, source-loading and role-gating
+method here needs the same organization-scoping, source-loading and role-gating
 rules the rest of the service applies.
 """
 
@@ -32,12 +32,12 @@ class AgentAccessOperations:
         The single call anything building an agent-facing view of this source
         should make. ``latest_catalog`` returns what was harvested, which is
         the right answer for a human browsing the Datasets page and the wrong
-        one for the semantic layer: a table a Tenant turned off must be absent
+        one for the semantic layer: a table an Organization turned off must be absent
         from what agents can reach, not merely dimmed in a UI.
         """
         version = await self.latest_catalog(actor, data_source_id)
         overrides = await self._access.list_for_source(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         return AccessOverrides.build(data_source_id, tuple(overrides)).apply(version)
 
@@ -58,7 +58,7 @@ class AgentAccessOperations:
         await self._load_source(actor, data_source_id)
         override = CatalogAccessOverride(
             override_id=uuid4(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             data_source_id=data_source_id,
             table_name=table_name,
             field_name=field_name,
@@ -99,11 +99,11 @@ class AgentAccessOperations:
     ) -> tuple[AgentAccessView, ...]:
         """Every override on this source, for a caller merging them into a catalog view.
 
-        A read, so any Tenant member may take it — the same reasoning that
+        A read, so any Organization member may take it — the same reasoning that
         makes browsing a Relation proposal open while confirming it is not.
         """
         await self._load_source(actor, data_source_id)
         overrides = await self._access.list_for_source(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         return tuple(to_access_view(o) for o in overrides)

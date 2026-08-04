@@ -42,14 +42,14 @@ class ApplyOperation(Protocol):
 
 def _request(
     *,
-    tenant_id: UUID,
+    organization_id: UUID,
     sequence_id: UUID,
     input_table: SequenceTableReference,
     operation_kind: str,
     operation_parameters: dict,
 ) -> SequenceStepExecutionRequest:
     return SequenceStepExecutionRequest(
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         sequence_id=sequence_id,
         step_id=uuid4(),
         operation_kind=operation_kind,
@@ -62,7 +62,7 @@ async def assert_port_satisfies_contract(
     *,
     apply_operation: ApplyOperation,
     seed_raw_table: SeedRawTable,
-    tenant_id: UUID,
+    organization_id: UUID,
     sequence_id: UUID,
 ) -> None:
     """Runs the same assertions against any SequenceExecutionPort
@@ -79,7 +79,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="drop_nulls",
@@ -99,7 +99,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="dedupe",
@@ -119,7 +119,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="filter_rows",
@@ -136,7 +136,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="rename_column",
@@ -153,7 +153,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="cast_type",
@@ -169,7 +169,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="cast_type",
@@ -188,7 +188,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="cast_type",
@@ -205,7 +205,7 @@ async def assert_port_satisfies_contract(
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=table,
             operation_kind="drop_table",
@@ -217,11 +217,11 @@ async def assert_port_satisfies_contract(
 
     # An unknown input table reference is a typed failure, not an exception.
     unknown_table = SequenceTableReference(
-        tenant_id=tenant_id, reference_id=uuid4(), kind="prepared"
+        organization_id=organization_id, reference_id=uuid4(), kind="prepared"
     )
     result = await apply_operation(
         _request(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             sequence_id=sequence_id,
             input_table=unknown_table,
             operation_kind="dedupe",

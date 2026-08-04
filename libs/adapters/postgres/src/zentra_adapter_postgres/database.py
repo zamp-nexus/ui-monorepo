@@ -27,16 +27,18 @@ class Database:
             return False
 
     @asynccontextmanager
-    async def tenant_connection(
-        self, tenant_id: UUID
+    async def organization_connection(
+        self, organization_id: UUID
     ) -> AsyncIterator[AsyncConnection]:
         async with self.engine.begin() as connection:
-            await set_tenant_context(connection, tenant_id)
+            await set_organization_context(connection, organization_id)
             yield connection
 
 
-async def set_tenant_context(connection: AsyncConnection, tenant_id: UUID) -> None:
+async def set_organization_context(
+    connection: AsyncConnection, organization_id: UUID
+) -> None:
     await connection.execute(
-        text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
-        {"tenant_id": str(tenant_id)},
+        text("SELECT set_config('app.organization_id', :organization_id, true)"),
+        {"organization_id": str(organization_id)},
     )

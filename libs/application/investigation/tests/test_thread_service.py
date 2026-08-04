@@ -220,7 +220,7 @@ class Repository:
 class UnitOfWork:
     def __init__(self, repository: Repository) -> None:
         self.threads = repository
-        self.organization = repository
+        self.groups = repository
         self.investigations = repository
         self.jobs = repository
         self.outbox = repository

@@ -24,9 +24,9 @@ execution_jobs = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
@@ -60,9 +60,9 @@ execution_jobs = Table(
     ),
     Column("completed_at", TIMESTAMP(timezone=True)),
     ForeignKeyConstraint(
-        ("analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_execution_jobs_analysis_run_tenant",
+        ("analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_execution_jobs_analysis_run_organization",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -91,21 +91,21 @@ execution_jobs = Table(
 )
 Index(
     "uq_execution_jobs_analysis_run",
-    execution_jobs.c.tenant_id,
+    execution_jobs.c.organization_id,
     execution_jobs.c.analysis_run_id,
     unique=True,
     postgresql_where=execution_jobs.c.job_kind == "investigation",
 )
 Index(
     "uq_execution_jobs_visualization",
-    execution_jobs.c.tenant_id,
+    execution_jobs.c.organization_id,
     execution_jobs.c.visualization_id,
     unique=True,
     postgresql_where=execution_jobs.c.job_kind == "visualization",
 )
 Index(
     "ix_execution_jobs_claim",
-    execution_jobs.c.tenant_id,
+    execution_jobs.c.organization_id,
     execution_jobs.c.status,
     execution_jobs.c.available_at,
     execution_jobs.c.created_at,

@@ -18,7 +18,7 @@ from .schema import execution_jobs
 def _job_from_row(row: Any) -> ExecutionJob:
     return ExecutionJob(
         job_id=row.job_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         investigation_id=row.analysis_run_id,
         status=ExecutionJobStatus(row.status),
         attempts=row.attempts,
@@ -63,7 +63,7 @@ class PostgresExecutionJobRepository:
         await self._connection.execute(
             insert(execution_jobs).values(
                 job_id=job.job_id,
-                tenant_id=job.tenant_id,
+                organization_id=job.organization_id,
                 analysis_run_id=job.investigation_id,
                 created_at=job.created_at,
                 **_values(job),

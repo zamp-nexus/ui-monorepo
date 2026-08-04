@@ -6,12 +6,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from .database import set_tenant_context
+from .database import set_organization_context
 from .schema import (
     identity_subjects,
-    tenant_identity_bindings,
-    tenant_memberships,
-    tenants,
+    organization_identity_bindings,
+    organization_memberships,
+    organizations,
     users,
 )
 
@@ -23,9 +23,9 @@ class IdentityNotBoundError(LookupError):
 @dataclass(frozen=True, slots=True)
 class IdentityContext:
     user_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     email: str
-    tenant_name: str
+    organization_name: str
     role: str
 
 
@@ -34,23 +34,28 @@ async def resolve_identity_context(
     *,
     provider: str,
     external_subject_id: str,
-    external_tenant_id: str,
+    external_organization_id: str,
 ) -> IdentityContext:
-    tenant_row = (
+    organization_row = (
         await connection.execute(
-            select(tenant_identity_bindings.c.tenant_id).where(
-                tenant_identity_bindings.c.provider == provider,
-                tenant_identity_bindings.c.external_tenant_id == external_tenant_id,
+            select(organization_identity_bindings.c.organization_id).where(
+                organization_identity_bindings.c.provider == provider,
+                organization_identity_bindings.c.external_organization_id
+                == external_organization_id,
             )
         )
     ).one_or_none()
-    if tenant_row is None:
-        raise IdentityNotBoundError("Identity organization is not bound to a tenant")
+    if organization_row is None:
+        raise IdentityNotBoundError(
+            "Identity organization is not bound to any organization"
+        )
 
-    await set_tenant_context(connection, tenant_row.tenant_id)
-    tenant_name = (
+    await set_organization_context(connection, organization_row.organization_id)
+    organization_name = (
         await connection.execute(
-            select(tenants.c.name).where(tenants.c.tenant_id == tenant_row.tenant_id)
+            select(organizations.c.name).where(
+                organizations.c.organization_id == organization_row.organization_id
+            )
         )
     ).scalar_one()
     membership_row = (
@@ -58,30 +63,33 @@ async def resolve_identity_context(
             select(
                 users.c.user_id,
                 users.c.email,
-                tenant_memberships.c.role,
+                organization_memberships.c.role,
             )
             .join(
                 identity_subjects,
                 identity_subjects.c.user_id == users.c.user_id,
             )
             .join(
-                tenant_memberships,
-                tenant_memberships.c.user_id == users.c.user_id,
+                organization_memberships,
+                organization_memberships.c.user_id == users.c.user_id,
             )
             .where(
                 identity_subjects.c.provider == provider,
                 identity_subjects.c.external_subject_id == external_subject_id,
-                tenant_memberships.c.tenant_id == tenant_row.tenant_id,
+                organization_memberships.c.organization_id
+                == organization_row.organization_id,
             )
         )
     ).one_or_none()
     if membership_row is None:
-        raise IdentityNotBoundError("Identity subject has no membership in this tenant")
+        raise IdentityNotBoundError(
+            "Identity subject has no membership in this organization"
+        )
 
     return IdentityContext(
         user_id=membership_row.user_id,
-        tenant_id=tenant_row.tenant_id,
+        organization_id=organization_row.organization_id,
         email=membership_row.email,
-        tenant_name=tenant_name,
+        organization_name=organization_name,
         role=membership_row.role,
     )

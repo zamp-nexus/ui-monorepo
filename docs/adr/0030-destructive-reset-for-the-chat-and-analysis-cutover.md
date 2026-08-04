@@ -33,3 +33,14 @@ is a deliberate, one-time exception justified specifically by pre-launch
 status, not a general policy of skipping migrations — a schema change made
 after real Organizations exist should not default to this approach without
 the same justification holding.
+
+## Reconciliation note
+
+This Decision's "Tenant... dropped and recreated as Organization" claim was
+drafted ahead of the actual rename — the migration this ADR originally
+authorized (`0023_chat_analysis_run_cutover.py`) touched only the chat/analysis
+tables and never renamed `tenants` itself, leaving the claim unexecuted for
+several weeks. The full Tenant → Organization rename (Postgres schema, RLS,
+every domain/application subsystem, the Clerk provisioning webhook) is what
+actually executes it, using this same "no production deployment, no migration
+path" reasoning extended to the rest of the schema.

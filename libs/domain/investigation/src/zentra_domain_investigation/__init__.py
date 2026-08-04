@@ -119,11 +119,11 @@ from .work_item import (
     WorkItemTransitionError,
 )
 from .workspace import (
-    MAX_ORGANIZATION_NAME_LENGTH,
+    MAX_GROUP_NAME_LENGTH,
     Group,
-    OrganizationNameError,
+    GroupNameError,
     Project,
-    normalize_organization_name,
+    normalize_group_name,
 )
 
 __all__ = [
@@ -185,7 +185,7 @@ __all__ = [
     "PRESERVED",
     "MetricComparison",
     "MessageEventPayload",
-    "MAX_ORGANIZATION_NAME_LENGTH",
+    "MAX_GROUP_NAME_LENGTH",
     "MAX_THREAD_MESSAGE_LENGTH",
     "MAX_THREAD_TITLE_LENGTH",
     "Project",
@@ -218,12 +218,12 @@ __all__ = [
     "WorkItemTransitionError",
     "TERMINAL_WORK_ITEM_STATUSES",
     "Group",
-    "OrganizationNameError",
+    "GroupNameError",
     "assess_completion",
     "confidence_ceiling",
     "directive_for_outcome",
     "evaluate_publication",
-    "normalize_organization_name",
+    "normalize_group_name",
     "normalize_message_content",
     "require_erasable",
 ]

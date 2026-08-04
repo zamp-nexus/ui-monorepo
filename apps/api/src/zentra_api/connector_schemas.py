@@ -210,7 +210,7 @@ class FieldResponse(BaseModel):
     position: int
     profile: FieldProfileResponse | None = None
     #: Whether the agent system may see this field. Defaults to visible; a
-    #: Tenant departs from that default one field at a time.
+    #: Organization departs from that default one field at a time.
     agent_visible: bool = True
 
 

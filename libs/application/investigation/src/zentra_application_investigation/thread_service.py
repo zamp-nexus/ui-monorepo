@@ -99,7 +99,7 @@ class ThreadService:
         message = ThreadMessage.create(
             message_id=message_id,
             thread_id=thread_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             author_id=actor.user_id,
             kind=ThreadMessageKind.USER_QUESTION,
             content=content,
@@ -107,13 +107,13 @@ class ThreadService:
         )
         routing = await self._intake.resolve(
             message.content,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             data_connection_id=data_connection_id,
         )
         title_source = routing.canonical_question or message.content
         thread = InvestigationThread.create(
             thread_id=thread_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             project_id=project_id,
             initiating_message_id=message_id,
             title=deterministic_thread_title(title_source),
@@ -125,7 +125,7 @@ class ThreadService:
             await unit_of_work.threads.add_thread(thread)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 thread_id=thread_id,
                 kind=WorkFeedEventKind.MESSAGE_ADDED,
                 payload=MessageEventPayload(
@@ -178,7 +178,7 @@ class ThreadService:
             message = ThreadMessage.create(
                 message_id=self._new_id(),
                 thread_id=thread_id,
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 author_id=actor.user_id,
                 kind=ThreadMessageKind.USER_CLARIFICATION,
                 content=content,
@@ -189,13 +189,13 @@ class ThreadService:
             )
             routing = await self._intake.resolve(
                 _combined_question_text(existing_messages + (message,)),
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 data_connection_id=data_connection_id,
             )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 thread_id=thread_id,
                 kind=WorkFeedEventKind.MESSAGE_ADDED,
                 payload=MessageEventPayload(
@@ -241,7 +241,7 @@ class ThreadService:
         message = ThreadMessage.create(
             message_id=self._new_id(),
             thread_id=thread.thread_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             author_id=actor.user_id,
             kind=ThreadMessageKind.USER_QUESTION,
             content=content,
@@ -249,7 +249,7 @@ class ThreadService:
         )
         routing = await self._intake.resolve(
             message.content,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             data_connection_id=latest.data_connection_id if latest else None,
         )
         normalized = message.content.casefold()
@@ -273,7 +273,7 @@ class ThreadService:
         thread.record_message(now)
         await unit_of_work.threads.add_message(message)
         await unit_of_work.work_feed.append(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.MESSAGE_ADDED,
             payload=MessageEventPayload(
@@ -292,7 +292,7 @@ class ThreadService:
             assert routing.canonical_question is not None
             follow_up = Investigation.create(
                 investigation_id=self._new_id(),
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 question=routing.canonical_question,
                 now=now,
                 data_connection_id=latest.data_connection_id if latest else None,
@@ -306,14 +306,14 @@ class ThreadService:
             await unit_of_work.jobs.add_job(
                 ExecutionJob.create(
                     job_id=self._new_id(),
-                    tenant_id=actor.tenant_id,
+                    organization_id=actor.organization_id,
                     investigation_id=follow_up.investigation_id,
                     now=now,
                 )
             )
             await unit_of_work.outbox.enqueue(follow_up.events)
             await unit_of_work.work_feed.append(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 thread_id=thread.thread_id,
                 kind=WorkFeedEventKind.INVESTIGATION_QUEUED,
                 payload=InvestigationEventPayload(
@@ -331,7 +331,7 @@ class ThreadService:
             router_message = self._router_messages(thread, routing, now)[0]
             await unit_of_work.threads.add_message(router_message)
             await unit_of_work.work_feed.append(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 thread_id=thread.thread_id,
                 kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
                 payload=RoutingEventPayload(
@@ -463,7 +463,7 @@ class ThreadService:
         limit = validate_page_size(limit, MAX_PAGE_SIZE)
         after = ThreadCursor.decode(cursor) if cursor else None
         async with self._uow(actor) as unit_of_work:
-            require_group(await unit_of_work.organization.get_group(project_id))
+            require_group(await unit_of_work.groups.get_group(project_id))
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
                 viewer_id=actor.user_id,
@@ -553,7 +553,7 @@ class ThreadService:
             router_messages = self._router_messages(thread, routing, now)
             await unit_of_work.threads.add_message(router_messages[0])
             await unit_of_work.work_feed.append(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 thread_id=thread.thread_id,
                 kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
                 payload=RoutingEventPayload(
@@ -567,11 +567,11 @@ class ThreadService:
         assert routing.canonical_question is not None
         investigation = Investigation.create(
             investigation_id=self._new_id(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             question=routing.canonical_question,
             now=now,
             # Which data the question is asked against. Absent means the demo
-            # warehouse, which is right only for a tenant that has connected
+            # warehouse, which is right only for an organization that has connected
             # nothing — see `active_connection.py`.
             data_connection_id=data_connection_id,
             thread_id=thread.thread_id,
@@ -581,7 +581,7 @@ class ThreadService:
         investigation.start(now)
         job = ExecutionJob.create(
             job_id=self._new_id(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation.investigation_id,
             now=now,
         )
@@ -592,7 +592,7 @@ class ThreadService:
         await unit_of_work.outbox.enqueue(investigation.events)
         await unit_of_work.threads.save_thread(thread)
         await unit_of_work.work_feed.append(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.ROUTING_RESOLVED,
             payload=RoutingEventPayload(disposition=routing.disposition.value),
@@ -600,7 +600,7 @@ class ThreadService:
             event_id=self._new_id(),
         )
         await unit_of_work.work_feed.append(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.INVESTIGATION_QUEUED,
             payload=InvestigationEventPayload(
@@ -622,12 +622,12 @@ class ThreadService:
         now: datetime,
     ) -> ThreadMessage:
         reply_text = await self._conversational.reply(
-            content, tenant_id=actor.tenant_id
+            content, organization_id=actor.organization_id
         )
         reply_message = ThreadMessage.create(
             message_id=self._new_id(),
             thread_id=thread.thread_id,
-            tenant_id=thread.tenant_id,
+            organization_id=thread.organization_id,
             author_id=None,
             kind=ThreadMessageKind.ASSISTANT_REPLY,
             content=reply_text,
@@ -635,7 +635,7 @@ class ThreadService:
         )
         await unit_of_work.threads.add_message(reply_message)
         await unit_of_work.work_feed.append(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             thread_id=thread.thread_id,
             kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
             payload=RoutingEventPayload(
@@ -660,7 +660,7 @@ class ThreadService:
             ThreadMessage.create(
                 message_id=self._new_id(),
                 thread_id=thread.thread_id,
-                tenant_id=thread.tenant_id,
+                organization_id=thread.organization_id,
                 author_id=None,
                 kind=ThreadMessageKind.ROUTER_CLARIFICATION,
                 content=f"{routing.clarification}\n{suggestions}",
@@ -673,7 +673,7 @@ class ThreadService:
     ) -> None:
         # `project_id` names a Group directly now -- Groups own Chat Sessions
         # directly, with no Project layer between them (ADR-0028).
-        group = require_group(await unit_of_work.organization.get_group(project_id))
+        group = require_group(await unit_of_work.groups.get_group(project_id))
         if group.archived_at is not None:
             raise ThreadConflictError("Archived Groups cannot accept Thread messages")
 
@@ -696,7 +696,7 @@ class ThreadService:
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
-            actor.tenant_id, actor.trace_id, actor.span_id
+            actor.organization_id, actor.trace_id, actor.span_id
         )
 
     @staticmethod

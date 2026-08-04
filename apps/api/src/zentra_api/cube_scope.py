@@ -57,15 +57,17 @@ class ScopedCubeSemanticLayers:
     async def resolve(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         data_connection_id: UUID | None,
     ) -> CubeSemanticLayer:
         fingerprint = (
-            await self._resolve_relation_fingerprint(tenant_id, data_connection_id)
+            await self._resolve_relation_fingerprint(
+                organization_id, data_connection_id
+            )
             if data_connection_id is not None
             else None
         )
-        key = (tenant_id, data_connection_id)
+        key = (organization_id, data_connection_id)
         cached = self._entries.get(key)
         if (
             cached is not None
@@ -76,7 +78,7 @@ class ScopedCubeSemanticLayers:
 
         token = (
             mint_cube_token(
-                str(tenant_id) if data_connection_id else None,
+                str(organization_id) if data_connection_id else None,
                 str(data_connection_id) if data_connection_id else None,
                 fingerprint,
                 secret=self._cube_api_secret,

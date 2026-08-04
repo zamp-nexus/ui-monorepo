@@ -3,7 +3,7 @@
 Routing a Thread's first message to a question used to live here — first a
 keyword table matching two governed scenarios, then a passthrough once the
 whitelist was removed. Both are gone: an `IntakeAgent` now reads the question
-against the Tenant's live Analytical Scope (ADR-0027) and makes a judgement
+against the Organization's live Analytical Scope (ADR-0027) and makes a judgement
 this module has no way to make. What is left is the one piece that was never
 about routing: a title derived from the message text alone.
 """

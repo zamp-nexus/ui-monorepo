@@ -285,7 +285,7 @@ export type WorkFeedPayload =
 
 export interface ThreadEvent {
   readonly event_id: string;
-  readonly tenant_id: string;
+  readonly organization_id: string;
   readonly thread_id: string;
   readonly sequence: number;
   readonly kind: WorkFeedEventKind;

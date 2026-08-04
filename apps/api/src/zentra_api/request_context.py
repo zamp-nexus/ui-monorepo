@@ -9,7 +9,7 @@ from zentra_adapter_postgres import (
     IdentityNotBoundError,
     resolve_identity_context,
 )
-from zentra_adapter_telemetry import correlate_tenant, current_trace_ids
+from zentra_adapter_telemetry import correlate_organization, current_trace_ids
 from zentra_application_investigation import AuthenticatedActor, Role
 
 from .auth import AuthenticationError, bearer_token
@@ -33,7 +33,7 @@ async def authenticated_context(
                 connection,
                 provider="clerk",
                 external_subject_id=principal.subject_id,
-                external_tenant_id=principal.organization_id,
+                external_organization_id=principal.organization_id,
             )
     except AuthenticationError as error:
         raise HTTPException(
@@ -46,13 +46,13 @@ async def authenticated_context(
             detail=str(error),
         ) from error
 
-    correlate_tenant(identity.tenant_id)
+    correlate_organization(identity.organization_id)
     trace_id, span_id = current_trace_ids()
     return RequestContext(
         identity=identity,
         actor=AuthenticatedActor(
             user_id=identity.user_id,
-            tenant_id=identity.tenant_id,
+            organization_id=identity.organization_id,
             role=Role(identity.role),
             trace_id=trace_id,
             span_id=span_id,

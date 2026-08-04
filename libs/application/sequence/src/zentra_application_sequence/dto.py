@@ -40,7 +40,7 @@ class SequenceOrigin(StrEnum):
 @dataclass(frozen=True, slots=True)
 class AuthenticatedActor:
     user_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     role: Role
 
 
@@ -57,7 +57,7 @@ class PreparedTableNotFoundError(LookupError):
 
 
 class RawTableNotFoundError(LookupError):
-    """The Raw Table a manual create requested does not exist for this Tenant."""
+    """The Raw Table a manual create requested does not exist for this Organization."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,7 +118,7 @@ class FailedRunView:
 @dataclass(frozen=True, slots=True)
 class SequenceGraphView:
     sequence_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     dataset_workspace_id: UUID
     thread_id: UUID | None
     origin: SequenceOrigin

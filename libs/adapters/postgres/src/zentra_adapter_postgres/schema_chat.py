@@ -20,26 +20,24 @@ activity_events = Table(
     "activity_events",
     metadata,
     Column("event_id", UUID(as_uuid=True), primary_key=True),
-    Column("tenant_id", UUID(as_uuid=True), nullable=False),
+    Column("organization_id", UUID(as_uuid=True), nullable=False),
     Column("chat_session_id", UUID(as_uuid=True), nullable=False),
     Column("sequence", Integer, nullable=False),
     Column("kind", String(64), nullable=False),
     Column("payload", JSON, nullable=False),
     Column("occurred_at", TIMESTAMP(timezone=True), nullable=False),
     ForeignKeyConstraint(
-        ("chat_session_id", "tenant_id"),
-        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
-        name="fk_activity_events_chat_session_tenant",
+        ("chat_session_id", "organization_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.organization_id"),
+        name="fk_activity_events_chat_session_organization",
         ondelete="CASCADE",
     ),
-    UniqueConstraint(
-        "chat_session_id", "sequence", name="uq_activity_events_sequence"
-    ),
+    UniqueConstraint("chat_session_id", "sequence", name="uq_activity_events_sequence"),
     CheckConstraint("sequence >= 1", name="ck_activity_events_sequence"),
 )
 Index(
-    "ix_activity_events_tenant_chat_session_sequence",
-    activity_events.c.tenant_id,
+    "ix_activity_events_organization_chat_session_sequence",
+    activity_events.c.organization_id,
     activity_events.c.chat_session_id,
     activity_events.c.sequence,
 )
@@ -49,7 +47,7 @@ visualization_briefs = Table(
     "visualization_briefs",
     metadata,
     Column("brief_id", UUID(as_uuid=True), primary_key=True),
-    Column("tenant_id", UUID(as_uuid=True), nullable=False),
+    Column("organization_id", UUID(as_uuid=True), nullable=False),
     Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column("schema_version", String(16), nullable=False),
     Column("content", JSON),
@@ -57,13 +55,13 @@ visualization_briefs = Table(
     Column("renderer_configuration", String(200), nullable=False),
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     ForeignKeyConstraint(
-        ("analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_visualization_briefs_analysis_run_tenant",
+        ("analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_visualization_briefs_analysis_run_organization",
         ondelete="CASCADE",
     ),
     UniqueConstraint(
-        "tenant_id",
+        "organization_id",
         "analysis_run_id",
         "schema_version",
         "content_hash",
@@ -71,7 +69,9 @@ visualization_briefs = Table(
         name="uq_visualization_briefs_identity",
     ),
     UniqueConstraint(
-        "brief_id", "tenant_id", name="uq_visualization_briefs_tenant_identity"
+        "brief_id",
+        "organization_id",
+        name="uq_visualization_briefs_organization_identity",
     ),
 )
 
@@ -80,7 +80,7 @@ visualization_artifacts = Table(
     "visualization_artifacts",
     metadata,
     Column("visualization_id", UUID(as_uuid=True), primary_key=True),
-    Column("tenant_id", UUID(as_uuid=True), nullable=False),
+    Column("organization_id", UUID(as_uuid=True), nullable=False),
     Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
     Column(
         "brief_id",
@@ -104,24 +104,24 @@ visualization_artifacts = Table(
     Column("erased_at", TIMESTAMP(timezone=True)),
     Column("erasure_category", String(32)),
     ForeignKeyConstraint(
-        ("brief_id", "tenant_id"),
-        ("visualization_briefs.brief_id", "visualization_briefs.tenant_id"),
-        name="fk_visualization_artifacts_brief_tenant",
+        ("brief_id", "organization_id"),
+        ("visualization_briefs.brief_id", "visualization_briefs.organization_id"),
+        name="fk_visualization_artifacts_brief_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_visualization_artifacts_analysis_run_tenant",
+        ("analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_visualization_artifacts_analysis_run_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("retry_of_visualization_id", "tenant_id"),
+        ("retry_of_visualization_id", "organization_id"),
         (
             "visualization_artifacts.visualization_id",
-            "visualization_artifacts.tenant_id",
+            "visualization_artifacts.organization_id",
         ),
-        name="fk_visualization_artifacts_retry_tenant",
+        name="fk_visualization_artifacts_retry_organization",
         ondelete="RESTRICT",
     ),
     UniqueConstraint(
@@ -129,8 +129,8 @@ visualization_artifacts = Table(
     ),
     UniqueConstraint(
         "visualization_id",
-        "tenant_id",
-        name="uq_visualization_artifacts_tenant_identity",
+        "organization_id",
+        name="uq_visualization_artifacts_organization_identity",
     ),
     CheckConstraint(
         "status IN ('pending', 'generating', 'ready', 'failed', 'tombstoned')",
@@ -148,7 +148,7 @@ visualization_actions = Table(
     "visualization_actions",
     metadata,
     Column("action_id", UUID(as_uuid=True), primary_key=True),
-    Column("tenant_id", UUID(as_uuid=True), nullable=False),
+    Column("organization_id", UUID(as_uuid=True), nullable=False),
     Column("visualization_id", UUID(as_uuid=True), nullable=False),
     Column("chat_session_id", UUID(as_uuid=True), nullable=False),
     Column("analysis_run_id", UUID(as_uuid=True), nullable=False),
@@ -161,24 +161,24 @@ visualization_actions = Table(
     Column("consumed_at", TIMESTAMP(timezone=True)),
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     ForeignKeyConstraint(
-        ("visualization_id", "tenant_id"),
+        ("visualization_id", "organization_id"),
         (
             "visualization_artifacts.visualization_id",
-            "visualization_artifacts.tenant_id",
+            "visualization_artifacts.organization_id",
         ),
-        name="fk_visualization_actions_artifact_tenant",
+        name="fk_visualization_actions_artifact_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("chat_session_id", "tenant_id"),
-        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
-        name="fk_visualization_actions_chat_session_tenant",
+        ("chat_session_id", "organization_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.organization_id"),
+        name="fk_visualization_actions_chat_session_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("analysis_run_id", "tenant_id"),
-        ("analysis_runs.analysis_run_id", "analysis_runs.tenant_id"),
-        name="fk_visualization_actions_analysis_run_tenant",
+        ("analysis_run_id", "organization_id"),
+        ("analysis_runs.analysis_run_id", "analysis_runs.organization_id"),
+        name="fk_visualization_actions_analysis_run_organization",
         ondelete="CASCADE",
     ),
     CheckConstraint(

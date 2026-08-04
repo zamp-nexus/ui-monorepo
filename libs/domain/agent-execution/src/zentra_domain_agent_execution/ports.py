@@ -23,8 +23,8 @@ from .tools import ToolCall, ToolDefinition, ToolResult
 #
 # This is the only port in the system that reaches data. `query()` enforces
 # ADR-003's governed-catalog restriction; `query_raw()` deliberately does not,
-# for tenants/agents that have opted out of it (still tenant-scoped — never
-# cross-tenant).
+# for organizations/agents that have opted out of it (still organization-scoped
+# — never cross-organization).
 # ---------------------------------------------------------------------------
 
 
@@ -34,7 +34,7 @@ class SemanticMeasure(BaseModel):
     name: str = Field(min_length=1)
     type: str = Field(min_length=1)
     format: str | None = None
-    # What this measure means in the tenant's own terms, carried from the
+    # What this measure means in the organization's own terms, carried from the
     # semantic model. A name tells an agent that `orders.revenue` exists; it
     # does not say whether that is gross or net of refunds, and choosing wrong
     # produces a confident answer to a different question.
@@ -147,7 +147,7 @@ class SemanticLayerPort(Protocol):
     def query(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
 
     # Same shape as `query`, but skips the governed-catalog rejection. Only
-    # offered to an Agent whose tenant has opted out of ADR-003's restriction.
+    # offered to an Agent whose organization has opted out of ADR-003's restriction.
     def query_raw(self, request: SemanticQuery) -> Awaitable[SemanticResult]: ...
 
 
@@ -232,13 +232,13 @@ class ExecutionStatus(StrEnum):
 
 
 class AgentExecutionRecord(BaseModel):
-    """One bounded unit of agent work, scoped to a Tenant and Investigation."""
+    """One bounded unit of agent work, scoped to an Organization and Investigation."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: UUID
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
     step: int = Field(ge=0)
@@ -279,7 +279,7 @@ class AgentExecutionStart(BaseModel):
 
     execution_id: UUID
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     agent_id: str = Field(min_length=1)
     role: AgentRole
     step: int = Field(ge=0)
@@ -324,12 +324,12 @@ class AgentRegistryPort(Protocol):
 
 
 class SequenceTableReference(BaseModel):
-    """An opaque, tenant-scoped locator for a table a Sequence Step reads or
-    produces — a Raw Table, or a prior Prepared Table."""
+    """An opaque, organization-scoped locator for a table a Sequence Step
+    reads or produces — a Raw Table, or a prior Prepared Table."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    tenant_id: UUID
+    organization_id: UUID
     reference_id: UUID
     kind: Literal["raw", "prepared"]
 
@@ -337,7 +337,7 @@ class SequenceTableReference(BaseModel):
 class SequenceStepExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    tenant_id: UUID
+    organization_id: UUID
     sequence_id: UUID
     step_id: UUID
     operation_kind: str = Field(min_length=1)

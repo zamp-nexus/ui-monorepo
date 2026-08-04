@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from zentra_application_investigation import GroupDetail
 
 
-class OrganizationNameRequest(BaseModel):
+class GroupNameRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={"examples": [{"name": "Finance Operations"}]},

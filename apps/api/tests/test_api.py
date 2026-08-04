@@ -109,7 +109,8 @@ class Dependencies:
     cube: Probe
     jwt_verifier: Verifier
     investigations: object | None = None
-    organization: object | None = None
+    groups: object | None = None
+    organizations: object | None = None
     threads: object | None = None
     semantic_layers: object | None = None
     #: No Connector wired: these tests are about the API surface, and a
@@ -138,9 +139,11 @@ def client(
     clickhouse: bool = True,
     cube: bool = True,
     investigations: object | None = None,
-    organization: object | None = None,
+    groups: object | None = None,
+    organizations: object | None = None,
     threads: object | None = None,
     semantic_layers: object | None = None,
+    clerk_webhook_secret: str | None = None,
 ) -> TestClient:
     dependencies = Dependencies(
         database=DatabaseProbe(postgres),
@@ -148,7 +151,8 @@ def client(
         cube=Probe(cube),
         jwt_verifier=Verifier(),
         investigations=investigations,
-        organization=organization,
+        groups=groups,
+        organizations=organizations,
         threads=threads,
         semantic_layers=semantic_layers or SemanticLayers(),
     )
@@ -160,6 +164,7 @@ def client(
             # here. The harness states the renderer's absence rather than
             # inheriting whatever the machine happens to be configured for.
             thesys_api_key=None,
+            clerk_webhook_secret=clerk_webhook_secret,
         ),
         dependencies=dependencies,  # type: ignore[arg-type]
     )

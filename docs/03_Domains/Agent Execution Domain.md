@@ -18,7 +18,7 @@ repo_path: libs/domain/agent-execution
 code_refs:
   - libs/domain/agent-execution/CONTEXT.md
   - libs/domain/agent-execution/src/zentra_domain_agent_execution/contracts.py
-  - libs/adapters/postgres/migrations/versions/0005_canonical_insight_role.py
+  - libs/adapters/postgres/migrations/versions/0001_initial_schema.py
 ---
 
 # Agent Execution Domain

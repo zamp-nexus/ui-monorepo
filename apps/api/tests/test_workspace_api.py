@@ -6,7 +6,7 @@ from uuid import UUID
 from zentra_adapter_postgres import IdentityContext
 from zentra_application_investigation import (
     GroupDetail,
-    OrganizationPage,
+    GroupPage,
     PermissionDeniedError,
 )
 
@@ -33,8 +33,8 @@ class WorkspaceStub:
         self.last_name = name
         return self.group
 
-    async def list_groups(self, *args: object, **kwargs: object) -> OrganizationPage:
-        return OrganizationPage(items=(self.group,), next_cursor="next")
+    async def list_groups(self, *args: object, **kwargs: object) -> GroupPage:
+        return GroupPage(items=(self.group,), next_cursor="next")
 
     async def get_group(self, *args: object, **kwargs: object) -> GroupDetail:
         return self.group
@@ -69,7 +69,7 @@ def test_owner_creates_and_lists_groups(monkeypatch) -> None:
     bind_identity(monkeypatch)
     workspace = WorkspaceStub()
 
-    with client(organization=workspace) as test_client:
+    with client(groups=workspace) as test_client:
         created = test_client.post("/v1/groups", headers=AUTH, json={"name": "Finance"})
         listed = test_client.get("/v1/groups", headers=AUTH)
 
@@ -89,7 +89,7 @@ def test_workspace_permission_errors_have_stable_codes(monkeypatch) -> None:
         async def create_group(self, *args: object, name: str) -> GroupDetail:
             raise PermissionDeniedError("This membership cannot organize workspaces")
 
-    with client(organization=RefusingWorkspace()) as test_client:
+    with client(groups=RefusingWorkspace()) as test_client:
         response = test_client.post(
             "/v1/groups", headers=AUTH, json={"name": "Finance"}
         )
@@ -99,7 +99,7 @@ def test_workspace_permission_errors_have_stable_codes(monkeypatch) -> None:
 
 
 def test_openapi_exposes_every_group_operation() -> None:
-    with client(organization=WorkspaceStub()) as test_client:
+    with client(groups=WorkspaceStub()) as test_client:
         paths = set(test_client.get("/openapi.json").json()["paths"])
 
     assert {

@@ -5,18 +5,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from zentra_application_investigation import (
-    OrganizationConflictError,
-    OrganizationCursorError,
-    OrganizationNotFoundError,
+    GroupConflictError,
+    GroupCursorError,
+    GroupNotFoundError,
     PermissionDeniedError,
 )
-from zentra_domain_investigation import OrganizationNameError
+from zentra_domain_investigation import GroupNameError
 
 from .request_context import RequestContext, authenticated_context
 from .workspace_schemas import (
+    GroupNameRequest,
     GroupPageResponse,
     GroupResponse,
-    OrganizationNameRequest,
 )
 
 router = APIRouter(prefix="/v1")
@@ -27,12 +27,12 @@ PageSize = Annotated[int, Query(ge=1, le=100)]
 def _workspace_error(error: Exception) -> NoReturn:
     if isinstance(error, PermissionDeniedError):
         code, status_code = "permission_denied", status.HTTP_403_FORBIDDEN
-    elif isinstance(error, OrganizationNotFoundError):
+    elif isinstance(error, GroupNotFoundError):
         code, status_code = "workspace_not_found", status.HTTP_404_NOT_FOUND
-    elif isinstance(error, OrganizationConflictError):
+    elif isinstance(error, GroupConflictError):
         code, status_code = "workspace_conflict", status.HTTP_409_CONFLICT
     elif isinstance(
-        error, (OrganizationCursorError, OrganizationNameError, ValueError)
+        error, (GroupCursorError, GroupNameError, ValueError)
     ):
         code, status_code = "invalid_workspace", status.HTTP_422_UNPROCESSABLE_ENTITY
     else:  # pragma: no cover
@@ -47,18 +47,18 @@ def _workspace_error(error: Exception) -> NoReturn:
     "/groups", response_model=GroupResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_group(
-    body: OrganizationNameRequest,
+    body: GroupNameRequest,
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> GroupResponse:
     try:
-        detail = await request.app.state.dependencies.organization.create_group(
+        detail = await request.app.state.dependencies.groups.create_group(
             resolved.actor, name=body.name
         )
     except (
         PermissionDeniedError,
-        OrganizationConflictError,
-        OrganizationNameError,
+        GroupConflictError,
+        GroupNameError,
     ) as error:
         _workspace_error(error)
     return GroupResponse.from_detail(detail)
@@ -73,13 +73,13 @@ async def list_groups(
     include_archived: bool = False,
 ) -> GroupPageResponse:
     try:
-        page = await request.app.state.dependencies.organization.list_groups(
+        page = await request.app.state.dependencies.groups.list_groups(
             resolved.actor,
             limit=limit,
             cursor=cursor,
             include_archived=include_archived,
         )
-    except (OrganizationCursorError, ValueError) as error:
+    except (GroupCursorError, ValueError) as error:
         _workspace_error(error)
     return GroupPageResponse(
         items=[GroupResponse.from_detail(item) for item in page.items],
@@ -92,10 +92,10 @@ async def get_group(
     group_id: UUID, request: Request, resolved: AuthenticatedRequest
 ) -> GroupResponse:
     try:
-        detail = await request.app.state.dependencies.organization.get_group(
+        detail = await request.app.state.dependencies.groups.get_group(
             resolved.actor, group_id
         )
-    except OrganizationNotFoundError as error:
+    except GroupNotFoundError as error:
         _workspace_error(error)
     return GroupResponse.from_detail(detail)
 
@@ -103,19 +103,19 @@ async def get_group(
 @router.patch("/groups/{group_id}", response_model=GroupResponse)
 async def rename_group(
     group_id: UUID,
-    body: OrganizationNameRequest,
+    body: GroupNameRequest,
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> GroupResponse:
     try:
-        detail = await request.app.state.dependencies.organization.rename_group(
+        detail = await request.app.state.dependencies.groups.rename_group(
             resolved.actor, group_id, name=body.name
         )
     except (
         PermissionDeniedError,
-        OrganizationNotFoundError,
-        OrganizationConflictError,
-        OrganizationNameError,
+        GroupNotFoundError,
+        GroupConflictError,
+        GroupNameError,
     ) as error:
         _workspace_error(error)
     return GroupResponse.from_detail(detail)
@@ -126,10 +126,10 @@ async def archive_group(
     group_id: UUID, request: Request, resolved: AuthenticatedRequest
 ) -> GroupResponse:
     try:
-        detail = await request.app.state.dependencies.organization.archive_group(
+        detail = await request.app.state.dependencies.groups.archive_group(
             resolved.actor, group_id
         )
-    except (PermissionDeniedError, OrganizationNotFoundError) as error:
+    except (PermissionDeniedError, GroupNotFoundError) as error:
         _workspace_error(error)
     return GroupResponse.from_detail(detail)
 
@@ -139,9 +139,9 @@ async def restore_group(
     group_id: UUID, request: Request, resolved: AuthenticatedRequest
 ) -> GroupResponse:
     try:
-        detail = await request.app.state.dependencies.organization.restore_group(
+        detail = await request.app.state.dependencies.groups.restore_group(
             resolved.actor, group_id
         )
-    except (PermissionDeniedError, OrganizationNotFoundError) as error:
+    except (PermissionDeniedError, GroupNotFoundError) as error:
         _workspace_error(error)
     return GroupResponse.from_detail(detail)

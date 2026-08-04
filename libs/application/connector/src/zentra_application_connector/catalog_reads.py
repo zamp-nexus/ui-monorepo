@@ -25,7 +25,7 @@ class CatalogOperations:
 
     Relies on the attributes the service establishes in its constructor. A mixin
     rather than a collaborator because every method here needs the same
-    tenant-scoping and source-loading rules the rest of the service applies, and
+    organization-scoping and source-loading rules the rest of the service applies, and
     passing those to a separate object would duplicate them.
     """
 
@@ -34,7 +34,7 @@ class CatalogOperations:
     ) -> CatalogVersion:
         await self._load_source(actor, data_source_id)
         version = await self._catalogs.latest_version(
-            data_source_id, tenant_id=actor.tenant_id
+            data_source_id, organization_id=actor.organization_id
         )
         if version is None:
             raise CatalogVersionNotFoundError(str(data_source_id))
@@ -44,7 +44,7 @@ class CatalogOperations:
         self, actor: AuthenticatedActor, catalog_version_id: UUID
     ) -> CatalogVersion:
         version = await self._catalogs.get_version(
-            catalog_version_id, tenant_id=actor.tenant_id
+            catalog_version_id, organization_id=actor.organization_id
         )
         if version is None:
             raise CatalogVersionNotFoundError(str(catalog_version_id))
@@ -77,7 +77,7 @@ class CatalogOperations:
         current = await self.get_catalog(actor, current_id)
         diff = diff_catalogs(previous, current)
         relations = await self._relations.list_for_version(
-            current_id, tenant_id=actor.tenant_id
+            current_id, organization_id=actor.organization_id
         )
         return ReharvestReport(
             catalog_version_id=current_id,

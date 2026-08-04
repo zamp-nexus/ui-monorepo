@@ -47,7 +47,7 @@ class WorkItem:
 
     work_item_id: UUID
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     role: AgentRole
     objective: str
     status: WorkItemStatus
@@ -64,7 +64,7 @@ class WorkItem:
         *,
         work_item_id: UUID,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         role: AgentRole,
         objective: str,
         now: datetime,
@@ -76,7 +76,7 @@ class WorkItem:
         return cls(
             work_item_id=work_item_id,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             role=role,
             objective=objective.strip(),
             status=WorkItemStatus.PENDING,

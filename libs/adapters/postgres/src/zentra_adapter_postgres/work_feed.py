@@ -24,7 +24,7 @@ class PostgresWorkFeedRepository:
     async def append(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         thread_id: UUID,
         kind: WorkFeedEventKind,
         payload: WorkFeedPayload,
@@ -55,7 +55,7 @@ class PostgresWorkFeedRepository:
         ).scalar_one()
         event = ThreadEvent(
             event_id=event_id or uuid4(),
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             thread_id=thread_id,
             sequence=sequence,
             kind=kind,
@@ -65,7 +65,7 @@ class PostgresWorkFeedRepository:
         await self._connection.execute(
             insert(activity_events).values(
                 event_id=event.event_id,
-                tenant_id=event.tenant_id,
+                organization_id=event.organization_id,
                 chat_session_id=event.thread_id,
                 sequence=event.sequence,
                 kind=event.kind.value,
@@ -83,7 +83,7 @@ class PostgresWorkFeedRepository:
     async def append_for_investigation(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         kind: WorkFeedEventKind,
         payload: WorkFeedPayload,
@@ -100,7 +100,7 @@ class PostgresWorkFeedRepository:
         if thread_id is None:
             return None
         return await self.append(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             thread_id=thread_id,
             kind=kind,
             payload=payload,
@@ -138,7 +138,7 @@ class PostgresWorkFeedRepository:
 def _event(row: object) -> ThreadEvent:
     return ThreadEvent(
         event_id=row.event_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         thread_id=row.chat_session_id,
         sequence=row.sequence,
         kind=WorkFeedEventKind(row.kind),

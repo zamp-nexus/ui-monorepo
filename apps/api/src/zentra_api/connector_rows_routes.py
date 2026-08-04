@@ -43,7 +43,7 @@ PageNumber = Annotated[int, Query(ge=1)]
 def _handle_rows():
     """Errors this route can raise, mapped once rather than per branch.
 
-    A read open to any tenant member — same policy as `latest_catalog` and
+    A read open to any Organization member — same policy as `latest_catalog` and
     `list_agent_access`, no role gate. `TableNotInCatalogError` and
     `CubeNotReadyError`/`httpx.HTTPError` both answer with a status the
     frontend recognises as "not ready yet" rather than a generic failure —
@@ -93,7 +93,7 @@ async def browse_table_rows(
         table = find_table(version, table_name)
         query = build_rows_query(table, page=page)
         semantic_layer = await _cube_semantic_layers(request).resolve(
-            tenant_id=actor.tenant_id, data_connection_id=data_source_id
+            organization_id=actor.organization_id, data_connection_id=data_source_id
         )
         payload = await semantic_layer.load_raw(query)
         columns, rows, total = parse_rows_payload(payload, table)

@@ -26,23 +26,23 @@ class ConnectorRawTableResolver:
         self._connector = connector
 
     async def label(
-        self, tenant_id: UUID, reference: RawTableReference
+        self, organization_id: UUID, reference: RawTableReference
     ) -> str | None:
         if isinstance(reference, DatasetTableVersionReference):
             # No Data Source upload path exists yet (Phase 3) — nothing can
             # confirm one of these actually exists, so it is trusted as given.
             return reference.storage_locator
-        return await self._connector_source_table_label(tenant_id, reference)
+        return await self._connector_source_table_label(organization_id, reference)
 
     async def _connector_source_table_label(
-        self, tenant_id: UUID, reference: ConnectorSourceTableReference
+        self, organization_id: UUID, reference: ConnectorSourceTableReference
     ) -> str | None:
         try:
             catalog_version_id = UUID(reference.catalog_version_id)
         except ValueError:
             return None
         actor = ConnectorActor(
-            user_id=uuid4(), tenant_id=tenant_id, role=ConnectorRole.VIEWER
+            user_id=uuid4(), organization_id=organization_id, role=ConnectorRole.VIEWER
         )
         try:
             catalog = await self._connector.get_catalog(actor, catalog_version_id)

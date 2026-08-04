@@ -8,7 +8,7 @@ const getToken = async () => 'test-token';
 
 const event = (sequence: number, eventId: string): ThreadEvent => ({
   event_id: eventId,
-  tenant_id: '20000000-0000-0000-0000-000000000002',
+  organization_id: '20000000-0000-0000-0000-000000000002',
   thread_id: '43000000-0000-0000-0000-000000000001',
   sequence,
   kind: 'agent.public_update',

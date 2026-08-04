@@ -23,9 +23,9 @@ workspace_groups = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("name", Text, nullable=False),
@@ -44,14 +44,14 @@ workspace_groups = Table(
     ),
     Column("archived_at", TIMESTAMP(timezone=True)),
     UniqueConstraint(
-        "tenant_id",
+        "organization_id",
         "normalized_name",
-        name="uq_workspace_groups_tenant_name",
+        name="uq_workspace_groups_organization_name",
     ),
     UniqueConstraint(
         "group_id",
-        "tenant_id",
-        name="uq_workspace_groups_tenant_identity",
+        "organization_id",
+        name="uq_workspace_groups_organization_identity",
     ),
     CheckConstraint(
         "char_length(name) BETWEEN 1 AND 100",
@@ -59,8 +59,8 @@ workspace_groups = Table(
     ),
 )
 Index(
-    "ix_workspace_groups_tenant_activity",
-    workspace_groups.c.tenant_id,
+    "ix_workspace_groups_organization_activity",
+    workspace_groups.c.organization_id,
     workspace_groups.c.updated_at.desc(),
     workspace_groups.c.group_id.desc(),
 )

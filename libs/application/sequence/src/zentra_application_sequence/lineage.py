@@ -104,7 +104,7 @@ def build_graph_view(sequence: Sequence) -> SequenceGraphView:
     reference = sequence.raw_table_reference
     return SequenceGraphView(
         sequence_id=sequence.sequence_id,
-        tenant_id=sequence.tenant_id,
+        organization_id=sequence.organization_id,
         dataset_workspace_id=sequence.dataset_workspace_id,
         thread_id=sequence.thread_id,
         origin=(

@@ -54,7 +54,7 @@ async def active_data_connection_id(
     sources = await connector.list_sources(
         ConnectorActor(
             user_id=actor.user_id,
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             role=ConnectorRole(actor.role.value),
         )
     )

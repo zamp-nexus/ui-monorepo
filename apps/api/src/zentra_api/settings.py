@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     cube_internal_api_secret: str | None = None
     clerk_issuer: str | None = None
     clerk_audience: str | None = None
+    #: Svix signing secret for `POST /v1/webhooks/clerk`. Absent means the
+    #: route rejects every request rather than skip verification — the same
+    #: fail-closed convention `connector_credential_key` follows.
+    clerk_webhook_secret: str | None = Field(default=None, repr=False)
     otel_exporter_otlp_endpoint: str | None = None
     otel_exporter_otlp_headers: str | None = None
     anthropic_api_key: str | None = Field(default=None, repr=False)

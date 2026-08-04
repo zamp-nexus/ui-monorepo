@@ -26,8 +26,8 @@ from dataclasses import dataclass
 
 import clickhouse_connect
 
-#: Percentiles worth reporting. p50 says what usually happens; p95 says what a
-#: Tenant complains about. A mean would hide both.
+#: Percentiles worth reporting. p50 says what usually happens; p95 says what an
+#: Organization complains about. A mean would hide both.
 _QUANTILES = (0.5, 0.95)
 
 
@@ -76,7 +76,7 @@ ORDER BY cost_total DESC
 """
 
 #: Cost per Investigation, not per execution — the number that decides whether
-#: the product is viable is what one Tenant question costs end to end.
+#: the product is viable is what one Organization question costs end to end.
 _INVESTIGATION_QUERY = """
 SELECT
     count() AS investigations,

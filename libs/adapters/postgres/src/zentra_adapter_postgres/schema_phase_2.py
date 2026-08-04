@@ -42,9 +42,9 @@ draft_findings = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("version", Integer, nullable=False, server_default="1"),
@@ -92,8 +92,8 @@ draft_findings = Table(
     ),
 )
 Index(
-    "ix_draft_findings_tenant_analysis_run",
-    draft_findings.c.tenant_id,
+    "ix_draft_findings_organization_analysis_run",
+    draft_findings.c.organization_id,
     draft_findings.c.analysis_run_id,
     draft_findings.c.version,
 )
@@ -114,9 +114,9 @@ draft_finding_claims = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("kind", String(16), nullable=False),
@@ -171,9 +171,9 @@ evidence_citations = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("metric", Text, nullable=False),
@@ -194,7 +194,7 @@ evidence_citations = Table(
         nullable=False,
         server_default=text("now()"),
     ),
-    # `unavailable` is a fault and `tombstoned` a Tenant's deliberate erasure.
+    # `unavailable` is a fault and `tombstoned` an Organization's deliberate erasure.
     # Collapsing them would either alarm a reader about a deletion they asked
     # for or quietly reassure them about data loss.
     CheckConstraint(
@@ -211,8 +211,8 @@ evidence_citations = Table(
     ),
 )
 Index(
-    "ix_evidence_citations_tenant_analysis_run",
-    evidence_citations.c.tenant_id,
+    "ix_evidence_citations_organization_analysis_run",
+    evidence_citations.c.organization_id,
     evidence_citations.c.analysis_run_id,
 )
 
@@ -235,9 +235,9 @@ draft_finding_claim_citations = Table(
         primary_key=True,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("position", Integer, nullable=False),
@@ -271,9 +271,9 @@ erasure_operations = Table(
         nullable=False,
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("category", String(32), nullable=False),
@@ -290,7 +290,7 @@ erasure_operations = Table(
     # the erased value is quoted back.
     Column("failure_code", Text),
     CheckConstraint(
-        "category IN ('tenant_request')",
+        "category IN ('organization_request')",
         name="ck_erasure_operations_category",
     ),
     CheckConstraint(

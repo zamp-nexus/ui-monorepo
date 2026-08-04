@@ -26,9 +26,9 @@ chat_sessions = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("group_id", UUID(as_uuid=True), nullable=False),
@@ -75,13 +75,15 @@ chat_sessions = Table(
     ),
     Column("archived_at", TIMESTAMP(timezone=True)),
     ForeignKeyConstraint(
-        ("group_id", "tenant_id"),
-        ("workspace_groups.group_id", "workspace_groups.tenant_id"),
-        name="fk_chat_sessions_group_tenant",
+        ("group_id", "organization_id"),
+        ("workspace_groups.group_id", "workspace_groups.organization_id"),
+        name="fk_chat_sessions_group_organization",
         ondelete="CASCADE",
     ),
     UniqueConstraint(
-        "chat_session_id", "tenant_id", name="uq_chat_sessions_tenant_identity"
+        "chat_session_id",
+        "organization_id",
+        name="uq_chat_sessions_organization_identity",
     ),
     CheckConstraint(
         "status IN ('draft', 'active', 'archived')",
@@ -106,7 +108,7 @@ chat_sessions = Table(
 )
 Index(
     "ix_chat_sessions_group_activity",
-    chat_sessions.c.tenant_id,
+    chat_sessions.c.organization_id,
     chat_sessions.c.group_id,
     chat_sessions.c.latest_activity_at.desc(),
     chat_sessions.c.chat_session_id.desc(),
@@ -124,9 +126,9 @@ messages = Table(
     ),
     Column("chat_session_id", UUID(as_uuid=True), nullable=False),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("author_id", UUID(as_uuid=True)),
@@ -146,16 +148,16 @@ messages = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("chat_session_id", "tenant_id"),
-        ("chat_sessions.chat_session_id", "chat_sessions.tenant_id"),
-        name="fk_messages_chat_session_tenant",
+        ("chat_session_id", "organization_id"),
+        ("chat_sessions.chat_session_id", "chat_sessions.organization_id"),
+        name="fk_messages_chat_session_organization",
         ondelete="CASCADE",
     ),
     UniqueConstraint(
         "message_id",
         "chat_session_id",
-        "tenant_id",
-        name="uq_messages_chat_session_tenant_identity",
+        "organization_id",
+        name="uq_messages_chat_session_organization_identity",
     ),
     CheckConstraint(
         "kind IN ('user_question', 'user_clarification', "
@@ -173,7 +175,7 @@ messages = Table(
 )
 Index(
     "ix_messages_chat_session_created",
-    messages.c.tenant_id,
+    messages.c.organization_id,
     messages.c.chat_session_id,
     messages.c.created_at,
     messages.c.message_id,
@@ -181,11 +183,11 @@ Index(
 
 chat_sessions.append_constraint(
     ForeignKeyConstraint(
-        ("initiating_message_id", "chat_session_id", "tenant_id"),
+        ("initiating_message_id", "chat_session_id", "organization_id"),
         (
             "messages.message_id",
             "messages.chat_session_id",
-            "messages.tenant_id",
+            "messages.organization_id",
         ),
         name="fk_chat_sessions_initiating_message",
         deferrable=True,

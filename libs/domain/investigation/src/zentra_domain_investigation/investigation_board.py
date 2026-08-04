@@ -1,7 +1,7 @@
 """The durable object an Investigation accumulates its working memory onto.
 
 See ADR-0026. Distinct from `workspace.py`'s `Group`/`Project` — those are
-Tenant-visible navigation containers with no analytical content; the
+Organization-visible navigation containers with no analytical content; the
 Investigation Board is the shared canvas Work Items read and write for one
 Investigation. The Orchestrator Loop decides what happens next by reading
 this object, never by parsing an Agent's prose.
@@ -102,7 +102,7 @@ class BoardTransitionError(RuntimeError):
 class InvestigationBoard:
     board_id: UUID
     investigation_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     created_at: datetime
     updated_at: datetime
     facts: list[Fact] = field(default_factory=list)
@@ -114,12 +114,17 @@ class InvestigationBoard:
 
     @classmethod
     def create(
-        cls, *, board_id: UUID, investigation_id: UUID, tenant_id: UUID, now: datetime
+        cls,
+        *,
+        board_id: UUID,
+        investigation_id: UUID,
+        organization_id: UUID,
+        now: datetime,
     ) -> InvestigationBoard:
         return cls(
             board_id=board_id,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             created_at=now,
             updated_at=now,
         )
@@ -130,9 +135,7 @@ class InvestigationBoard:
 
     @property
     def high_priority_open_gaps(self) -> tuple[KnowledgeGap, ...]:
-        return tuple(
-            gap for gap in self.open_gaps if gap.priority is GapPriority.HIGH
-        )
+        return tuple(gap for gap in self.open_gaps if gap.priority is GapPriority.HIGH)
 
     @property
     def unresolved_conflicts(self) -> tuple[Conflict, ...]:

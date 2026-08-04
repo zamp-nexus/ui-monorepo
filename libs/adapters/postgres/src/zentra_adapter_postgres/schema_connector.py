@@ -37,9 +37,9 @@ data_sources = Table(
     metadata,
     Column("data_source_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("name", Text, nullable=False),
@@ -79,15 +79,15 @@ data_sources = Table(
         "health IN ('unverified', 'reachable', 'unreachable')",
         name="ck_data_sources_health",
     ),
-    # A tenant's own source names are theirs to keep distinct; two tenants may
-    # both call one "Production".
+    # An Organization's own source names are theirs to keep distinct; two
+    # Organizations may both call one "Production".
     Index(
-        "uq_data_sources_tenant_name",
-        "tenant_id",
+        "uq_data_sources_organization_name",
+        "organization_id",
         "name",
         unique=True,
     ),
-    Index("ix_data_sources_tenant", "tenant_id"),
+    Index("ix_data_sources_organization", "organization_id"),
 )
 
 #: A Catalog Version, tables and all, as one JSONB document.
@@ -101,9 +101,9 @@ catalog_versions = Table(
     metadata,
     Column("catalog_version_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -116,7 +116,7 @@ catalog_versions = Table(
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     #: `{"tables": [...], "unreadable": [...]}` — the frozen picture itself.
     Column("payload", JSONB, nullable=False),
-    Index("ix_catalog_versions_tenant", "tenant_id"),
+    Index("ix_catalog_versions_organization", "organization_id"),
     # `latest_version` orders by this, per source.
     Index("ix_catalog_versions_source_created", "data_source_id", "created_at"),
 )
@@ -131,9 +131,9 @@ relations = Table(
     metadata,
     Column("relation_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -176,14 +176,14 @@ relations = Table(
         "origin IN ('inferred', 'declared')",
         name="ck_relations_origin",
     ),
-    Index("ix_relations_tenant", "tenant_id"),
+    Index("ix_relations_organization", "organization_id"),
     Index("ix_relations_catalog_version", "catalog_version_id"),
     # `list_for_source` reaches relations from either side of the join.
     Index("ix_relations_left_source", "left_data_source_id"),
     Index("ix_relations_right_source", "right_data_source_id"),
 )
 
-#: A Tenant decision that a table, or one field within it, is not for agents.
+#: An Organization decision that a table, or one field within it, is not for agents.
 #:
 #: Keyed by `table_name`/`field_name` rather than by `catalog_version_id` or a
 #: field id, both of which are reassigned on every re-harvest — the point of
@@ -192,16 +192,16 @@ relations = Table(
 #:
 #: Two partial unique indexes rather than one over `(..., field_name)`,
 #: because Postgres treats every `NULL` as distinct from every other `NULL`:
-#: a plain unique index would let a Tenant "toggle" the same table off twice
+#: a plain unique index would let an Organization "toggle" the same table off twice
 #: and get two rows instead of one upsert.
 catalog_agent_access = Table(
     "catalog_agent_access",
     metadata,
     Column("override_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -217,7 +217,7 @@ catalog_agent_access = Table(
     Column("decided_at", TIMESTAMP(timezone=True), nullable=False),
     Index(
         "ux_catalog_agent_access_table",
-        "tenant_id",
+        "organization_id",
         "data_source_id",
         "table_name",
         unique=True,
@@ -225,14 +225,14 @@ catalog_agent_access = Table(
     ),
     Index(
         "ux_catalog_agent_access_field",
-        "tenant_id",
+        "organization_id",
         "data_source_id",
         "table_name",
         "field_name",
         unique=True,
         postgresql_where=text("field_name IS NOT NULL"),
     ),
-    Index("ix_catalog_agent_access_source", "tenant_id", "data_source_id"),
+    Index("ix_catalog_agent_access_source", "organization_id", "data_source_id"),
 )
 
 #: One execution of discovery.
@@ -241,9 +241,9 @@ harvest_runs = Table(
     metadata,
     Column("harvest_run_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -273,6 +273,6 @@ harvest_runs = Table(
         nullable=False,
         server_default=text("false"),
     ),
-    Index("ix_harvest_runs_tenant", "tenant_id"),
+    Index("ix_harvest_runs_organization", "organization_id"),
     Index("ix_harvest_runs_source", "data_source_id"),
 )

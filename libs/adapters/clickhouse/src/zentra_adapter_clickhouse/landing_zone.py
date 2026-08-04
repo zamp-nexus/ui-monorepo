@@ -248,13 +248,13 @@ class ClickHouseLandingZone:
         self,
         stream: AsyncIterator[bytes],
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         upload_id: UUID,
         upload_format: UploadFormat,
         columns: Sequence[SourceFieldDescriptor],
     ) -> LandedTable:
         payload = await _collect(stream)
-        table = f"upload_{tenant_id.hex[:12]}_{upload_id.hex[:12]}"
+        table = f"upload_{organization_id.hex[:12]}_{upload_id.hex[:12]}"
         await asyncio.to_thread(
             self._create_and_insert, table, columns, payload, upload_format
         )

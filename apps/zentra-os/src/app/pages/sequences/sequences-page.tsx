@@ -38,7 +38,7 @@ export const SequencesPage = ({ getToken, identity }: SequencesPageProps) => {
   return (
     <section className="px-8 py-10">
       <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-        {identity.tenant_name}
+        {identity.organization_name}
       </p>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div>

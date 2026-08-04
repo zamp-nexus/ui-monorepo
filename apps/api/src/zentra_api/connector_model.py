@@ -39,8 +39,10 @@ class ConnectorNotConfiguredError(RuntimeError):
 #: membership: nothing here is attributable to a person, and every method
 #: touched is a read (reads are open to any role in this service; only
 #: mutations gate on WRITE_ROLES).
-def _system_actor(tenant_id: UUID) -> AuthenticatedActor:
-    return AuthenticatedActor(user_id=uuid4(), tenant_id=tenant_id, role=Role.VIEWER)
+def _system_actor(organization_id: UUID) -> AuthenticatedActor:
+    return AuthenticatedActor(
+        user_id=uuid4(), organization_id=organization_id, role=Role.VIEWER
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +73,7 @@ class ConnectorCubeModel:
 async def relation_fingerprint(
     connector: ConnectorService | None,
     *,
-    tenant_id: UUID,
+    organization_id: UUID,
     data_connection_id: UUID,
 ) -> str:
     """A fingerprint that changes on anything altering the compiled schema.
@@ -92,7 +94,7 @@ async def relation_fingerprint(
         raise ConnectorNotConfiguredError(
             "No ConnectorService is configured; cannot read a Join Graph"
         )
-    actor = _system_actor(tenant_id)
+    actor = _system_actor(organization_id)
     catalog = await connector.latest_catalog(actor, data_connection_id)
     graph = await connector.join_graph(actor, catalog.catalog_version_id)
     overrides = await connector.list_agent_access(actor, data_connection_id)
@@ -113,7 +115,7 @@ def _fingerprint_of(relations, overrides=()) -> str:
 async def connector_cube_model(
     connector: ConnectorService | None,
     *,
-    tenant_id: UUID,
+    organization_id: UUID,
     data_connection_id: UUID,
 ) -> ConnectorCubeModel:
     """Everything Cube's dynamic schema generator needs for one Data
@@ -128,7 +130,7 @@ async def connector_cube_model(
         raise ConnectorNotConfiguredError(
             "No ConnectorService is configured; cannot read a Join Graph"
         )
-    actor = _system_actor(tenant_id)
+    actor = _system_actor(organization_id)
     # Access-filtered, not the raw harvest. Everything compiled from this model
     # becomes a queryable cube, so a table a Tenant turned off in the Datasets
     # UI has to be structurally absent here — the same governance-by-absence

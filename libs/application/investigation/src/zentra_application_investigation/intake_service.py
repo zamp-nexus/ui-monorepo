@@ -1,4 +1,4 @@
-"""Resolves a Thread message against the Tenant's Analytical Scope.
+"""Resolves a Thread message against the Organization's Analytical Scope.
 
 Replaces `thread_routing.py`'s keyword whitelist (ADR-0027). `IntakeService`
 implements `IntakePort` by invoking an `AgentPort`-shaped Intake Agent — the
@@ -24,15 +24,15 @@ _DEFAULT_CLARIFICATION = (
 
 
 class IntakeService:
-    """Builds a fresh Intake Agent per call, scoped to the caller's Tenant.
+    """Builds a fresh Intake Agent per call, scoped to the caller's Organization.
 
     Mirrors `LangGraphInvestigationPipeline`: an Agent that reads a semantic
     layer cannot be built once at startup and shared, because the layer
-    itself is scoped per (Tenant, Data Connection) and resolved at request
+    itself is scoped per (Organization, Data Connection) and resolved at request
     time (`ScopedCubeSemanticLayers`). The caller's resolved Data Connection is
     threaded through here so Intake sees the same catalog the Cube Analyst
     will later query — routing against a different one than the answer comes
-    from is how "the catalog only has Commerce" gets said about a tenant whose
+    from is how "the catalog only has Commerce" gets said about an organization whose
     connected source has never had a Commerce cube.
     """
 
@@ -53,11 +53,11 @@ class IntakeService:
         self,
         question: str,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         data_connection_id: UUID | None = None,
     ) -> RoutingResult:
         semantic_layer = await self._resolve_semantic_layer(
-            tenant_id, data_connection_id
+            organization_id, data_connection_id
         )
         agent = self._agent_factory(semantic_layer)
         output = await agent.invoke(
@@ -66,7 +66,7 @@ class IntakeService:
                 # the message does not resolve, and reused as the real
                 # Investigation id if it does (the caller's job, not ours).
                 investigation_id=self._new_id(),
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 state={"question": question},
             )
         )

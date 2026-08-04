@@ -672,7 +672,7 @@
       },
       "CatalogSummaryResponse": {
         "additionalProperties": false,
-        "description": "What this tenant can actually be asked about.\n\nReplaces the fixed list of governed scenarios (ADR-0023). A client that has\nto offer the user a starting question needs the tenant's own vocabulary,\nand this is the same governed catalog the Cube Analyst reasons over \u2014 so a\nsuggestion the UI makes is one the agent can genuinely answer.",
+        "description": "What this Organization can actually be asked about.\n\nReplaces the fixed list of governed scenarios (ADR-0023). A client that has\nto offer the user a starting question needs the Organization's own vocabulary,\nand this is the same governed catalog the Cube Analyst reasons over \u2014 so a\nsuggestion the UI makes is one the agent can genuinely answer.",
         "properties": {
           "dimensions": {
             "items": {
@@ -1264,17 +1264,17 @@
             "title": "Email",
             "type": "string"
           },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "organization_name": {
+            "title": "Organization Name",
+            "type": "string"
+          },
           "role": {
             "title": "Role",
-            "type": "string"
-          },
-          "tenant_id": {
-            "format": "uuid",
-            "title": "Tenant Id",
-            "type": "string"
-          },
-          "tenant_name": {
-            "title": "Tenant Name",
             "type": "string"
           },
           "user_id": {
@@ -1285,9 +1285,9 @@
         },
         "required": [
           "user_id",
-          "tenant_id",
+          "organization_id",
           "email",
-          "tenant_name",
+          "organization_name",
           "role"
         ],
         "title": "ContextResponse",
@@ -1873,6 +1873,27 @@
         "title": "FindingResponse",
         "type": "object"
       },
+      "GroupNameRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "name": "Finance Operations"
+          }
+        ],
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "GroupNameRequest",
+        "type": "object"
+      },
       "GroupPageResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2407,27 +2428,6 @@
           "unit"
         ],
         "title": "MetricComparisonResponse",
-        "type": "object"
-      },
-      "OrganizationNameRequest": {
-        "additionalProperties": false,
-        "examples": [
-          {
-            "name": "Finance Operations"
-          }
-        ],
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "OrganizationNameRequest",
         "type": "object"
       },
       "PreparedTablePreviewResponse": {
@@ -4666,17 +4666,17 @@
         "summary": "Ready"
       }
     },
-    "/internal/v1/cube/model/{tenant_id}/{data_connection_id}": {
+    "/internal/v1/cube/model/{organization_id}/{data_connection_id}": {
       "get": {
-        "operationId": "get_connector_cube_model_internal_v1_cube_model__tenant_id___data_connection_id__get",
+        "operationId": "get_connector_cube_model_internal_v1_cube_model__organization_id___data_connection_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "tenant_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "format": "uuid",
-              "title": "Tenant Id",
+              "title": "Organization Id",
               "type": "string"
             }
           },
@@ -4787,7 +4787,7 @@
     },
     "/v1/catalog": {
       "get": {
-        "description": "The governed vocabulary this tenant may ask questions about.\n\nResolved per tenant, so it is the tenant's own catalog and never another's\n\u2014 the whole reason `ScopedCubeSemanticLayers` exists. Measures and\ndimensions only: no rows, and no physical schema.",
+        "description": "The governed vocabulary this Organization may ask questions about.\n\nResolved per Organization, so it is the Organization's own catalog and never\nanother's\n\u2014 the whole reason `ScopedCubeSemanticLayers` exists. Measures and\ndimensions only: no rows, and no physical schema.",
         "operationId": "catalog_v1_catalog_get",
         "parameters": [
           {
@@ -6187,7 +6187,7 @@
     },
     "/v1/connector/sources/{data_source_id}/deletion-preview": {
       "get": {
-        "description": "What DELETE would destroy, so it is known beforehand.\n\nA read. Deletion itself stays unconditional \u2014 a Tenant who wants their data\ngone should not be argued with, only informed.",
+        "description": "What DELETE would destroy, so it is known beforehand.\n\nA read. Deletion itself stays unconditional \u2014 an Organization who wants their data\ngone should not be argued with, only informed.",
         "operationId": "preview_source_deletion_v1_connector_sources__data_source_id__deletion_preview_get",
         "parameters": [
           {
@@ -6968,7 +6968,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrganizationNameRequest"
+                "$ref": "#/components/schemas/GroupNameRequest"
               }
             }
           },
@@ -7088,7 +7088,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrganizationNameRequest"
+                "$ref": "#/components/schemas/GroupNameRequest"
               }
             }
           },
@@ -7635,7 +7635,7 @@
     },
     "/v1/investigations/{investigation_id}/citations/{citation_id}": {
       "get": {
-        "description": "Follow one claim to the evidence behind it.\n\nNested under the Investigation so the Investigation's own visibility is\nchecked first: a citation id must not become a way to probe an\nInvestigation the caller cannot read.\n\nThere is no Tenant parameter, here or anywhere below. Identity comes from\nthe verified token, so there is nothing for a caller to supply or override.",
+        "description": "Follow one claim to the evidence behind it.\n\nNested under the Investigation so the Investigation's own visibility is\nchecked first: a citation id must not become a way to probe an\nInvestigation the caller cannot read.\n\nThere is no Organization parameter, here or anywhere below. Identity comes from\nthe verified token, so there is nothing for a caller to supply or override.",
         "operationId": "resolve_citation_v1_investigations__investigation_id__citations__citation_id__get",
         "parameters": [
           {

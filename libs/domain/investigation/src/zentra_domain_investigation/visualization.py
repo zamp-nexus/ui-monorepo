@@ -162,7 +162,7 @@ class VisualizationArtifact(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     visualization_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     brief_id: UUID
     status: VisualizationArtifactStatus
@@ -201,7 +201,7 @@ class VisualizationActionMapping(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     action_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     visualization_id: UUID
     thread_id: UUID
     investigation_id: UUID

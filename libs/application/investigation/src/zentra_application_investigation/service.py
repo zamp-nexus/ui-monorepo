@@ -107,7 +107,7 @@ class InvestigationService:
         now = self._now()
         investigation = Investigation.create(
             investigation_id=self._new_id(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             question=question,
             now=now,
             data_connection_id=data_connection_id,
@@ -115,13 +115,13 @@ class InvestigationService:
         investigation.start(now)
         job = ExecutionJob.create(
             job_id=self._new_id(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation.investigation_id,
             now=now,
         )
 
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -131,7 +131,7 @@ class InvestigationService:
             await unit_of_work.commit()
 
         delivered = await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation.investigation_id,
         )
         return await self._detail(
@@ -174,11 +174,13 @@ class InvestigationService:
     async def execute(self, actor: AuthenticatedActor, investigation_id: UUID) -> None:
         await self._execute(actor, investigation_id, record_failure=True)
 
-    async def execute_job(self, *, tenant_id: UUID, investigation_id: UUID) -> None:
+    async def execute_job(
+        self, *, organization_id: UUID, investigation_id: UUID
+    ) -> None:
         await self._execute(
             AuthenticatedActor(
                 user_id=UUID(int=0),
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 role=Role.MEMBER,
                 trace_id=UUID(int=0),
                 span_id=UUID(int=0),
@@ -190,19 +192,19 @@ class InvestigationService:
     async def fail_job(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         failure_category: str,
     ) -> None:
         actor = AuthenticatedActor(
             user_id=UUID(int=0),
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             role=Role.MEMBER,
             trace_id=UUID(int=0),
             span_id=UUID(int=0),
         )
         async with self._unit_of_work_factory(
-            tenant_id, actor.trace_id, actor.span_id
+            organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
             investigation = await unit_of_work.investigations.get(investigation_id)
         if investigation is not None:
@@ -211,7 +213,7 @@ class InvestigationService:
     async def cancel_job(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
     ) -> None:
         """Apply a cancellation observed by the durable worker.
@@ -222,7 +224,7 @@ class InvestigationService:
         """
         now = self._now()
         async with self._unit_of_work_factory(
-            tenant_id, UUID(int=0), UUID(int=0)
+            organization_id, UUID(int=0), UUID(int=0)
         ) as unit_of_work:
             investigation = await unit_of_work.investigations.get(
                 investigation_id, for_update=True
@@ -236,7 +238,7 @@ class InvestigationService:
             )
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 event_id=self._new_id(),
                 investigation_id=investigation_id,
                 kind=WorkFeedEventKind.INVESTIGATION_CANCELLED,
@@ -256,7 +258,7 @@ class InvestigationService:
         self._require_create_role(actor)
         now = self._now()
         async with self._unit_of_work_factory(
-            actor.tenant_id, actor.trace_id, actor.span_id
+            actor.organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
             investigation = await unit_of_work.investigations.get(
                 investigation_id, for_update=True
@@ -280,7 +282,7 @@ class InvestigationService:
                 )
                 await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 event_id=self._new_id(),
                 investigation_id=investigation_id,
                 kind=(
@@ -310,7 +312,7 @@ class InvestigationService:
         self._require_create_role(actor)
         now = self._now()
         async with self._unit_of_work_factory(
-            actor.tenant_id, actor.trace_id, actor.span_id
+            actor.organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
             original = await unit_of_work.investigations.get(
                 investigation_id, for_update=True
@@ -336,7 +338,7 @@ class InvestigationService:
                 sequence = (latest.thread_sequence or 0) + 1
             retried = Investigation.create(
                 investigation_id=self._new_id(),
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 question=original.question,
                 now=now,
                 data_connection_id=original.data_connection_id,
@@ -349,7 +351,7 @@ class InvestigationService:
             retried.start(now)
             job = ExecutionJob.create(
                 job_id=self._new_id(),
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 investigation_id=retried.investigation_id,
                 now=now,
             )
@@ -358,7 +360,7 @@ class InvestigationService:
             await unit_of_work.outbox.enqueue(retried.events)
             if retried.thread_id is not None and hasattr(unit_of_work, "work_feed"):
                 await unit_of_work.work_feed.append_for_investigation(
-                    tenant_id=actor.tenant_id,
+                    organization_id=actor.organization_id,
                     event_id=self._new_id(),
                     investigation_id=retried.investigation_id,
                     kind=WorkFeedEventKind.INVESTIGATION_RETRY_CREATED,
@@ -372,7 +374,7 @@ class InvestigationService:
                 )
             await unit_of_work.commit()
         delivered = await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=retried.investigation_id,
         )
         return await self._detail(
@@ -396,7 +398,7 @@ class InvestigationService:
         complete; this applies the terminal result to the aggregate.
         """
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -404,14 +406,14 @@ class InvestigationService:
             if investigation is None:
                 raise InvestigationNotFoundError("Investigation was not found")
             threshold = await unit_of_work.policies.confidence_threshold(
-                actor.tenant_id
+                actor.organization_id
             )
-            model_tier = await unit_of_work.policies.model_tier(actor.tenant_id)
+            model_tier = await unit_of_work.policies.model_tier(actor.organization_id)
 
         try:
             result = await self._pipeline.run(
                 investigation_id=investigation_id,
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 question=investigation.question,
                 model_tier=model_tier,
                 data_connection_id=investigation.data_connection_id,
@@ -450,7 +452,7 @@ class InvestigationService:
             HumanApproval(
                 approval_id=self._new_id(),
                 investigation_id=investigation.investigation_id,
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 reason=approval_reason,
                 failed_conditions=decision.failed,
                 status=HumanApprovalStatus.PENDING,
@@ -461,7 +463,7 @@ class InvestigationService:
         )
 
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -492,7 +494,7 @@ class InvestigationService:
                 )
                 if hasattr(unit_of_work, "work_feed"):
                     await unit_of_work.work_feed.append_for_investigation(
-                        tenant_id=actor.tenant_id,
+                        organization_id=actor.organization_id,
                         investigation_id=investigation_id,
                         kind=WorkFeedEventKind.FINDING_PUBLISHED,
                         payload=FindingEventPayload(
@@ -504,7 +506,7 @@ class InvestigationService:
                     )
             elif hasattr(unit_of_work, "work_feed"):
                 await unit_of_work.work_feed.append_for_investigation(
-                    tenant_id=actor.tenant_id,
+                    organization_id=actor.organization_id,
                     investigation_id=investigation_id,
                     kind=WorkFeedEventKind.APPROVAL_REQUESTED,
                     payload=ApprovalEventPayload(
@@ -521,7 +523,7 @@ class InvestigationService:
             await unit_of_work.commit()
 
         await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation_id,
         )
 
@@ -540,7 +542,7 @@ class InvestigationService:
             self._now(),
         )
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -551,7 +553,7 @@ class InvestigationService:
             await unit_of_work.outbox.enqueue(investigation.events)
             await unit_of_work.commit()
         await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation.investigation_id,
         )
 
@@ -561,7 +563,7 @@ class InvestigationService:
         investigation_id: UUID,
     ) -> InvestigationDetail:
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -571,7 +573,7 @@ class InvestigationService:
             approval = await unit_of_work.approvals.get_for_investigation(
                 investigation_id
             )
-            # Read inside the same tenant-scoped transaction, so RLS decides
+            # Read inside the same organization-scoped transaction, so RLS decides
             # visibility rather than a second unguarded round trip.
             draft = await unit_of_work.draft_findings.latest_for_investigation(
                 investigation_id
@@ -598,9 +600,9 @@ class InvestigationService:
         actor: AuthenticatedActor,
         *,
         investigation_id: UUID,
-        category: DeletionCategory = DeletionCategory.TENANT_REQUEST,
+        category: DeletionCategory = DeletionCategory.ORGANIZATION_REQUEST,
     ) -> InvestigationDetail:
-        """Erase a terminal Investigation's evidence, at a Tenant's request.
+        """Erase a terminal Investigation's evidence, at an Organization's request.
 
         Owner and admin only. The request, the erasure and the audit event are
         one transaction: a deletion that recorded itself without erasing, or
@@ -623,7 +625,7 @@ class InvestigationService:
         started = perf_counter()
         now = self._now()
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -634,7 +636,7 @@ class InvestigationService:
             try:
                 requested = await unit_of_work.erasures.request(
                     erasure_id=self._new_id(),
-                    tenant_id=actor.tenant_id,
+                    organization_id=actor.organization_id,
                     investigation_id=investigation_id,
                     category=category,
                     now=now,
@@ -694,7 +696,7 @@ class InvestigationService:
             await unit_of_work.commit()
 
         await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation_id,
         )
         self._observe_erasure(
@@ -715,18 +717,18 @@ class InvestigationService:
     ) -> EvidenceCitation:
         """Follow one claim's evidence.
 
-        Tenant identity comes from `actor` and nowhere else — the caller cannot
-        name a Tenant, so there is no parameter to get wrong. The transaction
-        sets `app.tenant_id` from it, and RLS decides visibility.
+        Organization identity comes from `actor` and nowhere else — the caller cannot
+        name an Organization, so there is no parameter to get wrong. The transaction
+        sets `app.organization_id` from it, and RLS decides visibility.
 
         Every way of not being allowed to see this collapses to the same
-        answer. "Another Tenant's", "another Investigation's" and "does not
+        answer. "Another Organization's", "another Investigation's" and "does not
         exist" are indistinguishable on purpose: a caller who can tell them
         apart can confirm that somebody else's evidence exists by copying an
         identifier.
         """
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -758,7 +760,7 @@ class InvestigationService:
         changed = False
         new_events: Sequence[DomainEvent] = ()
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -798,7 +800,7 @@ class InvestigationService:
                     await unit_of_work.outbox.enqueue(new_events)
                     if hasattr(unit_of_work, "work_feed"):
                         await unit_of_work.work_feed.append_for_investigation(
-                            tenant_id=actor.tenant_id,
+                            organization_id=actor.organization_id,
                             investigation_id=investigation_id,
                             kind=WorkFeedEventKind.APPROVAL_DECIDED,
                             payload=ApprovalEventPayload(
@@ -827,7 +829,7 @@ class InvestigationService:
                         )
                         if hasattr(unit_of_work, "work_feed"):
                             await unit_of_work.work_feed.append_for_investigation(
-                                tenant_id=actor.tenant_id,
+                                organization_id=actor.organization_id,
                                 investigation_id=investigation_id,
                                 kind=WorkFeedEventKind.FINDING_PUBLISHED,
                                 payload=FindingEventPayload(
@@ -848,7 +850,7 @@ class InvestigationService:
         delivered = True
         if changed:
             delivered = await self._audit_writer.flush(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 investigation_id=investigation_id,
             )
         return await self._detail(
@@ -874,7 +876,7 @@ class InvestigationService:
     ) -> InvestigationDetail:
         timeline = tuple(
             await self._audit_reader.list_timeline(
-                tenant_id=actor.tenant_id,
+                organization_id=actor.organization_id,
                 investigation_id=investigation.investigation_id,
             )
         )
@@ -949,7 +951,7 @@ class InvestigationService:
         rows by posting decisions at it.
         """
         async with self._unit_of_work_factory(
-            actor.tenant_id,
+            actor.organization_id,
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
@@ -974,7 +976,7 @@ class InvestigationService:
             await unit_of_work.outbox.enqueue(investigation.events[cursor:])
             await unit_of_work.commit()
         await self._audit_writer.flush(
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             investigation_id=investigation_id,
         )
 

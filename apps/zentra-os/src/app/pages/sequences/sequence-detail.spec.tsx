@@ -324,7 +324,7 @@ describe('SequenceDetailPage', () => {
       'id: 1\nevent: thread.message_added\ndata: ' +
       JSON.stringify({
         event_id: 'e1',
-        tenant_id: 't',
+        organization_id: 't',
         thread_id: THREAD_ID,
         sequence: 1,
         kind: 'thread.message_added',

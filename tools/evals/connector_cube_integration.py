@@ -9,7 +9,7 @@ adapters, the real `AesGcmCredentialCipher`, the real
 `connector_model.relation_fingerprint`/`cube_auth.mint_cube_token` — the same
 functions `apps/api` itself calls. Nothing here is mocked.
 
-A pass proves the whole chain a Tenant's pasted ClickHouse credentials travel
+A pass proves the whole chain an Organization's pasted ClickHouse credentials travel
 through: encrypt at rest -> decrypt in `resolve_driver_credentials` -> Cube's
 internal callback (`GET /internal/v1/cube/model/...`) -> `driverFactory`
 opens a real `type: 'clickhouse'` connection -> the ClickHouse driver
@@ -49,7 +49,11 @@ from zentra_adapter_postgres import (
     PostgresHarvestRunRepository,
     PostgresRelationRepository,
 )
-from zentra_adapter_postgres.schema import tenant_memberships, tenants, users
+from zentra_adapter_postgres.schema import (
+    organization_memberships,
+    organizations,
+    users,
+)
 from zentra_api.connector_model import relation_fingerprint
 from zentra_api.cube_auth import mint_cube_token
 from zentra_api.settings import Settings
@@ -88,16 +92,16 @@ class _UtcClock:
         return datetime.now(UTC)
 
 
-async def seed_tenant() -> tuple[UUID, UUID]:
-    """A tenant, a user, and an owner membership. Duplicated from
+async def seed_organization() -> tuple[UUID, UUID]:
+    """An Organization, a user, and an owner membership. Duplicated from
     `live_run.py` rather than imported — same small-boundary duplication
     this repo already accepts between `cube.js` and `Connector.js`."""
-    tenant_id, user_id = uuid4(), uuid4()
+    organization_id, user_id = uuid4(), uuid4()
     engine = create_async_engine(OWNER_URL)
     async with engine.begin() as connection:
         await connection.execute(
-            insert(tenants).values(
-                tenant_id=tenant_id,
+            insert(organizations).values(
+                organization_id=organization_id,
                 name="Cube/ClickHouse integration check",
                 model_tier="free",
             )
@@ -106,12 +110,12 @@ async def seed_tenant() -> tuple[UUID, UUID]:
             insert(users).values(user_id=user_id, email=f"{user_id}@integration.test")
         )
         await connection.execute(
-            insert(tenant_memberships).values(
-                tenant_id=tenant_id, user_id=user_id, role="owner"
+            insert(organization_memberships).values(
+                organization_id=organization_id, user_id=user_id, role="owner"
             )
         )
     await engine.dispose()
-    return tenant_id, user_id
+    return organization_id, user_id
 
 
 def _relation_key(left: str, right: str) -> frozenset[str]:
@@ -129,9 +133,11 @@ async def main() -> int:
         )
         return 1
 
-    print("seeding a tenant...")
-    tenant_id, user_id = await seed_tenant()
-    actor = AuthenticatedActor(user_id=user_id, tenant_id=tenant_id, role=Role.OWNER)
+    print("seeding an Organization...")
+    organization_id, user_id = await seed_organization()
+    actor = AuthenticatedActor(
+        user_id=user_id, organization_id=organization_id, role=Role.OWNER
+    )
 
     database = Database(settings.database_url)
     connector = ConnectorService(
@@ -191,10 +197,13 @@ async def main() -> int:
 
     print("computing the relation fingerprint and minting a Cube token...")
     fingerprint = await relation_fingerprint(
-        connector, tenant_id=tenant_id, data_connection_id=data_source_id
+        connector, organization_id=organization_id, data_connection_id=data_source_id
     )
     token = mint_cube_token(
-        str(tenant_id), str(data_source_id), fingerprint, secret=settings.cube_api_secret
+        str(organization_id),
+        str(data_source_id),
+        fingerprint,
+        secret=settings.cube_api_secret,
     )
 
     print(f"querying orders.count through Cube ({settings.cube_url})...")
