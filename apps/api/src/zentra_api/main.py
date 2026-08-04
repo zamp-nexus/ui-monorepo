@@ -16,6 +16,7 @@ from .dependencies import AppDependencies
 from .internal_cube_routes import router as internal_cube_router
 from .routes import router
 from .sequence_routes import router as sequence_router
+from .settings_routes import router as settings_router
 from .settings import Settings
 from .webhook_routes import router as webhook_router
 from .workspace_routes import router as workspace_router
@@ -107,6 +108,7 @@ def create_app(
     api.include_router(internal_cube_router)
     api.include_router(chat_router)
     api.include_router(sequence_router)
+    api.include_router(settings_router)
     api.include_router(webhook_router)
     configure_telemetry(
         api,

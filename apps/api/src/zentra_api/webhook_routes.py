@@ -100,6 +100,13 @@ async def clerk_webhook(
             # optional for exactly this reason.
             creator_email=None,
         )
+    elif event_type == "organization.updated":
+        await organizations.rename_organization(
+            trace_id=trace_id,
+            span_id=span_id,
+            external_organization_id=data["id"],
+            name=data["name"],
+        )
     elif event_type == "organizationMembership.created":
         public_user_data = data["public_user_data"]
         await organizations.add_member(

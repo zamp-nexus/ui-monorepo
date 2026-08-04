@@ -262,8 +262,10 @@
   --color-secondary: var(--interactive-secondary);
   --color-secondary-hover: var(--interactive-secondary-hover);
   --color-secondary-foreground: var(--text-primary);
-  --color-accent: var(--interactive-smart);
-  --color-accent-foreground: var(--text-highlight);
+  /* Nexus has one product signal. `accent` remains as a compatibility alias,
+     but resolves to the same indigo as `primary`. */
+  --color-accent: var(--interactive-primary);
+  --color-accent-foreground: var(--text-inverted);
 
   /* Destructive — `danger` and `destructive` are both in use across components */
   --color-danger: var(--interactive-destructive);
@@ -277,7 +279,7 @@
   --color-border-emphasis: var(--border-emphasis);
   --color-border-focus: var(--border-focus);
   --color-border-invalid: var(--feedback-error);
-  --color-input: var(--border-emphasis);
+  --color-input: var(--border-default);
   --color-ring: var(--border-focus);
 
   /* Feedback */
@@ -365,15 +367,15 @@
   --interactive-destructive-hover: hsl(0 78% 62%);
   --interactive-destructive-active: hsl(0 74% 48%);
 
-  /* Interactive - Smart (violet: navigation and agent surfaces) */
-  --interactive-smart: hsl(263 83% 58%);
-  --interactive-smart-hover: hsl(263 83% 64%);
-  --interactive-smart-active: hsl(263 83% 52%);
+  /* Compatibility aliases only: product UI must use the single indigo signal. */
+  --interactive-smart: var(--interactive-primary);
+  --interactive-smart-hover: var(--interactive-primary-hover);
+  --interactive-smart-active: var(--interactive-primary-active);
 
   /* Borders */
-  --border-default: hsl(225 18% 89%);
-  --border-subtle: hsl(225 20% 94%);
-  --border-emphasis: hsl(225 16% 82%);
+  --border-default: hsl(225 16% 90%);
+  --border-subtle: hsl(225 18% 94%);
+  --border-emphasis: hsl(225 14% 84%);
   --border-focus: hsl(238 63% 44%);
 
   /* Feedback */
@@ -389,8 +391,53 @@
   --shadow-depth-04: 0 20px 52px hsla(228 30% 15% / 0.12);
 
   /* Focus */
-  --focus-ring: 0 0 0 2px hsla(238 63% 44% / 0.24);
-  --focus-ring-offset: 0 0 0 4px hsla(238 63% 44% / 0.1);
+  --focus-ring: 0 0 0 3px hsla(238 63% 44% / 0.18);
+  --focus-ring-offset: none;
+}
+
+/* Dark mode retains the same semantic hierarchy and indigo signal. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-layer-00: hsl(228 18% 8%);
+  --bg-layer-01: hsl(228 16% 10%);
+  --bg-layer-02: hsl(228 14% 13%);
+  --bg-layer-03: hsl(228 13% 16%);
+  --bg-overlay: hsla(228 26% 3% / 0.66);
+  --bg-glass: hsla(228 16% 12% / 0.88);
+  --border-glass: hsla(225 18% 94% / 0.1);
+  --text-highlight: hsl(225 18% 96%);
+  --text-primary: hsl(225 14% 91%);
+  --text-secondary: hsl(225 10% 72%);
+  --text-tertiary: hsl(225 8% 60%);
+  --text-muted: hsl(225 7% 46%);
+  --text-inverted: hsl(228 18% 10%);
+  --interactive-primary: hsl(238 86% 72%);
+  --interactive-primary-hover: hsl(238 90% 78%);
+  --interactive-primary-active: hsl(238 78% 65%);
+  --interactive-primary-disabled: hsl(238 20% 34%);
+  --interactive-secondary: hsl(228 14% 15%);
+  --interactive-secondary-hover: hsl(228 14% 19%);
+  --interactive-secondary-active: hsl(228 14% 23%);
+  --interactive-destructive: hsl(0 78% 63%);
+  --interactive-destructive-hover: hsl(0 82% 70%);
+  --interactive-destructive-active: hsl(0 72% 56%);
+  --interactive-smart: var(--interactive-primary);
+  --interactive-smart-hover: var(--interactive-primary-hover);
+  --interactive-smart-active: var(--interactive-primary-active);
+  --border-default: hsl(228 12% 20%);
+  --border-subtle: hsl(228 12% 16%);
+  --border-emphasis: hsl(228 12% 28%);
+  --border-focus: hsl(238 86% 72%);
+  --feedback-success: hsl(150 58% 64%);
+  --feedback-warning: hsl(42 88% 67%);
+  --feedback-error: hsl(0 78% 70%);
+  --feedback-info: hsl(215 82% 70%);
+  --shadow-depth-01: 0 1px 2px hsla(228 30% 2% / 0.22);
+  --shadow-depth-02: 0 8px 24px hsla(228 30% 2% / 0.28);
+  --shadow-depth-03: 0 16px 40px hsla(228 30% 2% / 0.36);
+  --shadow-depth-04: 0 24px 64px hsla(228 30% 2% / 0.44);
+  --focus-ring: 0 0 0 3px hsla(238 86% 72% / 0.22);
+  --focus-ring-offset: none;
 }
 
 /* =============================================================================

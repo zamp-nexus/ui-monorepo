@@ -22,7 +22,7 @@ export const RouterClarificationMessage: ToolCallMessagePartComponent<
   return (
     <div className="flex gap-4">
       <span
-        className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-accent text-accent-foreground"
+        className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary"
         aria-hidden="true"
       >
         <Icon name="help_circle" size="sm" />

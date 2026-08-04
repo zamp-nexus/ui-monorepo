@@ -19,7 +19,13 @@ export {
   ThemeProvider,
   ThemeContext,
   defaultTheme,
+  ThemeModeProvider,
+  applyThemeToDocument,
+  initializeThemeMode,
+  readThemePreference,
+  resolveTheme,
   useTheme,
+  useThemeMode,
   useThemeContext,
   useFeatureFlag,
   useDirection,
@@ -33,7 +39,7 @@ export {
   createComponentResolvers,
   mergeThemeConfigs,
 } from './theme';
-export type { CreateThemeConfigOptions, SlotResolverProps } from './theme';
+export type { CreateThemeConfigOptions, ResolvedTheme, SlotResolverProps, ThemePreference } from './theme';
 
 // ============================================
 // Utils

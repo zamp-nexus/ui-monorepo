@@ -2,17 +2,17 @@
 
 ## Visual direction
 
-Nexus is a precise, light analytical workspace. It should feel composed and
+Nexus is a precise analytical workspace. It should feel composed and
 dependable: near-neutral surfaces, compact information density, clear writing,
 and a single cool-indigo signal for actions and focus. The interface helps a
 person understand their data; it must never compete with it.
 
 ## Foundations
 
-- **Canvas:** soft blue-grey white; use white only for working surfaces and
-  overlays.
-- **Accent:** indigo is reserved for primary actions, active navigation, focus,
-  and the smallest amount of high-priority status.
+- **Themes:** light is the default; dark uses slate-charcoal layers. Both modes
+  use the same semantic hierarchy and the same indigo action signal.
+- **Accent:** indigo is the sole product accent for primary actions, active
+  navigation, focus, and AI markers. Violet and blue are not alternate brands.
 - **Type:** use the product sans for every operational heading and body. Mono is
   only for source labels, technical metadata, and compact status labels.
 - **Spacing:** prefer 8px rhythm, generous page edges, and tight relationships
@@ -36,7 +36,8 @@ person understand their data; it must never compete with it.
 
 - Buttons have one primary action per working region. Secondary actions are
   quiet, bordered or text-level; destructive actions stay explicit.
-- Input and composer focus uses the indigo ring and a subtle elevation shift.
+- A compound control has one visible boundary. Input and composer focus uses a
+  quiet indigo edge and halo; child controls never add a second ring.
 - Empty states explain what is missing and offer the next useful action. Avoid
   large boxed illustrations or generic welcome copy.
 - Loading states preserve page geometry. AI progress uses short plain-language
@@ -59,7 +60,7 @@ person understand their data; it must never compete with it.
 
 ## Guardrails
 
-Do not use dark-first palettes, lime accents, decorative gradients, glass cards,
+Do not use lime or violet product accents, decorative gradients, glass cards,
 oversized serif headings, dense card mosaics, status colours as decoration, or
 ornamental AI imagery. A screen should remain clear if shadows and icons are
 removed.

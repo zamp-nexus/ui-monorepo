@@ -21,6 +21,8 @@ class OrganizationProvisioningRepository(Protocol):
         self, organization_id: UUID, *, name: str, created_at: datetime
     ) -> None: ...
 
+    async def rename_organization(self, organization_id: UUID, *, name: str) -> None: ...
+
     async def add_organization_binding(
         self,
         provider: str,

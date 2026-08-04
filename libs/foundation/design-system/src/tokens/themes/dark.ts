@@ -2,9 +2,8 @@
  * Dark Theme - Primary Theme
  *
  * Design principles:
- * - Green-tinted charcoal canvas, near black
- * - Signal lime as the single interactive accent
- * - Violet reserved for navigation and agent surfaces
+ * - Slate-charcoal canvas
+ * - Indigo as the single interactive accent
  * - Subtle layer elevation
  * - High contrast text hierarchy
  *
@@ -24,29 +23,29 @@ export const darkTheme = createTheme({
   colors: {
     background: {
       // Layer system: darker = deeper
-      layer00: 'hsl(140 8% 4%)', // Deepest - canvas
-      layer01: 'hsl(140 7% 6%)', // Default surface
-      layer02: 'hsl(140 6% 9%)', // Elevated
-      layer03: 'hsl(140 6% 12%)', // Highest - modals
-      overlay: 'hsla(140 10% 2% / 0.82)', // Backdrop
+      layer00: 'hsl(228 18% 8%)',
+      layer01: 'hsl(228 16% 10%)',
+      layer02: 'hsl(228 14% 13%)',
+      layer03: 'hsl(228 13% 16%)',
+      overlay: 'hsla(228 26% 3% / 0.66)',
     },
 
     text: {
       // Text hierarchy: lighter = more emphasis
-      highlight: 'hsl(96 14% 96%)', // Maximum
-      primary: 'hsl(96 10% 92%)', // High contrast
-      secondary: 'hsl(140 5% 70%)', // Reduced
-      tertiary: 'hsl(140 5% 57%)', // Placeholders
-      muted: 'hsl(140 5% 40%)', // Disabled
-      inverted: 'hsl(140 10% 4%)', // On colored BG
+      highlight: 'hsl(225 18% 96%)',
+      primary: 'hsl(225 14% 91%)',
+      secondary: 'hsl(225 10% 72%)',
+      tertiary: 'hsl(225 8% 60%)',
+      muted: 'hsl(225 7% 46%)',
+      inverted: 'hsl(228 18% 10%)',
     },
 
     interactive: {
       primary: {
-        resting: 'hsl(88 100% 70%)', // Signal lime
-        hovered: 'hsl(88 100% 78%)', // Lighter on hover
-        pressed: 'hsl(88 92% 63%)', // Darker on press
-        disabled: 'hsl(88 20% 40%)', // Desaturated
+        resting: 'hsl(238 86% 72%)',
+        hovered: 'hsl(238 90% 78%)',
+        pressed: 'hsl(238 78% 65%)',
+        disabled: 'hsl(238 20% 34%)',
       },
       secondary: {
         resting: 'hsl(140 6% 14%)',
@@ -67,18 +66,18 @@ export const darkTheme = createTheme({
         disabled: 'hsl(0 30% 40%)',
       },
       smart: {
-        resting: 'hsl(263 83% 58%)',
-        hovered: 'hsl(263 83% 64%)',
-        pressed: 'hsl(263 83% 52%)',
-        disabled: 'hsl(263 40% 45%)',
+        resting: 'hsl(238 86% 72%)',
+        hovered: 'hsl(238 90% 78%)',
+        pressed: 'hsl(238 78% 65%)',
+        disabled: 'hsl(238 20% 34%)',
       },
     },
 
     border: {
-      default: 'hsl(140 6% 16%)',
-      subtle: 'hsl(140 6% 12%)',
-      emphasis: 'hsl(140 6% 24%)',
-      focus: 'hsl(88 100% 70%)',
+      default: 'hsl(228 12% 20%)',
+      subtle: 'hsl(228 12% 16%)',
+      emphasis: 'hsl(228 12% 28%)',
+      focus: 'hsl(238 86% 72%)',
     },
 
     feedback: {
@@ -91,14 +90,14 @@ export const darkTheme = createTheme({
 
   effects: {
     shadow: {
-      depth01: '0 0 2px 0 hsla(140 10% 2% / 0.4), 0 2px 4px 0 hsla(140 10% 2% / 0.3)',
-      depth02: '0 2px 12px 0 hsla(140 10% 2% / 0.45)',
-      depth03: '0 0 6px 1px hsla(140 10% 2% / 0.3), 0 2px 24px 0 hsla(140 10% 2% / 0.4)',
-      depth04: '0 4px 32px 0 hsla(140 10% 2% / 0.55), 0 16px 48px 0 hsla(140 10% 2% / 0.45)',
+      depth01: '0 1px 2px hsla(228 30% 2% / 0.22)',
+      depth02: '0 8px 24px hsla(228 30% 2% / 0.28)',
+      depth03: '0 16px 40px hsla(228 30% 2% / 0.36)',
+      depth04: '0 24px 64px hsla(228 30% 2% / 0.44)',
     },
     focus: {
-      ring: '0 0 0 2px hsla(88 100% 70% / 0.35)',
-      ringOffset: '0 0 0 4px hsla(88 100% 70% / 0.12)',
+      ring: '0 0 0 3px hsla(238 86% 72% / 0.22)',
+      ringOffset: 'none',
     },
   },
 } as const satisfies ThemeContract);

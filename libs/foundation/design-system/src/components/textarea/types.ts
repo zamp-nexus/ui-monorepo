@@ -81,7 +81,7 @@ export type TextareaComponent = React.ForwardRefExoticComponent<
  */
 export const textareaDefaultTheme: ComponentThemeConfigStructure = {
   root: {
-    base: 'flex w-full rounded-md border bg-background px-3 py-2 text-base transition-colors placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 resize-y min-h-[80px]',
+    base: 'flex w-full rounded-md border bg-background px-3 py-2 text-base transition-colors placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background resize-y min-h-[80px]',
     variants: {
       size: {
         sm: 'text-sm px-2 py-1.5',
@@ -96,7 +96,7 @@ export const textareaDefaultTheme: ComponentThemeConfigStructure = {
       },
       invalid: {
         true: 'border-border-invalid focus-visible:ring-border-invalid',
-        false: 'border-border focus-visible:ring-border-focus',
+        false: 'border-border focus-visible:border-primary/70',
       },
       readOnly: {
         true: 'bg-background-muted cursor-default focus-visible:ring-0 resize-none',

@@ -8,6 +8,16 @@ export { ThemeContext, defaultTheme } from './theme-context';
 
 // Provider
 export { ThemeProvider } from './theme-provider';
+export {
+  ThemeModeProvider,
+  applyThemeToDocument,
+  initializeThemeMode,
+  readThemePreference,
+  resolveTheme,
+  useThemeMode,
+  type ResolvedTheme,
+  type ThemePreference,
+} from './theme-mode';
 
 // Hooks
 export {

@@ -109,7 +109,7 @@ export const sideNavDefaultTheme: ComponentThemeConfigStructure = {
     // `group` so the collapsed state set on the rail can reach the items:
     // labels hide and rows centre from one attribute rather than every item
     // being told what width its parent is.
-    base: 'group flex h-full shrink-0 flex-col gap-6 border-r border-border bg-card py-5 transition-[width] duration-200',
+    base: 'group flex h-full shrink-0 flex-col gap-6 border-r border-border-subtle bg-card py-5 transition-[width] duration-200',
     variants: {
       width: {
         // Wide enough for a 44px tile plus even gutters, so the collapsed rail
@@ -144,7 +144,7 @@ export const sideNavDefaultTheme: ComponentThemeConfigStructure = {
       variants: {},
       modifiers: {
         active: {
-          true: 'bg-accent text-accent-foreground font-medium',
+          true: 'bg-primary/10 text-primary font-medium',
           false: 'text-foreground-muted hover:bg-secondary hover:text-foreground',
         },
       },

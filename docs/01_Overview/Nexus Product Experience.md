@@ -50,4 +50,13 @@ The primary product outcome is time to first useful insight: a successful
 upload, first question, and useful response. Completion, latency, and follow-up
 engagement are supporting measures.
 
+## Appearance and settings
+
+Nexus uses one indigo product signal in both light and dark modes. Appearance
+is a browser-local System, Light, or Dark preference and never changes data
+scope or tenant policy. Settings presents Clerk-managed account context and
+Nexus tenant context; only owners may change the analytical confidence threshold
+and cost ceiling. Organization names remain Clerk-authoritative, while data
+residency and model tier are informational.
+
 Parent: [[Overview MOC]]

@@ -79,16 +79,6 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
 
   const railFooter = (
     <>
-      <IconButton
-        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        intent="ghost"
-        size="sm"
-        className={collapsed ? undefined : 'self-end'}
-        onClick={() => setCollapsed((open) => !open)}
-      >
-        <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="sm" />
-      </IconButton>
-
       {/* Collapsed, the primary action is a tile the same size as a nav item,
           so the rail stays one column of squares. */}
       {collapsed ? (
@@ -167,8 +157,22 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
         width={collapsed ? 'compact' : 'default'}
         className="hidden md:flex"
         brand={
-          <div className="flex w-full flex-col gap-5">
+          <div className="flex w-full items-start justify-between gap-1">
             <ProductMark showRelease compact={collapsed} />
+            <Tooltip
+              content={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+              side="right"
+              sideOffset={10}
+            >
+              <IconButton
+                aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                intent="ghost"
+                size="sm"
+                onClick={() => setCollapsed((open) => !open)}
+              >
+                <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="sm" />
+              </IconButton>
+            </Tooltip>
           </div>
         }
         footer={railFooter}

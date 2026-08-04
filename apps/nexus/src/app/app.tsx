@@ -26,6 +26,7 @@ import {
 } from './pages/entry-screens';
 import { SequenceDetailPage } from './pages/sequences/sequence-detail-page';
 import { SequencesPage } from './pages/sequences/sequences-page';
+import { SettingsPage } from './pages/settings/settings-page';
 import { AppShell } from './shell/app-shell';
 import type { IdentityContext, ReadinessResponse } from './types';
 
@@ -155,16 +156,7 @@ const AuthenticatedWorkspace = () => {
           path="/connections/new/:connectorId"
           element={<ConnectorConfig getToken={getToken} identity={identity.data} />}
         />
-        <Route
-          path="/settings"
-          element={
-            <ComingSoon
-              title="Settings"
-              icon="settings"
-              description="Tenant policy, approval thresholds, theme and notification preferences."
-            />
-          }
-        />
+        <Route path="/settings" element={<SettingsPage getToken={getToken} />} />
         <Route path="*" element={<Navigate replace to="/chats" />} />
       </Routes>
     </AppShell>
