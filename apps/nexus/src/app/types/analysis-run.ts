@@ -33,10 +33,10 @@ export interface MetricComparison {
   readonly unit: string;
 }
 
-export interface Investigation {
-  readonly investigation_id: string;
+export interface AnalysisRun {
+  readonly analysis_run_id: string;
   readonly canonical_question: string;
-  /** Present only on Investigations started before free-text questions. */
+  /** Present only on Analysis Runs started before free-text questions. */
   readonly scenario_key: string | null;
   readonly status:
     | 'pending'
@@ -58,7 +58,7 @@ export interface Investigation {
     readonly metrics: readonly MetricComparison[];
     readonly evidence_references: readonly string[];
   } | null;
-  // Present only for Investigations that ran through the Insight Agent.
+  // Present only for Analysis Runs that ran through the Insight Agent.
   // Null means legacy narrative, not missing evidence.
   readonly draft_finding: DraftFinding | null;
   readonly outcome:
@@ -99,7 +99,7 @@ export interface Investigation {
     readonly failed_conditions: readonly string[];
     readonly latency_ms: number | null;
     readonly total_cost_usd: string | null;
-    // Set only on an `investigation.failed` entry.
+    // Set only on an `analysis_run.failed` entry.
     readonly failure_category: string | null;
   }[];
   readonly audit_delivery: 'complete' | 'pending';

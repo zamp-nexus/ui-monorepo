@@ -14,9 +14,9 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from zentra_application_investigation import InvestigationDetail, VisualizationDetail
+from zentra_application_analysis_run import AnalysisRunDetail, VisualizationDetail
 from zentra_domain_agent_execution import ConfidenceOutcome, ValidationOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     ApprovalDecision,
     EvidenceCitation,
     RejectionReason,
@@ -79,7 +79,7 @@ class VisualizationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     visualization_id: UUID
-    investigation_id: UUID
+    analysis_run_id: UUID
     status: str
     renderer_kind: str
     model: str | None
@@ -102,7 +102,7 @@ class VisualizationResponse(BaseModel):
         artifact: VisualizationArtifact = detail.artifact
         return cls(
             visualization_id=artifact.visualization_id,
-            investigation_id=artifact.investigation_id,
+            analysis_run_id=artifact.analysis_run_id,
             status=artifact.status.value,
             renderer_kind=artifact.renderer_kind,
             model=artifact.model,
@@ -134,7 +134,7 @@ class VisualizationActionResponse(BaseModel):
     kind: str
     citation_id: UUID | None = None
     thread_id: UUID | None = None
-    investigation_id: UUID | None = None
+    analysis_run_id: UUID | None = None
 
 
 class ApprovalDecisionRequest(BaseModel):
@@ -271,13 +271,13 @@ class TombstoneResponse(BaseModel):
 class EvidenceDeletionRequest(BaseModel):
     """Deleting evidence is irreversible, so it is not a bare POST.
 
-    The caller states the Investigation it means. A confirmation the client can
+    The caller states the Analysis Run it means. A confirmation the client can
     default to would not be a confirmation.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    confirm_investigation_id: UUID
+    confirm_analysis_run_id: UUID
 
 
 class ValidationResponse(BaseModel):
@@ -304,7 +304,7 @@ OutcomeResponse = Annotated[
 
 
 def _outcome_response(outcome: object) -> OutcomeResponse | None:
-    """One mapping, shared by the Investigation's outcome and a citation's."""
+    """One mapping, shared by the Analysis Run's outcome and a citation's."""
     if isinstance(outcome, ConfidenceOutcome):
         return ConfidenceResponse(
             score=outcome.score,
@@ -322,7 +322,7 @@ def _outcome_response(outcome: object) -> OutcomeResponse | None:
 class DraftFindingResponse(BaseModel):
     """The Phase 2 structured draft.
 
-    Sits beside `finding` rather than replacing it. An Investigation that ran
+    Sits beside `finding` rather than replacing it. An Analysis Run that ran
     before Insight existed has `finding` and a null `draft_finding`, which is
     how a client tells a legacy narrative apart from claims that are genuinely
     structured and will become individually citable.
@@ -382,7 +382,7 @@ class TimelineResponse(BaseModel):
     total_cost_usd: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
-    # Set only on an `investigation.failed` entry.
+    # Set only on an `analysis_run.failed` entry.
     failure_category: str | None = None
 
 
@@ -395,12 +395,12 @@ class UsageResponse(BaseModel):
     latency_ms: int
 
 
-class InvestigationDetailResponse(BaseModel):
+class AnalysisRunDetailResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    investigation_id: UUID
+    analysis_run_id: UUID
     canonical_question: str
-    #: Present only on Investigations started before free-text questions.
+    #: Present only on Analysis Runs started before free-text questions.
     scenario_key: str | None
     status: str
     version: int
@@ -414,13 +414,13 @@ class InvestigationDetailResponse(BaseModel):
     pending_approval: ApprovalResponse | None
     timeline: list[TimelineResponse]
     audit_delivery: str
-    # Whether this caller may erase this Investigation's evidence. Decided
+    # Whether this caller may erase this Analysis Run's evidence. Decided
     # by the server for the same reason `can_decide` is.
     can_delete_evidence: bool
     usage: UsageResponse
 
     @classmethod
-    def from_detail(cls, detail: InvestigationDetail) -> InvestigationDetailResponse:
+    def from_detail(cls, detail: AnalysisRunDetail) -> AnalysisRunDetailResponse:
         finding = None
         if detail.finding is not None:
             finding = FindingResponse(
@@ -496,7 +496,7 @@ class InvestigationDetailResponse(BaseModel):
                 failed_conditions=list(detail.pending_approval.failed_conditions),
             )
         return cls(
-            investigation_id=detail.investigation_id,
+            analysis_run_id=detail.analysis_run_id,
             canonical_question=detail.question,
             scenario_key=detail.scenario_key,
             status=detail.status.value,

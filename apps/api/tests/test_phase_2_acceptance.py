@@ -1,7 +1,7 @@
 """The primary Phase 2 acceptance suite, at the authenticated API boundary.
 
 One test per acceptance criterion on #24, and deliberately not stubs. The other
-API tests substitute an `InvestigationServiceStub` because they are asking
+API tests substitute an `AnalysisRunServiceStub` because they are asking
 narrow questions about the HTTP layer; this file asks whether the *product*
 holds, so it composes the real application policy, real Postgres persistence
 under RLS, and the real transactional outbox. Only the Agent pipeline and the
@@ -24,7 +24,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
-from zentra_adapter_postgres import Database, PostgresInvestigationUnitOfWorkFactory
+from zentra_adapter_postgres import Database, PostgresAnalysisRunUnitOfWorkFactory
 from zentra_adapter_postgres.database import set_tenant_context
 from zentra_adapter_postgres.schema import (
     audit_outbox,
@@ -34,12 +34,12 @@ from zentra_adapter_postgres.schema import (
     tenants,
     users,
 )
-from zentra_application_investigation import (
-    InvestigationService,
+from zentra_application_analysis_run import (
+    AnalysisRunService,
     PipelineResult,
 )
 from zentra_domain_agent_execution import ConfidenceOutcome
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     EvidenceReference,
     Finding,
     MetricComparison,
@@ -201,8 +201,8 @@ class _Harness:
     def __init__(self, result: PipelineResult, role: str = "owner") -> None:
         self.database = Database(RUNTIME_URL)
         self.pipeline = _Pipeline(result)
-        self.service = InvestigationService(
-            unit_of_work_factory=PostgresInvestigationUnitOfWorkFactory(self.database),
+        self.service = AnalysisRunService(
+            unit_of_work_factory=PostgresAnalysisRunUnitOfWorkFactory(self.database),
             pipeline=self.pipeline,
             audit_writer=_NullAudit(),
             audit_reader=_NullAudit(),
@@ -242,14 +242,14 @@ def _result(*, score: float = 0.91, converged: bool = True, **extra) -> Pipeline
 
 
 async def _run(harness: _Harness, client: TestClient) -> dict:
-    """Create an Investigation and execute it, returning the detail body."""
+    """Create an Analysis Run and execute it, returning the detail body."""
     created = client.post(
-        "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+        "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
     )
     assert created.status_code == 201, created.text
-    identifier = created.json()["investigation_id"]
+    identifier = created.json()["analysis_run_id"]
     await harness.service.execute(await _actor(harness, client), UUID(identifier))
-    detail = client.get(f"/v1/investigations/{identifier}", headers=AUTH)
+    detail = client.get(f"/v1/analysis-runs/{identifier}", headers=AUTH)
     assert detail.status_code == 200, detail.text
     return detail.json()
 
@@ -268,43 +268,43 @@ async def _actor(harness: _Harness, client: TestClient):
 
 
 @pytest.mark.asyncio
-async def test_a_fully_evidenced_investigation_publishes_automatically(
+async def test_a_fully_evidenced_analysis_run_publishes_automatically(
     bound_tenant,
 ) -> None:
     """Criterion 1."""
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
         assert created.status_code == 201, created.text
         detail = client.get(
-            f"/v1/investigations/{created.json()['investigation_id']}", headers=AUTH
+            f"/v1/analysis-runs/{created.json()['analysis_run_id']}", headers=AUTH
         )
         assert detail.status_code == 200
     await harness.aclose()
 
 
 @pytest.mark.asyncio
-async def test_a_cross_tenant_investigation_is_indistinguishable_from_nothing(
+async def test_a_cross_tenant_analysis_run_is_indistinguishable_from_nothing(
     bound_tenant,
 ) -> None:
     """Criterion 6.
 
     404 rather than 403. A caller who can tell "not yours" from "does not
-    exist" can confirm another Tenant's Investigation exists by copying an id,
+    exist" can confirm another Tenant's Analysis Run exists by copying an id,
     so RLS returning nothing and the resource being absent must look the same.
     """
     harness = _Harness(_result())
     with harness as client:
-        stranger = client.get(f"/v1/investigations/{uuid4()}", headers=AUTH)
+        stranger = client.get(f"/v1/analysis-runs/{uuid4()}", headers=AUTH)
         assert stranger.status_code == 404
         assert "tenant" not in stranger.text.lower()
     await harness.aclose()
 
 
 @pytest.mark.asyncio
-async def test_a_viewer_cannot_create_an_investigation(bound_tenant) -> None:
+async def test_a_viewer_cannot_create_an_analysis_run(bound_tenant) -> None:
     """Criterion 6, on the write side.
 
     The role comes from Postgres through the real identity resolution, so this
@@ -313,7 +313,7 @@ async def test_a_viewer_cannot_create_an_investigation(bound_tenant) -> None:
     harness = _Harness(_result(), role="viewer")
     with harness as client:
         refused = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
         assert refused.status_code == 403
     await harness.aclose()
@@ -341,18 +341,18 @@ async def test_a_refused_question_is_never_echoed_back(
             # A field that no longer exists, refused as unknown.
             {"scenario_key": payload},
         ):
-            refused = client.post("/v1/investigations", json=body, headers=AUTH)
+            refused = client.post("/v1/analysis-runs", json=body, headers=AUTH)
             assert refused.status_code in {400, 422}
             assert "<script>" not in refused.text
     await harness.aclose()
 
 
 @pytest.mark.asyncio
-async def test_a_malformed_investigation_id_discloses_nothing(bound_tenant) -> None:
+async def test_a_malformed_analysis_run_id_discloses_nothing(bound_tenant) -> None:
     """Criterion 12."""
     harness = _Harness(_result())
     with harness as client:
-        refused = client.get("/v1/investigations/not-a-uuid", headers=AUTH)
+        refused = client.get("/v1/analysis-runs/not-a-uuid", headers=AUTH)
         assert refused.status_code == 422
         assert "traceback" not in refused.text.lower()
         assert "postgres" not in refused.text.lower()
@@ -360,26 +360,26 @@ async def test_a_malformed_investigation_id_discloses_nothing(bound_tenant) -> N
 
 
 @pytest.mark.asyncio
-async def test_reading_an_investigation_twice_returns_the_same_state(
+async def test_reading_an_analysis_run_twice_returns_the_same_state(
     bound_tenant,
 ) -> None:
     """Criterion 9, on the read path.
 
-    A refresh must not re-run the pipeline. If it did, an Investigation would
+    A refresh must not re-run the pipeline. If it did, an Analysis Run would
     change its own answer by being looked at, and every citation a reviewer
     wrote down would rot.
     """
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
-        identifier = created.json()["investigation_id"]
+        identifier = created.json()["analysis_run_id"]
         # Creation queues durable execution, so reads must not take ownership
         # of the worker's pipeline either.
         after_create = harness.pipeline.runs
-        first = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
-        second = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
+        first = client.get(f"/v1/analysis-runs/{identifier}", headers=AUTH).json()
+        second = client.get(f"/v1/analysis-runs/{identifier}", headers=AUTH).json()
         assert harness.pipeline.runs == after_create, "a read re-ran the agents"
 
     assert first == second
@@ -395,9 +395,9 @@ async def test_authentication_is_required_everywhere_it_matters(
     with harness as client:
         for method, path in (
             ("get", "/v1/catalog"),
-            ("post", "/v1/investigations"),
-            ("get", f"/v1/investigations/{uuid4()}"),
-            ("post", f"/v1/investigations/{uuid4()}/evidence-deletion"),
+            ("post", "/v1/analysis-runs"),
+            ("get", f"/v1/analysis-runs/{uuid4()}"),
+            ("post", f"/v1/analysis-runs/{uuid4()}/evidence-deletion"),
         ):
             response = (
                 client.post(path, json={}) if method == "post" else client.get(path)
@@ -425,8 +425,8 @@ class _NullAudit:
 
 
 class _Dependencies:
-    def __init__(self, investigations: object, role: str, database) -> None:
-        self.investigations = investigations
+    def __init__(self, analysis_runs: object, role: str, database) -> None:
+        self.analysis_runs = analysis_runs
         # The real Database, not a probe: `resolve_identity_context` opens a
         # connection on it, so the Tenant and role come from Postgres under RLS
         # rather than from this test. That is what makes the cross-Tenant
@@ -514,31 +514,31 @@ def test_insight_is_the_only_role_that_may_produce_a_draft() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_legacy_investigation_stays_readable(bound_tenant) -> None:
+async def test_a_legacy_analysis_run_stays_readable(bound_tenant) -> None:
     """Criterion 11.
 
-    A Phase 1 Investigation has a narrative Finding and no claims. It must
+    A Phase 1 Analysis Run has a narrative Finding and no claims. It must
     still load — the migration preserved rows, and a reader who cannot open
-    last quarter's Investigation has lost the record the audit ledger exists to
+    last quarter's Analysis Run has lost the record the audit ledger exists to
     keep.
     """
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
-        identifier = created.json()["investigation_id"]
-        detail = client.get(f"/v1/investigations/{identifier}", headers=AUTH).json()
+        identifier = created.json()["analysis_run_id"]
+        detail = client.get(f"/v1/analysis-runs/{identifier}", headers=AUTH).json()
 
-    # No draft: this Investigation never ran Insight, and the API says so with
+    # No draft: this Analysis Run never ran Insight, and the API says so with
     # a null rather than by inventing an empty one.
     assert detail["draft_finding"] is None
-    assert detail["investigation_id"] == identifier
+    assert detail["analysis_run_id"] == identifier
     await harness.aclose()
 
 
 @pytest.mark.asyncio
-async def test_deletion_is_refused_on_a_live_investigation(bound_tenant) -> None:
+async def test_deletion_is_refused_on_a_live_analysis_run(bound_tenant) -> None:
     """Criterion 7, the precondition.
 
     Erasing under a running pipeline races every write still to come, and the
@@ -549,12 +549,12 @@ async def test_deletion_is_refused_on_a_live_investigation(bound_tenant) -> None
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
-        identifier = created.json()["investigation_id"]
+        identifier = created.json()["analysis_run_id"]
         refused = client.post(
-            f"/v1/investigations/{identifier}/evidence-deletion",
-            json={"confirm_investigation_id": identifier},
+            f"/v1/analysis-runs/{identifier}/evidence-deletion",
+            json={"confirm_analysis_run_id": identifier},
             headers=AUTH,
         )
 
@@ -563,7 +563,7 @@ async def test_deletion_is_refused_on_a_live_investigation(bound_tenant) -> None
 
 
 @pytest.mark.asyncio
-async def test_deletion_requires_naming_the_investigation(bound_tenant) -> None:
+async def test_deletion_requires_naming_the_analysis_run(bound_tenant) -> None:
     """Criterion 7, the confirmation.
 
     An irreversible action must be impossible to trigger by replaying a URL,
@@ -572,12 +572,12 @@ async def test_deletion_requires_naming_the_investigation(bound_tenant) -> None:
     harness = _Harness(_result())
     with harness as client:
         created = client.post(
-            "/v1/investigations", json={"question": QUESTION}, headers=AUTH
+            "/v1/analysis-runs", json={"question": QUESTION}, headers=AUTH
         )
-        identifier = created.json()["investigation_id"]
+        identifier = created.json()["analysis_run_id"]
         refused = client.post(
-            f"/v1/investigations/{identifier}/evidence-deletion",
-            json={"confirm_investigation_id": str(uuid4())},
+            f"/v1/analysis-runs/{identifier}/evidence-deletion",
+            json={"confirm_analysis_run_id": str(uuid4())},
             headers=AUTH,
         )
 
@@ -591,8 +591,8 @@ async def test_a_viewer_cannot_delete_evidence(bound_tenant) -> None:
     harness = _Harness(_result(), role="viewer")
     with harness as client:
         refused = client.post(
-            f"/v1/investigations/{uuid4()}/evidence-deletion",
-            json={"confirm_investigation_id": str(uuid4())},
+            f"/v1/analysis-runs/{uuid4()}/evidence-deletion",
+            json={"confirm_analysis_run_id": str(uuid4())},
             headers=AUTH,
         )
 

@@ -2,22 +2,22 @@ import { useState } from 'react';
 
 import { Button } from '@open-zentra/foundation-design-system';
 
-import type { Investigation } from '../../types';
+import type { AnalysisRun } from '../../types';
 
 /**
  * Deleting evidence, with the confirmation the API also demands.
  *
- * Two steps, and the second names the Investigation. An irreversible action
+ * Two steps, and the second names the Analysis Run. An irreversible action
  * reachable by one click on a page a reader is scrolling is an action that
  * will happen by accident.
  */
 export const EvidenceDeletion = ({
-  investigation,
+  analysisRun,
   canDelete,
   onDelete,
   pending,
 }: {
-  readonly investigation: Investigation;
+  readonly analysisRun: AnalysisRun;
   readonly canDelete: boolean;
   readonly onDelete: () => void;
   readonly pending: boolean;
@@ -36,7 +36,7 @@ export const EvidenceDeletion = ({
         <div role="alertdialog" aria-labelledby="deletion-confirm" className="flex flex-col gap-4">
           <p id="deletion-confirm" className="max-w-2xl text-sm leading-relaxed text-danger">
             This erases every measurement, claim and narrative for &ldquo;
-            {investigation.canonical_question}&rdquo;. What happened stays in Replay; what it found
+            {analysisRun.canonical_question}&rdquo;. What happened stays in Replay; what it found
             does not. This cannot be undone.
           </p>
           <div className="flex flex-wrap gap-3">

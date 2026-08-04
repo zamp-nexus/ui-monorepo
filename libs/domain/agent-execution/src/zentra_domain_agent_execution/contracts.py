@@ -131,7 +131,7 @@ OUTCOME_ADAPTER = TypeAdapter(OutcomeSignal)
 class AgentInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    investigation_id: UUID
+    analysis_run_id: UUID
     organization_id: UUID
     state: dict[str, JsonValue]
 

@@ -4,21 +4,21 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-from zentra_application_investigation import (
-    InvestigationDetail,
+from zentra_application_analysis_run import (
+    AnalysisRunDetail,
     RoutingResult,
+    ThreadAnalysisRunSummary,
     ThreadDetail,
-    ThreadInvestigationSummary,
     ThreadMessageDetail,
     ThreadPage,
     ThreadSummary,
 )
 
 from .schemas import (
+    AnalysisRunDetailResponse,
     DraftFindingResponse,
     EvidenceCitationResponse,
     FindingResponse,
-    InvestigationDetailResponse,
     MetricComparisonResponse,
     OutcomeResponse,
     UsageResponse,
@@ -104,7 +104,7 @@ class ThreadApprovalStateResponse(BaseModel):
 
     @classmethod
     def from_detail(
-        cls, detail: ThreadInvestigationSummary
+        cls, detail: ThreadAnalysisRunSummary
     ) -> ThreadApprovalStateResponse:
         assert detail.approval is not None
         approval = detail.approval
@@ -122,14 +122,14 @@ class ThreadApprovalStateResponse(BaseModel):
         )
 
 
-class ThreadInvestigationResponse(BaseModel):
+class ThreadAnalysisRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    investigation_id: UUID
+    analysis_run_id: UUID
     sequence: int
     status: str
-    parent_investigation_id: UUID | None
-    retry_of_investigation_id: UUID | None
+    parent_analysis_run_id: UUID | None
+    retry_of_analysis_run_id: UUID | None
     created_at: datetime
     updated_at: datetime
     canonical_question: str
@@ -143,8 +143,8 @@ class ThreadInvestigationResponse(BaseModel):
 
     @classmethod
     def from_detail(
-        cls, detail: ThreadInvestigationSummary
-    ) -> ThreadInvestigationResponse:
+        cls, detail: ThreadAnalysisRunSummary
+    ) -> ThreadAnalysisRunResponse:
         finding = None
         if detail.finding is not None:
             finding = FindingResponse(
@@ -167,9 +167,9 @@ class ThreadInvestigationResponse(BaseModel):
             )
         draft = None
         if detail.draft_finding is not None:
-            converted = InvestigationDetailResponse.from_detail(
-                InvestigationDetail(
-                    investigation_id=detail.investigation_id,
+            converted = AnalysisRunDetailResponse.from_detail(
+                AnalysisRunDetail(
+                    analysis_run_id=detail.analysis_run_id,
                     question=detail.question,
                     scenario_key=detail.scenario_key,
                     status=detail.status,
@@ -190,11 +190,11 @@ class ThreadInvestigationResponse(BaseModel):
             )
             draft = converted.draft_finding
         return cls(
-            investigation_id=detail.investigation_id,
+            analysis_run_id=detail.analysis_run_id,
             sequence=detail.sequence,
             status=detail.status.value,
-            parent_investigation_id=detail.parent_investigation_id,
-            retry_of_investigation_id=detail.retry_of_investigation_id,
+            parent_analysis_run_id=detail.parent_analysis_run_id,
+            retry_of_analysis_run_id=detail.retry_of_analysis_run_id,
             created_at=detail.created_at,
             updated_at=detail.updated_at,
             canonical_question=detail.question,
@@ -257,7 +257,7 @@ class ChatResponse(BaseModel):
                             "authored_by_user": False,
                         },
                     ],
-                    "investigation_id": None,
+                    "analysis_run_id": None,
                     "usage": {
                         "input_tokens": 0,
                         "output_tokens": 0,
@@ -301,8 +301,8 @@ class ChatResponse(BaseModel):
     updated_at: datetime
     latest_activity_at: datetime
     messages: list[ThreadMessageResponse]
-    investigation_id: UUID | None = None
-    investigations: list[ThreadInvestigationResponse] = Field(default_factory=list)
+    analysis_run_id: UUID | None = None
+    analysis_runs: list[ThreadAnalysisRunResponse] = Field(default_factory=list)
     event_cursor: int = 0
     usage: UsageResponse
     routing: RoutingResponse | None = None
@@ -322,10 +322,10 @@ class ChatResponse(BaseModel):
                 ThreadMessageResponse.from_detail(message)
                 for message in detail.messages
             ],
-            investigation_id=detail.investigation_id,
-            investigations=[
-                ThreadInvestigationResponse.from_detail(value)
-                for value in detail.investigations
+            analysis_run_id=detail.analysis_run_id,
+            analysis_runs=[
+                ThreadAnalysisRunResponse.from_detail(value)
+                for value in detail.analysis_runs
             ],
             event_cursor=detail.event_cursor,
             usage=UsageResponse(
@@ -356,7 +356,7 @@ class ThreadSummaryResponse(BaseModel):
     title: str
     status: str
     latest_activity_at: datetime
-    investigation_id: UUID | None = None
+    analysis_run_id: UUID | None = None
 
     @classmethod
     def from_detail(cls, detail: ThreadSummary) -> ThreadSummaryResponse:
@@ -366,7 +366,7 @@ class ThreadSummaryResponse(BaseModel):
             title=detail.title,
             status=detail.status.value,
             latest_activity_at=detail.latest_activity_at,
-            investigation_id=detail.investigation_id,
+            analysis_run_id=detail.analysis_run_id,
         )
 
 

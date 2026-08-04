@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from zentra_adapter_postgres import IdentityContext
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     RoutingDisposition,
     RoutingResult,
     ThreadConflictError,
@@ -13,7 +13,7 @@ from zentra_application_investigation import (
     ThreadPage,
     ThreadSummary,
 )
-from zentra_domain_investigation import ThreadMessageKind, ThreadStatus
+from zentra_domain_analysis_run import ThreadMessageKind, ThreadStatus
 
 from zentra_api.thread_schemas import ChatResponse
 
@@ -54,7 +54,7 @@ def detail(*, status: ThreadStatus = ThreadStatus.DRAFT) -> ThreadDetail:
                 authored_by_user=True,
             ),
         ),
-        investigation_id=None,
+        analysis_run_id=None,
         routing=routing(),
         can_append_message=status is ThreadStatus.DRAFT,
         can_archive=status is not ThreadStatus.ARCHIVED,
@@ -83,7 +83,7 @@ class ThreadStub:
                     title="How is the business doing?",
                     status=ThreadStatus.DRAFT,
                     latest_activity_at=NOW,
-                    investigation_id=None,
+                    analysis_run_id=None,
                 ),
             ),
             next_cursor="next",

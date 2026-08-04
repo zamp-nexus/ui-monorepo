@@ -96,7 +96,7 @@ export const ChatPage = ({
       event.kind === 'thread.routing_clarification' ||
       event.kind === 'thread.routing_resolved' ||
       event.kind.startsWith('visualization.') ||
-      event.kind.startsWith('investigation.');
+      event.kind.startsWith('analysis_run.');
     if (!settles) return;
     void queryClient.invalidateQueries({ queryKey: ['thread', event.thread_id] });
     if (event.kind === 'visualization.completed' || event.kind === 'visualization.failed') {
@@ -182,8 +182,9 @@ export const ChatPage = ({
           </p>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ChatContextProvider value={{ getToken, onFollowUp: submit, onFillComposer: setDraft }}>
+        <div className="relative min-h-0 flex-1 flex flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto pb-40">
+            <ChatContextProvider value={{ getToken, onFollowUp: submit, onFillComposer: setDraft }}>
             <AssistantRuntimeProvider runtime={runtime}>
               <ThreadPrimitive.Root>
                 <ThreadPrimitive.Empty>
@@ -212,12 +213,17 @@ export const ChatPage = ({
           </ChatContextProvider>
         </div>
 
-        <ChatComposer
-          draft={draft}
-          onDraftChange={setDraft}
-          onSend={submit}
-          disabled={send.isPending || !canSend}
-        />
+          <div className="absolute bottom-8 left-1/2 w-full max-w-3xl -translate-x-1/2 px-6 pointer-events-none">
+            <div className="pointer-events-auto shadow-2xl rounded-3xl overflow-hidden">
+              <ChatComposer
+                draft={draft}
+                onDraftChange={setDraft}
+                onSend={submit}
+                disabled={send.isPending || !canSend}
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
       <ActivityInspector

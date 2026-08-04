@@ -7,7 +7,7 @@ import type { ChatMessage } from '../../types';
  * One message in the conversation.
  *
  * The question is shown as written — plain text in a bubble. A published answer
- * is *not* a message and is not rendered here; it lives on the Investigation
+ * is *not* a message and is not rendered here; it lives on the Analysis Run
  * and is rendered by `AnswerRow`.
  *
  * That leaves the `router_clarification`: the server saying it could not map

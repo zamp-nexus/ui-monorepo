@@ -26,11 +26,11 @@ from zentra_adapter_model_providers import (
 from zentra_adapter_postgres import (
     Database,
     PostgresAgentAccessRepository,
+    PostgresAnalysisRunUnitOfWorkFactory,
     PostgresCatalogRepository,
     PostgresDataSourceRepository,
     PostgresGroupUnitOfWorkFactory,
     PostgresHarvestRunRepository,
-    PostgresInvestigationUnitOfWorkFactory,
     PostgresOrganizationProvisioningUnitOfWorkFactory,
     PostgresRelationRepository,
     PostgresSequenceUnitOfWorkFactory,
@@ -42,17 +42,17 @@ from zentra_adapter_telemetry import (
     record_evidence_deletion,
     record_publication_decision,
 )
-from zentra_application_connector import ConnectorService
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
+    AnalysisRunService,
     ConversationalService,
     ExecutionJobWorker,
     GroupService,
     IntakeService,
-    InvestigationService,
     OrganizationProvisioningService,
     ThreadService,
     VisualizationService,
 )
+from zentra_application_connector import ConnectorService
 from zentra_application_sequence import SequenceService
 from zentra_domain_agent_execution import SemanticLayerPort
 
@@ -75,7 +75,7 @@ class HealthProbe(Protocol):
 class _UtcClock:
     """The Connector's `Clock` port.
 
-    A class rather than the `now=lambda` the Investigation service takes,
+    A class rather than the `now=lambda` the Analysis Run service takes,
     because that port asks for an object with a `now()` method.
     """
 
@@ -95,7 +95,7 @@ class AppDependencies:
     semantic_layers: ScopedCubeSemanticLayers
     models: ProviderClients
     jwt_verifier: ClerkJwtVerifier
-    investigations: InvestigationService
+    analysis_runs: AnalysisRunService
     audit_delivery: AuditDeliveryCoordinator
     groups: GroupService
     #: Provisions Organizations/Users from Clerk webhook events. Named
@@ -150,7 +150,7 @@ class AppDependencies:
         # Unauthenticated: /readyz needs no token, and a health probe must
         # not depend on a JWT's expiry.
         cube = CubeClient(settings.cube_url, None)
-        unit_of_work_factory = PostgresInvestigationUnitOfWorkFactory(database)
+        unit_of_work_factory = PostgresAnalysisRunUnitOfWorkFactory(database)
         registry = PostgresAgentRegistry(database)
         recorder = PostgresExecutionRecorder(unit_of_work_factory)
 
@@ -178,7 +178,7 @@ class AppDependencies:
             resolve_relation_fingerprint=resolve_relation_fingerprint,
         )
 
-        # ADR-0026: the Investigation Engine's Board and Work Item queue
+        # ADR-0026: the Analysis Run Engine's Board and Work Item queue
         # are the platform controller. There is no graph to build any more —
         # the loop holds the Agents directly.
         #
@@ -196,7 +196,7 @@ class AppDependencies:
             unit_of_work_factory=unit_of_work_factory,
             audit=audit,
         )
-        investigations = InvestigationService(
+        analysis_runs = AnalysisRunService(
             unit_of_work_factory=unit_of_work_factory,
             pipeline=OrchestratorLoop(
                 agents_factories,
@@ -259,9 +259,9 @@ class AppDependencies:
                 agent_factory=_build_conversational_agent,
                 new_id=uuid4,
             ),
-            # Same coordinator `investigations` uses above -- it owns the
+            # Same coordinator `analysis_runs` uses above -- it owns the
             # retry-loop task and the set of organizations that loop sweeps,
-            # so Thread-created Investigations need to flush through this
+            # so Thread-created Analysis Runs need to flush through this
             # instance rather than a second one, or the sweep gap this closes
             # would just reopen.
             audit_writer=audit_delivery,
@@ -319,7 +319,7 @@ class AppDependencies:
         )
         execution_worker = ExecutionJobWorker(
             unit_of_work_factory=unit_of_work_factory,
-            executor=investigations,
+            executor=analysis_runs,
             visualization_executor=visualizations,
             worker_id=worker_id,
             now=lambda: datetime.now(UTC),
@@ -334,7 +334,7 @@ class AppDependencies:
                 settings.clerk_issuer,
                 settings.clerk_audience,
             ),
-            investigations=investigations,
+            analysis_runs=analysis_runs,
             audit_delivery=audit_delivery,
             groups=groups,
             organizations=organizations,
@@ -355,7 +355,7 @@ class AppDependencies:
         if self.execution_worker_enabled and self.worker_task is None:
             self.worker_task = asyncio.create_task(
                 self.execution_worker.run_forever(),
-                name="investigation-execution-worker",
+                name="analysis-run-execution-worker",
             )
 
     async def stop(self) -> None:

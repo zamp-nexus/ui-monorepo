@@ -1,13 +1,13 @@
 export type {
+  AnalysisRun,
   CatalogMember,
   CatalogSummary,
   DependencyStatus,
   IdentityContext,
-  Investigation,
   MetricComparison,
   ReadinessResponse,
   RejectionReason,
-} from './investigation';
+} from './analysis-run';
 
 export type { ChatMessage, ChatRole, ChatSuggestion } from './chat';
 
@@ -15,6 +15,8 @@ export type {
   Agent,
   AgentCapability,
   AgentEventPayload,
+  AnalysisRunEventPayload,
+  AnalysisRunStatus,
   ApprovalEventPayload,
   BriefAction,
   BriefActionKind,
@@ -29,17 +31,15 @@ export type {
   EvidenceCitation,
   FindingEventPayload,
   Group,
-  InvestigationEventPayload,
-  InvestigationStatus,
   MessageEventPayload,
   Page,
   ResolvedCitation,
   RoutingEventPayload,
   Thread,
   ThreadActions,
+  ThreadAnalysisRun,
   ThreadApprovalState,
   ThreadEvent,
-  ThreadInvestigation,
   ThreadMessage,
   ThreadRouting,
   ThreadSummary,

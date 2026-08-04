@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-from zentra_application_investigation import GroupDetail
+from zentra_application_analysis_run import GroupDetail
 
 
 class GroupNameRequest(BaseModel):

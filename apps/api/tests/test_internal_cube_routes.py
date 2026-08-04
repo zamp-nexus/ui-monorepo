@@ -34,7 +34,7 @@ class Dependencies:
     cube: object
     jwt_verifier: object
     connector: object | None = None
-    investigations: object | None = None
+    analysis_runs: object | None = None
     organization: object | None = None
 
     async def close(self) -> None:

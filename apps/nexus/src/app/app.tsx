@@ -131,7 +131,7 @@ const AuthenticatedWorkspace = () => {
           element={<ChatPage getToken={getToken} identity={identity.data} />}
         />
         <Route
-          path="/investigations/:id"
+          path="/analysis-runs/:id"
           element={<InvestigationWorkspace getToken={getToken} />}
         />
         <Route
@@ -140,7 +140,7 @@ const AuthenticatedWorkspace = () => {
             <ComingSoon
               title="Dashboard"
               icon="grid"
-              description="A tenant-wide view of running investigations, published findings and the approvals waiting on you."
+              description="A tenant-wide view of running analysis runs, published findings and the approvals waiting on you."
             />
           }
         />

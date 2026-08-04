@@ -1,5 +1,5 @@
 /**
- * Talking to the Investigation API.
+ * Talking to the Analysis Run API.
  *
  * Extracted from `app.tsx` so the Draft Finding panel can follow a claim to
  * its evidence without importing the whole app — and so a failed request
@@ -20,7 +20,7 @@ export class ApiError extends Error {
      * The stable error code, where the endpoint publishes one — the Thread and
      * Workspace routes answer `{code, message}` rather than FastAPI's
      * `{detail}`. A caller that only reads the status cannot tell
-     * `thread_conflict` (ask again once the Investigation finishes) from a
+     * `thread_conflict` (ask again once the Analysis Run finishes) from a
      * conflict it should give up on, and those are different things to say.
      */
     readonly code: string | null = null,

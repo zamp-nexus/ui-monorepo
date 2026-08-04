@@ -66,7 +66,7 @@ const claimLabels: Record<Claim['kind'], string> = {
 };
 
 /**
- * Says, in as many words, that this Investigation predates structured claims.
+ * Says, in as many words, that this Analysis Run predates structured claims.
  *
  * Silence would read as "no evidence here", which is a harsher and less true
  * statement than "this one ran before claims were separable".
@@ -74,7 +74,7 @@ const claimLabels: Record<Claim['kind'], string> = {
 export function LegacyFindingNotice() {
   return (
     <p className={styles.legacyNotice} data-state="legacy">
-      This Investigation ran before claims were recorded separately. Its conclusion is narrative,
+      This Analysis Run ran before claims were recorded separately. Its conclusion is narrative,
       and it carries no Evidence Citations to follow to individual claims.
     </p>
   );
@@ -87,18 +87,18 @@ export function LegacyFindingNotice() {
  * away — and because it is keyboard-operable and announced without any
  * scripting to get wrong.
  *
- * It fetches on open rather than rendering what the Investigation payload
+ * It fetches on open rather than rendering what the Analysis Run payload
  * already carried. Following a citation is a Tenant-authorized read with its
  * own outcomes, and five of them have to stay apart: still loading, resolved
  * and readable, resolved but unreachable, not permitted, and broken. Rendering
  * the inline copy would collapse the last three into silence.
  */
 function CitationDisclosure({
-  investigationId,
+  analysisRunId,
   citationId,
   claimText,
 }: {
-  investigationId: string;
+  analysisRunId: string;
   citationId: string;
   claimText: string;
 }) {
@@ -106,12 +106,12 @@ function CitationDisclosure({
   const { getAccessToken } = useAuthSession();
 
   const resolved = useQuery({
-    queryKey: ['citation', investigationId, citationId],
+    queryKey: ['citation', analysisRunId, citationId],
     enabled: open,
     retry: false,
     queryFn: () =>
       requestJson<EvidenceCitation>(
-        `/v1/investigations/${investigationId}/citations/${citationId}`,
+        `/v1/analysis-runs/${analysisRunId}/citations/${citationId}`,
         () => getAccessToken({ audience: 'first_party_http' }),
       ),
   });
@@ -146,8 +146,7 @@ function resolutionState(
   citation?: EvidenceCitation,
 ): ResolutionState {
   if (error) {
-    // 404 is the deliberate invisible-resource answer, and covers another
-    // Tenant's, another Investigation's, and nonexistent alike. Anything else
+    // 404 is the deliberate invisible-resource answer, and covers another    // Tenant's, another Analysis Run's, and nonexistent alike. Anything else
     // is a fault, and a reader should not be told it is a permission problem.
     return error instanceof ApiError && error.status === 404 ? 'inaccessible' : 'failed';
   }
@@ -216,10 +215,10 @@ function CitationBody({
 
 export function DraftFindingPanel({
   draft,
-  investigationId,
+  analysisRunId,
 }: {
   draft: DraftFinding;
-  investigationId: string;
+  analysisRunId: string;
 }) {
   const headingId = `draft-${draft.draft_finding_id}`;
   const unresolved = draft.contradictions.filter((c) => !c.resolved);
@@ -252,7 +251,7 @@ export function DraftFindingPanel({
               {claim.citation_ids.map((citationId) => (
                 <CitationDisclosure
                   key={citationId}
-                  investigationId={investigationId}
+                  analysisRunId={analysisRunId}
                   citationId={citationId}
                   claimText={claim.text}
                 />

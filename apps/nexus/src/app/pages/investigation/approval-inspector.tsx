@@ -11,7 +11,7 @@ import {
 } from '@open-zentra/foundation-design-system';
 
 import { approvalHeadings, conditionLabels } from '../../constants/labels';
-import type { Investigation, RejectionReason } from '../../types';
+import type { AnalysisRun, RejectionReason } from '../../types';
 
 /**
  * What the reviewer is being asked to judge, in the place they judge it.
@@ -22,14 +22,14 @@ import type { Investigation, RejectionReason } from '../../types';
  * trusted, whether anything is still disputed, how many claims are followable,
  * and whether any of them are not.
  */
-const ApprovalEvidence = ({ investigation }: { readonly investigation: Investigation }) => {
-  const draft = investigation.draft_finding;
+const ApprovalEvidence = ({ analysisRun }: { readonly analysisRun: AnalysisRun }) => {
+  const draft = analysisRun.draft_finding;
   if (!draft) {
     // Said, not omitted. A reviewer seeing no evidence block would not know
     // whether there is nothing to show or whether it failed to load.
     return (
       <p className="mt-4 text-sm leading-relaxed text-foreground-muted">
-        This investigation predates structured claims. There is no claim-level evidence to review;
+        This Analysis Run predates structured claims. There is no claim-level evidence to review;
         judge it from the narrative finding above.
       </p>
     );
@@ -114,15 +114,15 @@ const rejectionReasons: readonly { value: RejectionReason; label: string }[] = [
  * The human gate: why it opened, what it rests on, and the decision itself.
  */
 export const ApprovalInspector = ({
-  investigation,
+  analysisRun,
   onDecision,
   pending,
 }: {
-  readonly investigation: Investigation;
+  readonly analysisRun: AnalysisRun;
   readonly onDecision: (decision: 'approve' | 'reject', reason: RejectionReason | null) => void;
   readonly pending: boolean;
 }) => {
-  const approval = investigation.pending_approval;
+  const approval = analysisRun.pending_approval;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [reason, setReason] = useState<RejectionReason>('insufficient_evidence');
 
@@ -139,9 +139,9 @@ export const ApprovalInspector = ({
           Resolution
         </p>
         <h2 className="text-xl font-medium">
-          {investigation.status === 'completed'
+          {analysisRun.status === 'completed'
             ? 'Approved and complete'
-            : investigation.status === 'rejected'
+            : analysisRun.status === 'rejected'
             ? 'Rejected with cause'
             : 'No decision required'}
         </h2>
@@ -190,13 +190,13 @@ export const ApprovalInspector = ({
         </p>
       )}
 
-      <ApprovalEvidence investigation={investigation} />
+      <ApprovalEvidence analysisRun={analysisRun} />
 
       {/* Said before the buttons, not after. A reviewer should know what
           approving does while deciding, not discover it afterwards. */}
       <p className="mt-5 text-sm leading-relaxed text-foreground-muted">
         Approving publishes this finding to everyone in the tenant. Rejecting records your reason
-        and closes the investigation without publishing. Either way the evidence, the decision and
+        and closes the Analysis Run without publishing. Either way the evidence, the decision and
         who made it stay in Replay.
       </p>
 

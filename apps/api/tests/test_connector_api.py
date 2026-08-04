@@ -179,7 +179,7 @@ class Dependencies:
     cube: Probe
     jwt_verifier: Verifier
     connector: ConnectorService | None
-    investigations: object | None = None
+    analysis_runs: object | None = None
 
     async def close(self) -> None:
         return None

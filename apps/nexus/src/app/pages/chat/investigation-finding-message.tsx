@@ -1,18 +1,18 @@
 /**
- * The `investigation-finding` tool call: what the agents produced, rendered
+ * The `analysis-run-finding` tool call: what the agents produced, rendered
  * as the assistant's turn.
  *
  * There is no message behind this. A published Finding lives on the
- * Investigation, so the headline and summary are read from there and the
- * generated view is rendered beneath them. Until the Investigation is
+ * Analysis Run, so the headline and summary are read from there and the
+ * generated view is rendered beneath them. Until the Analysis Run is
  * terminal the row still exists -- saying which state it is in is more
  * useful than showing nothing while agents work.
  *
- * Cancel/retry render only on the latest Investigation (`result.isLatest`):
+ * Cancel/retry render only on the latest Analysis Run (`result.isLatest`):
  * `thread.actions.can_cancel`/`can_retry` describe the one Analysis Run that
- * can currently be acted on, not any Investigation in the Thread's history.
+ * can currently be acted on, not any Analysis Run in the Thread's history.
  * The pending-approval decision, by contrast, is read straight off this
- * Investigation's own `approval` -- that already only exists on the one
+ * Analysis Run's own `approval` -- that already only exists on the one
  * actually awaiting it.
  */
 
@@ -25,9 +25,9 @@ import { Link } from 'react-router-dom';
 import { Badge, Button, Card } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
-import { cancelInvestigation, decideApproval, retryInvestigation } from './api';
+import { cancelAnalysisRun, decideApproval, retryAnalysisRun } from './api';
 import { useChatContext } from './chat-context';
-import type { InvestigationFindingResult } from './to-chat-message';
+import type { AnalysisRunFindingResult } from './to-chat-message';
 import { VisualizationAnswer } from './visualization-answer';
 
 const WORKING: Record<string, string> = {
@@ -38,8 +38,8 @@ const WORKING: Record<string, string> = {
 };
 
 const STOPPED: Record<string, string> = {
-  failed: 'This investigation could not be completed.',
-  cancelled: 'This investigation was stopped.',
+  failed: 'This analysis run could not be completed.',
+  cancelled: 'This analysis run was stopped.',
   rejected: 'This draft was rejected, so no Finding was published.',
 };
 
@@ -50,9 +50,9 @@ const REJECTION_REASONS: readonly { value: string; label: string }[] = [
   { value: 'needs_more_analysis', label: 'Needs more analysis' },
 ];
 
-export const InvestigationFindingMessage: ToolCallMessagePartComponent<
-  { investigationId: string },
-  InvestigationFindingResult
+export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
+  { analysisRunId: string },
+  AnalysisRunFindingResult
 > = ({ result }) => {
   const { getToken, onFollowUp } = useChatContext();
   const queryClient = useQueryClient();
@@ -62,20 +62,20 @@ export const InvestigationFindingMessage: ToolCallMessagePartComponent<
     queryClient.invalidateQueries({ queryKey: ['thread', threadId] });
 
   const cancel = useMutation({
-    mutationFn: () => cancelInvestigation(getToken, result!.investigation.investigation_id),
+    mutationFn: () => cancelAnalysisRun(getToken, result!.analysisRun.analysis_run_id),
     onSuccess: () => refresh(result!.threadId),
   });
   const retry = useMutation({
-    mutationFn: () => retryInvestigation(getToken, result!.investigation.investigation_id),
+    mutationFn: () => retryAnalysisRun(getToken, result!.analysisRun.analysis_run_id),
     onSuccess: () => refresh(result!.threadId),
   });
   const decision = useMutation({
     mutationFn: (choice: 'approve' | 'reject') => {
-      const approval = result?.investigation.approval;
+      const approval = result?.analysisRun.approval;
       if (!result || !approval) throw new Error('This approval is no longer available.');
       return decideApproval(
         getToken,
-        result.investigation.investigation_id,
+        result.analysisRun.analysis_run_id,
         approval.approval_id,
         choice,
         choice === 'reject' ? reason : null,
@@ -85,11 +85,11 @@ export const InvestigationFindingMessage: ToolCallMessagePartComponent<
   });
 
   if (!result) return null;
-  const { investigation, isLatest, threadActions } = result;
-  const finding = investigation.finding;
-  const working = WORKING[investigation.status];
-  const stopped = STOPPED[investigation.status];
-  const approval = investigation.approval;
+  const { analysisRun, isLatest, threadActions } = result;
+  const finding = analysisRun.finding;
+  const working = WORKING[analysisRun.status];
+  const stopped = STOPPED[analysisRun.status];
+  const approval = analysisRun.approval;
   const awaitingDecision = approval?.can_decide === true && approval.decided_at === null;
   const controlsError = cancel.error ?? retry.error ?? decision.error;
 
@@ -130,13 +130,13 @@ export const InvestigationFindingMessage: ToolCallMessagePartComponent<
         {/* The generated view, and the governed brief whenever it is absent. */}
         <VisualizationAnswer
           getToken={getToken}
-          investigationId={investigation.investigation_id}
+          analysisRunId={analysisRun.analysis_run_id}
           onFollowUp={onFollowUp}
         />
 
         <Link
           className="mt-4 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-primary no-underline hover:underline"
-          to={`/investigations/${investigation.investigation_id}`}
+          to={`/analysis-runs/${analysisRun.analysis_run_id}`}
         >
           <Icon name="search" size="sm" />
           Open the evidence trace

@@ -26,10 +26,10 @@ export interface ChatMessage {
   readonly content: string;
   readonly created_at: string;
   /**
-   * An Investigation this answer came from, when the agent opened one.
+   * An Analysis Run this answer came from, when the agent opened one.
    * Null for a message that needed no governed query.
    */
-  readonly investigation_id: string | null;
+  readonly analysis_run_id: string | null;
 }
 
 /** A starting question offered on an empty thread. */

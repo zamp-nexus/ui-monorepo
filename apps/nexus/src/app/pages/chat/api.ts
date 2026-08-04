@@ -3,8 +3,8 @@
  *
  * The chat surface creates analytical work only as a consequence of a Chat
  * Session message resolving to a governed scenario. It never posts to
- * `/v1/investigations` — that is the older standalone flow the launcher uses,
- * and going through it directly would produce an Investigation no Chat
+ * `/v1/analysis-runs` — that is the older standalone flow the launcher uses,
+ * and going through it directly would produce an Analysis Run no Chat
  * Session owns.
  */
 
@@ -65,12 +65,12 @@ export const archiveChat = (getToken: TokenSource, threadId: string) =>
 export const restoreChat = (getToken: TokenSource, threadId: string) =>
   requestJson<Thread>(`/v1/chats/${threadId}/restore`, getToken, post());
 
-/** Draft Chat Sessions with no Investigation only. The server enforces it. */
+/** Draft Chat Sessions with no Analysis Run only. The server enforces it. */
 export const deleteChat = (getToken: TokenSource, threadId: string) =>
   requestJson<void>(`/v1/chats/${threadId}`, getToken, { method: 'DELETE' });
 
 /* -------------------------------------------------------------------------- */
-/* Investigation controls                                                      */
+/* Analysis Run controls                                                      */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -78,19 +78,19 @@ export const deleteChat = (getToken: TokenSource, threadId: string) =>
  * recorded, not once the agents have stopped. The Thread snapshot is what says
  * whether they have.
  */
-export const cancelInvestigation = (getToken: TokenSource, investigationId: string) =>
-  requestJson<unknown>(`/v1/investigations/${investigationId}/cancel`, getToken, post());
+export const cancelAnalysisRun = (getToken: TokenSource, analysisRunId: string) =>
+  requestJson<unknown>(`/v1/analysis-runs/${analysisRunId}/cancel`, getToken, post());
 
-/** Creates an immutable linked retry — a new entry in `investigations`. */
-export const retryInvestigation = (getToken: TokenSource, investigationId: string) =>
-  requestJson<unknown>(`/v1/investigations/${investigationId}/retry`, getToken, post());
+/** Creates an immutable linked retry — a new entry in `analysis_runs`. */
+export const retryAnalysisRun = (getToken: TokenSource, analysisRunId: string) =>
+  requestJson<unknown>(`/v1/analysis-runs/${analysisRunId}/retry`, getToken, post());
 
 /* -------------------------------------------------------------------------- */
 /* Visualization                                                               */
 /* -------------------------------------------------------------------------- */
 
-export const getInvestigationVisualization = (getToken: TokenSource, investigationId: string) =>
-  requestJson<Visualization>(`/v1/investigations/${investigationId}/visualization`, getToken);
+export const getAnalysisRunVisualization = (getToken: TokenSource, analysisRunId: string) =>
+  requestJson<Visualization>(`/v1/analysis-runs/${analysisRunId}/visualization`, getToken);
 
 /** Renders again without re-running any analysis. */
 export const retryVisualization = (getToken: TokenSource, visualizationId: string) =>
@@ -121,23 +121,23 @@ export const executeVisualizationAction = (
 /** Resolves to a citation, or to a tombstone if the evidence was erased. */
 export const resolveCitation = (
   getToken: TokenSource,
-  investigationId: string,
+  analysisRunId: string,
   citationId: string,
 ) =>
   requestJson<ResolvedCitation>(
-    `/v1/investigations/${investigationId}/citations/${citationId}`,
+    `/v1/analysis-runs/${analysisRunId}/citations/${citationId}`,
     getToken,
   );
 
 export const decideApproval = (
   getToken: TokenSource,
-  investigationId: string,
+  analysisRunId: string,
   approvalId: string,
   decision: 'approve' | 'reject',
   reason: string | null,
 ) =>
   requestJson<unknown>(
-    `/v1/investigations/${investigationId}/approvals/${approvalId}/decision`,
+    `/v1/analysis-runs/${analysisRunId}/approvals/${approvalId}/decision`,
     getToken,
     post({ decision, reason }),
   );

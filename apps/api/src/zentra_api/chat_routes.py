@@ -14,7 +14,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     PermissionDeniedError,
     ThreadConflictError,
     ThreadCursorError,
@@ -26,7 +26,7 @@ from zentra_application_investigation import (
     ThreadStreamRouting,
     ThreadStreamSnapshot,
 )
-from zentra_domain_investigation import ThreadMessageError, ThreadTransitionError
+from zentra_domain_analysis_run import ThreadMessageError, ThreadTransitionError
 
 from .active_connection import (
     AmbiguousDataConnectionError,
@@ -60,7 +60,7 @@ _SSE_HEADERS = {"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": 
 
 
 async def _active_connection(dependencies: object, actor: object) -> UUID | None:
-    """The Data Connection this Thread's Investigations query."""
+    """The Data Connection this Thread's Analysis Runs query."""
     try:
         return await active_data_connection_id(
             dependencies.connector,  # type: ignore[attr-defined]
@@ -121,8 +121,8 @@ def _stream_event_frame(event: ThreadStreamEvent) -> str:
             {
                 "thread_id": str(event.thread_id),
                 "message_id": str(event.message_id),
-                "investigation_id": (
-                    str(event.investigation_id) if event.investigation_id else None
+                "analysis_run_id": (
+                    str(event.analysis_run_id) if event.analysis_run_id else None
                 ),
                 "routing": RoutingResponse.from_detail(event.routing).model_dump(
                     mode="json"

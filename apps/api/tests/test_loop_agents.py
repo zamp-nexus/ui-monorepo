@@ -1,7 +1,7 @@
 """What the real Agents do when the Orchestrator Loop drives them.
 
 Ported from `libs/adapters/langgraph/tests/test_graph.py`, which asserted the
-same things through `InvestigationGraph`. ADR-0026 replaced the mechanism; the
+same things through `AnalysisRunGraph`. ADR-0026 replaced the mechanism; the
 Agents and the properties below are unchanged, so the tests moved rather than
 went away.
 """

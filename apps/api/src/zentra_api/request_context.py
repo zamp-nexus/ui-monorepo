@@ -10,7 +10,7 @@ from zentra_adapter_postgres import (
     resolve_identity_context,
 )
 from zentra_adapter_telemetry import correlate_organization, current_trace_ids
-from zentra_application_investigation import AuthenticatedActor, Role
+from zentra_application_analysis_run import AuthenticatedActor, Role
 
 from .auth import AuthenticationError, bearer_token
 

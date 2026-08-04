@@ -30,7 +30,7 @@ from zentra_api.pipeline import (
     _pipeline_result,
 )
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 
 
@@ -141,7 +141,7 @@ def outcome(**overrides: object) -> PipelineOutcome:
 async def run(**overrides: object):
     return _pipeline_result(
         outcome(**overrides),
-        investigation_id=INVESTIGATION_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
         tenant_id=TENANT_ID,
     )
 
@@ -237,7 +237,7 @@ def execution(role: AgentRole) -> AgentExecutionRecord:
     moment = datetime(2026, 7, 30, 9, 0, tzinfo=UTC)
     return AgentExecutionRecord(
         execution_id=uuid4(),
-        investigation_id=INVESTIGATION_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
         tenant_id=TENANT_ID,
         agent_id="insight_v1",
         role=role,
@@ -289,7 +289,7 @@ class _RecordingUnitOfWork:
     def work_feed(self) -> _RecordingUnitOfWork:
         return self
 
-    async def append_for_investigation(self, **kwargs: object) -> None:
+    async def append_for_analysis_run(self, **kwargs: object) -> None:
         return None
 
 
@@ -426,7 +426,7 @@ async def test_the_draft_names_the_execution_that_produced_it() -> None:
     assert draft.produced_by_execution_id == UUID(
         "70000000-0000-0000-0000-000000000007"
     )
-    assert draft.investigation_id == INVESTIGATION_ID
+    assert draft.analysis_run_id == ANALYSIS_RUN_ID
     assert draft.tenant_id == TENANT_ID
 
 
