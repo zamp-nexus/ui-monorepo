@@ -17,7 +17,7 @@ dependencies = [
   "zentra-application-sequence",
   "zentra-domain-agent-execution",
   "zentra-domain-connector",
-  "zentra-domain-investigation",
+  "zentra-domain-analysis-run",
   "zentra-domain-sequence"
 ]
 
@@ -37,7 +37,7 @@ members = [
   "libs/application/sequence",
   "libs/domain/agent-execution",
   "libs/domain/connector",
-  "libs/domain/investigation",
+  "libs/domain/analysis_run",
   "libs/domain/sequence"
 ]
 
@@ -83,7 +83,7 @@ workspace = true
 [tool.uv.sources.zentra-domain-connector]
 workspace = true
 
-[tool.uv.sources.zentra-domain-investigation]
+[tool.uv.sources.zentra-domain-analysis-run]
 workspace = true
 
 [tool.uv.sources.zentra-domain-sequence]

@@ -1,3 +1,0 @@
-# investigation
-
-Project description here.
