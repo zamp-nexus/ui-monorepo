@@ -25,10 +25,14 @@ import { Link } from 'react-router-dom';
 import { Badge, Button, Card } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
+import { AgentActivityBlock } from './agent-activity-block';
 import { cancelAnalysisRun, decideApproval, retryAnalysisRun } from './api';
 import { useChatContext } from './chat-context';
 import type { AnalysisRunFindingResult } from './to-chat-message';
 import { VisualizationAnswer } from './visualization-answer';
+
+/** Statuses a reader should read as "this turn is done", not "still working". */
+const TERMINAL_STATUSES = new Set(['completed', 'rejected', 'failed', 'cancelled']);
 
 const WORKING: Record<string, string> = {
   pending: 'Queued.',
@@ -54,7 +58,7 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
   { analysisRunId: string },
   AnalysisRunFindingResult
 > = ({ result }) => {
-  const { getToken, onFollowUp } = useChatContext();
+  const { getToken, onFollowUp, activityByRun, agents } = useChatContext();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState(REJECTION_REASONS[0].value);
 
@@ -103,6 +107,12 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
       </span>
 
       <div className="min-w-0 flex-1">
+        <AgentActivityBlock
+          events={activityByRun.get(analysisRun.analysis_run_id) ?? []}
+          agents={agents}
+          finalized={TERMINAL_STATUSES.has(analysisRun.status)}
+        />
+
         {finding ? (
           <>
             <h2 className="font-serif text-xl font-normal leading-tight tracking-[-0.02em]">

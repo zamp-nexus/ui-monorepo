@@ -251,6 +251,10 @@
   --color-muted: var(--bg-layer-02);
   --color-muted-foreground: var(--text-tertiary);
 
+  /* Glass & Glow (New) */
+  --color-glass: var(--bg-glass);
+  --color-glass-border: var(--border-glass);
+
   /* Interactive */
   --color-primary: var(--interactive-primary);
   --color-primary-hover: var(--interactive-primary-hover);
@@ -326,12 +330,18 @@
 :root {
   color-scheme: dark;
 
-  /* Backgrounds - green-tinted charcoal, near-black canvas */
-  --bg-layer-00: hsl(140 8% 4%);
-  --bg-layer-01: hsl(140 7% 6%);
-  --bg-layer-02: hsl(140 6% 9%);
-  --bg-layer-03: hsl(140 6% 12%);
-  --bg-overlay: hsla(140 10% 2% / 0.82);
+  /* Backgrounds - deep true black, pristine layers */
+  --bg-layer-00: hsl(0 0% 0%);
+  --bg-layer-01: hsl(0 0% 4%);
+  --bg-layer-02: hsl(0 0% 7%);
+  --bg-layer-03: hsl(0 0% 11%);
+  --bg-overlay: hsla(0 0% 0% / 0.85);
+  
+  /* Glass & Glow */
+  --bg-glass: hsla(0 0% 7% / 0.6);
+  --border-glass: hsla(0 0% 100% / 0.08);
+  --glow-primary: radial-gradient(circle at center, hsla(88, 100%, 70%, 0.15) 0%, transparent 65%);
+  --glow-smart: radial-gradient(circle at center, hsla(263, 83%, 58%, 0.2) 0%, transparent 65%);
 
   /* Text */
   --text-highlight: hsl(96 14% 96%);
@@ -363,9 +373,9 @@
   --interactive-smart-active: hsl(263 83% 52%);
 
   /* Borders */
-  --border-default: hsl(140 6% 16%);
-  --border-subtle: hsl(140 6% 12%);
-  --border-emphasis: hsl(140 6% 24%);
+  --border-default: hsla(0 0% 100% / 0.1);
+  --border-subtle: hsla(0 0% 100% / 0.05);
+  --border-emphasis: hsla(0 0% 100% / 0.15);
   --border-focus: hsl(88 100% 70%);
 
   /* Feedback */
@@ -394,11 +404,17 @@
   color-scheme: light;
 
   /* Backgrounds */
-  --bg-layer-00: hsl(140 6% 98%);
-  --bg-layer-01: hsl(140 6% 100%);
-  --bg-layer-02: hsl(140 6% 100%);
-  --bg-layer-03: hsl(140 6% 100%);
-  --bg-overlay: hsla(140 8% 8% / 0.4);
+  --bg-layer-00: hsl(0 0% 98%);
+  --bg-layer-01: hsl(0 0% 100%);
+  --bg-layer-02: hsl(0 0% 100%);
+  --bg-layer-03: hsl(0 0% 100%);
+  --bg-overlay: hsla(0 0% 8% / 0.3);
+
+  /* Glass & Glow */
+  --bg-glass: hsla(0 0% 100% / 0.7);
+  --border-glass: hsla(0 0% 0% / 0.06);
+  --glow-primary: radial-gradient(circle at center, hsla(88, 72%, 28%, 0.1) 0%, transparent 65%);
+  --glow-smart: radial-gradient(circle at center, hsla(263, 83%, 52%, 0.15) 0%, transparent 65%);
 
   /* Text */
   --text-highlight: hsl(140 8% 8%);

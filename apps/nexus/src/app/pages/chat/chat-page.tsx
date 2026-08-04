@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssistantRuntimeProvider, ThreadPrimitive } from '@assistant-ui/react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { IconButton } from '@open-zentra/foundation-design-system';
-import { Icon } from '@open-zentra/foundation-icons';
-
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
-import { ActivityInspector } from './activity-inspector';
+import { groupEventsByAnalysisRun } from './agent-activity-block';
 import { getChat, listAgents, listChats } from './api';
 import { ChatComposer } from './chat-composer';
 import { ChatContextProvider } from './chat-context';
@@ -50,7 +47,6 @@ export const ChatPage = ({
   // out of sync with it.
   const activeThreadId = chatId ?? NEW_THREAD;
   const [draft, setDraft] = useState('');
-  const [inspectorOpen, setInspectorOpen] = useState(false);
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const group = useActiveGroup(getToken);
@@ -105,6 +101,11 @@ export const ChatPage = ({
   };
 
   const feed = useThreadEvents(getToken, activeThreadId, thread?.event_cursor ?? 0, onEvent);
+
+  // Grouped once per feed change, not per Analysis Run rendered -- every
+  // `analysis-run-finding` tool-call reads its own turn's slice back out by
+  // id, the same positional reasoning `to-chat-message.ts` already relies on.
+  const activityByRun = useMemo(() => groupEventsByAnalysisRun(feed.events), [feed.events]);
 
   // `replace: true` -- a send from the bare `/chats` composer is establishing
   // this thread's canonical URL, not a user-initiated navigation. A normal
@@ -168,15 +169,6 @@ export const ChatPage = ({
           <h1 className="min-w-0 flex-1 font-serif text-2xl font-normal tracking-[-0.03em]">
             {thread?.title ?? 'Chat'}
           </h1>
-          <IconButton
-            aria-label={inspectorOpen ? 'Close activity panel' : 'Open activity panel'}
-            aria-pressed={inspectorOpen}
-            intent="ghost"
-            size="sm"
-            onClick={() => setInspectorOpen((value) => !value)}
-          >
-            <Icon name="sidebar" size="sm" />
-          </IconButton>
           <p className="w-full text-sm text-foreground-muted">
             Ask a governed question and follow the evidence trace it produces.
           </p>
@@ -184,7 +176,15 @@ export const ChatPage = ({
 
         <div className="relative min-h-0 flex-1 flex flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto pb-40">
-            <ChatContextProvider value={{ getToken, onFollowUp: submit, onFillComposer: setDraft }}>
+            <ChatContextProvider
+              value={{
+                getToken,
+                onFollowUp: submit,
+                onFillComposer: setDraft,
+                activityByRun,
+                agents: agents.data ?? [],
+              }}
+            >
             <AssistantRuntimeProvider runtime={runtime}>
               <ThreadPrimitive.Root>
                 <ThreadPrimitive.Empty>
@@ -225,14 +225,6 @@ export const ChatPage = ({
           </div>
         </div>
       </section>
-
-      <ActivityInspector
-        events={feed.events}
-        status={feed.status}
-        agents={agents.data ?? []}
-        open={inspectorOpen}
-        onClose={() => setInspectorOpen(false)}
-      />
     </div>
   );
 };
