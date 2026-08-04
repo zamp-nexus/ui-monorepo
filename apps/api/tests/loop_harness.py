@@ -8,7 +8,7 @@ between them.
 
 It replaces the harness that lived in `libs/adapters/langgraph/tests/
 test_graph.py`. Those tests exercised the same four Agents through
-`InvestigationGraph`; ADR-0026 deleted the graph, not the Agents, so the
+`AnalysisRunGraph`; ADR-0026 deleted the graph, not the Agents, so the
 coverage moved here rather than out.
 """
 
@@ -52,7 +52,7 @@ from zentra_domain_agent_execution import (
 
 from zentra_api.orchestrator_loop import OrchestratorLoop, StepAgents
 
-INVESTIGATION_ID = UUID("11000000-0000-0000-0000-000000000001")
+ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 QUESTION = "Why did EU refunds increase from June to July 2026?"
 
@@ -319,11 +319,11 @@ class FakeWorkItemRepository:
     async def save(self, item) -> None:
         self._store["items"][item.work_item_id] = item
 
-    async def list_for_investigation(self, investigation_id, tenant_id):
+    async def list_for_analysis_run(self, analysis_run_id, tenant_id):
         return tuple(
             item
             for item in self._store["items"].values()
-            if item.investigation_id == investigation_id
+            if item.analysis_run_id == analysis_run_id
         )
 
 
@@ -334,7 +334,7 @@ class FakePolicies:
 
 class FakeUnitOfWork:
     def __init__(self, store: dict) -> None:
-        self.investigation_boards = FakeBoardRepository(store)
+        self.analysis_run_boards = FakeBoardRepository(store)
         self.work_items = FakeWorkItemRepository(store)
         self.policies = FakePolicies()
 
@@ -460,7 +460,7 @@ def board_store(loop: OrchestratorLoop) -> dict:
 
 async def run(loop: OrchestratorLoop):
     return await loop.run(
-        investigation_id=INVESTIGATION_ID,
+        analysis_run_id=ANALYSIS_RUN_ID,
         tenant_id=TENANT_ID,
         question=QUESTION,
     )

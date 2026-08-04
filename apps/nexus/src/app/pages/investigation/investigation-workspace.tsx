@@ -6,7 +6,7 @@ import { Card } from '@open-zentra/foundation-design-system';
 
 import { requestJson, type TokenSource } from '../../api';
 import { DraftFindingPanel, LegacyFindingNotice } from '../../draft-finding-panel';
-import type { Investigation, RejectionReason } from '../../types';
+import type { AnalysisRun, RejectionReason } from '../../types';
 import { ApprovalInspector } from './approval-inspector';
 import { EvidenceDeletion } from './evidence-deletion';
 import { EvidenceSpine } from './evidence-spine';
@@ -14,15 +14,15 @@ import { MetricField } from './metric-field';
 import { OutcomePanel } from './outcome-panel';
 
 /**
- * One Investigation: what it asked, what the ledger recorded, what was found,
+ * One Analysis Run: what it asked, what the ledger recorded, what was found,
  * and the decision it is waiting on.
  */
 export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenSource }) => {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ['investigation', id],
-    queryFn: () => requestJson<Investigation>(`/v1/investigations/${id}`, getToken),
+    queryKey: ['analysisRun', id],
+    queryFn: () => requestJson<AnalysisRun>(`/v1/analysis-runs/${id}`, getToken),
     enabled: Boolean(id),
     refetchInterval: (result) => {
       const data = result.state.data;
@@ -40,16 +40,16 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
 
   const deletion = useMutation({
     mutationFn: () => {
-      if (!id) throw new Error('This investigation is no longer available.');
-      return requestJson<Investigation>(`/v1/investigations/${id}/evidence-deletion`, getToken, {
+      if (!id) throw new Error('This analysisRun is no longer available.');
+      return requestJson<AnalysisRun>(`/v1/analysis-runs/${id}/evidence-deletion`, getToken, {
         method: 'POST',
-        // The API demands the Investigation be named as well as addressed.
+        // The API demands the Analysis Run be named as well as addressed.
         // Sending it from here keeps the client honest about which one it
         // means rather than trusting the URL it happens to be on.
-        body: JSON.stringify({ confirm_investigation_id: id }),
+        body: JSON.stringify({ confirm_analysis_run_id: id }),
       });
     },
-    onSuccess: (investigation) => queryClient.setQueryData(['investigation', id], investigation),
+    onSuccess: (analysisRun) => queryClient.setQueryData(['analysisRun', id], analysisRun),
   });
 
   const decision = useMutation({
@@ -64,8 +64,8 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
       if (!approval || !id) {
         throw new Error('This approval is no longer available.');
       }
-      return requestJson<Investigation>(
-        `/v1/investigations/${id}/approvals/${approval.approval_id}/decision`,
+      return requestJson<AnalysisRun>(
+        `/v1/analysis-runs/${id}/approvals/${approval.approval_id}/decision`,
         getToken,
         {
           method: 'POST',
@@ -73,7 +73,7 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
         },
       );
     },
-    onSuccess: (investigation) => queryClient.setQueryData(['investigation', id], investigation),
+    onSuccess: (analysisRun) => queryClient.setQueryData(['analysisRun', id], analysisRun),
   });
 
   if (query.isPending) {
@@ -89,7 +89,7 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
     return (
       <section className="flex flex-col items-start gap-4 px-8 py-10">
         <p className="text-sm text-danger" role="alert">
-          {query.error?.message ?? 'Investigation was not found.'}
+          {query.error?.message ?? 'Analysis Run was not found.'}
         </p>
         <Link className="text-sm text-primary" to="/">
           Return to the launcher
@@ -98,20 +98,20 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
     );
   }
 
-  const investigation = query.data;
+  const analysisRun = query.data;
 
   return (
-    <div className="px-8 py-10" data-resolution={investigation.status}>
+    <div className="px-8 py-10" data-resolution={analysisRun.status}>
       <header className="flex flex-wrap items-start justify-between gap-6 border-b border-border pb-8">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-            Investigation · {investigation.investigation_id.slice(0, 8)}
+            Analysis Run · {analysisRun.analysis_run_id.slice(0, 8)}
           </p>
           <motion.h1
             className="mt-3 max-w-3xl font-serif text-[clamp(1.9rem,3.6vw,3rem)] font-normal leading-[1.04] tracking-[-0.035em]"
-            layoutId="investigation-question"
+            layoutId="analysisRun-question"
           >
-            {investigation.canonical_question}
+            {analysisRun.canonical_question}
           </motion.h1>
         </div>
         <div className="flex items-center gap-3" aria-live="polite">
@@ -121,58 +121,58 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
               Current state
             </small>
             <strong className="font-mono text-sm uppercase tracking-[0.08em]">
-              {investigation.status.replace(/_/g, ' ')}
+              {analysisRun.status.replace(/_/g, ' ')}
             </strong>
           </div>
         </div>
       </header>
 
       <div className="mt-8 grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)_minmax(0,22rem)]">
-        <EvidenceSpine investigation={investigation} />
+        <EvidenceSpine analysisRun={analysisRun} />
 
         <Card component="article" padding="lg">
           <Card.Header
             end={
               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
-                Evaluation {investigation.evaluation_attempts} / 3
+                Evaluation {analysisRun.evaluation_attempts} / 3
               </span>
             }
           >
             <Card.Title>Finding preview</Card.Title>
           </Card.Header>
 
-          {investigation.finding ? (
+          {analysisRun.finding ? (
             <>
               <h2 className="font-serif text-2xl font-normal leading-tight tracking-[-0.02em]">
-                {investigation.finding.headline}
+                {analysisRun.finding.headline}
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-foreground-muted">
-                {investigation.finding.summary}
+                {analysisRun.finding.summary}
               </p>
 
               <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                {investigation.finding.metrics.map((metric) => (
+                {analysisRun.finding.metrics.map((metric) => (
                   <MetricField key={metric.metric} metric={metric} />
                 ))}
               </div>
 
               <div className="mt-8">
-                {investigation.draft_finding ? (
+                {analysisRun.draft_finding ? (
                   <DraftFindingPanel
-                    draft={investigation.draft_finding}
-                    investigationId={investigation.investigation_id}
+                    draft={analysisRun.draft_finding}
+                    analysisRunId={analysisRun.analysis_run_id}
                   />
                 ) : (
                   <LegacyFindingNotice />
                 )}
               </div>
 
-              <OutcomePanel investigation={investigation} />
+              <OutcomePanel analysisRun={analysisRun} />
 
               <footer className="mt-8 flex flex-wrap items-center gap-3 border-t border-border pt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
                 <span>Evidence reference</span>
                 <code className="normal-case tracking-normal text-foreground">
-                  {investigation.finding.evidence_references[0]}
+                  {analysisRun.finding.evidence_references[0]}
                 </code>
               </footer>
             </>
@@ -181,8 +181,8 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
 
         <AnimatePresence mode="wait">
           <ApprovalInspector
-            key={investigation.pending_approval?.approval_id ?? investigation.status}
-            investigation={investigation}
+            key={analysisRun.pending_approval?.approval_id ?? analysisRun.status}
+            analysisRun={analysisRun}
             pending={decision.isPending}
             onDecision={(choice, reason) => decision.mutate({ choice, reason })}
           />
@@ -190,8 +190,8 @@ export const InvestigationWorkspace = ({ getToken }: { readonly getToken: TokenS
       </div>
 
       <EvidenceDeletion
-        investigation={investigation}
-        canDelete={investigation.can_delete_evidence}
+        analysisRun={analysisRun}
+        canDelete={analysisRun.can_delete_evidence}
         pending={deletion.isPending}
         onDelete={() => deletion.mutate()}
       />

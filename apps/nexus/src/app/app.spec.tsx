@@ -42,8 +42,8 @@ const contextResponse = {
   role: 'owner',
 };
 
-const investigation = {
-  investigation_id: '30000000-0000-0000-0000-000000000003',
+const analysisRun = {
+  analysis_run_id: '30000000-0000-0000-0000-000000000003',
   canonical_question: 'Why did EU refunds increase from June to July 2026?',
   scenario_key: null,
   status: 'awaiting_approval',
@@ -75,7 +75,7 @@ const investigation = {
     ],
     evidence_references: ['artifact://semantic/eu-refund-spike/2026-06_2026-07'],
   },
-  // Legacy by default: every Investigation that ran before Insight has a
+  // Legacy by default: every Analysis Run that ran before Insight has a
   // narrative Finding and no structured draft.
   draft_finding: null,
   outcome: {
@@ -93,7 +93,7 @@ const investigation = {
   timeline: [
     {
       entry_id: '50000000-0000-0000-0000-000000000005',
-      event_type: 'investigation.created',
+      event_type: 'analysis_run.created',
       status: 'pending',
       created_at: '2026-07-29T00:00:00Z',
       artifact_references: [],
@@ -166,7 +166,7 @@ const catalogResponse = {
 };
 
 const mockApi = (
-  detail: unknown = investigation,
+  detail: unknown = analysisRun,
   citation?: { body: unknown; status?: number },
   context: unknown = contextResponse,
 ) =>
@@ -177,13 +177,13 @@ const mockApi = (
     if (url.endsWith('/v1/catalog')) return response(catalogResponse);
     // Following a citation is its own Tenant-authorized read, so it gets its
     // own stub: a test can make it succeed, deny, or break independently of
-    // the Investigation it hangs off.
+    // the Analysis Run it hangs off.
     if (url.includes('/citations/')) {
       return citation
         ? response(citation.body, citation.status ?? 200)
         : response({ detail: 'Evidence was not found' }, 404);
     }
-    if (url.includes('/v1/investigations/')) return response(detail);
+    if (url.includes('/v1/analysis-runs/')) return response(detail);
     return response({ detail: 'Not found' }, 404);
   });
 
@@ -284,7 +284,7 @@ describe('App', () => {
       tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'owner@example.com' },
     });
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     // The approve control rather than the heading: the outcome panel and the
     // approval now legitimately share the policy's wording, so a heading query
     // matches both.
@@ -308,8 +308,8 @@ describe('App', () => {
 
   it('renders read-only approval state for a viewer', async () => {
     mockApi({
-      ...investigation,
-      pending_approval: { ...investigation.pending_approval, can_decide: false },
+      ...analysisRun,
+      pending_approval: { ...analysisRun.pending_approval, can_decide: false },
     });
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -318,14 +318,14 @@ describe('App', () => {
       tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'viewer@example.com' },
     });
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     expect(await screen.findByText(/owner or admin judgment is required/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /approve finding/i })).toBeNull();
   });
 
   it('announces a completed terminal state after approval', async () => {
     const completed = {
-      ...investigation,
+      ...analysisRun,
       status: 'completed' as const,
       pending_approval: null,
       finished_at: '2026-07-29T00:00:02Z',
@@ -338,7 +338,7 @@ describe('App', () => {
       tenant: { id: 'org_123', name: 'Acme' },
       user: { email: 'owner@example.com' },
     });
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await waitFor(() => expect(screen.getByText('Approved and complete')).toBeTruthy());
     expect(screen.getAllByText('completed')).toBeTruthy();
   });
@@ -350,9 +350,9 @@ describe('App', () => {
     // deliberately months this fixture's question does not mention: a caption
     // that still says June or July is reading something other than the data.
     mockApi({
-      ...investigation,
+      ...analysisRun,
       finding: {
-        ...investigation.finding,
+        ...analysisRun.finding,
         metrics: [
           {
             metric: 'refund_amount',
@@ -373,7 +373,7 @@ describe('App', () => {
       user: { email: 'owner@example.com' },
     });
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -397,7 +397,7 @@ describe('App', () => {
       user: { email: 'owner@example.com' },
     });
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -464,13 +464,13 @@ describe('App', () => {
     });
   };
 
-  it('says a legacy investigation predates structured claims', async () => {
+  it('says a legacy analysis run predates structured claims', async () => {
     // Rendering nothing would read as "no evidence here", which is both
     // harsher and less true than "this one ran before claims were separable".
     mockApi();
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -484,10 +484,10 @@ describe('App', () => {
     // The one distinction a reviewer most needs, carried as a visible word
     // rather than a colour — a reader who cannot tell the swatches apart
     // still gets it.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -499,10 +499,10 @@ describe('App', () => {
   });
 
   it('renders claims in the order the draft recorded', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -518,10 +518,10 @@ describe('App', () => {
   it('says root cause is unresolved out loud', async () => {
     // ADR 0011 turns on the product stating this rather than letting a reader
     // assume causality was established.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -531,10 +531,10 @@ describe('App', () => {
   });
 
   it('surfaces an unresolved contradiction rather than smoothing it away', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -550,10 +550,10 @@ describe('App', () => {
     // A disclosure rather than a link: the reader is inspecting evidence, not
     // navigating away, and `<details>` is keyboard-operable and announced
     // without any scripting to get wrong.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -567,10 +567,10 @@ describe('App', () => {
   });
 
   it('offers no evidence affordance on an interpretation', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -594,7 +594,7 @@ describe('App', () => {
   };
 
   const openEvidence = async () => {
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -608,10 +608,10 @@ describe('App', () => {
 
   it('shows the figure a measured claim rests on', async () => {
     // On the claim itself, without following anything.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('heading', {
       name: /confidence below the tenant threshold/i,
       level: 2,
@@ -623,7 +623,7 @@ describe('App', () => {
   });
 
   it('resolves the governed context a citation carries', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft }, { body: activeCitation });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft }, { body: activeCitation });
     signedIn();
     await openEvidence();
 
@@ -635,7 +635,7 @@ describe('App', () => {
     // A Tenant who erased something asked for that. A reader told "deleted"
     // about data loss is being reassured wrongly.
     mockApi(
-      { ...investigation, draft_finding: structuredDraft },
+      { ...analysisRun, draft_finding: structuredDraft },
       { body: { ...activeCitation, state: 'unavailable' } },
     );
     signedIn();
@@ -648,7 +648,7 @@ describe('App', () => {
   it('says evidence you may not see is not a failure', async () => {
     // 404 is the deliberate invisible-resource answer. Telling the reader the
     // system broke would be a different, and false, claim.
-    mockApi({ ...investigation, draft_finding: structuredDraft });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft });
     signedIn();
     await openEvidence();
 
@@ -658,7 +658,7 @@ describe('App', () => {
 
   it('says a server fault is a failure, not a permission problem', async () => {
     mockApi(
-      { ...investigation, draft_finding: structuredDraft },
+      { ...analysisRun, draft_finding: structuredDraft },
       { body: { detail: 'boom' }, status: 500 },
     );
     signedIn();
@@ -669,7 +669,7 @@ describe('App', () => {
   });
 
   it('announces resolution progress in a live region', async () => {
-    mockApi({ ...investigation, draft_finding: structuredDraft }, { body: activeCitation });
+    mockApi({ ...analysisRun, draft_finding: structuredDraft }, { body: activeCitation });
     signedIn();
     await openEvidence();
 
@@ -681,16 +681,16 @@ describe('App', () => {
     // picture. The copy here used to describe one scenario's sample size
     // regardless of why the gate actually opened.
     mockApi({
-      ...investigation,
+      ...analysisRun,
       pending_approval: {
-        ...investigation.pending_approval,
+        ...analysisRun.pending_approval,
         reason: 'evidence_incomplete',
         failed_conditions: ['converged', 'confident', 'evidenced'],
       },
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/independent recheck did not agree/i)).toBeTruthy();
@@ -705,9 +705,9 @@ describe('App', () => {
   });
 
   const gated = (overrides = {}) => ({
-    ...investigation,
+    ...analysisRun,
     draft_finding: structuredDraft,
-    pending_approval: { ...investigation.pending_approval, ...overrides },
+    pending_approval: { ...analysisRun.pending_approval, ...overrides },
   });
 
   it('shows what the decision turns on, beside the decision', async () => {
@@ -717,7 +717,7 @@ describe('App', () => {
     mockApi(gated());
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/42% · capped sample size/i)).toBeTruthy();
@@ -736,7 +736,7 @@ describe('App', () => {
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/1 of 1 cannot be followed/i)).toBeTruthy();
@@ -747,7 +747,7 @@ describe('App', () => {
     mockApi(gated());
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     const consequence = screen.getByText(/Approving publishes this finding/i);
@@ -761,7 +761,7 @@ describe('App', () => {
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByText(/owner or admin judgment is required/i);
 
     expect(screen.queryByRole('button', { name: /approve finding/i })).toBeNull();
@@ -782,20 +782,20 @@ describe('App', () => {
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/1 erased at the tenant's request/i)).toBeTruthy();
     expect(screen.queryByText(/cannot be followed/i)).toBeNull();
   });
 
-  it('says when a legacy investigation has no claim-level evidence', async () => {
+  it('says when a legacy analysis run has no claim-level evidence', async () => {
     // A reviewer seeing no evidence block would not know whether there is
     // nothing to show or whether it failed to load.
-    mockApi({ ...investigation, draft_finding: null });
+    mockApi({ ...analysisRun, draft_finding: null });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/predates structured claims/i)).toBeTruthy();
@@ -807,7 +807,7 @@ describe('App', () => {
     mockApi();
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/after 1 failed rung/i)).toBeTruthy();
@@ -815,8 +815,8 @@ describe('App', () => {
 
   it('explains a gate at the point in the timeline where it opened', async () => {
     mockApi({
-      ...investigation,
-      timeline: investigation.timeline.map((entry) =>
+      ...analysisRun,
+      timeline: analysisRun.timeline.map((entry) =>
         entry.event_type === 'human_approval.requested'
           ? { ...entry, failed_conditions: ['confident', 'evidenced'] }
           : entry,
@@ -824,7 +824,7 @@ describe('App', () => {
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(
@@ -840,14 +840,14 @@ describe('App', () => {
     mockApi();
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByRole('button', { name: /approve finding/i });
 
     expect(screen.getByText(/v1 · 1240 ms/)).toBeTruthy();
   });
 
   const terminal = {
-    ...investigation,
+    ...analysisRun,
     status: 'completed',
     pending_approval: null,
     can_delete_evidence: true,
@@ -859,7 +859,7 @@ describe('App', () => {
     mockApi(terminal);
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     const start = await screen.findByRole('button', { name: /delete evidence/i });
 
     expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -874,7 +874,7 @@ describe('App', () => {
     mockApi(terminal);
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     fireEvent.click(await screen.findByRole('button', { name: /delete evidence/i }));
 
     const warning = screen.getByRole('alertdialog').textContent ?? '';
@@ -883,17 +883,17 @@ describe('App', () => {
     expect(warning).toMatch(/cannot be undone/i);
   });
 
-  it('offers no deletion on a live investigation', async () => {
+  it('offers no deletion on a live analysis run', async () => {
     // Erasing under a running pipeline races every write still to come.
     mockApi({
-      ...investigation,
+      ...analysisRun,
       status: 'running',
       pending_approval: null,
       can_delete_evidence: false,
     });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByText(/EU refunds rose/i);
 
     expect(screen.queryByRole('button', { name: /delete evidence/i })).toBeNull();
@@ -903,7 +903,7 @@ describe('App', () => {
     mockApi({ ...terminal, can_delete_evidence: false });
     signedIn();
 
-    renderApp('/investigations/30000000-0000-0000-0000-000000000003');
+    renderApp('/analysis-runs/30000000-0000-0000-0000-000000000003');
     await screen.findByText(/EU refunds rose/i);
 
     expect(screen.queryByRole('button', { name: /delete evidence/i })).toBeNull();

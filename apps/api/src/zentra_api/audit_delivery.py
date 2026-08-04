@@ -12,9 +12,9 @@ from uuid import UUID
 from zentra_adapter_clickhouse import AuditEntry, AuditRepository
 from zentra_adapter_postgres import (
     OutboxRecord,
-    PostgresInvestigationUnitOfWorkFactory,
+    PostgresAnalysisRunUnitOfWorkFactory,
 )
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuditDelivery,
     TimelineEntry,
 )
@@ -89,7 +89,7 @@ class AuditDeliveryCoordinator:
     def __init__(
         self,
         *,
-        unit_of_work_factory: PostgresInvestigationUnitOfWorkFactory,
+        unit_of_work_factory: PostgresAnalysisRunUnitOfWorkFactory,
         audit: AuditRepository,
         retry_interval_seconds: float = 1,
     ) -> None:
@@ -100,7 +100,7 @@ class AuditDeliveryCoordinator:
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
-    async def flush(self, *, organization_id: UUID, investigation_id: UUID) -> bool:
+    async def flush(self, *, organization_id: UUID, analysis_run_id: UUID) -> bool:
         self._active_organizations.add(organization_id)
         async with self._unit_of_work_factory(
             organization_id,
@@ -108,7 +108,7 @@ class AuditDeliveryCoordinator:
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
             pending = await unit_of_work.outbox.pending(
-                investigation_id=investigation_id
+                analysis_run_id=analysis_run_id
             )
 
         delivered = True
@@ -144,13 +144,13 @@ class AuditDeliveryCoordinator:
         self,
         *,
         organization_id: UUID,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
     ) -> Sequence[TimelineEntry]:
         self._active_organizations.add(organization_id)
         try:
-            delivered_rows = await self._audit.list_for_investigation(
+            delivered_rows = await self._audit.list_for_analysis_run(
                 organization_id=organization_id,
-                investigation_id=investigation_id,
+                analysis_run_id=analysis_run_id,
             )
         except Exception:
             delivered_rows = []
@@ -159,8 +159,8 @@ class AuditDeliveryCoordinator:
             SYSTEM_TRACE_ID,
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
-            outbox_rows = await unit_of_work.outbox.all_for_investigation(
-                investigation_id
+            outbox_rows = await unit_of_work.outbox.all_for_analysis_run(
+                analysis_run_id
             )
 
         entries: dict[UUID, TimelineEntry] = {}
@@ -256,11 +256,11 @@ class AuditDeliveryCoordinator:
                         SYSTEM_SPAN_ID,
                     ) as unit_of_work:
                         pending = await unit_of_work.outbox.pending()
-                    investigation_ids = {record.investigation_id for record in pending}
-                    for investigation_id in investigation_ids:
+                    analysis_run_ids = {record.analysis_run_id for record in pending}
+                    for analysis_run_id in analysis_run_ids:
                         await self.flush(
                             organization_id=organization_id,
-                            investigation_id=investigation_id,
+                            analysis_run_id=analysis_run_id,
                         )
                 except Exception:
                     continue
@@ -277,7 +277,7 @@ class AuditDeliveryCoordinator:
             trace_id=UUID(str(payload["trace_id"])),
             span_id=UUID(str(payload["span_id"])),
             organization_id=record.organization_id,
-            investigation_id=record.investigation_id,
+            analysis_run_id=record.analysis_run_id,
             event_type=str(payload["event_type"]),
             agent_id=metadata.get("agent_id"),
             execution_id=(
@@ -301,7 +301,7 @@ class AuditDeliveryCoordinator:
             artifact_refs=tuple(payload.get("artifact_refs", ())),
             redacted_metadata=metadata,
             # `record.created_at`, not the payload's `occurred_at`. The
-            # outbox is where each Investigation's timeline is made
+            # outbox is where each Analysis Run's timeline is made
             # strictly increasing; delivering the un-floored instant
             # would throw that away the moment an event reached the
             # ledger, and Replay sorts on this column.

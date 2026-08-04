@@ -78,7 +78,7 @@ const SourceRow = ({ source, onTest, testing, canWrite }: SourceRowProps) => (
  *
  * Health is shown per row rather than assumed: a source that was reachable when
  * it was registered is not necessarily reachable now, and a rotated password is
- * the most ordinary way for an investigation to start failing.
+ * the most ordinary way for an Analysis Run to start failing.
  */
 export const ConnectionsPage = ({ getToken, identity }: ConnectionsPageProps) => {
   const queryClient = useQueryClient();
@@ -160,7 +160,7 @@ export const ConnectionsPage = ({ getToken, identity }: ConnectionsPageProps) =>
         >
           <EmptyState.Title>No sources connected</EmptyState.Title>
           <EmptyState.Description>
-            An investigation can only cite data it can reach. Connect a ClickHouse service to give
+            An Analysis Run can only cite data it can reach. Connect a ClickHouse service to give
             this tenant something to harvest.
           </EmptyState.Description>
           <EmptyState.Actions>

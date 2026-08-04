@@ -349,7 +349,7 @@ class RelationResponse(BaseModel):
 class RelationDecisionRequest(BaseModel):
     """Confirm or reject. A rejection must say why; a confirmation need not.
 
-    Asymmetric on purpose, and the same asymmetry the Investigation API already
+    Asymmetric on purpose, and the same asymmetry the Analysis Run API already
     uses for Human Approvals: the recorded reason is what suppresses
     re-proposal, so a rejection without one would silently lose that behaviour.
     """

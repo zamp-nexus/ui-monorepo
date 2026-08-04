@@ -65,7 +65,7 @@ class IntakeService:
                 # Intake precedes any AnalysisRun; this id is discarded if
                 # the message does not resolve, and reused as the real
                 # AnalysisRun id if it does (the caller's job, not ours).
-                investigation_id=self._new_id(),
+                analysis_run_id=self._new_id(),
                 organization_id=organization_id,
                 state={"question": question},
             )

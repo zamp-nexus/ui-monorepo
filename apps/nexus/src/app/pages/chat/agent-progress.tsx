@@ -13,6 +13,7 @@
 
 import { Badge } from '@open-zentra/foundation-design-system';
 import { Icon, type IconName } from '@open-zentra/foundation-icons';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import type { Agent, AgentEventPayload, ThreadEvent } from '../../types';
 import type { FeedStatus } from './use-thread-events';
@@ -62,12 +63,12 @@ export const progressLines = (events: readonly ThreadEvent[]): readonly Line[] =
   const lines: Line[] = [];
 
   for (const event of events) {
-    if (event.kind === 'investigation.queued') {
+    if (event.kind === 'analysis_run.queued') {
       lines.push({
         id: event.event_id,
         agentId: null,
         role: null,
-        text: 'Investigation queued.',
+        text: 'Analysis Run queued.',
         done: true,
       });
       continue;
@@ -165,30 +166,56 @@ export const AgentProgress = ({
         </Badge>
       ) : null}
 
-      <ol className="m-0 flex list-none flex-col gap-2 p-0">
-        {lines.map((line) => (
-          <li key={line.id} className="flex items-start gap-3">
-            <span
-              className={
-                line.done ? 'mt-1 text-foreground-muted' : 'mt-1 animate-pulse text-primary'
-              }
-              aria-hidden="true"
+      <ol className="m-0 flex list-none flex-col gap-2 p-0 overflow-hidden">
+        <AnimatePresence initial={false}>
+          {lines.map((line) => (
+            <motion.li
+              key={line.id}
+              layout
+              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              animate={{ opacity: 1, height: 'auto', scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="flex items-start gap-3 overflow-hidden py-1"
             >
-              <Icon
-                name={ROLE_ICON[roleOf(line.agentId, line.role) ?? ''] ?? DEFAULT_ROLE_ICON}
-                size="sm"
-              />
-            </span>
-            <span className="min-w-0 flex-1 text-sm text-foreground-muted">
-              {line.agentId ? (
-                <strong className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
-                  {nameOf(line.agentId)}
-                </strong>
-              ) : null}
-              {line.text}
-            </span>
-          </li>
-        ))}
+              <span
+                className={
+                  line.done
+                    ? 'mt-1 text-foreground-muted transition-colors duration-500'
+                    : 'mt-1 text-primary'
+                }
+                aria-hidden="true"
+              >
+                <motion.div
+                  animate={line.done ? {} : { scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+                  transition={line.done ? {} : { repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                >
+                  <Icon
+                    name={ROLE_ICON[roleOf(line.agentId, line.role) ?? ''] ?? DEFAULT_ROLE_ICON}
+                    size="sm"
+                  />
+                </motion.div>
+              </span>
+              <span className={`min-w-0 flex-1 text-sm transition-colors duration-500 ${line.done ? 'text-foreground-muted' : 'text-foreground'}`}>
+                {line.agentId ? (
+                  <strong className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
+                    {nameOf(line.agentId)}
+                  </strong>
+                ) : null}
+                {line.done ? (
+                  line.text
+                ) : (
+                  <motion.span
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                  >
+                    {line.text}
+                  </motion.span>
+                )}
+              </span>
+            </motion.li>
+          ))}
+        </AnimatePresence>
       </ol>
     </section>
   );

@@ -4,13 +4,13 @@ from typing import Annotated, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     GroupConflictError,
     GroupCursorError,
     GroupNotFoundError,
     PermissionDeniedError,
 )
-from zentra_domain_investigation import GroupNameError
+from zentra_domain_analysis_run import GroupNameError
 
 from .request_context import RequestContext, authenticated_context
 from .workspace_schemas import (

@@ -208,7 +208,7 @@ class Dependencies:
     jwt_verifier: Verifier
     connector: ConnectorService | None
     cube_semantic_layers: FakeScopedCubeSemanticLayers | None = None
-    investigations: object | None = None
+    analysis_runs: object | None = None
 
     async def close(self) -> None:
         return None

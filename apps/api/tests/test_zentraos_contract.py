@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from zentra_domain_investigation import ThreadEvent, VisualizationBriefV1
+from zentra_domain_analysis_run import ThreadEvent, VisualizationBriefV1
 
 from zentra_api.main import create_app
 
@@ -50,8 +50,8 @@ def test_backend_journey_contract_and_fixtures_are_complete() -> None:
         "/v1/groups/{group_id}/chats",
         "/v1/chats/{chat_id}/messages",
         "/v1/chats/{chat_id}/events",
-        "/v1/investigations/{investigation_id}/approvals/{approval_id}/decision",
-        "/v1/investigations/{investigation_id}/visualization",
+        "/v1/analysis-runs/{analysis_run_id}/approvals/{approval_id}/decision",
+        "/v1/analysis-runs/{analysis_run_id}/visualization",
         "/v1/visualizations/{visualization_id}/actions/{action_id}/execute",
     ):
         assert path in paths

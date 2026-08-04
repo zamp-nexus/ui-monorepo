@@ -1,15 +1,15 @@
 import { approvalHeadings } from '../../constants/labels';
-import type { Investigation } from '../../types';
+import type { AnalysisRun } from '../../types';
 
 /**
  * The typed outcome the evaluator recorded, in its own vocabulary.
  */
-export const OutcomePanel = ({ investigation }: { readonly investigation: Investigation }) => {
-  const outcome = investigation.outcome;
+export const OutcomePanel = ({ analysisRun }: { readonly analysisRun: AnalysisRun }) => {
+  const outcome = analysisRun.outcome;
   if (!outcome) return null;
 
-  const heading = investigation.pending_approval
-    ? approvalHeadings[investigation.pending_approval.reason] ?? 'Human judgment required'
+  const heading = analysisRun.pending_approval
+    ? approvalHeadings[analysisRun.pending_approval.reason] ?? 'Human judgment required'
     : null;
 
   if (outcome.kind === 'confidence') {
@@ -27,7 +27,7 @@ export const OutcomePanel = ({ investigation }: { readonly investigation: Invest
         </p>
         <ul className="mt-4 flex list-none flex-col gap-2 p-0 text-sm text-foreground-muted">
           <li>Calibrated by: {outcome.calibration_method.replace(/_/g, ' ')}</li>
-          <li>Evaluation attempts: {investigation.evaluation_attempts} of 3</li>
+          <li>Evaluation attempts: {analysisRun.evaluation_attempts} of 3</li>
           {outcome.calibration_method === 'capped_evaluator_shared_model_family' ? (
             <li className="text-warning">
               ! The recheck ran on the same model family as the analysis, so it was not independent.

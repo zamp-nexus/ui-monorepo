@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     AuthenticatedActor,
     Role,
     RoutingDisposition,
@@ -18,7 +18,7 @@ from zentra_application_investigation import (
     ThreadStreamRouting,
     ThreadStreamSnapshot,
 )
-from zentra_domain_investigation import ThreadMessage, ThreadMessageKind, ThreadStatus
+from zentra_domain_analysis_run import ThreadMessage, ThreadMessageKind, ThreadStatus
 
 from zentra_api.chat_routes import append_chat_message, create_chat
 
@@ -63,7 +63,7 @@ def _detail() -> ThreadDetail:
                 authored_by_user=False,
             ),
         ),
-        investigation_id=None,
+        analysis_run_id=None,
         routing=CONVERSATIONAL_ROUTING,
         can_append_message=True,
         can_archive=True,
@@ -76,7 +76,7 @@ async def _scripted_stream():
     yield ThreadStreamRouting(
         thread_id=THREAD_ID,
         message_id=MESSAGE_ID,
-        investigation_id=None,
+        analysis_run_id=None,
         routing=CONVERSATIONAL_ROUTING,
     )
     yield ThreadStreamDelta(message_id=REPLY_ID, text="Hello")
@@ -99,7 +99,7 @@ async def _failing_stream():
     yield ThreadStreamRouting(
         thread_id=THREAD_ID,
         message_id=MESSAGE_ID,
-        investigation_id=None,
+        analysis_run_id=None,
         routing=CONVERSATIONAL_ROUTING,
     )
     yield ThreadStreamDelta(message_id=REPLY_ID, text="Hel")
@@ -156,7 +156,7 @@ async def test_create_chat_streams_routing_deltas_message_and_snapshot() -> None
 
     assert len(chunks) == 5
     assert chunks[0].startswith("event: routing\n")
-    assert '"investigation_id": null' in chunks[0]
+    assert '"analysis_run_id": null' in chunks[0]
     assert chunks[1] == (
         'event: delta\ndata: {"message_id": '
         '"50000000-0000-0000-0000-000000000004", "text": "Hello"}\n\n'

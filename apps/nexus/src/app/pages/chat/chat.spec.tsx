@@ -67,8 +67,8 @@ const clarifiedThread: Thread = {
       authored_by_user: false,
     },
   ],
-  investigation_id: null,
-  investigations: [],
+  analysis_run_id: null,
+  analysis_runs: [],
   event_cursor: 2,
   usage: USAGE,
   routing: {
@@ -276,10 +276,10 @@ describe('Chat', () => {
 
 describe('toTimeline', () => {
   const thread = (over: Partial<Thread>): Thread => ({ ...clarifiedThread, ...over });
-  const investigations = (...ids: string[]) =>
-    ids.map((investigation_id) => ({
-      investigation_id,
-    })) as unknown as Thread['investigations'];
+  const analysis_runs = (...ids: string[]) =>
+    ids.map((analysis_run_id) => ({
+      analysis_run_id,
+    })) as unknown as Thread['analysis_runs'];
 
   it('derives the role from who authored the message', () => {
     const [question, clarification] = toTimeline(clarifiedThread);
@@ -289,27 +289,27 @@ describe('toTimeline', () => {
 
   it('renders an answer the server never sent as a message', () => {
     // A resolved Thread holds only the question; the answer is on the
-    // Investigation. Rendering messages alone would show nothing.
+    // Analysis Run. Rendering messages alone would show nothing.
     const answered = thread({
       messages: [clarifiedThread.messages[0]],
       routing: null,
-      investigations: investigations('i-1'),
+      analysis_runs: analysis_runs('i-1'),
     });
 
     const timeline = toTimeline(answered);
     expect(timeline.map((entry) => entry.kind)).toEqual(['message', 'answer']);
-    expect(timeline[1].kind === 'answer' && timeline[1].investigation.investigation_id).toBe('i-1');
+    expect(timeline[1].kind === 'answer' && timeline[1].analysisRun.analysis_run_id).toBe('i-1');
   });
 
   it('never gives a clarified question an answer', () => {
-    const timeline = toTimeline(thread({ investigations: investigations('i-1') }));
+    const timeline = toTimeline(thread({ analysis_runs: analysis_runs('i-1') }));
     expect(timeline.some((entry) => entry.kind === 'answer')).toBe(false);
   });
 
   it('never gives a non-analytical question an answer, and does not skew later pairings', () => {
     // Regression: a "hello" followed by a real question used to consume the
-    // wrong Investigation, off by one, because only `router_clarification`
-    // was recognized as "this question got no Investigation" -- not
+    // wrong Analysis Run, off by one, because only `router_clarification`
+    // was recognized as "this question got no Analysis Run" -- not
     // `assistant_reply` (ADR-0033's Conversational Agent output).
     const withGreeting = thread({
       messages: [
@@ -336,7 +336,7 @@ describe('toTimeline', () => {
         },
       ],
       routing: null,
-      investigations: investigations('i-1'),
+      analysis_runs: analysis_runs('i-1'),
     });
 
     const timeline = toTimeline(withGreeting);
@@ -356,7 +356,7 @@ describe('toTimeline', () => {
         },
       ],
       routing: null,
-      investigations: investigations('i-1', 'i-2'),
+      analysis_runs: analysis_runs('i-1', 'i-2'),
     });
 
     const timeline = toTimeline(followUp);
@@ -372,7 +372,7 @@ describe('toTimeline', () => {
 describe('the brief a reader falls back to', () => {
   const brief: VisualizationBrief = {
     schema_version: '1.0',
-    investigation_id: 'i-1',
+    analysis_run_id: 'i-1',
     question: 'Why did EU refunds increase?',
     headline: 'EU refunds rose 12%',
     summary: 'Refunds increased across both months.',
@@ -432,8 +432,8 @@ describe('the brief a reader falls back to', () => {
           authored_by_user: false,
         },
       ],
-      investigation_id: 'i-1',
-      investigations: [{ investigation_id: 'i-1' }] as unknown as Thread['investigations'],
+      analysis_run_id: 'i-1',
+      analysis_runs: [{ analysis_run_id: 'i-1' }] as unknown as Thread['analysis_runs'],
     };
     route({
       ...baseRoutes,
@@ -442,7 +442,7 @@ describe('the brief a reader falls back to', () => {
       '/visualization': {
         body: {
           visualization_id: 'v-1',
-          investigation_id: 'i-1',
+          analysis_run_id: 'i-1',
           renderer_kind: 'thesys_c1',
           model: null,
           api_version: null,

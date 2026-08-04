@@ -28,7 +28,7 @@ interface ActivityInspectorProps {
  * a screen too narrow to resize meaningfully anyway.
  *
  * A pending Human Approval is the one exception ADR-0029 calls for and stays
- * inline in the conversation (`InvestigationControls`) -- this panel never
+ * inline in the conversation (`AnalysisRunControls`) -- this panel never
  * renders it.
  */
 export const ActivityInspector = ({

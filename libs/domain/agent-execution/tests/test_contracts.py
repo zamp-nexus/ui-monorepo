@@ -92,7 +92,7 @@ def test_evidence_references_are_metadata_only_artifact_pointers() -> None:
 def test_input_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError):
         AgentInput(
-            investigation_id=uuid4(),
+            analysis_run_id=uuid4(),
             tenant_id=uuid4(),
             state={},
             caller_tenant_id=uuid4(),
@@ -114,7 +114,7 @@ async def test_agent_port_shape_is_usable() -> None:
     agent = StubAgent()
     output = await agent.invoke(
         AgentInput(
-            investigation_id=uuid4(),
+            analysis_run_id=uuid4(),
             tenant_id=uuid4(),
             state={"question": "Why did refunds increase?"},
         )

@@ -20,13 +20,13 @@ interface SequenceChatPanelProps {
 }
 
 /**
- * The Investigation Thread scoped to this Sequence.
+ * The Analysis Run Thread scoped to this Sequence.
  *
  * Reuses the same chat primitives the `/chat` surface renders with — a
- * Sequence's thread is an ordinary Investigation Thread, just one this page
+ * Sequence's thread is an ordinary Analysis Run Thread, just one this page
  * happens to also render a graph beside. It never renders `AnswerRow` or
- * `InvestigationControls`: nothing routes a Sequence-scoped question to an
- * Investigation, so `thread.investigations` is always empty here.
+ * `AnalysisRunControls`: nothing routes a Sequence-scoped question to an
+ * Analysis Run, so `thread.analysis_runs` is always empty here.
  */
 export const SequenceChatPanel = ({ getToken, threadId, feed }: SequenceChatPanelProps) => {
   const [draft, setDraft] = useState('');

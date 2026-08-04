@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
     MessageEventPayload,
     ThreadEvent,
     WorkFeedEventKind,

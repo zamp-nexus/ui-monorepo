@@ -7,19 +7,19 @@
  */
 
 export const eventLabels: Record<string, string> = {
-  'investigation.evidence_erased': 'Evidence erased at the tenant’s request',
+  'analysis_run.evidence_erased': 'Evidence erased at the tenant’s request',
   'human_approval.denied': 'A decision was attempted and refused',
-  'investigation.created': 'Question registered',
-  'investigation.started': 'Governed query started',
-  'investigation.evaluation_started': 'Validation opened',
-  'investigation.validation_completed': 'Evidence validated',
+  'analysis_run.created': 'Question registered',
+  'analysis_run.started': 'Governed query started',
+  'analysis_run.evaluation_started': 'Validation opened',
+  'analysis_run.validation_completed': 'Evidence validated',
   'human_approval.requested': 'Human judgment requested',
   'human_approval.granted': 'Human judgment recorded',
   'human_approval.rejected': 'Evidence rejected',
-  'investigation.completed': 'Investigation completed',
-  'investigation.rejected': 'Investigation rejected',
-  'investigation.retry_requested': 'Recheck disagreed, retrying',
-  'investigation.failed': 'Investigation failed',
+  'analysis_run.completed': 'Analysis Run completed',
+  'analysis_run.rejected': 'Analysis Run rejected',
+  'analysis_run.retry_requested': 'Recheck disagreed, retrying',
+  'analysis_run.failed': 'Analysis Run failed',
   'agent.execution_completed': 'Agent step completed',
   'agent.execution_failed': 'Agent step failed',
 };
@@ -28,11 +28,11 @@ export const eventLabels: Record<string, string> = {
  * The status column for an `agent.execution_*` row, keyed by event type
  * rather than read off `entry.status`.
  *
- * Every ledger event carries the Investigation's own status at the moment
+ * Every ledger event carries the Analysis Run's own status at the moment
  * it was recorded (`pipeline.py`'s `_started_event`/`_audit_event` stamp
- * `InvestigationStatus.RUNNING` on both, deliberately -- the Investigation
+ * `AnalysisRunStatus.RUNNING` on both, deliberately -- the Analysis Run
  * itself really is still running when one of its steps fails; only a later,
- * separate transition ends it). That is correct for the Investigation-level
+ * separate transition ends it). That is correct for the Analysis-Run-level
  * rows, but reusing it for a step's own row shows "running" on a step that
  * has already failed.
  */
@@ -71,7 +71,7 @@ export const conditionLabels: Record<string, string> = {
   uncontradicted: 'A contradiction is still open',
 };
 
-// Why an `investigation.failed` entry failed, in words a reader (not just an
+// Why an `analysis_run.failed` entry failed, in words a reader (not just an
 // operator reading logs) can act on. A category with no entry here still
 // renders — falling back to the failed step's own status label — rather than
 // disappearing.

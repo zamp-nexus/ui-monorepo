@@ -8,7 +8,7 @@
  */
 
 import type { DraftFinding } from '../draft-finding-panel';
-import type { MetricComparison } from './investigation';
+import type { MetricComparison } from './analysis-run';
 
 /* -------------------------------------------------------------------------- */
 /* Workspace                                                                   */
@@ -53,7 +53,7 @@ export interface ThreadMessage {
  * What this actor may do to this Chat Session right now.
  *
  * Read, never computed. `can_append_message` no longer depends on the latest
- * Investigation's status -- a follow-up is legal any time the Chat Session
+ * Analysis Run's status -- a follow-up is legal any time the Chat Session
  * isn't archived (ADR-0028) -- but the principle stays: the server is the
  * one place that decides, and a client that re-derived it would be a second
  * rule that can disagree with the first.
@@ -94,7 +94,7 @@ export interface ThreadApprovalState {
   readonly can_decide: boolean;
 }
 
-export type InvestigationStatus =
+export type AnalysisRunStatus =
   | 'pending'
   | 'running'
   | 'evaluating'
@@ -104,12 +104,12 @@ export type InvestigationStatus =
   | 'failed'
   | 'cancelled';
 
-export interface ThreadInvestigation {
-  readonly investigation_id: string;
+export interface ThreadAnalysisRun {
+  readonly analysis_run_id: string;
   readonly sequence: number;
-  readonly status: InvestigationStatus;
-  readonly parent_investigation_id: string | null;
-  readonly retry_of_investigation_id: string | null;
+  readonly status: AnalysisRunStatus;
+  readonly parent_analysis_run_id: string | null;
+  readonly retry_of_analysis_run_id: string | null;
   readonly created_at: string;
   readonly updated_at: string;
   readonly canonical_question: string;
@@ -149,11 +149,11 @@ export interface Thread {
   readonly latest_activity_at: string;
   readonly messages: readonly ThreadMessage[];
   /**
-   * The latest attempt, retained for compatibility. `investigations` is the
+   * The latest attempt, retained for compatibility. `analysis_runs` is the
    * ordered collection and is what the surface should render.
    */
-  readonly investigation_id: string | null;
-  readonly investigations: readonly ThreadInvestigation[];
+  readonly analysis_run_id: string | null;
+  readonly analysis_runs: readonly ThreadAnalysisRun[];
   /** Where to resume the Work Feed from. Snapshot first, then tail. */
   readonly event_cursor: number;
   readonly usage: ThreadUsage;
@@ -167,7 +167,7 @@ export interface ThreadSummary {
   readonly title: string;
   readonly status: string;
   readonly latest_activity_at: string;
-  readonly investigation_id: string | null;
+  readonly analysis_run_id: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -177,8 +177,8 @@ export interface ThreadSummary {
 /**
  * Every kind the server declares.
  *
- * Five of these — `investigation.started`, `investigation.status_changed`,
- * `investigation.completed`, `investigation.failed`, and
+ * Five of these — `analysis_run.started`, `analysis_run.status_changed`,
+ * `analysis_run.completed`, `analysis_run.failed`, and
  * `visualization.tombstoned` — are declared but never emitted by the current
  * runtime. They are listed because the contract carries them, and deliberately
  * not depended on for any state transition.
@@ -187,14 +187,14 @@ export type WorkFeedEventKind =
   | 'thread.message_added'
   | 'thread.routing_clarification'
   | 'thread.routing_resolved'
-  | 'investigation.queued'
-  | 'investigation.started'
-  | 'investigation.status_changed'
-  | 'investigation.cancel_requested'
-  | 'investigation.cancelled'
-  | 'investigation.completed'
-  | 'investigation.failed'
-  | 'investigation.retry_created'
+  | 'analysis_run.queued'
+  | 'analysis_run.started'
+  | 'analysis_run.status_changed'
+  | 'analysis_run.cancel_requested'
+  | 'analysis_run.cancelled'
+  | 'analysis_run.completed'
+  | 'analysis_run.failed'
+  | 'analysis_run.retry_created'
   | 'agent.started'
   | 'agent.public_update'
   | 'agent.capability_used'
@@ -223,12 +223,12 @@ export interface RoutingEventPayload {
   readonly suggestion_count: number;
 }
 
-export interface InvestigationEventPayload {
-  readonly type: 'investigation';
-  readonly investigation_id: string;
+export interface AnalysisRunEventPayload {
+  readonly type: 'analysis_run';
+  readonly analysis_run_id: string;
   readonly status: string;
-  readonly parent_investigation_id: string | null;
-  readonly retry_of_investigation_id: string | null;
+  readonly parent_analysis_run_id: string | null;
+  readonly retry_of_analysis_run_id: string | null;
   readonly failure_category: string | null;
 }
 
@@ -260,14 +260,14 @@ export interface ApprovalEventPayload {
 
 export interface FindingEventPayload {
   readonly type: 'finding';
-  readonly investigation_id: string;
+  readonly analysis_run_id: string;
   readonly citation_count: number;
 }
 
 export interface VisualizationEventPayload {
   readonly type: 'visualization';
   readonly visualization_id: string;
-  readonly investigation_id: string;
+  readonly analysis_run_id: string;
   readonly status: string;
   readonly model: string | null;
   readonly api_version: string | null;
@@ -277,7 +277,7 @@ export interface VisualizationEventPayload {
 export type WorkFeedPayload =
   | MessageEventPayload
   | RoutingEventPayload
-  | InvestigationEventPayload
+  | AnalysisRunEventPayload
   | AgentEventPayload
   | ApprovalEventPayload
   | FindingEventPayload
@@ -373,7 +373,7 @@ export interface BriefAction {
 /** The governed spec. Present even when the renderer never ran. */
 export interface VisualizationBrief {
   readonly schema_version: '1.0';
-  readonly investigation_id: string;
+  readonly analysis_run_id: string;
   readonly question: string;
   readonly headline: string;
   readonly summary: string;
@@ -391,7 +391,7 @@ export interface VisualizationBrief {
 
 export interface Visualization {
   readonly visualization_id: string;
-  readonly investigation_id: string;
+  readonly analysis_run_id: string;
   readonly status: VisualizationStatus;
   readonly renderer_kind: string;
   readonly model: string | null;
@@ -416,7 +416,7 @@ export interface VisualizationActionResult {
   readonly kind: BriefActionKind | string;
   readonly citation_id: string | null;
   readonly thread_id: string | null;
-  readonly investigation_id: string | null;
+  readonly analysis_run_id: string | null;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -33,7 +33,7 @@ export const ComingSoon = ({ title, icon, description }: ComingSoonProps) => (
       <EmptyState.Description>{description}</EmptyState.Description>
       <EmptyState.Actions>
         <Button component={Link} to="/" intent="secondary">
-          Back to investigations
+          Back to analysis runs
         </Button>
       </EmptyState.Actions>
     </EmptyState>

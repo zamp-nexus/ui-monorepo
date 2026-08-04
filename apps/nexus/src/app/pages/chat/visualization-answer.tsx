@@ -17,7 +17,7 @@ import type { TokenSource } from '../../api';
 import type { ResolvedCitation, VisualizationStatus } from '../../types';
 import {
   executeVisualizationAction,
-  getInvestigationVisualization,
+  getAnalysisRunVisualization,
   resolveCitation,
   retryVisualization,
 } from './api';
@@ -34,19 +34,19 @@ const NOTICE: Partial<Record<VisualizationStatus, string>> = {
 
 export const VisualizationAnswer = ({
   getToken,
-  investigationId,
+  analysisRunId,
   onFollowUp,
 }: {
   readonly getToken: TokenSource;
-  readonly investigationId: string;
+  readonly analysisRunId: string;
   /** A `continue_conversation` action resolves to a message to send. */
   readonly onFollowUp: (message: string) => void;
 }) => {
   const [citation, setCitation] = useState<ResolvedCitation | null>(null);
 
   const query = useQuery({
-    queryKey: ['visualization', investigationId],
-    queryFn: () => getInvestigationVisualization(getToken, investigationId),
+    queryKey: ['visualization', analysisRunId],
+    queryFn: () => getAnalysisRunVisualization(getToken, analysisRunId),
     retry: false,
   });
 
@@ -60,7 +60,7 @@ export const VisualizationAnswer = ({
     onSuccess: async (result) => {
       // The server decided what the action meant. The button only named it.
       if (result.kind === 'open_citation' && result.citation_id) {
-        setCitation(await resolveCitation(getToken, investigationId, result.citation_id));
+        setCitation(await resolveCitation(getToken, analysisRunId, result.citation_id));
         return;
       }
       if (result.kind === 'continue_conversation') {
@@ -70,7 +70,7 @@ export const VisualizationAnswer = ({
   });
 
   const openCitation = useMutation({
-    mutationFn: (citationId: string) => resolveCitation(getToken, investigationId, citationId),
+    mutationFn: (citationId: string) => resolveCitation(getToken, analysisRunId, citationId),
     onSuccess: setCitation,
   });
 
@@ -82,7 +82,7 @@ export const VisualizationAnswer = ({
     onSuccess: () => query.refetch(),
   });
 
-  // An Investigation that produced no Finding has no visualization, and a 404
+  // An Analysis Run that produced no Finding has no visualization, and a 404
   // here is that — not a fault worth putting in front of a reader.
   if (query.isPending || query.error || !visualization) return null;
 

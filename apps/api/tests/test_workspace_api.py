@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from zentra_adapter_postgres import IdentityContext
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
     GroupDetail,
     GroupPage,
     PermissionDeniedError,

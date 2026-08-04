@@ -1,4 +1,4 @@
-"""The Investigation Engine's loop: a Board, a Work Item queue, and Agents.
+"""The Analysis Run Engine's loop: a Board, a Work Item queue, and Agents.
 
 Split out of `pipeline.py`, which crossed the repository's 600-line limit once
 Phase 3 gave the loop a planner and parallel children. `pipeline.py` keeps what
@@ -8,7 +8,7 @@ run itself.
 
 See ADR-0026. The loop is a deterministic service, not an Agent: it may ask a
 model for planning *proposals*, but which proposals become Work Items, and when
-the investigation is finished, are decided by rule here.
+the analysis run is finished, are decided by rule here.
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ from zentra_adapter_model_providers import (
     ProviderClients,
     RoutedModelClient,
 )
-from zentra_adapter_postgres import PostgresInvestigationUnitOfWorkFactory
-from zentra_application_investigation import PipelineResult, bounded_outcome
+from zentra_adapter_postgres import PostgresAnalysisRunUnitOfWorkFactory
+from zentra_application_analysis_run import PipelineResult, bounded_outcome
 from zentra_domain_agent_execution import (
     OUTCOME_ADAPTER,
     AgentExecutionRecord,
@@ -53,14 +53,14 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     OutcomeSignal,
 )
-from zentra_domain_investigation import (
+from zentra_domain_analysis_run import (
+    AnalysisRunBoard,
     BoardConfidence,
     Conflict,
     ConflictStatus,
     EvidenceReference,
     Fact,
     GapPriority,
-    InvestigationBoard,
     KnowledgeGap,
     WorkItem,
     assess_completion,
@@ -76,7 +76,7 @@ async def _no_cancellation(_: UUID, __: UUID) -> None:
     return None
 
 
-# Mirrors `InvestigationGraph`'s `_EXCLUDED_FROM_STATE` (graph.py): result rows
+# Mirrors `AnalysisRunGraph`'s `_EXCLUDED_FROM_STATE` (graph.py): result rows
 # stay in `agent_executions.output`, reachable only through the artifact://
 # pointer, never carried in the state a later Agent or the Board sees.
 _EXCLUDED_FROM_STATE = frozenset({"rows"})
@@ -85,7 +85,7 @@ _EXCLUDED_FROM_STATE = frozenset({"rows"})
 def _for_state(output: AgentOutput) -> dict[str, Any]:
     """The subset of an Agent's output the next step (or the Board) may see.
 
-    Identical in shape to `InvestigationGraph._for_state` on purpose: Insight
+    Identical in shape to `AnalysisRunGraph._for_state` on purpose: Insight
     and the Evaluator are unmodified and still expect exactly this shape,
     whichever mechanism produced it.
     """
@@ -130,7 +130,7 @@ def _insight_outcome_from_state(state: dict[str, Any]) -> InsightOutcome:
 def _validated_evidence_from_state(
     analyst_state: dict[str, Any],
 ) -> tuple[ValidatedEvidence, ...]:
-    """Mirrors `InvestigationGraph._validated_evidence` (graph.py)."""
+    """Mirrors `AnalysisRunGraph._validated_evidence` (graph.py)."""
     execution_id = analyst_state.get("execution_id")
     if not execution_id:
         return ()
@@ -201,7 +201,7 @@ def _accept(
     return tuple(accepted)
 
 
-def _documented(board: InvestigationBoard) -> tuple[str, ...]:
+def _documented(board: AnalysisRunBoard) -> tuple[str, ...]:
     """The contradictions the Board found that Insight never saw.
 
     Insight drafts from the primary measurement alone, so a follow-up that
@@ -216,7 +216,7 @@ def _documented(board: InvestigationBoard) -> tuple[str, ...]:
     )
 
 
-def _require_settled_conflicts(board: InvestigationBoard) -> None:
+def _require_settled_conflicts(board: AnalysisRunBoard) -> None:
     """Fail closed rather than draft over an open contradiction.
 
     `_document_conflicts` settles every Conflict immediately before this runs,
@@ -234,7 +234,7 @@ def _require_settled_conflicts(board: InvestigationBoard) -> None:
         )
 
 
-#: How many follow-up measurements one Investigation may fan out to, and how
+#: How many follow-up measurements one Analysis Run may fan out to, and how
 #: many run at once — the same number, because accepting more than can run
 #: concurrently would only queue them behind each other.
 #:
@@ -310,7 +310,7 @@ def build_agents_factory(
     model = RoutedModelClient(tier=tier, clients=models.as_dict(), breaker=breaker)
     # Read from disk once per tier rather than per Agent Execution. Skills are
     # stable per role, and they are appended to the cached system prefix — a
-    # registry rebuilt per investigation would still be correct but would do
+    # registry rebuilt per analysis run would still be correct but would do
     # the file I/O on the request path for no reason.
     skills = SkillRegistry.from_directory()
 
@@ -342,7 +342,7 @@ def build_agents_factory(
 
 
 class OrchestratorLoop:
-    """Drives the existing specialist Agents through a durable Investigation
+    """Drives the existing specialist Agents through a durable Analysis Run
     Board and Work Item queue instead of a compiled LangGraph (ADR-0026).
 
     Phase 3 shape: the primary question is measured and rechecked exactly as
@@ -354,7 +354,7 @@ class OrchestratorLoop:
 
     What did not change: the ≤`MAX_EVALUATION_ATTEMPTS` Evaluator-Optimizer
     loop, the Agents themselves, and publication authority — which stays
-    deterministic Investigation policy (ADR-0011), never this loop.
+    deterministic Analysis Run policy (ADR-0011), never this loop.
     """
 
     def __init__(
@@ -362,7 +362,7 @@ class OrchestratorLoop:
         agent_factories: Mapping[ModelTier, AgentsFactory],
         semantic_layers: ScopedCubeSemanticLayers,
         *,
-        unit_of_work_factory: PostgresInvestigationUnitOfWorkFactory,
+        unit_of_work_factory: PostgresAnalysisRunUnitOfWorkFactory,
         recorder: AgentExecutionRecorder,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
@@ -383,7 +383,7 @@ class OrchestratorLoop:
     async def run(
         self,
         *,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         organization_id: UUID,
         question: str,
         model_tier: str = ModelTier.FREE.value,
@@ -397,9 +397,9 @@ class OrchestratorLoop:
         # change. The rows are what a later run (or an operator) reads; this
         # object is what the loop reasons over, so a decision can never be made
         # from state that failed to persist.
-        board = InvestigationBoard.create(
+        board = AnalysisRunBoard.create(
             board_id=self._new_id(),
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             now=self._now(),
         )
@@ -409,7 +409,7 @@ class OrchestratorLoop:
         await self._open_board(board, seed_gap)
 
         # Shared by every concurrent branch, so the ledger orders the whole
-        # investigation rather than each branch privately. `next` on a counter
+        # analysis run rather than each branch privately. `next` on a counter
         # does not await, so no two Work Items can take the same step.
         steps = count(1)
 
@@ -419,7 +419,7 @@ class OrchestratorLoop:
         # after the Analyst and its recheck have already run.
         followups = await self._plan(
             agents.planner,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             question=question,
             steps=steps,
@@ -427,7 +427,7 @@ class OrchestratorLoop:
 
         primary = await self._measure(
             agents,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             question=question,
             objective=f"Measure what the question asks: {question}",
@@ -438,7 +438,7 @@ class OrchestratorLoop:
         children = await self._fan_out(
             agents,
             board=board,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             followups=followups,
             parent=primary,
@@ -457,7 +457,7 @@ class OrchestratorLoop:
         insight_state, insight_execution_id, _ = await self._run_step(
             agent=agents.insight,
             role=AgentRole.INSIGHT,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             objective="Draft a Finding from the validated evidence",
             payload={
@@ -508,7 +508,7 @@ class OrchestratorLoop:
                 evaluator_sample_size=primary.evaluator_state.get("sample_size"),
                 evidence=primary.evidence,
             ),
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
         )
 
@@ -525,7 +525,7 @@ class OrchestratorLoop:
 
     async def _finish_board(
         self,
-        board: InvestigationBoard,
+        board: AnalysisRunBoard,
         result: PipelineResult,
         *,
         evidence_validated: bool,
@@ -541,7 +541,7 @@ class OrchestratorLoop:
         is exactly what ADR-0010 exists to prevent.
 
         This is not a publication decision. `evaluate_publication` owns that
-        (ADR-0011) and is untouched; this says whether the Investigation is
+        (ADR-0011) and is untouched; this says whether the Analysis Run is
         finished, which is a different question with a different answer.
         """
         outcome = bounded_outcome(result)
@@ -564,7 +564,7 @@ class OrchestratorLoop:
         async with self._unit_of_work_factory(
             board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            await unit_of_work.investigation_boards.save(board)
+            await unit_of_work.analysis_run_boards.save(board)
             await unit_of_work.commit()
 
     async def _confidence_threshold(self, organization_id: UUID) -> float:
@@ -579,7 +579,7 @@ class OrchestratorLoop:
         self,
         agents: StepAgents,
         *,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         organization_id: UUID,
         question: str,
         objective: str,
@@ -595,7 +595,7 @@ class OrchestratorLoop:
         """
         analyst_state, analyst_item_id = await self._run_analyst(
             agents.cube_analyst,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             question=question,
             objective=objective,
@@ -610,7 +610,7 @@ class OrchestratorLoop:
             evaluator_state, _, _ = await self._run_step(
                 agent=agents.evaluator,
                 role=AgentRole.EVALUATOR,
-                investigation_id=investigation_id,
+                analysis_run_id=analysis_run_id,
                 organization_id=organization_id,
                 objective="Independently verify the Analyst's measurement",
                 payload={"question": question, "analyst": analyst_state},
@@ -626,7 +626,7 @@ class OrchestratorLoop:
                 break
             analyst_state, analyst_item_id = await self._run_analyst(
                 agents.cube_analyst,
-                investigation_id=investigation_id,
+                analysis_run_id=analysis_run_id,
                 organization_id=organization_id,
                 question=question,
                 objective="Re-measure after the Evaluator's recheck disagreed",
@@ -648,7 +648,7 @@ class OrchestratorLoop:
         self,
         planner: OrchestratorAgent | None,
         *,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         organization_id: UUID,
         question: str,
         steps: Iterator[int],
@@ -668,7 +668,7 @@ class OrchestratorLoop:
         state, _, _ = await self._run_step(
             agent=planner,
             role=AgentRole.ORCHESTRATOR,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             objective="Propose the follow-up measurements this question needs",
             payload={"question": question},
@@ -686,8 +686,8 @@ class OrchestratorLoop:
         self,
         agents: StepAgents,
         *,
-        board: InvestigationBoard,
-        investigation_id: UUID,
+        board: AnalysisRunBoard,
+        analysis_run_id: UUID,
         organization_id: UUID,
         followups: Sequence[str],
         parent: _Measurement,
@@ -707,7 +707,7 @@ class OrchestratorLoop:
             KnowledgeGap(
                 gap_id=self._new_id(),
                 description=objective,
-                # Never HIGH: a follow-up is worth asking, but an investigation
+                # Never HIGH: a follow-up is worth asking, but an analysis run
                 # that cannot answer one has still answered the question the
                 # user asked. Only the seed gap is allowed to be HIGH.
                 priority=GapPriority.MEDIUM,
@@ -724,7 +724,7 @@ class OrchestratorLoop:
             *(
                 self._measure(
                     agents,
-                    investigation_id=investigation_id,
+                    analysis_run_id=analysis_run_id,
                     organization_id=organization_id,
                     question=objective,
                     objective=objective,
@@ -741,7 +741,7 @@ class OrchestratorLoop:
     # -- the Board --------------------------------------------------------
 
     async def _merge(
-        self, board: InvestigationBoard, measurement: _Measurement
+        self, board: AnalysisRunBoard, measurement: _Measurement
     ) -> None:
         """Record what a measurement established, and notice disagreement.
 
@@ -780,7 +780,7 @@ class OrchestratorLoop:
                 board.open_conflict(conflict, now=self._now())
             await self._persist_merge(board, fact, conflict)
 
-    async def _document_conflicts(self, board: InvestigationBoard) -> None:
+    async def _document_conflicts(self, board: AnalysisRunBoard) -> None:
         """Settle every open Conflict as documented, never as resolved.
 
         Resolving one means establishing which measurement was right, and the
@@ -806,37 +806,37 @@ class OrchestratorLoop:
             board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             for conflict in settled:
-                await unit_of_work.investigation_boards.settle_conflict(
+                await unit_of_work.analysis_run_boards.settle_conflict(
                     board.organization_id, conflict
                 )
             await unit_of_work.commit()
 
-    async def _open_board(self, board: InvestigationBoard, gap: KnowledgeGap) -> None:
+    async def _open_board(self, board: AnalysisRunBoard, gap: KnowledgeGap) -> None:
         board.open_gap(gap, now=self._now())
         async with self._unit_of_work_factory(
             board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            await unit_of_work.investigation_boards.create(board)
-            await unit_of_work.investigation_boards.open_gap(
+            await unit_of_work.analysis_run_boards.create(board)
+            await unit_of_work.analysis_run_boards.open_gap(
                 board.board_id, board.organization_id, gap
             )
             await unit_of_work.commit()
 
     async def _open_gaps(
-        self, board: InvestigationBoard, gaps: Sequence[KnowledgeGap]
+        self, board: AnalysisRunBoard, gaps: Sequence[KnowledgeGap]
     ) -> None:
         async with self._unit_of_work_factory(
             board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             for gap in gaps:
                 board.open_gap(gap, now=self._now())
-                await unit_of_work.investigation_boards.open_gap(
+                await unit_of_work.analysis_run_boards.open_gap(
                     board.board_id, board.organization_id, gap
                 )
             await unit_of_work.commit()
 
     async def _persist_merge(
-        self, board: InvestigationBoard, fact: Fact, conflict: Conflict | None
+        self, board: AnalysisRunBoard, fact: Fact, conflict: Conflict | None
     ) -> None:
         """One transaction, because they are one event.
 
@@ -847,17 +847,17 @@ class OrchestratorLoop:
         async with self._unit_of_work_factory(
             board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            await unit_of_work.investigation_boards.record_fact(
+            await unit_of_work.analysis_run_boards.record_fact(
                 board.board_id, board.organization_id, fact
             )
             if conflict is not None:
-                await unit_of_work.investigation_boards.open_conflict(
+                await unit_of_work.analysis_run_boards.open_conflict(
                     board.board_id, board.organization_id, conflict
                 )
             await unit_of_work.commit()
 
     async def _close_board(
-        self, board: InvestigationBoard, answered: Sequence[str]
+        self, board: AnalysisRunBoard, answered: Sequence[str]
     ) -> None:
         """Resolve the gaps this run actually closed, and only those.
 
@@ -880,7 +880,7 @@ class OrchestratorLoop:
         ) as unit_of_work:
             for gap in settled:
                 board.resolve_gap(gap.gap_id, now=self._now())
-                await unit_of_work.investigation_boards.resolve_gap(
+                await unit_of_work.analysis_run_boards.resolve_gap(
                     gap.gap_id, board.organization_id
                 )
             await unit_of_work.commit()
@@ -889,7 +889,7 @@ class OrchestratorLoop:
         self,
         agent: CubeAnalystAgent,
         *,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         organization_id: UUID,
         question: str,
         objective: str,
@@ -904,7 +904,7 @@ class OrchestratorLoop:
         state, execution_id, work_item_id = await self._run_step(
             agent=agent,
             role=AgentRole.CUBE_ANALYST,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             objective=objective,
             payload=payload,
@@ -919,7 +919,7 @@ class OrchestratorLoop:
         *,
         agent: AgentPort,
         role: AgentRole,
-        investigation_id: UUID,
+        analysis_run_id: UUID,
         organization_id: UUID,
         objective: str,
         payload: dict[str, Any],
@@ -932,17 +932,17 @@ class OrchestratorLoop:
         Returns the resulting state, the execution id, and the Work Item id.
 
         `steps` is shared across concurrent branches so the ledger orders the
-        whole investigation, and `parent_work_item_id` is what makes the queue
+        whole analysis run, and `parent_work_item_id` is what makes the queue
         a graph the Board grew rather than a DAG somebody drew in advance.
         """
         # Before the Work Item exists, not after: a run cancelled here should
         # leave no pending row behind claiming work nobody will ever do.
-        await self._cancellation_checkpoint(organization_id, investigation_id)
+        await self._cancellation_checkpoint(organization_id, analysis_run_id)
 
         now = self._now()
         item = WorkItem.create(
             work_item_id=self._new_id(),
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             organization_id=organization_id,
             role=role,
             objective=objective,
@@ -963,7 +963,7 @@ class OrchestratorLoop:
         await self._recorder.record_started(
             AgentExecutionStart(
                 execution_id=execution_id,
-                investigation_id=investigation_id,
+                analysis_run_id=analysis_run_id,
                 organization_id=organization_id,
                 agent_id=agent.descriptor.agent_id,
                 role=role,
@@ -981,7 +981,7 @@ class OrchestratorLoop:
         try:
             output = await agent.invoke(
                 AgentInput(
-                    investigation_id=investigation_id,
+                    analysis_run_id=analysis_run_id,
                     organization_id=organization_id,
                     state=agent_state,
                 )
@@ -991,7 +991,7 @@ class OrchestratorLoop:
             await self._recorder.record(
                 _execution_record(
                     execution_id=execution_id,
-                    investigation_id=investigation_id,
+                    analysis_run_id=analysis_run_id,
                     organization_id=organization_id,
                     agent_id=agent.descriptor.agent_id,
                     role=role,
@@ -1016,7 +1016,7 @@ class OrchestratorLoop:
         await self._recorder.record(
             _execution_record(
                 execution_id=execution_id,
-                investigation_id=investigation_id,
+                analysis_run_id=analysis_run_id,
                 organization_id=organization_id,
                 agent_id=agent.descriptor.agent_id,
                 role=role,
@@ -1041,14 +1041,14 @@ class OrchestratorLoop:
         # And again once the step is durable, so a cancellation requested
         # mid-call stops the loop before the next Agent is paid for rather
         # than after the whole three-attempt trust loop has run.
-        await self._cancellation_checkpoint(organization_id, investigation_id)
+        await self._cancellation_checkpoint(organization_id, analysis_run_id)
         return _for_state(output), execution_id, item.work_item_id
 
 
 def _execution_record(
     *,
     execution_id: UUID,
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     organization_id: UUID,
     agent_id: str,
     role: AgentRole,
@@ -1062,7 +1062,7 @@ def _execution_record(
 ) -> AgentExecutionRecord:
     return AgentExecutionRecord(
         execution_id=execution_id,
-        investigation_id=investigation_id,
+        analysis_run_id=analysis_run_id,
         organization_id=organization_id,
         agent_id=agent_id,
         role=role,

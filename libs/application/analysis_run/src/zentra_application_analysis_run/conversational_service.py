@@ -45,7 +45,7 @@ class ConversationalService:
             AgentInput(
                 # Discarded: a conversational reply never becomes an
                 # AnalysisRun, so there is nothing for this id to name.
-                investigation_id=self._new_id(),
+                analysis_run_id=self._new_id(),
                 organization_id=organization_id,
                 state={"message": message},
             )
@@ -58,7 +58,7 @@ class ConversationalService:
         agent = self._agent_factory()
         async for chunk in agent.invoke_stream(
             AgentInput(
-                investigation_id=self._new_id(),
+                analysis_run_id=self._new_id(),
                 organization_id=organization_id,
                 state={"message": message},
             )

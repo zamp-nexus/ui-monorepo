@@ -14,17 +14,17 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from zentra_adapter_telemetry import (
-    correlate_investigation,
+    correlate_analysis_run,
     correlate_thread,
     record_citation_resolution,
 )
-from zentra_application_investigation import (
+from zentra_application_analysis_run import (
+    AnalysisRunNotFoundError,
     ConflictError,
-    InvestigationNotFoundError,
     PermissionDeniedError,
 )
 from zentra_domain_agent_execution import PublicAgent
-from zentra_domain_investigation import Tombstone
+from zentra_domain_analysis_run import Tombstone
 
 from .active_connection import (
     AmbiguousDataConnectionError,
@@ -32,6 +32,7 @@ from .active_connection import (
 )
 from .request_context import RequestContext, authenticated_context
 from .schemas import (
+    AnalysisRunDetailResponse,
     ApprovalDecisionRequest,
     CatalogMemberResponse,
     CatalogSummaryResponse,
@@ -39,7 +40,6 @@ from .schemas import (
     DependencyStatus,
     EvidenceCitationResponse,
     EvidenceDeletionRequest,
-    InvestigationDetailResponse,
     ReadinessResponse,
     TombstoneResponse,
     VisualizationActionRequest,
@@ -136,7 +136,7 @@ async def catalog(
     semantic_layer = await dependencies.semantic_layers.resolve(
         organization_id=resolved.actor.organization_id,
         # The Organization's own connection, not the demo warehouse. Serving the demo
-        # catalog here would offer a question the Investigation cannot answer.
+        # catalog here would offer a question the Analysis Run cannot answer.
         data_connection_id=await _active_connection(dependencies, resolved.actor),
     )
     governed = await semantic_layer.catalog()
@@ -167,83 +167,83 @@ async def agents(request: Request, _: AuthenticatedRequest) -> list[PublicAgent]
 
 
 @router.get(
-    "/v1/investigations/{investigation_id}",
-    response_model=InvestigationDetailResponse,
+    "/v1/analysis-runs/{analysis_run_id}",
+    response_model=AnalysisRunDetailResponse,
 )
-async def get_investigation(
-    investigation_id: UUID,
+async def get_analysis_run(
+    analysis_run_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
+) -> AnalysisRunDetailResponse:
     try:
-        detail = await request.app.state.dependencies.investigations.get(
+        detail = await request.app.state.dependencies.analysis_runs.get(
             resolved.actor,
-            investigation_id,
+            analysis_run_id,
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    return InvestigationDetailResponse.from_detail(detail)
+    return AnalysisRunDetailResponse.from_detail(detail)
 
 
 @router.post(
-    "/v1/investigations/{investigation_id}/cancel",
-    response_model=InvestigationDetailResponse,
+    "/v1/analysis-runs/{analysis_run_id}/cancel",
+    response_model=AnalysisRunDetailResponse,
 )
-async def cancel_investigation(
-    investigation_id: UUID,
+async def cancel_analysis_run(
+    analysis_run_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
+) -> AnalysisRunDetailResponse:
     try:
-        detail = await request.app.state.dependencies.investigations.cancel(
-            resolved.actor, investigation_id
+        detail = await request.app.state.dependencies.analysis_runs.cancel(
+            resolved.actor, analysis_run_id
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except PermissionDeniedError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    return InvestigationDetailResponse.from_detail(detail)
+    return AnalysisRunDetailResponse.from_detail(detail)
 
 
 @router.post(
-    "/v1/investigations/{investigation_id}/retry",
-    response_model=InvestigationDetailResponse,
+    "/v1/analysis-runs/{analysis_run_id}/retry",
+    response_model=AnalysisRunDetailResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def retry_investigation(
-    investigation_id: UUID,
+async def retry_analysis_run(
+    analysis_run_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
+) -> AnalysisRunDetailResponse:
     try:
-        detail = await request.app.state.dependencies.investigations.retry(
-            resolved.actor, investigation_id
+        detail = await request.app.state.dependencies.analysis_runs.retry(
+            resolved.actor, analysis_run_id
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except PermissionDeniedError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    return InvestigationDetailResponse.from_detail(detail)
+    return AnalysisRunDetailResponse.from_detail(detail)
 
 
 @router.get(
-    "/v1/investigations/{investigation_id}/visualization",
+    "/v1/analysis-runs/{analysis_run_id}/visualization",
     response_model=VisualizationResponse,
 )
-async def investigation_visualization(
-    investigation_id: UUID,
+async def analysis_run_visualization(
+    analysis_run_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> VisualizationResponse:
     try:
-        detail = await request.app.state.dependencies.visualizations.for_investigation(
-            resolved.actor, investigation_id
+        detail = await request.app.state.dependencies.visualizations.for_analysis_run(
+            resolved.actor, analysis_run_id
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return VisualizationResponse.from_detail(detail)
 
@@ -261,7 +261,7 @@ async def get_visualization(
         detail = await request.app.state.dependencies.visualizations.get(
             resolved.actor, visualization_id
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return VisualizationResponse.from_detail(detail)
 
@@ -280,7 +280,7 @@ async def retry_visualization(
         detail = await request.app.state.dependencies.visualizations.retry(
             resolved.actor, visualization_id
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -307,7 +307,7 @@ async def execute_visualization_action(
             visualization_id=visualization_id,
             action_id=action_id,
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -317,25 +317,25 @@ async def execute_visualization_action(
         kind=result.kind,
         citation_id=result.citation_id,
         thread_id=result.thread_id,
-        investigation_id=result.investigation_id,
+        analysis_run_id=result.analysis_run_id,
     )
 
 
 @router.get(
-    "/v1/investigations/{investigation_id}/citations/{citation_id}",
+    "/v1/analysis-runs/{analysis_run_id}/citations/{citation_id}",
     response_model=EvidenceCitationResponse | TombstoneResponse,
 )
 async def resolve_citation(
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     citation_id: UUID,
     request: Request,
     resolved: AuthenticatedRequest,
 ) -> EvidenceCitationResponse | TombstoneResponse:
     """Follow one claim to the evidence behind it.
 
-    Nested under the Investigation so the Investigation's own visibility is
+    Nested under the Analysis Run so the Analysis Run's own visibility is
     checked first: a citation id must not become a way to probe an
-    Investigation the caller cannot read.
+    Analysis Run the caller cannot read.
 
     There is no Organization parameter, here or anywhere below. Identity comes from
     the verified token, so there is nothing for a caller to supply or override.
@@ -347,15 +347,15 @@ async def resolve_citation(
     state = "failed"
     failure_category: str | None = None
     try:
-        citation = await request.app.state.dependencies.investigations.resolve_citation(
+        citation = await request.app.state.dependencies.analysis_runs.resolve_citation(
             resolved.actor,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             citation_id=citation_id,
         )
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         state = "inaccessible"
         failure_category = "not_visible_to_organization"
-        # Same answer for another Organization's, another Investigation's, and
+        # Same answer for another Organization's, another Analysis Run's, and
         # nonexistent. A caller who could tell them apart could confirm that
         # somebody else's evidence exists.
         raise HTTPException(status_code=404, detail="Evidence was not found") from error
@@ -385,65 +385,65 @@ async def resolve_citation(
 
 
 @router.post(
-    "/v1/investigations/{investigation_id}/evidence-deletion",
-    response_model=InvestigationDetailResponse,
+    "/v1/analysis-runs/{analysis_run_id}/evidence-deletion",
+    response_model=AnalysisRunDetailResponse,
 )
 async def delete_evidence(
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     payload: EvidenceDeletionRequest,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
-    """Erase a terminal Investigation's evidence.
+) -> AnalysisRunDetailResponse:
+    """Erase a terminal Analysis Run's evidence.
 
-    The body must name the Investigation the path already names. It is a
+    The body must name the Analysis Run the path already names. It is a
     deliberate redundancy: an irreversible action should be impossible to
     trigger by replaying a URL, and a confirmation the client can default to
     would not be a confirmation.
     """
-    correlate_investigation(investigation_id)
-    if payload.confirm_investigation_id != investigation_id:
+    correlate_analysis_run(analysis_run_id)
+    if payload.confirm_analysis_run_id != analysis_run_id:
         raise HTTPException(
             status_code=422,
-            detail="Confirm the investigation whose evidence is being deleted",
+            detail="Confirm the analysis run whose evidence is being deleted",
         )
     try:
-        detail = await request.app.state.dependencies.investigations.delete_evidence(
+        detail = await request.app.state.dependencies.analysis_runs.delete_evidence(
             resolved.actor,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
         )
     except PermissionDeniedError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    return InvestigationDetailResponse.from_detail(detail)
+    return AnalysisRunDetailResponse.from_detail(detail)
 
 
 @router.post(
-    "/v1/investigations/{investigation_id}/approvals/{approval_id}/decision",
-    response_model=InvestigationDetailResponse,
+    "/v1/analysis-runs/{analysis_run_id}/approvals/{approval_id}/decision",
+    response_model=AnalysisRunDetailResponse,
 )
 async def decide_approval(
-    investigation_id: UUID,
+    analysis_run_id: UUID,
     approval_id: UUID,
     body: ApprovalDecisionRequest,
     request: Request,
     resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
+) -> AnalysisRunDetailResponse:
     try:
-        detail = await request.app.state.dependencies.investigations.decide(
+        detail = await request.app.state.dependencies.analysis_runs.decide(
             resolved.actor,
-            investigation_id=investigation_id,
+            analysis_run_id=analysis_run_id,
             approval_id=approval_id,
             decision=body.decision,
             rejection_reason=body.reason,
         )
     except PermissionDeniedError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
-    except InvestigationNotFoundError as error:
+    except AnalysisRunNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    return InvestigationDetailResponse.from_detail(detail)
+    return AnalysisRunDetailResponse.from_detail(detail)

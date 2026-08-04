@@ -1,7 +1,7 @@
 """The registry read path.
 
 `0005` deliberately keeps a pre-rename `insight_root_cause` row alive so old
-Investigations stay readable. That makes this the one place a legacy role can
+Analysis Runs stay readable. That makes this the one place a legacy role can
 re-enter the running system: the Orchestrator writes the roles it is offered
 into the task ledger, and the ledger is persisted. The recorder's guard checks
 `execution.role` and would never see it.

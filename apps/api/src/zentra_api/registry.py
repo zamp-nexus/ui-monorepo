@@ -17,9 +17,9 @@ _PUBLIC_DEFAULTS: dict[AgentRole, tuple[str, str, tuple[AgentCapability, ...]]] 
         "Plans governed analytical work and delegates it to registered Agents.",
         (
             AgentCapability(
-                capability_id="plan_investigation",
+                capability_id="plan_analysis_run",
                 version="1.0",
-                display_name="Plan investigation",
+                display_name="Plan analysis run",
                 description="Creates a bounded plan over registered analytical roles.",
             ),
         ),

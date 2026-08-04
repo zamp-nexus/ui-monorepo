@@ -9,16 +9,16 @@ import {
   eventLabels,
   failureCategoryLabels,
 } from '../../constants/labels';
-import type { Investigation } from '../../types';
+import type { AnalysisRun } from '../../types';
 
 /**
  * The persisted evidence timeline: what happened, in the order the ledger
  * recorded it.
  */
-export const EvidenceSpine = ({ investigation }: { readonly investigation: Investigation }) => {
+export const EvidenceSpine = ({ analysisRun }: { readonly analysisRun: AnalysisRun }) => {
   const reducedMotion = useReducedMotion();
-  const resolved = investigation.status === 'completed';
-  const rejected = investigation.status === 'rejected';
+  const resolved = analysisRun.status === 'completed';
+  const rejected = analysisRun.status === 'rejected';
   const pathColor = rejected ? 'text-danger' : resolved ? 'text-primary' : 'text-accent';
 
   return (
@@ -26,7 +26,7 @@ export const EvidenceSpine = ({ investigation }: { readonly investigation: Inves
       <Card.Header
         end={
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
-            {investigation.audit_delivery === 'complete'
+            {analysisRun.audit_delivery === 'complete'
               ? 'Ledger synchronized'
               : 'Ledger delivery pending'}
           </span>
@@ -58,7 +58,7 @@ export const EvidenceSpine = ({ investigation }: { readonly investigation: Inves
         </svg>
 
         <ol className="m-0 flex list-none flex-col gap-5 p-0">
-          {investigation.timeline.map((entry, index) => (
+          {analysisRun.timeline.map((entry, index) => (
             <motion.li
               className="relative grid grid-cols-[1fr_auto] items-start gap-3"
               key={entry.entry_id}

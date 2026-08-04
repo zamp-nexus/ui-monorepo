@@ -76,7 +76,7 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
 
     output = await agent.invoke(
         AgentInput(
-            investigation_id=ANALYSIS_RUN_ID,
+            analysis_run_id=ANALYSIS_RUN_ID,
             tenant_id=TENANT_ID,
             state={"question": "hi there"},
         )
