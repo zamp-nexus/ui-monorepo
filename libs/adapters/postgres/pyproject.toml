@@ -14,7 +14,7 @@ addopts = """
 [project]
 name = "zentra-adapter-postgres"
 version = "1.0.0"
-description = "ZentraOS Postgres control-plane adapter"
+description = "Nexus Postgres control-plane adapter"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [

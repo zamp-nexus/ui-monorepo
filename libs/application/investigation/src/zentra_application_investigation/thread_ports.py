@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from typing import Protocol
 from uuid import UUID
@@ -41,6 +42,10 @@ class ConversationalPort(Protocol):
     """Replies to a non-analytical message (ADR-0033)."""
 
     async def reply(self, message: str, *, organization_id: UUID) -> str: ...
+
+    def reply_stream(
+        self, message: str, *, organization_id: UUID
+    ) -> AsyncIterator[str]: ...
 
 
 class ThreadRepository(Protocol):

@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 priority: high
 tags: [adr, decisions, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Hexagonal Modular Monolith]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Hexagonal Modular Monolith]]"]
 repo_path: docs/adr
 ---
 
@@ -52,4 +52,4 @@ decision supersedes an old one and both notes link to each other. Create an ADR
 only for a hard-to-reverse choice with real alternatives and meaningful future
 surprise.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

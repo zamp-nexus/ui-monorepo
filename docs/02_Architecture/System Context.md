@@ -14,14 +14,14 @@ priority: critical
 tags: [architecture, system-context]
 related: ["[[Architecture MOC]]", "[[Repository Overview]]", "[[Deployment Topology]]"]
 repo_path: .
-code_refs: [docker-compose.yml, apps/api/src/zentra_api/dependencies.py, apps/zentra-os/src/app/app.tsx]
+code_refs: [docker-compose.yml, apps/api/src/zentra_api/dependencies.py, apps/nexus/src/app/app.tsx]
 ---
 
 # System Context
 
 ```mermaid
 flowchart LR
-  U["User"] --> W["zentra-os"]
+  U["User"] --> W["nexus"]
   W --> C["Clerk"]
   W --> A["FastAPI service"]
   A --> P["Postgres control plane"]

@@ -1,4 +1,4 @@
-"""ZentraOS FastAPI composition root"""
+"""Nexus FastAPI composition root"""
 
 from .main import app, create_app
 

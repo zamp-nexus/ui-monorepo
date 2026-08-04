@@ -167,6 +167,18 @@ ROUTING: dict[ModelTier, dict[AgentRole, tuple[ModelChoice, ...]]] = {
             _OPENROUTER_FREE,
             _SONNET,
         ),
+        # Conversational replies to non-analytical messages (ADR-0033) are
+        # always served on this chain today — the Conversational Agent is
+        # wired to the Intake model client regardless of tenant tier — so it
+        # inherits Intake's chain rather than getting its own.
+        AgentRole.CONVERSATIONAL: (
+            _GEMINI_FLASH,
+            _NVIDIA_NEMOTRON,
+            _GROQ_OSS,
+            _CEREBRAS_GLM,
+            _OPENROUTER_FREE,
+            _SONNET,
+        ),
     },
     ModelTier.PREMIUM: {
         # Light roles: classification, recheck, and prose-over-already-

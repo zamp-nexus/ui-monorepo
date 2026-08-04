@@ -70,6 +70,16 @@ class _FakeConversational:
         return "Thanks for reaching out!"
 
 
+class _FakeAuditWriter:
+    """This test exercises Thread atomicity, not audit delivery -- flushing
+    is a real ClickHouse round trip `AuditDeliveryCoordinator` owns, so a
+    no-op stands in for it here."""
+
+    async def flush(self, *, organization_id, investigation_id) -> bool:
+        del organization_id, investigation_id
+        return True
+
+
 def actor(organization_id, *, role: Role = Role.OWNER) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=uuid4(),
@@ -118,6 +128,7 @@ async def test_thread_and_first_message_are_atomic_and_organization_scoped() -> 
         unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
         intake=_UnresolvedIntake(),
         conversational=_FakeConversational(),
+        audit_writer=_FakeAuditWriter(),
         now=now,
         new_id=uuid4,
     )
@@ -213,6 +224,7 @@ async def test_default_data_connection_id_round_trips_and_is_organization_scoped
         unit_of_work_factory=PostgresThreadUnitOfWorkFactory(database),
         intake=_UnresolvedIntake(),
         conversational=_FakeConversational(),
+        audit_writer=_FakeAuditWriter(),
         now=now,
         new_id=uuid4,
     )

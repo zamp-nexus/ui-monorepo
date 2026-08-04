@@ -1,4 +1,4 @@
-"""ZentraOS agent execution domain contract"""
+"""Nexus agent execution domain contract"""
 
 from .catalogue import AgentCapability, PublicAgent
 from .contracts import (
@@ -35,6 +35,9 @@ from .ports import (
     ModelMessage,
     ModelPort,
     ModelResponse,
+    ModelStreamDelta,
+    ModelStreamEnd,
+    ModelStreamEvent,
     RegisteredAgent,
     SemanticCatalog,
     SemanticDimension,
@@ -90,6 +93,9 @@ __all__ = [
     "ModelMessage",
     "ModelPort",
     "ModelResponse",
+    "ModelStreamDelta",
+    "ModelStreamEnd",
+    "ModelStreamEvent",
     "merged_fallbacks",
     "OUTCOME_ADAPTER",
     "OutcomeSignal",

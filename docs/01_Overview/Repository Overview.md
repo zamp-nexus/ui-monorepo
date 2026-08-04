@@ -19,13 +19,13 @@ code_refs: [package.json, nx.json, pyproject.toml, docker-compose.yml]
 
 # Repository Overview
 
-This npm and uv workspace combines the ZentraOS product with reusable frontend
+This npm and uv workspace combines the Nexus product with reusable frontend
 foundation packages. Nx owns project discovery, dependency analysis, task
 orchestration, and caching across both languages.
 
 ## Product surfaces
 
-- `apps/zentra-os`: React 19 and Vite Forensic Observatory.
+- `apps/nexus`: React 19 and Vite Forensic Observatory.
 - `apps/api`: FastAPI composition root and HTTP boundary.
 - `libs/domain`: framework-independent Investigation and Agent Execution
   contracts.

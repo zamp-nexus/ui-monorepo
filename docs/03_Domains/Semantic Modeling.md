@@ -41,7 +41,7 @@ joins require a bridge or recorded row-multiplication acknowledgment. Material
 schema drift blocks new Investigations until remapping and approval.
 
 Implementation detail: [[Cube Semantic Model]]. Canonical definition:
-[ZentraOS domain context](../../libs/domain/CONTEXT.md).
+[Nexus domain context](../../libs/domain/CONTEXT.md).
 
 Phase 3 source language: [Data Source context](../../libs/domain/data-source/CONTEXT.md).
 

@@ -25,7 +25,7 @@ The separate warehouse Postgres database contains deterministic e-commerce
 fixtures for customers, products, orders, order items, payments, refunds,
 shipments, geography, and refund reasons.
 
-It is development/test infrastructure, not the ZentraOS transactional control
+It is development/test infrastructure, not the Nexus transactional control
 plane and not a production customer-data store.
 
 The seed guarantees two scenarios, chosen so that one cannot clear the

@@ -130,6 +130,18 @@ class PostgresThreadRepository:
         )
 
     async def add_message(self, message: ThreadMessage) -> None:
+        sequence = (
+            await self._connection.execute(
+                update(chat_sessions)
+                .where(chat_sessions.c.chat_session_id == message.thread_id)
+                .values(
+                    next_message_sequence=(
+                        chat_sessions.c.next_message_sequence + 1
+                    )
+                )
+                .returning(chat_sessions.c.next_message_sequence - 1)
+            )
+        ).scalar_one()
         await self._connection.execute(
             insert(messages).values(
                 message_id=message.message_id,
@@ -139,6 +151,7 @@ class PostgresThreadRepository:
                 kind=message.kind.value,
                 content=message.content,
                 created_at=message.created_at,
+                sequence=sequence,
             )
         )
 
@@ -148,7 +161,7 @@ class PostgresThreadRepository:
             .where(messages.c.chat_session_id == thread_id)
             .order_by(
                 messages.c.created_at,
-                messages.c.message_id,
+                messages.c.sequence,
             )
         )
         rows = (await self._connection.execute(statement)).all()

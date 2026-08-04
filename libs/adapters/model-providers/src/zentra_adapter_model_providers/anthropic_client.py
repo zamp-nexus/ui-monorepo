@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 
 import anthropic
 from anthropic import AsyncAnthropic
@@ -9,6 +9,9 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    ModelStreamDelta,
+    ModelStreamEnd,
+    ModelStreamEvent,
     ToolCall,
     ToolDefinition,
 )
@@ -174,5 +177,87 @@ class AnthropicModelClient:
                     cache_write_tokens=cache_write,
                 ),
                 model=response.model,
+            ),
+        )
+
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        # Never sent — see the note on `complete()`.
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        del temperature
+        request: dict[str, object] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": [
+                {
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            "messages": [_wire_message(message) for message in messages],
+        }
+
+        try:
+            async with self._client.messages.stream(**request) as stream:  # type: ignore[arg-type]
+                try:
+                    async for text in stream.text_stream:
+                        if text:
+                            yield ModelStreamDelta(text=text)
+                except (
+                    anthropic.RateLimitError,
+                    anthropic.InternalServerError,
+                    anthropic.APITimeoutError,
+                    anthropic.APIConnectionError,
+                    anthropic.APIStatusError,
+                    anthropic.APIError,
+                ) as e:
+                    raise ProviderUnavailableError(
+                        f"anthropic failed mid-stream: {e}"
+                    ) from e
+                final = await stream.get_final_message()
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
+            raise ProviderAuthError(f"anthropic rejected credentials: {e}") from e
+        except (
+            anthropic.RateLimitError,
+            anthropic.InternalServerError,
+            anthropic.APITimeoutError,
+            anthropic.APIConnectionError,
+        ) as e:
+            raise ProviderUnavailableError(f"anthropic unavailable: {e}") from e
+        except anthropic.APIStatusError as e:
+            raise ProviderUnavailableError(
+                f"anthropic returned {e.status_code}: {e}"
+            ) from e
+        except anthropic.APIError as e:
+            raise ProviderUnavailableError(f"anthropic failed: {e}") from e
+
+        if final.stop_reason == "max_tokens":
+            raise ProviderTruncatedError(
+                f"anthropic/{model} hit the {max_tokens} token ceiling"
+            )
+
+        usage = final.usage
+        cache_read = usage.cache_read_input_tokens or 0
+        cache_write = usage.cache_creation_input_tokens or 0
+        yield ModelStreamEnd(
+            stop_reason=final.stop_reason,
+            usage=ExecutionUsage(
+                input_tokens=usage.input_tokens + cache_read + cache_write,
+                output_tokens=usage.output_tokens,
+                cost_usd=token_cost_usd(
+                    model,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    cache_read_tokens=cache_read,
+                    cache_write_tokens=cache_write,
+                ),
+                model=final.model,
             ),
         )

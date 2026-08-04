@@ -11,7 +11,7 @@ reviewed: 2026-07-29
 confidence: verified
 priority: critical
 tags: [architecture, index]
-related: ["[[ZentraOS Knowledge Base]]"]
+related: ["[[Nexus Knowledge Base]]"]
 repo_path: docs/02_Architecture
 ---
 
@@ -26,4 +26,4 @@ repo_path: docs/02_Architecture
 
 Accepted trade-offs are indexed separately in [[Decisions MOC]].
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

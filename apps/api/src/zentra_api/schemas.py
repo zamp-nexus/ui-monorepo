@@ -75,19 +75,6 @@ class CatalogSummaryResponse(BaseModel):
     dimensions: list[CatalogMemberResponse]
 
 
-class InvestigationCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    #: Free text (ADR-0023). Bounded here so an oversized body is refused at the
-    #: edge; the application normalises and re-validates it, since the Thread
-    #: path reaches the same service without passing through this model.
-    question: str = Field(min_length=1, max_length=4000)
-    #: Which Data Connection to ask it against. Omitted resolves to the
-    #: Organization's only connection, or the demo warehouse when it has none;
-    #: an Organization with several is asked to choose rather than guessed at.
-    data_connection_id: UUID | None = None
-
-
 class VisualizationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -395,6 +382,8 @@ class TimelineResponse(BaseModel):
     total_cost_usd: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    # Set only on an `investigation.failed` entry.
+    failure_category: str | None = None
 
 
 class UsageResponse(BaseModel):
@@ -537,6 +526,7 @@ class InvestigationDetailResponse(BaseModel):
                     total_cost_usd=entry.total_cost_usd,
                     input_tokens=entry.input_tokens,
                     output_tokens=entry.output_tokens,
+                    failure_category=entry.failure_category,
                 )
                 for entry in detail.timeline
             ],

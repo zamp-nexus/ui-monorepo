@@ -11,7 +11,7 @@ reviewed: 2026-07-30
 confidence: verified
 priority: normal
 tags: [change, release, incident, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Documentation Maintenance Workflow]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Documentation Maintenance Workflow]]"]
 repo_path: docs/14_Change
 ---
 
@@ -29,4 +29,4 @@ open-question notes that need team visibility. Use the templates in
 Issue and PRD work remains in GitHub Issues. Promote only durable conclusions
 into the vault.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

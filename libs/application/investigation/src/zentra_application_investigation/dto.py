@@ -116,6 +116,10 @@ class TimelineEntry:
     total_cost_usd: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    # Set only on an `investigation.failed` entry -- the classifier's
+    # category (e.g. `no_enabled_agent`), so Replay can say why rather than
+    # only that it failed.
+    failure_category: str | None = None
 
     @classmethod
     def from_domain_event(

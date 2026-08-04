@@ -16,7 +16,7 @@ resource "clickhouse_service" "audit" {
   ip_access = [
     {
       source      = var.clickhouse_allowed_cidr
-      description = "ZentraOS API egress"
+      description = "Nexus API egress"
     }
   ]
 }

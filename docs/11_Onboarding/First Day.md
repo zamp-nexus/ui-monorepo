@@ -41,7 +41,7 @@ API/frontend targets, and readiness before changing code.
 
 ## Source tour
 
-Start at `apps/zentra-os`, cross the HTTP boundary at `apps/api`, follow
+Start at `apps/nexus`, cross the HTTP boundary at `apps/api`, follow
 `InvestigationService`, then inspect domain, Postgres UoW, Cube scenario, and
 audit coordinator. Use [[Repository Source Map]] for exact paths.
 

@@ -1,4 +1,4 @@
-"""Bind a Clerk organization and user to a ZentraOS organization and membership.
+"""Bind a Clerk organization and user to a Nexus organization and membership.
 
 Signing in to Clerk is not enough. The API resolves every request through
 `resolve_identity_context`, which needs two rows that Clerk knows nothing about:

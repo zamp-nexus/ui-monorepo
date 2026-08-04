@@ -1,4 +1,4 @@
-"""ZentraOS agent adapter.
+"""Nexus agent adapter.
 
 Named for LangGraph, which used to compile these agents into a fixed graph.
 ADR-0026 moved orchestration to the Investigation Engine's Board and Work Item

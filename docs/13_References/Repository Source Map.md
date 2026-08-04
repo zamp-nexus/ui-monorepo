@@ -32,7 +32,7 @@ code_refs: [package.json, nx.json, CONTEXT-MAP.md]
 | Audit schema/policy | ClickHouse init SQL and adapter model validation |
 | Semantic definitions | Cube `Commerce.js` |
 | Deterministic facts | warehouse seed and Cube fixture |
-| Frontend behavior | `apps/zentra-os/src/app` |
+| Frontend behavior | `apps/nexus/src/app` |
 | Local topology | `docker-compose.yml` |
 | Managed infrastructure | `infra/terraform` |
 | CI behavior | `.github/workflows/ci.yml` |

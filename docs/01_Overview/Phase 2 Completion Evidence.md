@@ -90,7 +90,7 @@ application policy, real Postgres under RLS, real transactional outbox, with
 only the Agent pipeline and Semantic layer doubled (#24).
 
 **9 — The Insight corpus and the Observatory accessibility journeys are linked.**
-`evals/insight/` (17/17) and `apps/zentra-os-e2e/src/observatory-journeys.spec.ts`
+`evals/insight/` (17/17) and `apps/nexus-e2e/src/observatory-journeys.spec.ts`
 — 69 journeys across Chromium, Firefox and WebKit with `wcag2a` + `wcag2aa`
 scans (#25).
 

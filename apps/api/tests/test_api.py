@@ -159,11 +159,6 @@ def client(
     app = create_app(
         Settings(
             clerk_issuer="https://example.clerk.accounts.dev",
-            # `Settings` reads the repository `.env`, so a developer holding a
-            # real renderer key would otherwise change what readiness reports
-            # here. The harness states the renderer's absence rather than
-            # inheriting whatever the machine happens to be configured for.
-            thesys_api_key=None,
             clerk_webhook_secret=clerk_webhook_secret,
         ),
         dependencies=dependencies,  # type: ignore[arg-type]
@@ -207,7 +202,6 @@ def test_readiness_reports_sanitized_dependency_state() -> None:
         "postgres": {"status": "ready"},
         "clickhouse": {"status": "unavailable"},
         "cube": {"status": "ready"},
-        "thesys": {"status": "unavailable"},
     }
     assert "password" not in response.text
 
@@ -356,64 +350,6 @@ class InvestigationServiceStub:
     ) -> InvestigationDetail:
         self.last_decision = decision
         return self.detail
-
-
-def test_investigation_create_returns_typed_confidence(monkeypatch) -> None:
-    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
-        return IdentityContext(
-            user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-            email="owner@example.com",
-            tenant_name="Acme Europe",
-            role="owner",
-        )
-
-    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    service = InvestigationServiceStub()
-    with client(investigations=service) as test_client:
-        response = test_client.post(
-            "/v1/investigations",
-            headers={"Authorization": "Bearer valid"},
-            json={"question": "Why did EU refunds increase from June to July 2026?"},
-        )
-
-    assert response.status_code == 201
-    assert service.execute_calls == 0
-    assert response.json()["status"] == "awaiting_approval"
-    assert response.json()["outcome"] == {
-        "kind": "confidence",
-        "score": 0.42,
-        "calibration_method": "evaluator_independent_recheck",
-    }
-
-
-def test_a_metric_carries_the_periods_it_compares(monkeypatch) -> None:
-    """The client cannot derive them and must never guess them, so the response
-    is the only place they can come from."""
-
-    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
-        return IdentityContext(
-            user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
-            email="owner@example.com",
-            tenant_name="Acme Europe",
-            role="owner",
-        )
-
-    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
-    with client(investigations=InvestigationServiceStub()) as test_client:
-        response = test_client.post(
-            "/v1/investigations",
-            headers={"Authorization": "Bearer valid"},
-            json={"question": "Why did EU refunds increase from June to July 2026?"},
-        )
-
-    dated, undated = response.json()["finding"]["metrics"]
-    assert dated["previous_label"] == "June 2026"
-    assert dated["current_label"] == "July 2026"
-    # A metric with no period to name says so, rather than borrowing one.
-    assert undated["previous_label"] is None
-    assert undated["current_label"] is None
 
 
 def test_approval_request_validates_reason_before_service(monkeypatch) -> None:

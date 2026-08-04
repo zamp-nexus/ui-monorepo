@@ -48,7 +48,7 @@ class FieldProfile:
     ``sampled_rows`` is carried on every profile so that no statistic can be
     presented without the size of the evidence behind it. ``sample_values`` is
     empty unless the Data Source explicitly opted in; the default is off
-    because retained raw values would place customer data in ZentraOS storage.
+    because retained raw values would place customer data in Nexus storage.
     """
 
     sampled_rows: int
@@ -241,7 +241,7 @@ def diff_catalogs(previous: CatalogVersion, current: CatalogVersion) -> CatalogD
 
 @dataclass(slots=True)
 class DataSource:
-    """An organization-owned origin of queryable data ZentraOS may read.
+    """An organization-owned origin of queryable data Nexus may read.
 
     Credentials live behind ``sealed_credentials`` and are never held in the
     clear on this object, so there is no representation of a Data Source that

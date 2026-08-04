@@ -14,7 +14,7 @@ priority: high
 tags: [status, phase-1]
 related: ["[[Overview MOC]]", "[[Known Unknowns]]", "[[Managed Service Readiness]]"]
 repo_path: README.md
-code_refs: [README.md, libs/domain/investigation, apps/zentra-os]
+code_refs: [README.md, libs/domain/investigation, apps/nexus]
 ---
 
 # Current Implementation Status

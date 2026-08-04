@@ -165,6 +165,11 @@ class CompletionOutcome:
 class FailureOutcome:
     code: str
     message: str
+    # The classifier's category (e.g. `no_enabled_agent`), distinct from
+    # `code` -- every failure reaches this same fixed `code`, so it cannot
+    # tell an operator why. `message` names why in prose only, which Replay
+    # cannot key a label off of.
+    category: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -479,7 +484,7 @@ class Investigation:
             target=InvestigationStatus.FAILED,
             event_type="investigation.failed",
             now=now,
-            metadata={"code": failure.code},
+            metadata={"code": failure.code, "category": failure.category},
             finished=True,
         )
 

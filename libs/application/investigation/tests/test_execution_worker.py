@@ -55,13 +55,13 @@ class Factory:
     def __init__(self, job: ExecutionJob) -> None:
         self.uow = UnitOfWork(Jobs(job))
 
-    async def bound_tenant_ids(self) -> tuple[UUID, ...]:
+    async def bound_organization_ids(self) -> tuple[UUID, ...]:
         return (TENANT_ID,)
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[UnitOfWork]:
-        assert tenant_id == TENANT_ID
+        assert organization_id == TENANT_ID
         return self.uow
 
 
@@ -71,7 +71,7 @@ class Executor:
         self.calls: list[UUID] = []
         self.failures: list[str] = []
 
-    async def execute_job(self, *, tenant_id: UUID, investigation_id: UUID) -> None:
+    async def execute_job(self, *, organization_id: UUID, investigation_id: UUID) -> None:
         self.calls.append(investigation_id)
         if self.error is not None:
             raise self.error
@@ -79,7 +79,7 @@ class Executor:
     async def fail_job(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         failure_category: str,
     ) -> None:
@@ -89,7 +89,7 @@ class Executor:
 def job() -> ExecutionJob:
     return ExecutionJob.create(
         job_id=JOB_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         investigation_id=INVESTIGATION_ID,
         now=NOW,
     )
@@ -151,3 +151,35 @@ async def test_worker_fails_domain_errors_without_retrying_or_leaking_message() 
     assert failed.failure_category == "domain_failure"
     assert executor.failures == ["domain_failure"]
     assert "customer secret" not in repr(failed)
+
+
+class _NoEnabledAgentLikeError(RuntimeError):
+    """Stands in for `zentra_adapter_langgraph`'s `NoEnabledAgentError` --
+    same `category`/`transient` shape, without this application-layer test
+    depending on an adapter package."""
+
+    category = "no_enabled_agent"
+    transient = False
+
+
+@pytest.mark.asyncio
+async def test_a_named_failure_category_is_used_as_is_not_reclassified() -> None:
+    """Regression: an error naming its own `category`/`transient` (as
+    `NoEnabledAgentError` now does) must reach the ledger under that name,
+    not fall through to the generic `unexpected` every unclassified bug also
+    gets -- an operator needs to tell a registry-configuration gap from an
+    actual defect."""
+    factory = Factory(job())
+    executor = Executor(_NoEnabledAgentLikeError("no promoted evaluator"))
+    worker = ExecutionJobWorker(
+        unit_of_work_factory=factory,
+        executor=executor,
+        worker_id="worker-a",
+        now=lambda: NOW,
+    )
+
+    await worker.run_once()
+
+    failed = factory.uow.jobs.job
+    assert failed.status is ExecutionJobStatus.FAILED
+    assert failed.failure_category == "no_enabled_agent"

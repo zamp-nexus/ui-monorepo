@@ -1,6 +1,6 @@
-# ZentraOS Domain
+# Nexus Domain
 
-ZentraOS is a chat-first analytical workspace: every question a User asks in a Chat Session may open a governed Analysis Run whose claims can be verified and replayed, without the User ever needing to know that boundary exists.
+Nexus is a chat-first analytical workspace: every question a User asks in a Chat Session may open a governed Analysis Run whose claims can be verified and replayed, without the User ever needing to know that boundary exists.
 
 ## Tenancy and identity
 

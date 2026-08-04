@@ -115,6 +115,7 @@ def _state_to_json(investigation: Investigation) -> dict[str, Any]:
             {
                 "code": investigation.failure.code,
                 "message": investigation.failure.message,
+                "category": investigation.failure.category,
             }
             if investigation.failure
             else None
@@ -146,6 +147,7 @@ def _investigation_from_row(row: Any) -> Investigation:
         FailureOutcome(
             code=failure_value["code"],
             message=failure_value["message"],
+            category=failure_value.get("category"),
         )
         if failure_value
         else None

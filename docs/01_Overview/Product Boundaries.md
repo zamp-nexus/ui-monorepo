@@ -21,7 +21,7 @@ code_refs: [README.md, apps/api/src/zentra_api/routes.py]
 
 ## Current product
 
-ZentraOS converts a governed business question into a tenant-isolated,
+Nexus converts a governed business question into a tenant-isolated,
 evidence-backed Investigation. The current deployment exposes two fixed
 scenarios: `eu_refund_spike` and `na_channel_growth`.
 

@@ -14,13 +14,13 @@ describeComponent(<SideNav>Rail</SideNav>, {
 describe('SideNav composition', () => {
   it('renders brand and footer slots around the item list', () => {
     render(
-      <SideNav aria-label="Primary" brand={<span>Oddessy</span>} footer={<span>Docs</span>}>
+      <SideNav aria-label="Primary" brand={<span>Nexus</span>} footer={<span>Docs</span>}>
         <SideNav.Item href="/">Dashboard</SideNav.Item>
       </SideNav>,
     );
 
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeTruthy();
-    expect(screen.getByText('Oddessy')).toBeTruthy();
+    expect(screen.getByText('Nexus')).toBeTruthy();
     expect(screen.getByText('Docs')).toBeTruthy();
   });
 

@@ -1,6 +1,6 @@
-# ZentraOS
+# Nexus
 
-ZentraOS is a trust-first analytics system: investigations are tenant-isolated,
+Nexus is a trust-first analytics system: investigations are tenant-isolated,
 results carry typed outcome evidence, governed work can stop at a human gate,
 and the process can be replayed without retaining raw customer data.
 
@@ -45,7 +45,7 @@ npm exec -- nx serve api
 In another terminal:
 
 ```bash
-npm exec -- nx serve zentra-os
+npm exec -- nx serve nexus
 ```
 
 The frontend runs at `http://localhost:4200`, the API at
@@ -87,7 +87,7 @@ uv run python tools/architecture/verify_known_bad_boundary.py
 uv run lint-imports
 npm exec -- nx run evals:check
 npm exec -- nx run-many -t lint test build typecheck
-npm exec -- nx e2e zentra-os-e2e
+npm exec -- nx e2e nexus-e2e
 ```
 
 `evals:check` replays pinned model responses through each agent to verify
@@ -102,7 +102,7 @@ and generated connection credentials must remain outside the repository.
 ## Engineering knowledge
 
 Open [`docs/`](docs/README.md) as the plugin-independent Obsidian vault and
-start at the [ZentraOS Knowledge Base](docs/00_Index/ZentraOS%20Knowledge%20Base.md).
+start at the [Nexus Knowledge Base](docs/00_Index/Nexus%20Knowledge%20Base.md).
 Validate its metadata, links, and source references with:
 
 ```bash

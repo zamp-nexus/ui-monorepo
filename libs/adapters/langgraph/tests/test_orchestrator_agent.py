@@ -108,6 +108,16 @@ async def test_a_missing_required_role_refuses_rather_than_proceeding() -> None:
         await planner.invoke(agent_input())
 
 
+def test_no_enabled_agent_is_a_named_failure_not_an_unexpected_one() -> None:
+    """Regression: this used to carry no `category`/`transient`, so the
+    execution worker's classifier fell through to `unexpected` -- the same
+    label a genuine bug gets -- even though the ledger's own
+    `_KNOWN_ERROR_CATEGORIES` already expected `NoEnabledAgentError` to be
+    distinguishable."""
+    assert NoEnabledAgentError.category == "no_enabled_agent"
+    assert NoEnabledAgentError.transient is False
+
+
 @pytest.mark.asyncio
 async def test_it_refuses_when_insight_is_required_but_not_promoted() -> None:
     """The fail-closed case, and the reason the flag and the registry are two

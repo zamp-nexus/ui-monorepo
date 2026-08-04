@@ -1,6 +1,6 @@
 """Reading a customer's ClickHouse as a Data Source.
 
-Distinct from ``audit.py`` in this same package, which writes ZentraOS's own
+Distinct from ``audit.py`` in this same package, which writes Nexus's own
 metadata-only ledger. This module reads someone else's warehouse and must never
 copy rows out of it: every statistic and every overlap measurement is computed
 by aggregate query *at the source*, and only the aggregate comes back.

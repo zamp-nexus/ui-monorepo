@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 priority: high
 tags: [api, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[FastAPI Service]]"]
+related: ["[[Nexus Knowledge Base]]", "[[FastAPI Service]]"]
 repo_path: apps/api/src/zentra_api/routes.py
 ---
 
@@ -30,4 +30,4 @@ There is no streaming, agent-management, or general replay API in the current
 phase. Thread routing accepts natural-language messages only within the governed
 scenario catalogue.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

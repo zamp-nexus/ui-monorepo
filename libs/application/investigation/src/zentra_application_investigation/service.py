@@ -538,6 +538,7 @@ class InvestigationService:
             FailureOutcome(
                 code="pipeline_failed",
                 message=f"Pipeline failed: {failure_category}",
+                category=failure_category,
             ),
             self._now(),
         )

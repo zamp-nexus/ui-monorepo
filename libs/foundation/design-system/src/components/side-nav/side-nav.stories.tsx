@@ -60,7 +60,7 @@ export const Default: Story = {
  */
 export const WithBrandAndFooter: Story = {
   args: {
-    brand: <span className="font-mono text-lg font-bold text-primary">ODDESSY</span>,
+    brand: <span className="font-mono text-lg font-bold text-primary">Nexus</span>,
     footer: <Button fullWidth>New analysis</Button>,
     children: items,
   },

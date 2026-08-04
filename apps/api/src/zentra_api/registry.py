@@ -126,7 +126,7 @@ class PostgresAgentRegistry:
             default = _PUBLIC_DEFAULTS.get(role)
             display_name = row.display_name or (default[0] if default else role.value)
             description = row.description or (
-                default[1] if default else "Registered ZentraOS Agent."
+                default[1] if default else "Registered Nexus Agent."
             )
             capabilities = tuple(
                 AgentCapability.model_validate(value)

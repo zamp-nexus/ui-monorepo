@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from decimal import Decimal
 
 import openai
@@ -11,6 +11,9 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    ModelStreamDelta,
+    ModelStreamEnd,
+    ModelStreamEvent,
     ToolCall,
     ToolDefinition,
 )
@@ -230,6 +233,104 @@ class OpenAICompatibleModelClient:
                     response.model
                     if "/" in response.model
                     else f"{name}/{response.model}"
+                ),
+            ),
+        )
+
+
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        name = self._config.provider.value
+        wire: list[dict[str, object]] = [{"role": "system", "content": system}]
+        for message in messages:
+            wire.extend(_wire_messages(message))
+        request: dict[str, object] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": wire,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        try:
+            stream = await self._client.chat.completions.create(**request)  # type: ignore[arg-type]
+        except (openai.AuthenticationError, openai.PermissionDeniedError) as e:
+            raise ProviderAuthError(f"{name} rejected credentials: {e}") from e
+        except (
+            openai.RateLimitError,
+            openai.InternalServerError,
+            openai.APITimeoutError,
+            openai.APIConnectionError,
+        ) as e:
+            raise ProviderUnavailableError(f"{name} unavailable: {e}") from e
+        except openai.BadRequestError as e:
+            raise ProviderUnavailableError(f"{name} rejected the request: {e}") from e
+        except openai.APIStatusError as e:
+            raise ProviderUnavailableError(
+                f"{name} returned {e.status_code}: {e}"
+            ) from e
+        except openai.APIError as e:
+            raise ProviderUnavailableError(f"{name} failed: {e}") from e
+
+        served_model = model
+        stop_reason: str | None = None
+        input_tokens = 0
+        output_tokens = 0
+        cache_read = 0
+        try:
+            async for chunk in stream:
+                served_model = chunk.model or served_model
+                if chunk.usage is not None:
+                    input_tokens = chunk.usage.prompt_tokens
+                    output_tokens = chunk.usage.completion_tokens
+                    details = chunk.usage.prompt_tokens_details
+                    if details is not None:
+                        cache_read = details.cached_tokens or 0
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                if choice.finish_reason:
+                    stop_reason = choice.finish_reason
+                delta_text = choice.delta.content if choice.delta else None
+                if delta_text:
+                    yield ModelStreamDelta(text=delta_text)
+        except (
+            openai.RateLimitError,
+            openai.InternalServerError,
+            openai.APITimeoutError,
+            openai.APIConnectionError,
+            openai.APIStatusError,
+            openai.APIError,
+        ) as e:
+            raise ProviderUnavailableError(f"{name} failed mid-stream: {e}") from e
+
+        if stop_reason == "length":
+            raise ProviderTruncatedError(
+                f"{_qualified(name, model)} hit the {max_tokens} token ceiling"
+            )
+
+        yield ModelStreamEnd(
+            stop_reason=stop_reason,
+            usage=ExecutionUsage(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost_usd=_cost(
+                    served=served_model,
+                    requested=model,
+                    input_tokens=max(0, input_tokens - cache_read),
+                    output_tokens=output_tokens,
+                    cache_read_tokens=cache_read,
+                ),
+                model=(
+                    served_model if "/" in served_model else f"{name}/{served_model}"
                 ),
             ),
         )

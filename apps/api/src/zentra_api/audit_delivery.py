@@ -193,6 +193,7 @@ class AuditDeliveryCoordinator:
                 ),
                 input_tokens=row.get("input_tokens"),
                 output_tokens=row.get("output_tokens"),
+                failure_category=metadata.get("category"),
             )
         for record in outbox_rows:
             if record.dispatched_at is not None:
@@ -219,6 +220,7 @@ class AuditDeliveryCoordinator:
                     total_cost_usd=metadata.get("total_cost_usd"),
                     input_tokens=metadata.get("input_tokens"),
                     output_tokens=metadata.get("output_tokens"),
+                    failure_category=metadata.get("category"),
                 ),
             )
         return tuple(

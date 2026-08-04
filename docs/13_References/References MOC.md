@@ -11,7 +11,7 @@ reviewed: 2026-07-29
 confidence: verified
 priority: normal
 tags: [reference, index]
-related: ["[[ZentraOS Knowledge Base]]"]
+related: ["[[Nexus Knowledge Base]]"]
 repo_path: docs/13_References
 ---
 
@@ -24,4 +24,4 @@ repo_path: docs/13_References
 - [[Known Unknowns]]
 - [[Documentation Maintenance Workflow]]
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

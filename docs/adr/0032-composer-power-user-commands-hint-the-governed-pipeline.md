@@ -12,7 +12,7 @@ confidence: verified
 implementation: planned
 tags: [adr, chat, composer, intake]
 related: ["[[adr/0027-analytical-scope-replaces-scenario-whitelist]]", "[[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]"]
-repo_path: apps/zentra-os/src/app/pages/chat
+repo_path: apps/nexus/src/app/pages/chat
 ---
 
 # Composer power-user commands hint the governed pipeline, never bypass it
