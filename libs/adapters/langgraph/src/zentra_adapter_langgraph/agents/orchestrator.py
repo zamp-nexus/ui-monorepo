@@ -51,6 +51,9 @@ DESCRIPTOR = AgentDescriptor(
 class NoEnabledAgentError(RuntimeError):
     """A required role has no enabled, eval-passing agent registered."""
 
+    category = "no_enabled_agent"
+    transient = False
+
 
 class OrchestratorAgent:
     """Decomposes the question, delegates, and arbitrates. Writes nothing.

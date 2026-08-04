@@ -31,7 +31,7 @@ code_refs:
 
 # Connector Domain
 
-The Connector owns how ZentraOS learns what is in a Tenant's data and how that
+The Connector owns how Nexus learns what is in a Tenant's data and how that
 data connects. It is what makes arbitrary datasets answerable, which
 [[Current Implementation Status]] previously listed as not implemented.
 
@@ -40,9 +40,9 @@ data connects. It is what makes arbitrary datasets answerable, which
 A **Data Source** is a tenant-owned origin of queryable data. It has two kinds
 and they are variants of one concept rather than two concepts:
 
-- `connected` — a customer warehouse ZentraOS reads **in place**. Rows never
+- `connected` — a customer warehouse Nexus reads **in place**. Rows never
   leave it. Only metadata and aggregate measurements are retained.
-- `uploaded` — a CSV or Parquet file landed as a table in ZentraOS-owned
+- `uploaded` — a CSV or Parquet file landed as a table in Nexus-owned
   ClickHouse, because a file has no source to query.
 
 Modelling uploads as Data Sources is what gives harvest, profiling and inference

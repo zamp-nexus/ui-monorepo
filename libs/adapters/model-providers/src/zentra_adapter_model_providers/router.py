@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 
 import jsonschema
 from pydantic.types import JsonValue
@@ -10,6 +10,7 @@ from zentra_domain_agent_execution import (
     ModelMessage,
     ModelPort,
     ModelResponse,
+    ModelStreamEvent,
     ToolDefinition,
 )
 
@@ -109,6 +110,66 @@ class RoutedModelClient:
 
         raise ChainExhaustedError(role.value, attempts)
 
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        """Freeform-text streaming, for Conversational/Insight-shaped roles only.
+
+        A provider may fall back to the next rung only before it has produced
+        its first event — nothing has reached the caller yet, so a swap is
+        invisible, exactly like `complete()`'s fallback. Once a chunk has been
+        yielded outward, that provider is committed: splicing two providers'
+        output together, or restarting a reply the caller has already begun
+        forwarding to a user, would be worse than a clean, retryable-by-resend
+        failure. A mid-stream `ProviderError` after that point is therefore
+        re-raised, not retried.
+        """
+        role = AgentRole(model)
+        attempts: list[str] = []
+
+        for choice in chain_for(self._tier, role):
+            client = self._clients.get(choice.provider)
+            if client is None:
+                attempts.append(f"{choice}: no API key configured")
+                continue
+            if not self._breaker.allow(choice.provider):
+                attempts.append(f"{choice}: circuit open")
+                continue
+
+            generator = client.stream(
+                model=choice.model,
+                system=system,
+                messages=messages,
+                max_tokens=choice.max_tokens,
+                temperature=temperature,
+            )
+            try:
+                first_event = await anext(generator)
+            except StopAsyncIteration:
+                self._breaker.record_failure(choice.provider)
+                attempts.append(f"{choice}: empty stream")
+                continue
+            except ProviderAuthError:
+                raise
+            except ProviderError as error:
+                self._breaker.record_failure(choice.provider)
+                attempts.append(f"{choice}: {error}")
+                continue
+
+            self._breaker.record_success(choice.provider)
+            yield _with_fallbacks(first_event, attempts)
+            async for event in generator:
+                yield _with_fallbacks(event, attempts)
+            return
+
+        raise ChainExhaustedError(role.value, attempts)
+
     async def _attempt(
         self,
         *,
@@ -154,6 +215,12 @@ class RoutedModelClient:
             return response
         assert last is not None
         raise last
+
+
+def _with_fallbacks(event: ModelStreamEvent, attempts: list[str]) -> ModelStreamEvent:
+    if not attempts or not hasattr(event, "fallbacks"):
+        return event
+    return event.model_copy(update={"fallbacks": tuple(attempts)})
 
 
 def _validate(text: str, schema: dict[str, JsonValue]) -> None:

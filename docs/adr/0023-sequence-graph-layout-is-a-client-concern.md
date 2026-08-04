@@ -16,12 +16,12 @@ related:
   - "[[Sequence Domain]]"
   - "[[adr/0019-public-work-feed]]"
 depends_on: []
-repo_path: apps/zentra-os/src/app/pages/sequences
+repo_path: apps/nexus/src/app/pages/sequences
 code_refs:
-  - apps/zentra-os/src/app/pages/sequences/graph-layout.ts
+  - apps/nexus/src/app/pages/sequences/graph-layout.ts
   - apps/api/src/zentra_api/sequence_routes.py
   - apps/api/src/zentra_api/sequence_schemas.py
-  - apps/zentra-os/src/app/pages/sequences/sequence-detail-page.tsx
+  - apps/nexus/src/app/pages/sequences/sequence-detail-page.tsx
 ---
 
 # Sequence graph layout is a client concern, and the API adds no new Work Feed event kinds

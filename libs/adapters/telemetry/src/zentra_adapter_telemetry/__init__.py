@@ -1,4 +1,4 @@
-"""ZentraOS OpenTelemetry adapter"""
+"""Nexus OpenTelemetry adapter"""
 
 from .metrics import SAFE_DIMENSIONS
 from .tracing import (

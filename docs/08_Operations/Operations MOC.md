@@ -11,7 +11,7 @@ reviewed: 2026-07-29
 confidence: verified
 priority: high
 tags: [operations, index]
-related: ["[[ZentraOS Knowledge Base]]", "[[Runbooks MOC]]"]
+related: ["[[Nexus Knowledge Base]]", "[[Runbooks MOC]]"]
 repo_path: docker-compose.yml
 ---
 
@@ -26,4 +26,4 @@ repo_path: docker-compose.yml
 
 Recovery procedures live in [[Runbooks MOC]].
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]

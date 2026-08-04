@@ -12,6 +12,8 @@ from zentra_domain_agent_execution import (
     ExecutionUsage,
     ModelMessage,
     ModelResponse,
+    ModelStreamDelta,
+    ModelStreamEnd,
     ToolCall,
     ToolDefinition,
 )
@@ -404,3 +406,126 @@ async def test_tools_reach_the_provider_client() -> None:
     )
 
     assert anthropic.tools_seen == [(TOOL,)]
+
+
+# --- streaming -------------------------------------------------------------
+
+
+class StubStreamingClient:
+    """Replays a scripted sequence of streaming events/failures for one
+    provider. An exception in the outcome list is raised at that position in
+    the stream, rather than returned — the position determines whether the
+    router sees it before or after the first successful chunk."""
+
+    def __init__(self, *outcomes: Any) -> None:
+        self._outcomes = list(outcomes)
+        self.calls = 0
+
+    async def stream(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: Sequence[ModelMessage],
+        max_tokens: int,
+        temperature: float = 0.2,
+    ) -> Any:
+        self.calls += 1
+        for outcome in self._outcomes:
+            if isinstance(outcome, Exception):
+                raise outcome
+            yield ModelStreamDelta(text=outcome)
+        yield ModelStreamEnd(
+            usage=ExecutionUsage(
+                input_tokens=10, output_tokens=5, cost_usd=Decimal("0"), model=model
+            )
+        )
+
+
+async def collect(events: Any) -> list[Any]:
+    return [event async for event in events]
+
+
+def stream_router(clients: dict[Provider, Any]) -> RoutedModelClient:
+    return RoutedModelClient(tier=ModelTier.FREE, clients=clients)
+
+
+@pytest.mark.asyncio
+async def test_a_provider_that_fails_before_its_first_chunk_falls_through() -> None:
+    first = StubStreamingClient(ProviderUnavailableError("429 rate limited"))
+    second = StubStreamingClient("hello")
+
+    events = await collect(
+        stream_router({Provider.GEMINI: first, Provider.CEREBRAS: second}).stream(
+            model=AgentRole.CONVERSATIONAL.value,
+            system="s",
+            messages=[ModelMessage(role="user", content="hi")],
+            max_tokens=1000,
+        )
+    )
+
+    assert first.calls == 1
+    assert second.calls == 1
+    deltas = [e.text for e in events if isinstance(e, ModelStreamDelta)]
+    assert deltas == ["hello"]
+
+
+@pytest.mark.asyncio
+async def test_a_mid_stream_failure_after_the_first_chunk_is_never_retried() -> None:
+    """Once a chunk has been forwarded, a provider is committed: splicing two
+    providers' output, or restarting a reply a caller already began forwarding
+    to a user, would be worse than a clean, retryable-by-resend failure."""
+    first = StubStreamingClient("hel", ProviderUnavailableError("dropped connection"))
+    second = StubStreamingClient("hello")
+
+    with pytest.raises(ProviderUnavailableError):
+        await collect(
+            stream_router({Provider.GEMINI: first, Provider.CEREBRAS: second}).stream(
+                model=AgentRole.CONVERSATIONAL.value,
+                system="s",
+                messages=[ModelMessage(role="user", content="hi")],
+                max_tokens=1000,
+            )
+        )
+
+    assert first.calls == 1
+    assert second.calls == 0, "no fallback once a chunk already reached the caller"
+
+
+@pytest.mark.asyncio
+async def test_every_provider_failing_before_a_first_chunk_exhausts_the_chain() -> None:
+    failing = StubStreamingClient(ProviderUnavailableError("down"))
+
+    router = stream_router({Provider.GEMINI: failing, Provider.CEREBRAS: failing})
+    with pytest.raises(ChainExhaustedError) as caught:
+        await collect(
+            router.stream(
+                model=AgentRole.CONVERSATIONAL.value,
+                system="s",
+                messages=[ModelMessage(role="user", content="hi")],
+                max_tokens=1000,
+            )
+        )
+
+    assert "conversational" in str(caught.value)
+
+
+@pytest.mark.asyncio
+async def test_a_streamed_replys_terminal_event_carries_the_fallback_trail() -> None:
+    # Gemini leads the free Conversational chain; failing it first forces the
+    # fallback onto Cerebras, so the trail actually has something to record.
+    dead = StubStreamingClient(ProviderUnavailableError("gemini returned 402"))
+    served = StubStreamingClient("hello")
+
+    events = await collect(
+        stream_router({Provider.GEMINI: dead, Provider.CEREBRAS: served}).stream(
+            model=AgentRole.CONVERSATIONAL.value,
+            system="s",
+            messages=[ModelMessage(role="user", content="hi")],
+            max_tokens=1000,
+        )
+    )
+
+    ends = [e for e in events if isinstance(e, ModelStreamEnd)]
+    assert len(ends) == 1
+    assert "gemini returned 402" in "\n".join(ends[0].fallbacks)

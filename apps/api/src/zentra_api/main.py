@@ -75,7 +75,7 @@ def create_app(
         )
 
     api = FastAPI(
-        title="ZentraOS API",
+        title="Nexus API",
         version="0.1.0",
         lifespan=lifespan,
     )

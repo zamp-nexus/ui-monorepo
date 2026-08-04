@@ -1,4 +1,4 @@
-"""ZentraOS model provider adapter"""
+"""Nexus model provider adapter"""
 
 from zentra_domain_agent_execution import model_family
 

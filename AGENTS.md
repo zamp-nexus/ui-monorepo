@@ -81,7 +81,7 @@ Multi-context layout: root `CONTEXT-MAP.md` points to per-area `CONTEXT.md` file
 
 ### Engineering knowledge vault
 
-`docs/` is the Obsidian vault root. Start at `docs/00_Index/ZentraOS Knowledge Base.md`.
+`docs/` is the Obsidian vault root. Start at `docs/00_Index/Nexus Knowledge Base.md`.
 When architecture, behavior, API, schema, operations, or ownership changes, update the
 canonical vault note in the same change and run `npm exec -- nx run docs:check`.
 

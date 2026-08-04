@@ -10,7 +10,7 @@ class SourceKind(StrEnum):
     """How a Data Source came to exist.
 
     Two kinds of one concept rather than two concepts. An uploaded file is a
-    Data Source backed by a ZentraOS-owned table, which is what gives harvest,
+    Data Source backed by a Nexus-owned table, which is what gives harvest,
     profiling and inference exactly one implementation — and what makes
     relations *across* sources fall out rather than needing separate machinery.
     """

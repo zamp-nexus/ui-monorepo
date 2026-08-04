@@ -30,7 +30,7 @@ from ._metadata import metadata
 #:
 #: `sealed_credentials` is `bytea` holding AES-GCM ciphertext, never a
 #: password. It is nullable because an uploaded source has no credential to
-#: seal — it is backed by a ZentraOS-owned table rather than someone else's
+#: seal — it is backed by a Nexus-owned table rather than someone else's
 #: warehouse.
 data_sources = Table(
     "data_sources",

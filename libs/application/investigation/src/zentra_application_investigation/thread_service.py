@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from uuid import UUID
 
@@ -27,6 +27,7 @@ from .dto import (
     Role,
     UsageSummary,
 )
+from .ports import AuditWriter
 from .thread_dto import (
     RoutingDisposition,
     RoutingResult,
@@ -36,6 +37,12 @@ from .thread_dto import (
     ThreadInvestigationSummary,
     ThreadNotFoundError,
     ThreadPage,
+    ThreadStreamDelta,
+    ThreadStreamError,
+    ThreadStreamEvent,
+    ThreadStreamMessage,
+    ThreadStreamRouting,
+    ThreadStreamSnapshot,
 )
 from .thread_ports import (
     ConversationalPort,
@@ -75,14 +82,29 @@ class ThreadService:
         unit_of_work_factory: ThreadUnitOfWorkFactory,
         intake: IntakePort,
         conversational: ConversationalPort,
+        audit_writer: AuditWriter,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._intake = intake
         self._conversational = conversational
+        self._audit_writer = audit_writer
         self._now = now
         self._new_id = new_id
+
+    async def _flush_audit(self, actor: AuthenticatedActor, investigation_id: UUID | None) -> None:
+        # Fire-and-forget from the caller's perspective: `InvestigationService`
+        # flushes after every outbox enqueue it makes, and Thread-created
+        # Investigations need the same sweep -- otherwise their audit events
+        # sit undelivered forever, since nothing else registers this
+        # organization with the delivery coordinator's retry loop.
+        if investigation_id is None:
+            return
+        await self._audit_writer.flush(
+            organization_id=actor.organization_id,
+            investigation_id=investigation_id,
+        )
 
     async def create(
         self,
@@ -145,6 +167,7 @@ class ThreadService:
                 data_connection_id=data_connection_id,
             )
             await unit_of_work.commit()
+        await self._flush_audit(actor, investigation_id)
         return build_thread_detail(
             thread,
             (message,) + router_messages,
@@ -152,6 +175,102 @@ class ThreadService:
             routing,
             actor,
         )
+
+    async def create_streaming(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        project_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
+    ) -> AsyncIterator[ThreadStreamEvent]:
+        """Same as `create`, except a NOT_ANALYTICAL reply streams live.
+
+        Routing, the user's message, and the Investigation/router-clarification
+        branches all commit exactly as `create` does, in one transaction --
+        those never call a model for prose a user reads directly, so there is
+        nothing to stream. Only the Conversational reply moves the model call
+        outside any transaction; see `_stream_conversational_turn`.
+        """
+        self._require_mutator(actor)
+        now = self._now()
+        thread_id = self._new_id()
+        message_id = self._new_id()
+        message = ThreadMessage.create(
+            message_id=message_id,
+            thread_id=thread_id,
+            organization_id=actor.organization_id,
+            author_id=actor.user_id,
+            kind=ThreadMessageKind.USER_QUESTION,
+            content=content,
+            now=now,
+        )
+        routing = await self._intake.resolve(
+            message.content,
+            organization_id=actor.organization_id,
+            data_connection_id=data_connection_id,
+        )
+        title_source = routing.canonical_question or message.content
+        thread = InvestigationThread.create(
+            thread_id=thread_id,
+            organization_id=actor.organization_id,
+            project_id=project_id,
+            initiating_message_id=message_id,
+            title=deterministic_thread_title(title_source),
+            now=now,
+            created_by=actor.user_id,
+        )
+        async with self._uow(actor) as unit_of_work:
+            await self._require_writable_project(unit_of_work, project_id)
+            await unit_of_work.threads.add_thread(thread)
+            await unit_of_work.threads.add_message(message)
+            await unit_of_work.work_feed.append(
+                organization_id=actor.organization_id,
+                thread_id=thread_id,
+                kind=WorkFeedEventKind.MESSAGE_ADDED,
+                payload=MessageEventPayload(
+                    message_id=message.message_id,
+                    message_kind=message.kind.value,
+                ),
+                occurred_at=now,
+                event_id=self._new_id(),
+            )
+            investigation_id, router_messages, conversational_content = (
+                await self._apply_routing_streaming(
+                    unit_of_work,
+                    actor,
+                    thread,
+                    message,
+                    routing,
+                    now,
+                    data_connection_id=data_connection_id,
+                )
+            )
+            await unit_of_work.commit()
+        await self._flush_audit(actor, investigation_id)
+
+        yield ThreadStreamRouting(
+            thread_id=thread_id,
+            message_id=message_id,
+            investigation_id=investigation_id,
+            routing=routing,
+        )
+
+        all_messages = (message,) + router_messages
+        if conversational_content is not None:
+            async for event in self._stream_conversational_turn(
+                actor, thread, conversational_content, routing
+            ):
+                yield event
+                if isinstance(event, ThreadStreamError):
+                    return
+                if isinstance(event, ThreadStreamMessage):
+                    all_messages = all_messages + (event.message,)
+
+        detail = build_thread_detail(
+            thread, all_messages, investigation_id, routing, actor
+        )
+        yield ThreadStreamSnapshot(detail=detail)
 
     async def append(
         self,
@@ -217,9 +336,114 @@ class ThreadService:
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(thread_id)
-            return build_thread_detail(
+            detail = build_thread_detail(
                 thread, messages, investigation_id, routing, actor
             )
+        await self._flush_audit(actor, investigation_id)
+        return detail
+
+    async def append_streaming(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        thread_id: UUID,
+        content: str,
+        data_connection_id: UUID | None = None,
+    ) -> AsyncIterator[ThreadStreamEvent]:
+        """Streaming counterpart to `append` -- see `create_streaming`.
+
+        The ACTIVE-thread branch hands off to `_append_follow_up_streaming`
+        outside this transaction entirely: that path manages its own two
+        transactions around the model call, exactly like `create_streaming`
+        does, so nothing here may hold a lock across it.
+        """
+        self._require_mutator(actor)
+        now = self._now()
+        is_active: bool
+        async with self._uow(actor) as unit_of_work:
+            thread = self._require_thread(
+                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+            )
+            await self._require_visible(unit_of_work, actor, thread_id)
+            await self._require_writable_project(unit_of_work, thread.project_id)
+            if thread.status is ThreadStatus.ARCHIVED:
+                raise ThreadConflictError("Archived Threads cannot accept messages")
+            is_active = thread.status is ThreadStatus.ACTIVE
+            if not is_active:
+                message = ThreadMessage.create(
+                    message_id=self._new_id(),
+                    thread_id=thread_id,
+                    organization_id=actor.organization_id,
+                    author_id=actor.user_id,
+                    kind=ThreadMessageKind.USER_CLARIFICATION,
+                    content=content,
+                    now=now,
+                )
+                existing_messages = await unit_of_work.threads.messages_for_thread(
+                    thread_id
+                )
+                routing = await self._intake.resolve(
+                    _combined_question_text(existing_messages + (message,)),
+                    organization_id=actor.organization_id,
+                    data_connection_id=data_connection_id,
+                )
+                thread.record_message(now)
+                await unit_of_work.threads.add_message(message)
+                await unit_of_work.work_feed.append(
+                    organization_id=actor.organization_id,
+                    thread_id=thread_id,
+                    kind=WorkFeedEventKind.MESSAGE_ADDED,
+                    payload=MessageEventPayload(
+                        message_id=message.message_id,
+                        message_kind=message.kind.value,
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
+                investigation_id, _, conversational_content = (
+                    await self._apply_routing_streaming(
+                        unit_of_work,
+                        actor,
+                        thread,
+                        message,
+                        routing,
+                        now,
+                        data_connection_id=data_connection_id,
+                    )
+                )
+                await unit_of_work.threads.save_thread(thread)
+                await unit_of_work.commit()
+                messages = await unit_of_work.threads.messages_for_thread(thread_id)
+
+        if not is_active:
+            await self._flush_audit(actor, investigation_id)
+
+        if is_active:
+            async for event in self._append_follow_up_streaming(
+                actor, thread, content, now
+            ):
+                yield event
+            return
+
+        yield ThreadStreamRouting(
+            thread_id=thread_id,
+            message_id=message.message_id,
+            investigation_id=investigation_id,
+            routing=routing,
+        )
+
+        if conversational_content is not None:
+            async for event in self._stream_conversational_turn(
+                actor, thread, conversational_content, routing
+            ):
+                yield event
+                if isinstance(event, ThreadStreamError):
+                    return
+                if isinstance(event, ThreadStreamMessage):
+                    messages = messages + (event.message,)
+
+        detail = build_thread_detail(thread, messages, investigation_id, routing, actor)
+        yield ThreadStreamSnapshot(detail=detail)
 
     async def _append_follow_up(
         self,
@@ -286,7 +510,7 @@ class ThreadService:
         investigation_id = latest.investigation_id if latest else None
         if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
             await self._conversational_reply(
-                unit_of_work, actor, thread, message.content, routing, now
+                unit_of_work, actor, thread, message.content, routing
             )
         elif routing.disposition is RoutingDisposition.RESOLVED:
             assert routing.canonical_question is not None
@@ -344,7 +568,154 @@ class ThreadService:
         await unit_of_work.threads.save_thread(thread)
         await unit_of_work.commit()
         messages = await unit_of_work.threads.messages_for_thread(thread.thread_id)
+        await self._flush_audit(actor, investigation_id)
         return build_thread_detail(thread, messages, investigation_id, routing, actor)
+
+    async def _append_follow_up_streaming(
+        self,
+        actor: AuthenticatedActor,
+        thread: InvestigationThread,
+        content: str,
+        now: datetime,
+    ) -> AsyncIterator[ThreadStreamEvent]:
+        """Streaming counterpart to `_append_follow_up`.
+
+        Manages its own transaction (unlike `_append_follow_up`, which is
+        handed one by its caller): the NOT_ANALYTICAL branch streams a model
+        reply between two short transactions, so nothing here may hold a
+        lock across that call the way the non-streaming version's caller
+        does.
+        """
+        conversational_content: str | None = None
+        async with self._uow(actor) as unit_of_work:
+            latest = await unit_of_work.investigations.latest_for_thread(
+                thread.thread_id, for_update=True
+            )
+            message = ThreadMessage.create(
+                message_id=self._new_id(),
+                thread_id=thread.thread_id,
+                organization_id=actor.organization_id,
+                author_id=actor.user_id,
+                kind=ThreadMessageKind.USER_QUESTION,
+                content=content,
+                now=now,
+            )
+            routing = await self._intake.resolve(
+                message.content,
+                organization_id=actor.organization_id,
+                data_connection_id=latest.data_connection_id if latest else None,
+            )
+            normalized = message.content.casefold()
+            published_reference = any(
+                token in normalized
+                for token in ("again", "latest", "re-run", "rerun", "same")
+            )
+            if (
+                latest is not None
+                and routing.disposition is not RoutingDisposition.RESOLVED
+                and published_reference
+                and latest.status is InvestigationStatus.COMPLETED
+            ):
+                routing = RoutingResult(
+                    disposition=RoutingDisposition.RESOLVED,
+                    scenario_key=latest.scenario_key,
+                    canonical_question=latest.question,
+                    clarification=None,
+                    suggestions=(),
+                )
+            thread.record_message(now)
+            await unit_of_work.threads.add_message(message)
+            await unit_of_work.work_feed.append(
+                organization_id=actor.organization_id,
+                thread_id=thread.thread_id,
+                kind=WorkFeedEventKind.MESSAGE_ADDED,
+                payload=MessageEventPayload(
+                    message_id=message.message_id,
+                    message_kind=message.kind.value,
+                ),
+                occurred_at=now,
+                event_id=self._new_id(),
+            )
+            investigation_id = latest.investigation_id if latest else None
+            if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
+                conversational_content = message.content
+            elif routing.disposition is RoutingDisposition.RESOLVED:
+                assert routing.canonical_question is not None
+                follow_up = Investigation.create(
+                    investigation_id=self._new_id(),
+                    organization_id=actor.organization_id,
+                    question=routing.canonical_question,
+                    now=now,
+                    data_connection_id=latest.data_connection_id if latest else None,
+                    thread_id=thread.thread_id,
+                    thread_sequence=(latest.thread_sequence or 0) + 1 if latest else 1,
+                    initiating_message_id=message.message_id,
+                    parent_investigation_id=latest.investigation_id if latest else None,
+                )
+                follow_up.start(now)
+                await unit_of_work.investigations.add(follow_up)
+                await unit_of_work.jobs.add_job(
+                    ExecutionJob.create(
+                        job_id=self._new_id(),
+                        organization_id=actor.organization_id,
+                        investigation_id=follow_up.investigation_id,
+                        now=now,
+                    )
+                )
+                await unit_of_work.outbox.enqueue(follow_up.events)
+                await unit_of_work.work_feed.append(
+                    organization_id=actor.organization_id,
+                    thread_id=thread.thread_id,
+                    kind=WorkFeedEventKind.INVESTIGATION_QUEUED,
+                    payload=InvestigationEventPayload(
+                        investigation_id=follow_up.investigation_id,
+                        status=follow_up.status,
+                        parent_investigation_id=(
+                            latest.investigation_id if latest else None
+                        ),
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
+                investigation_id = follow_up.investigation_id
+            else:
+                router_message = self._router_messages(thread, routing, now)[0]
+                await unit_of_work.threads.add_message(router_message)
+                await unit_of_work.work_feed.append(
+                    organization_id=actor.organization_id,
+                    thread_id=thread.thread_id,
+                    kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
+                    payload=RoutingEventPayload(
+                        disposition=routing.disposition.value,
+                        suggestion_count=len(routing.suggestions),
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
+            await unit_of_work.threads.save_thread(thread)
+            await unit_of_work.commit()
+            messages = await unit_of_work.threads.messages_for_thread(thread.thread_id)
+        await self._flush_audit(actor, investigation_id)
+
+        yield ThreadStreamRouting(
+            thread_id=thread.thread_id,
+            message_id=message.message_id,
+            investigation_id=investigation_id,
+            routing=routing,
+        )
+
+        if conversational_content is not None:
+            async for event in self._stream_conversational_turn(
+                actor, thread, conversational_content, routing
+            ):
+                yield event
+                if isinstance(event, ThreadStreamError):
+                    return
+                if isinstance(event, ThreadStreamMessage):
+                    messages = messages + (event.message,)
+
+        detail = build_thread_detail(thread, messages, investigation_id, routing, actor)
+        yield ThreadStreamSnapshot(detail=detail)
 
     async def get(self, actor: AuthenticatedActor, thread_id: UUID) -> ThreadDetail:
         async with self._uow(actor) as unit_of_work:
@@ -546,7 +917,7 @@ class ThreadService:
             thread.activate(now)
             await unit_of_work.threads.save_thread(thread)
             reply_message = await self._conversational_reply(
-                unit_of_work, actor, thread, message.content, routing, now
+                unit_of_work, actor, thread, message.content, routing
             )
             return None, (reply_message,)
         if routing.disposition is not RoutingDisposition.RESOLVED:
@@ -612,6 +983,89 @@ class ThreadService:
         )
         return investigation.investigation_id, ()
 
+    async def _apply_routing_streaming(
+        self,
+        unit_of_work: ThreadUnitOfWork,
+        actor: AuthenticatedActor,
+        thread: InvestigationThread,
+        message: ThreadMessage,
+        routing: RoutingResult,
+        now: datetime,
+        data_connection_id: UUID | None = None,
+    ) -> tuple[UUID | None, tuple[ThreadMessage, ...], str | None]:
+        """Streaming counterpart to `_apply_routing`.
+
+        Identical for every disposition except NOT_ANALYTICAL: instead of
+        generating and persisting the reply inline (which would hold this
+        transaction open for the whole model call), it activates the Thread
+        and returns the content to stream, leaving the reply itself to
+        `_stream_conversational_turn` once this transaction has committed.
+        """
+        if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
+            thread.title = deterministic_thread_title(message.content)
+            thread.activate(now)
+            await unit_of_work.threads.save_thread(thread)
+            return None, (), message.content
+        if routing.disposition is not RoutingDisposition.RESOLVED:
+            router_messages = self._router_messages(thread, routing, now)
+            await unit_of_work.threads.add_message(router_messages[0])
+            await unit_of_work.work_feed.append(
+                organization_id=actor.organization_id,
+                thread_id=thread.thread_id,
+                kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
+                payload=RoutingEventPayload(
+                    disposition=routing.disposition.value,
+                    suggestion_count=len(routing.suggestions),
+                ),
+                occurred_at=now,
+                event_id=self._new_id(),
+            )
+            return None, router_messages, None
+        assert routing.canonical_question is not None
+        investigation = Investigation.create(
+            investigation_id=self._new_id(),
+            organization_id=actor.organization_id,
+            question=routing.canonical_question,
+            now=now,
+            data_connection_id=data_connection_id,
+            thread_id=thread.thread_id,
+            thread_sequence=1,
+            initiating_message_id=message.message_id,
+        )
+        investigation.start(now)
+        job = ExecutionJob.create(
+            job_id=self._new_id(),
+            organization_id=actor.organization_id,
+            investigation_id=investigation.investigation_id,
+            now=now,
+        )
+        thread.title = deterministic_thread_title(routing.canonical_question)
+        thread.activate(now)
+        await unit_of_work.investigations.add(investigation)
+        await unit_of_work.jobs.add_job(job)
+        await unit_of_work.outbox.enqueue(investigation.events)
+        await unit_of_work.threads.save_thread(thread)
+        await unit_of_work.work_feed.append(
+            organization_id=actor.organization_id,
+            thread_id=thread.thread_id,
+            kind=WorkFeedEventKind.ROUTING_RESOLVED,
+            payload=RoutingEventPayload(disposition=routing.disposition.value),
+            occurred_at=now,
+            event_id=self._new_id(),
+        )
+        await unit_of_work.work_feed.append(
+            organization_id=actor.organization_id,
+            thread_id=thread.thread_id,
+            kind=WorkFeedEventKind.INVESTIGATION_QUEUED,
+            payload=InvestigationEventPayload(
+                investigation_id=investigation.investigation_id,
+                status="queued",
+            ),
+            occurred_at=now,
+            event_id=self._new_id(),
+        )
+        return investigation.investigation_id, (), None
+
     async def _conversational_reply(
         self,
         unit_of_work: ThreadUnitOfWork,
@@ -619,11 +1073,15 @@ class ThreadService:
         thread: InvestigationThread,
         content: str,
         routing: RoutingResult,
-        now: datetime,
     ) -> ThreadMessage:
         reply_text = await self._conversational.reply(
             content, organization_id=actor.organization_id
         )
+        # Re-derive `now` after the model call returns -- the caller's `now`
+        # is the turn's start time, and stamping the reply with it can tie
+        # (or even precede) the question it answers once the DB's tiebreak
+        # falls back to a random message id.
+        reply_now = self._now()
         reply_message = ThreadMessage.create(
             message_id=self._new_id(),
             thread_id=thread.thread_id,
@@ -631,7 +1089,7 @@ class ThreadService:
             author_id=None,
             kind=ThreadMessageKind.ASSISTANT_REPLY,
             content=reply_text,
-            now=now,
+            now=reply_now,
         )
         await unit_of_work.threads.add_message(reply_message)
         await unit_of_work.work_feed.append(
@@ -642,10 +1100,69 @@ class ThreadService:
                 disposition=routing.disposition.value,
                 suggestion_count=0,
             ),
-            occurred_at=now,
+            occurred_at=reply_now,
             event_id=self._new_id(),
         )
         return reply_message
+
+    async def _stream_conversational_turn(
+        self,
+        actor: AuthenticatedActor,
+        thread: InvestigationThread,
+        content: str,
+        routing: RoutingResult,
+    ) -> AsyncIterator[ThreadStreamEvent]:
+        """Streams a Conversational reply with no transaction open.
+
+        Yields `ThreadStreamDelta` events as the model produces them, then
+        exactly one terminal event: `ThreadStreamMessage` on success (the
+        reply persisted in its own short transaction, opened only after the
+        model call has finished) or `ThreadStreamError` if the model failed
+        after streaming had already begun — never silently retried; see
+        `RoutedModelClient.stream`.
+        """
+        reply_message_id = self._new_id()
+        chunks: list[str] = []
+        try:
+            async for chunk in self._conversational.reply_stream(
+                content, organization_id=actor.organization_id
+            ):
+                if not chunk:
+                    continue
+                chunks.append(chunk)
+                yield ThreadStreamDelta(message_id=reply_message_id, text=chunk)
+        except Exception as error:  # noqa: BLE001 - surfaced as a typed terminal event
+            yield ThreadStreamError(message=str(error))
+            return
+
+        # The turn-start `now` is stale by the time streaming finishes -- a
+        # reply stamped with it can tie (or even precede) the question it
+        # answers once the DB's tiebreak falls back to a random message id.
+        reply_now = self._now()
+        reply_message = ThreadMessage.create(
+            message_id=reply_message_id,
+            thread_id=thread.thread_id,
+            organization_id=thread.organization_id,
+            author_id=None,
+            kind=ThreadMessageKind.ASSISTANT_REPLY,
+            content="".join(chunks),
+            now=reply_now,
+        )
+        async with self._uow(actor) as unit_of_work:
+            await unit_of_work.threads.add_message(reply_message)
+            await unit_of_work.work_feed.append(
+                organization_id=actor.organization_id,
+                thread_id=thread.thread_id,
+                kind=WorkFeedEventKind.ROUTING_CLARIFICATION,
+                payload=RoutingEventPayload(
+                    disposition=routing.disposition.value,
+                    suggestion_count=0,
+                ),
+                occurred_at=reply_now,
+                event_id=self._new_id(),
+            )
+            await unit_of_work.commit()
+        yield ThreadStreamMessage(message=reply_message)
 
     def _router_messages(
         self,

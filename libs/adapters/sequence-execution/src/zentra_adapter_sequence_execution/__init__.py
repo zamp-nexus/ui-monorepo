@@ -1,4 +1,4 @@
-"""ZentraOS chDB-backed Sequence Step execution adapter"""
+"""Nexus chDB-backed Sequence Step execution adapter"""
 
 from .chdb_execution import ChdbSequenceExecutionPort, RawTableLookup
 from .lambda_handler import build_handler

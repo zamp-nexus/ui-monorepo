@@ -33,7 +33,7 @@ fails *after* a successful sign-in and looks like a Clerk problem.
 
 Both files are gitignored.
 
-`apps/zentra-os/.env.local`:
+`apps/nexus/.env.local`:
 
 ```bash
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -94,7 +94,7 @@ This is the step with no equivalent in Clerk, and the one that fails silently.
 | `identity_subjects` | Clerk user → `users.user_id` |
 
 Without them the browser signs in cleanly and the app shows *"This organization
-is not bound to a ZentraOS tenant."*
+is not bound to a Nexus tenant."*
 
 ```bash
 uv run python tools/evals/bind_clerk_identity.py \
@@ -125,7 +125,7 @@ combination that reaches the publish path.
 | "Setup required. Add `VITE_CLERK_PUBLISHABLE_KEY`" | key missing, or Vite started before `.env.local` existed — restart the dev server, it does not hot-reload env |
 | "Clerk issuer is not configured" | `CLERK_ISSUER` unset, or the API started before it was set — restart it |
 | "An active Clerk organization is required" | organizations disabled, or no org active in the session |
-| "This organization is not bound to a ZentraOS tenant" | step 4 not run |
+| "This organization is not bound to a Nexus tenant" | step 4 not run |
 | "Failed to fetch" | the API is down or on another port; check `curl localhost:8000/health/live` |
 | 401 on every request, log says `MissingRequiredClaimError: "aud"` | `CLERK_AUDIENCE` holds a value the token does not carry. Blank is handled — it means unconfigured |
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from contextlib import AbstractAsyncContextManager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -31,6 +31,7 @@ from zentra_application_investigation.thread_dto import (
     ThreadCursorError,
     ThreadNotFoundError,
     ThreadSlice,
+    ThreadStreamSnapshot,
     ThreadSummary,
 )
 from zentra_application_investigation.thread_routing import deterministic_thread_title
@@ -242,7 +243,7 @@ class UnitOfWorkFactory:
         self.repository = repository
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[UnitOfWork]:
         return UnitOfWork(self.repository)
 
@@ -261,10 +262,10 @@ class FakeIntake:
         self,
         question: str,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         data_connection_id: UUID | None = None,
     ) -> RoutingResult:
-        del tenant_id, data_connection_id
+        del organization_id, data_connection_id
         normalized = question.casefold()
         if "hello" in normalized or "thanks" in normalized:
             return RoutingResult(
@@ -292,15 +293,37 @@ class FakeIntake:
 
 
 class FakeConversational:
-    async def reply(self, message: str, *, tenant_id: UUID) -> str:
-        del message, tenant_id
+    async def reply(self, message: str, *, organization_id: UUID) -> str:
+        del message, organization_id
         return "Thanks for reaching out!"
+
+    async def reply_stream(self, message: str, *, organization_id: UUID):
+        del message, organization_id
+        for chunk in ("Thanks ", "for ", "reaching out!"):
+            yield chunk
+
+
+class FakeAuditWriter:
+    async def flush(self, *, organization_id: UUID, investigation_id: UUID) -> bool:
+        del organization_id, investigation_id
+        return True
+
+
+class RecordingAuditWriter(FakeAuditWriter):
+    def __init__(self) -> None:
+        self.flushed: list[tuple[UUID, UUID]] = []
+
+    async def flush(self, *, organization_id: UUID, investigation_id: UUID) -> bool:
+        self.flushed.append((organization_id, investigation_id))
+        return await super().flush(
+            organization_id=organization_id, investigation_id=investigation_id
+        )
 
 
 def actor(role: Role = Role.MEMBER) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=uuid4(),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         role=role,
         trace_id=uuid4(),
         span_id=uuid4(),
@@ -311,7 +334,7 @@ def repository() -> Repository:
     value = Repository()
     value.groups[GROUP_ID] = Group.create(
         group_id=GROUP_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         name="Finance",
         now=NOW,
     )
@@ -323,6 +346,7 @@ def service(value: Repository) -> ThreadService:
         unit_of_work_factory=UnitOfWorkFactory(value),
         intake=FakeIntake(),
         conversational=FakeConversational(),
+        audit_writer=FakeAuditWriter(),
         now=lambda: NOW,
         new_id=uuid4,
     )
@@ -371,6 +395,68 @@ async def test_a_resolved_first_message_activates_the_thread_and_queues_work() -
     )
     assert len(value.jobs) == 1
     assert value.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_a_resolved_message_flushes_audit_delivery_for_its_investigation() -> None:
+    """Regression: Thread-created Investigations used to enqueue outbox
+    events with no writer wired to flush them, so their audit delivery sat
+    `pending` forever -- `ThreadService` must flush the same way
+    `InvestigationService` always has."""
+    value = repository()
+    audit_writer = RecordingAuditWriter()
+    threads = ThreadService(
+        unit_of_work_factory=UnitOfWorkFactory(value),
+        intake=FakeIntake(),
+        conversational=FakeConversational(),
+        audit_writer=audit_writer,
+        now=lambda: NOW,
+        new_id=uuid4,
+    )
+    acting_actor = actor()
+
+    detail = await threads.create(
+        acting_actor,
+        project_id=GROUP_ID,
+        content="Why did EU refunds increase from June to July 2026?",
+    )
+
+    assert audit_writer.flushed == [
+        (acting_actor.organization_id, detail.investigation_id)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_streamed_reply_is_ordered_after_the_question_it_answers() -> None:
+    """Regression: `_stream_conversational_turn` used to stamp a streamed
+    reply with the turn's start time, not when it actually finished, so a
+    reply could tie (or precede) the question it answers once the store's
+    tiebreak fell back to a value with no chronological meaning."""
+    value = repository()
+    ticks = iter([NOW, NOW + timedelta(seconds=5)])
+    threads = ThreadService(
+        unit_of_work_factory=UnitOfWorkFactory(value),
+        intake=FakeIntake(),
+        conversational=FakeConversational(),
+        audit_writer=FakeAuditWriter(),
+        now=lambda: next(ticks),
+        new_id=uuid4,
+    )
+
+    events = [
+        event
+        async for event in threads.create_streaming(
+            actor(), project_id=GROUP_ID, content="hello there"
+        )
+    ]
+
+    snapshot = next(
+        event for event in events if isinstance(event, ThreadStreamSnapshot)
+    )
+    question, reply = snapshot.detail.messages
+    assert question.kind is ThreadMessageKind.USER_QUESTION
+    assert reply.kind is ThreadMessageKind.ASSISTANT_REPLY
+    assert reply.created_at > question.created_at
 
 
 @pytest.mark.asyncio

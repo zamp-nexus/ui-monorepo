@@ -13,10 +13,10 @@ implementation: current
 priority: high
 tags: [user, workflow, frontend]
 related: ["[[Overview MOC]]", "[[Forensic Observatory]]", "[[Investigation API]]"]
-repo_path: apps/zentra-os/src/app/app.tsx
+repo_path: apps/nexus/src/app/app.tsx
 code_refs:
-  - apps/zentra-os/src/app/app.tsx
-  - apps/zentra-os/src/app/app.spec.tsx
+  - apps/nexus/src/app/app.tsx
+  - apps/nexus/src/app/app.spec.tsx
 ---
 
 # User Workflows

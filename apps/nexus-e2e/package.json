@@ -1,0 +1,19 @@
+{
+  "name": "nexus-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "tags": [
+      "layer:e2e",
+      "platform:any",
+      "scope:core"
+    ],
+    "implicitDependencies": [
+      "nexus"
+    ],
+    "name": "nexus-e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1"
+  }
+}

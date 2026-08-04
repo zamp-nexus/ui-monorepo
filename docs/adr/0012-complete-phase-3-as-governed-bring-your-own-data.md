@@ -349,7 +349,7 @@ both weaken privacy and evidence lineage.
 Mutable status and the one-month sequence live in
 [[Phase 3 - Governed Bring Your Own Data]]. Vocabulary lives in the
 [Data Source context](../../libs/domain/data-source/CONTEXT.md), [Agent Execution
-context](../../libs/domain/agent-execution/CONTEXT.md), and [ZentraOS domain
+context](../../libs/domain/agent-execution/CONTEXT.md), and [Nexus domain
 context](../../libs/domain/CONTEXT.md).
 
 Parent: [[Decisions MOC]]

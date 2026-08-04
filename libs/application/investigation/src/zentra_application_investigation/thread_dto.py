@@ -14,6 +14,7 @@ from zentra_domain_investigation import (
     Finding,
     HumanApproval,
     InvestigationStatus,
+    ThreadMessage,
     ThreadMessageKind,
     ThreadStatus,
 )
@@ -160,6 +161,58 @@ class ThreadDetail:
     can_cancel: bool = False
     can_retry: bool = False
     usage: UsageSummary = UsageSummary()
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadStreamRouting:
+    """First event of a streaming turn: routing has resolved, the user's
+    message is durably persisted. Everything a caller needs to seed a cache
+    immediately, before any reply text exists."""
+
+    thread_id: UUID
+    message_id: UUID
+    investigation_id: UUID | None
+    routing: RoutingResult
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadStreamDelta:
+    """One incremental chunk of a conversational reply in progress."""
+
+    message_id: UUID
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadStreamMessage:
+    """The conversational reply, fully generated and persisted."""
+
+    message: ThreadMessage
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadStreamSnapshot:
+    """Terminal event: the same detail a non-streaming call returns outright."""
+
+    detail: ThreadDetail
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadStreamError:
+    """Terminal event: the reply failed after streaming had already begun.
+
+    Never retried onto another provider once emitted -- see
+    `RoutedModelClient.stream`'s docstring for why a mid-stream failure is a
+    clean error rather than a silent retry.
+    """
+
+    message: str
+
+
+ThreadStreamEvent = (
+    ThreadStreamRouting | ThreadStreamDelta | ThreadStreamMessage | ThreadStreamSnapshot
+    | ThreadStreamError
+)
 
 
 @dataclass(frozen=True, slots=True)

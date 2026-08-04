@@ -19,7 +19,7 @@ code_refs:
   - libs/adapters/langgraph/src/zentra_adapter_langgraph/agents/insight.py
   - libs/application/investigation/src/zentra_application_investigation/service.py
   - libs/adapters/clickhouse/src/zentra_adapter_clickhouse/audit.py
-  - apps/zentra-os/src/app/app.tsx
+  - apps/nexus/src/app/app.tsx
 ---
 
 # Phase 2 - Insight Auditor and Replay

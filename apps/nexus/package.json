@@ -1,0 +1,64 @@
+{
+  "name": "@open-zentra/nexus",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "nexus",
+    "tags": [
+      "layer:app",
+      "platform:react",
+      "scope:core"
+    ],
+    "targets": {
+      "build": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      },
+      "serve": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      },
+      "dev": {
+        "syncGenerators": [
+          "@juristr/nx-tailwind-sync:source-directives"
+        ]
+      },
+      "build-e2e": {
+        "executor": "nx:run-commands",
+        "outputs": [
+          "{projectRoot}/dist-e2e"
+        ],
+        "cache": true,
+        "options": {
+          "command": "npx vite build --mode e2e --outDir dist-e2e",
+          "cwd": "apps/nexus"
+        }
+      },
+      "preview-e2e": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build-e2e"
+        ],
+        "cache": false,
+        "options": {
+          "command": "npx vite preview --mode e2e --outDir dist-e2e --port 4200 --strictPort",
+          "cwd": "apps/nexus"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@assistant-ui/react": "^0.15.4",
+    "@clerk/clerk-react": "^5.61.9",
+    "@open-zentra/foundation-auth": "^0.0.1",
+    "@open-zentra/foundation-authz": "^0.0.1",
+    "@open-zentra/foundation-design-system": "^0.0.1",
+    "@open-zentra/foundation-icons": "^0.0.1",
+    "@tanstack/react-query": "^5.101.4",
+    "@xyflow/react": "^12.11.2",
+    "motion": "^12.43.0",
+    "react-router-dom": "^7.18.1"
+  }
+}

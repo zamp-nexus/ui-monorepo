@@ -1,4 +1,4 @@
-"""ZentraOS Postgres control-plane adapter"""
+"""Nexus Postgres control-plane adapter"""
 
 from .agent_access import PostgresAgentAccessRepository
 from .connector import PostgresDataSourceRepository
@@ -9,6 +9,7 @@ from .connector_catalog import (
 )
 from .database import Database
 from .execution_job import PostgresExecutionJobRepository
+from .notify import listen as listen_for_notify
 from .identity import (
     IdentityContext,
     IdentityNotBoundError,
@@ -46,6 +47,7 @@ from .workspace import (
 
 __all__ = [
     "Database",
+    "listen_for_notify",
     "IdentityContext",
     "IdentityNotBoundError",
     "ConcurrentInvestigationUpdateError",

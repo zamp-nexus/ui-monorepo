@@ -97,4 +97,4 @@ def test_the_join_graph_endpoint_exists(committed) -> None:
 
 
 def test_the_contract_declares_its_own_title(committed) -> None:
-    assert committed["info"]["title"] == "ZentraOS Connector API"
+    assert committed["info"]["title"] == "Nexus Connector API"

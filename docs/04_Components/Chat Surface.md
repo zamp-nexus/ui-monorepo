@@ -15,19 +15,19 @@ tags: [component, frontend, react, chat, sse, generative-ui]
 aliases: [chat, thread surface]
 related: ["[[Components MOC]]", "[[Forensic Observatory]]", "[[Investigation Thread API]]", "[[Visualization and Work Feed API]]", "[[Workspace Organization API]]"]
 depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]"]
-repo_path: apps/zentra-os/src/app/pages/chat
+repo_path: apps/nexus/src/app/pages/chat
 code_refs:
-  - apps/zentra-os/src/app/pages/chat/chat-page.tsx
-  - apps/zentra-os/src/app/pages/chat/api.ts
-  - apps/zentra-os/src/app/pages/chat/use-thread-events.ts
-  - apps/zentra-os/src/app/pages/chat/use-active-group.ts
-  - apps/zentra-os/src/app/pages/chat/activity-inspector.tsx
-  - apps/zentra-os/src/app/pages/chat/use-resizable-panel.ts
-  - apps/zentra-os/src/app/pages/chat/composer-commands.ts
-  - apps/zentra-os/src/app/pages/chat/visualization-answer.tsx
-  - apps/zentra-os/src/app/pages/chat/brief-answer.tsx
-  - apps/zentra-os/src/app/types/thread.ts
-  - apps/zentra-os/src/app/pages/chat/chat.spec.tsx
+  - apps/nexus/src/app/pages/chat/chat-page.tsx
+  - apps/nexus/src/app/pages/chat/api.ts
+  - apps/nexus/src/app/pages/chat/use-thread-events.ts
+  - apps/nexus/src/app/pages/chat/use-active-group.ts
+  - apps/nexus/src/app/pages/chat/activity-inspector.tsx
+  - apps/nexus/src/app/pages/chat/use-resizable-panel.ts
+  - apps/nexus/src/app/pages/chat/composer-commands.ts
+  - apps/nexus/src/app/pages/chat/visualization-answer.tsx
+  - apps/nexus/src/app/pages/chat/brief-answer.tsx
+  - apps/nexus/src/app/types/thread.ts
+  - apps/nexus/src/app/pages/chat/chat.spec.tsx
 ---
 
 # Chat Surface

@@ -91,7 +91,7 @@ class FileLandingZone(Protocol):
     """Where an uploaded file becomes a queryable table.
 
     Separate from ``SourceConnector`` because landing is a write and everything
-    else here is a read. The landing zone is ZentraOS-owned storage; the
+    else here is a read. The landing zone is Nexus-owned storage; the
     connector reads customer-owned storage. Conflating them would blur the one
     boundary that matters most in this design.
     """

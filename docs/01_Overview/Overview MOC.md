@@ -11,7 +11,7 @@ reviewed: 2026-08-01
 confidence: verified
 priority: critical
 tags: [overview, index]
-related: ["[[ZentraOS Knowledge Base]]"]
+related: ["[[Nexus Knowledge Base]]"]
 repo_path: docs/01_Overview
 ---
 
@@ -25,8 +25,8 @@ repo_path: docs/01_Overview
 - [[Phase 3 - Governed Bring Your Own Data]]
 - [[Documentation System Specification]]
 
-Use this hub to answer what ZentraOS is, what exists today, and where a new
+Use this hub to answer what Nexus is, what exists today, and where a new
 engineer should go next.
 
-Parent: [[ZentraOS Knowledge Base]]
+Parent: [[Nexus Knowledge Base]]
 - [[Phase 2 Completion Evidence]] — per-criterion certification evidence for #27.

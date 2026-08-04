@@ -2,16 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `apps/zentra-os`'s chat surface work against the API Plan 2 shipped (it currently calls routes that no longer exist), then give it the behavior ADR-0028/0029/0032/0033 promised: assistant replies rendered correctly, a composer that's never disabled by an in-flight Analysis Run, `#`/`@`/`/` power-user commands, a resizable Activity Inspector instead of always-visible agent chatter, and Chat as the primary surface instead of the Investigation launcher.
+**Goal:** Make `apps/nexus`'s chat surface work against the API Plan 2 shipped (it currently calls routes that no longer exist), then give it the behavior ADR-0028/0029/0032/0033 promised: assistant replies rendered correctly, a composer that's never disabled by an in-flight Analysis Run, `#`/`@`/`/` power-user commands, a resizable Activity Inspector instead of always-visible agent chatter, and Chat as the primary surface instead of the Investigation launcher.
 
-**Architecture:** All changes live in `apps/zentra-os/src/app/pages/chat` and `apps/zentra-os/src/app/types/thread.ts`, plus a small routing change in `app.tsx`/`nav-items.ts`. No visual redesign of colors/spacing/typography — this plan makes the surface functionally correct and structurally complete per the ADRs; pixel-perfect polish stays parked (tracked separately).
+**Architecture:** All changes live in `apps/nexus/src/app/pages/chat` and `apps/nexus/src/app/types/thread.ts`, plus a small routing change in `app.tsx`/`nav-items.ts`. No visual redesign of colors/spacing/typography — this plan makes the surface functionally correct and structurally complete per the ADRs; pixel-perfect polish stays parked (tracked separately).
 
 **Tech Stack:** React 19, TanStack Query, `@open-zentra/foundation-design-system`, Vite/Vitest. No new dependencies.
 
 ## Global Constraints
 
 - No back-compat: the old `/v1/projects/{id}/threads` and `/v1/threads/{id}/...` paths are gone (Plan 2, PR #98) — every call site is updated in place, none left dual-pathed.
-- Every task must be verified in a real browser (`pnpm nx serve zentra-os` or the project's actual serve target — confirm via `pnpm nx show project zentra-os` first) against a running `apps/api` + Postgres, not just unit tests. Screenshot or describe what you actually saw; "the code should do X" is not verification.
+- Every task must be verified in a real browser (`pnpm nx serve nexus` or the project's actual serve target — confirm via `pnpm nx show project nexus` first) against a running `apps/api` + Postgres, not just unit tests. Screenshot or describe what you actually saw; "the code should do X" is not verification.
 - `ThreadInvestigation`/`Investigation`/`ThreadService` vocabulary in the API and application layer is unchanged (Plans 1-3 deferred that rename) — this plan does not rename `investigation_id`, `ThreadInvestigation`, etc. in the frontend types either, even though the user-facing copy around them changes. Match the existing convention in `thread.ts`'s own docstring: the type mirrors the API contract exactly.
 - Every new/changed component must keep the existing accessibility patterns (`aria-label`, `aria-live`, `role="alert"`) already present in the files it touches.
 
@@ -20,12 +20,12 @@
 ### Task 1: Fix the broken API client and Group-only navigation
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/pages/chat/api.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/use-active-project.ts` → rename to `use-active-group.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/use-thread-events.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-page.tsx`
-- Modify: `apps/zentra-os/src/app/types/thread.ts`
-- Test: `apps/zentra-os/src/app/pages/chat/chat.spec.tsx`, `apps/zentra-os/src/app/pages/chat/use-thread-events.spec.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/api.ts`
+- Modify: `apps/nexus/src/app/pages/chat/use-active-project.ts` → rename to `use-active-group.ts`
+- Modify: `apps/nexus/src/app/pages/chat/use-thread-events.ts`
+- Modify: `apps/nexus/src/app/pages/chat/chat-page.tsx`
+- Modify: `apps/nexus/src/app/types/thread.ts`
+- Test: `apps/nexus/src/app/pages/chat/chat.spec.tsx`, `apps/nexus/src/app/pages/chat/use-thread-events.spec.tsx`
 
 **Interfaces:**
 - Produces: `useActiveGroup(getToken)` — same return shape as the old `useActiveProject` (a React Query result resolving to a `groupId: string`), consumed by `chat-page.tsx` exactly where `useActiveProject`/`projectId` are used today.
@@ -114,19 +114,19 @@ export const useActiveGroup = (getToken: TokenSource) =>
   });
 ```
 
-- [ ] **Step 3: Update `chat-page.tsx`**'s imports and call sites: `useActiveProject`→`useActiveGroup`, `project`→`group`, `projectId`→`groupId`, `listThreads`→`listChats`, `createThread`→`createChat`, `getThread`→`getChat`, `archiveThread`/`restoreThread`/`deleteThread`→`archiveChat`/`restoreChat`/`deleteChat` (wherever those three are used — check `chat-history.tsx` too, `grep -rn "archiveThread\|restoreThread\|deleteThread" apps/zentra-os/src` first to find every call site).
+- [ ] **Step 3: Update `chat-page.tsx`**'s imports and call sites: `useActiveProject`→`useActiveGroup`, `project`→`group`, `projectId`→`groupId`, `listThreads`→`listChats`, `createThread`→`createChat`, `getThread`→`getChat`, `archiveThread`/`restoreThread`/`deleteThread`→`archiveChat`/`restoreChat`/`deleteChat` (wherever those three are used — check `chat-history.tsx` too, `grep -rn "archiveThread\|restoreThread\|deleteThread" apps/nexus/src` first to find every call site).
 
 - [ ] **Step 4: Fix the SSE URL in `use-thread-events.ts`**: `` `${apiUrl}/v1/threads/${threadId}/events?after=${sequence}` `` → `` `${apiUrl}/v1/chats/${threadId}/events?after=${sequence}` ``.
 
 - [ ] **Step 5: Update `types/thread.ts`**: delete the `Project` interface (nothing constructs one anymore); update `Thread.project_id`'s doc comment if it references Project — check whether the field name itself should stay `project_id` (yes: the API's own `ThreadDetail.project_id`/`ThreadSummary.project_id` fields are unchanged, per this plan's Global Constraints, so the frontend type must match the wire shape exactly, stale name and all).
 
-- [ ] **Step 6: Update tests.** `chat.spec.tsx` and `use-thread-events.spec.tsx` reference the old function/hook names and URL paths — update every one (`grep -n "useActiveProject\|listThreads\|createThread\|getThread\|/v1/projects\|/v1/threads" apps/zentra-os/src/app/pages/chat/*.spec.tsx` first to find them all).
+- [ ] **Step 6: Update tests.** `chat.spec.tsx` and `use-thread-events.spec.tsx` reference the old function/hook names and URL paths — update every one (`grep -n "useActiveProject\|listThreads\|createThread\|getThread\|/v1/projects\|/v1/threads" apps/nexus/src/app/pages/chat/*.spec.tsx` first to find them all).
 
 - [ ] **Step 7: Run tests and start the dev server to confirm the chat page loads without 404s**
 
 ```bash
-pnpm nx test zentra-os
-pnpm nx serve zentra-os &  # or the project's actual serve target
+pnpm nx test nexus
+pnpm nx serve nexus &  # or the project's actual serve target
 ```
 
 Open the chat page in a browser, send a message, confirm it reaches a real response (requires `apps/api` running against a migrated Postgres — see Plan 1/2's Docker setup). Confirm the network tab shows `/v1/groups/*/chats`/`/v1/chats/*` calls, not 404s against the old paths.
@@ -134,8 +134,8 @@ Open the chat page in a browser, send a message, confirm it reaches a real respo
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "fix(zentra-os): point the chat surface at the renamed Chat Session API"
+git add apps/nexus
+git commit -m "fix(nexus): point the chat surface at the renamed Chat Session API"
 ```
 
 ---
@@ -143,10 +143,10 @@ git commit -m "fix(zentra-os): point the chat surface at the renamed Chat Sessio
 ### Task 2: Render assistant replies correctly
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/pages/chat/to-chat-message.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-message-row.tsx`
-- Modify: `apps/zentra-os/src/app/types/thread.ts`
-- Test: a new `apps/zentra-os/src/app/pages/chat/to-chat-message.spec.ts` if none exists (`find apps/zentra-os/src/app/pages/chat -iname "to-chat-message*"` first — there may already be coverage inside `chat.spec.tsx`; check before adding a new file)
+- Modify: `apps/nexus/src/app/pages/chat/to-chat-message.ts`
+- Modify: `apps/nexus/src/app/pages/chat/chat-message-row.tsx`
+- Modify: `apps/nexus/src/app/types/thread.ts`
+- Test: a new `apps/nexus/src/app/pages/chat/to-chat-message.spec.ts` if none exists (`find apps/nexus/src/app/pages/chat -iname "to-chat-message*"` first — there may already be coverage inside `chat.spec.tsx`; check before adding a new file)
 
 **Interfaces:**
 - No new exported functions — `toTimeline`'s existing behavior gains a case, `ChatMessageRow` gains a rendering branch for one more `kind` value.
@@ -176,8 +176,8 @@ git commit -m "fix(zentra-os): point the chat surface at the renamed Chat Sessio
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "fix(zentra-os): render assistant_reply messages and fix Investigation pairing"
+git add apps/nexus
+git commit -m "fix(nexus): render assistant_reply messages and fix Investigation pairing"
 ```
 
 ---
@@ -185,8 +185,8 @@ git commit -m "fix(zentra-os): render assistant_reply messages and fix Investiga
 ### Task 3: Composer is never disabled by an in-flight Analysis Run
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-composer.tsx`
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-page.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/chat-composer.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/chat-page.tsx`
 
 **Interfaces:** none new — this is a copy/behavior fix, not a shape change.
 
@@ -203,8 +203,8 @@ git commit -m "fix(zentra-os): render assistant_reply messages and fix Investiga
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "fix(zentra-os): remove the stale 'waiting for investigation' composer copy"
+git add apps/nexus
+git commit -m "fix(nexus): remove the stale 'waiting for investigation' composer copy"
 ```
 
 ---
@@ -212,11 +212,11 @@ git commit -m "fix(zentra-os): remove the stale 'waiting for investigation' comp
 ### Task 4: Composer power-user commands
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-composer.tsx`
-- Create: `apps/zentra-os/src/app/pages/chat/composer-commands.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-page.tsx`
-- Modify: `apps/zentra-os/src/app/pages/chat/api.ts`
-- Test: `apps/zentra-os/src/app/pages/chat/composer-commands.spec.ts`
+- Modify: `apps/nexus/src/app/pages/chat/chat-composer.tsx`
+- Create: `apps/nexus/src/app/pages/chat/composer-commands.ts`
+- Modify: `apps/nexus/src/app/pages/chat/chat-page.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/api.ts`
+- Test: `apps/nexus/src/app/pages/chat/composer-commands.spec.ts`
 
 **Interfaces:**
 - Produces: `parseComposerCommands(draft: string): { text: string; datasetHint: string | null; mentions: readonly string[]; skillHint: string | null }` — pure function, no I/O. Consumed by `chat-page.tsx`'s `submit`.
@@ -283,8 +283,8 @@ This requires a new backend route (`PATCH /v1/chats/{chat_id}/dataset` or simila
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/zentra-os apps/api  # if Step 3 touched the backend
-git commit -m "feat(zentra-os): composer #dataset/@user//skill commands (ADR-0032)"
+git add apps/nexus apps/api  # if Step 3 touched the backend
+git commit -m "feat(nexus): composer #dataset/@user//skill commands (ADR-0032)"
 ```
 
 ---
@@ -292,14 +292,14 @@ git commit -m "feat(zentra-os): composer #dataset/@user//skill commands (ADR-003
 ### Task 5: Resizable Activity Inspector
 
 **Files:**
-- Create: `apps/zentra-os/src/app/pages/chat/activity-inspector.tsx`
-- Create: `apps/zentra-os/src/app/pages/chat/use-resizable-panel.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/chat-page.tsx`
-- Modify: `apps/zentra-os/src/app/pages/chat/agent-progress.tsx` (only its export surface — its `progressLines` logic is unchanged and reused)
-- Test: `apps/zentra-os/src/app/pages/chat/use-resizable-panel.spec.ts`, extend `chat.spec.tsx`
+- Create: `apps/nexus/src/app/pages/chat/activity-inspector.tsx`
+- Create: `apps/nexus/src/app/pages/chat/use-resizable-panel.ts`
+- Modify: `apps/nexus/src/app/pages/chat/chat-page.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/agent-progress.tsx` (only its export surface — its `progressLines` logic is unchanged and reused)
+- Test: `apps/nexus/src/app/pages/chat/use-resizable-panel.spec.ts`, extend `chat.spec.tsx`
 
 **Interfaces:**
-- Produces: `<ActivityInspector events={...} status={...} agents={...} open={...} onClose={...} />` (desktop: resizable right panel; mobile: bottom drawer, same props, different chrome via a CSS breakpoint or a `useMediaQuery`-style hook if this codebase already has one — `grep -rn "useMediaQuery\|matchMedia" apps/zentra-os/src` first).
+- Produces: `<ActivityInspector events={...} status={...} agents={...} open={...} onClose={...} />` (desktop: resizable right panel; mobile: bottom drawer, same props, different chrome via a CSS breakpoint or a `useMediaQuery`-style hook if this codebase already has one — `grep -rn "useMediaQuery\|matchMedia" apps/nexus/src` first).
 - `useResizablePanel(options: { defaultWidth: number; minWidth: number; minRemainingWidth: number })` → `{ width: number; onDragStart: (event: PointerEvent) => void }`, a small generic hook with no chat-specific knowledge, so it is reusable if another resizable panel appears later.
 
 Per ADR-0029: everything the Activity Feed carries stays hidden behind an opt-in panel by default; a pending Human Approval is the one exception and stays inline (already true — `InvestigationControls` is unchanged by this task). `agent-progress.tsx` today renders `AgentProgress` inline in the main timeline, always visible — this task moves it into the new panel instead, closed by default, with a toggle to open it.
@@ -435,7 +435,7 @@ const InspectorHeader = ({ onClose }: { readonly onClose: () => void }) => (
 );
 ```
 
-Verify `Icon` actually exports an `"x"` name and `IconButton` accepts `onClick` before using them as-is — check `@open-zentra/foundation-icons`'s icon list and an existing `IconButton onClick` usage elsewhere in this codebase first (`grep -rn "IconButton" apps/zentra-os/src | grep onClick`).
+Verify `Icon` actually exports an `"x"` name and `IconButton` accepts `onClick` before using them as-is — check `@open-zentra/foundation-icons`'s icon list and an existing `IconButton onClick` usage elsewhere in this codebase first (`grep -rn "IconButton" apps/nexus/src | grep onClick`).
 
 - [ ] **Step 4: Wire it into `chat-page.tsx`.** Add `const [inspectorOpen, setInspectorOpen] = useState(false)`. Remove the inline `<AgentProgress events={feed.events} status={feed.status} agents={agents.data ?? []} />` from the timeline `.map()` block entirely. Add a toggle button in the page header (near the title) that opens the inspector, and render `<ActivityInspector events={feed.events} status={feed.status} agents={agents.data ?? []} open={inspectorOpen} onClose={() => setInspectorOpen(false)} />` as a sibling to the main `<section>`, inside the existing `<div className="flex h-full min-h-0">` wrapper.
 
@@ -444,8 +444,8 @@ Verify `Icon` actually exports an `"x"` name and `IconButton` accepts `onClick` 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "feat(zentra-os): resizable Activity Inspector, hidden by default (ADR-0029)"
+git add apps/nexus
+git commit -m "feat(nexus): resizable Activity Inspector, hidden by default (ADR-0029)"
 ```
 
 ---
@@ -453,10 +453,10 @@ git commit -m "feat(zentra-os): resizable Activity Inspector, hidden by default 
 ### Task 6: Chat becomes the primary surface
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/app.tsx`
-- Modify: `apps/zentra-os/src/app/shell/nav-items.ts`
-- Modify: `apps/zentra-os/src/app/pages/chat/answer-row.tsx` (add a link out to Analysis Details)
-- Test: extend whatever test currently covers routing (`grep -rln "Launcher\|InvestigationWorkspace" apps/zentra-os/src/app/app.spec.tsx` — check if one exists first)
+- Modify: `apps/nexus/src/app/app.tsx`
+- Modify: `apps/nexus/src/app/shell/nav-items.ts`
+- Modify: `apps/nexus/src/app/pages/chat/answer-row.tsx` (add a link out to Analysis Details)
+- Test: extend whatever test currently covers routing (`grep -rln "Launcher\|InvestigationWorkspace" apps/nexus/src/app/app.spec.tsx` — check if one exists first)
 
 **Interfaces:** none new beyond a `analysisDetailsHref` (or equivalent) prop threaded from `chat-page.tsx` into `AnswerRow`, pointing at the existing `/investigations/:id` route.
 
@@ -476,7 +476,7 @@ Per ADR-0028/the original acceptance criteria: "no Investigation console as prim
 />
 ```
 
-Remove the now-redundant separate `/chat` route (or keep it as an alias redirecting to `/`, your call — check whether anything else in the codebase links to `/chat` by path string first: `grep -rn "'/chat'" apps/zentra-os/src`).
+Remove the now-redundant separate `/chat` route (or keep it as an alias redirecting to `/`, your call — check whether anything else in the codebase links to `/chat` by path string first: `grep -rn "'/chat'" apps/nexus/src`).
 
 - [ ] **Step 2: Update `nav-items.ts`.** Remove the standalone `Investigations` entry (or fold it into a less prominent position — this plan's call: remove it from the primary rail, since Chat is now `/` and the launcher is reachable via an Analysis Details link, not a top-level destination). Update the `Chat` item's `to` if it changed, and its `matches` array to cover `/investigations` for back-compat highlighting if a user lands there directly.
 
@@ -487,8 +487,8 @@ Remove the now-redundant separate `/chat` route (or keep it as an alias redirect
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "feat(zentra-os): make Chat the primary surface, Investigation launcher secondary"
+git add apps/nexus
+git commit -m "feat(nexus): make Chat the primary surface, Investigation launcher secondary"
 ```
 
 ---
@@ -496,7 +496,7 @@ git commit -m "feat(zentra-os): make Chat the primary surface, Investigation lau
 ### Task 7: Reskin the inline approval card's vocabulary
 
 **Files:**
-- Modify: `apps/zentra-os/src/app/pages/chat/investigation-controls.tsx`
+- Modify: `apps/nexus/src/app/pages/chat/investigation-controls.tsx`
 
 **Interfaces:** none — labels/copy only, no prop or behavior change.
 
@@ -509,8 +509,8 @@ git commit -m "feat(zentra-os): make Chat the primary surface, Investigation lau
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/zentra-os
-git commit -m "docs(zentra-os): Chat Session vocabulary in the inline approval card"
+git add apps/nexus
+git commit -m "docs(nexus): Chat Session vocabulary in the inline approval card"
 ```
 
 ---
@@ -518,8 +518,8 @@ git commit -m "docs(zentra-os): Chat Session vocabulary in the inline approval c
 ## Final Verification
 
 ```bash
-pnpm nx test zentra-os
-pnpm nx lint zentra-os
+pnpm nx test nexus
+pnpm nx lint nexus
 ```
 
 Then, with `apps/api` running against a freshly-migrated Postgres (`docker compose up -d --wait control-postgres`, `alembic upgrade head`) and the frontend dev server running:

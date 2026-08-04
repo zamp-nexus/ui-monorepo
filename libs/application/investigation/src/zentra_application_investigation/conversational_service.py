@@ -8,17 +8,32 @@ per-request state today.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from typing import Protocol
 from uuid import UUID
 
-from zentra_domain_agent_execution import AgentInput, AgentPort
+from zentra_domain_agent_execution import AgentInput, AgentOutput
+
+
+class _ConversationalAgent(Protocol):
+    """What this Service needs beyond the plain `AgentPort` shape.
+
+    `invoke_stream` is specific to the Conversational Agent, not a general
+    `AgentPort` method — every structured, tool-calling role never streams,
+    so generalizing it onto the shared port would be speculative for roles
+    that will never use it.
+    """
+
+    async def invoke(self, agent_input: AgentInput) -> AgentOutput: ...
+
+    def invoke_stream(self, agent_input: AgentInput) -> AsyncIterator[str]: ...
 
 
 class ConversationalService:
     def __init__(
         self,
         *,
-        agent_factory: Callable[[], AgentPort],
+        agent_factory: Callable[[], _ConversationalAgent],
         new_id: Callable[[], UUID],
     ) -> None:
         self._agent_factory = agent_factory
@@ -36,3 +51,16 @@ class ConversationalService:
             )
         )
         return str(output.fields["reply"])
+
+    async def reply_stream(
+        self, message: str, *, organization_id: UUID
+    ) -> AsyncIterator[str]:
+        agent = self._agent_factory()
+        async for chunk in agent.invoke_stream(
+            AgentInput(
+                investigation_id=self._new_id(),
+                organization_id=organization_id,
+                state={"message": message},
+            )
+        ):
+            yield chunk

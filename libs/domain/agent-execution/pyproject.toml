@@ -14,7 +14,7 @@ addopts = """
 [project]
 name = "zentra-domain-agent-execution"
 version = "1.0.0"
-description = "ZentraOS agent execution domain contract"
+description = "Nexus agent execution domain contract"
 requires-python = ">=3.13,<3.14"
 readme = 'README.md'
 dependencies = [

@@ -1,4 +1,4 @@
-# ZentraOS managed foundation
+# Nexus managed foundation
 
 This stack provisions the Phase 0 Neon control plane and ClickHouse Cloud audit
 service in US East. Terraform reads credentials from provider environment

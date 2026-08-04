@@ -55,7 +55,7 @@ class RegisterSourceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     credentials: SourceCredentialsRequest
     description: str | None = Field(default=None, max_length=1000)
-    #: Off by default. Enabling it stores raw field values in ZentraOS, which is
+    #: Off by default. Enabling it stores raw field values in Nexus, which is
     #: a materially different data posture, so it must be asked for explicitly.
     store_sample_values: bool = False
 

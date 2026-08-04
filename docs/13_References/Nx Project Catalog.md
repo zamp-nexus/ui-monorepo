@@ -22,12 +22,12 @@ code_refs: [nx.json, package.json]
 The verified pre-vault graph contained 31 software/workspace projects. Adding
 the governed `docs` project makes documentation the thirty-second Nx project.
 
-## ZentraOS product
+## Nexus product
 
 | Project | Root | Layer |
 | --- | --- | --- |
-| `zentra-os` | `apps/zentra-os` | React app |
-| `zentra-os-e2e` | `apps/zentra-os-e2e` | e2e |
+| `nexus` | `apps/nexus` | React app |
+| `nexus-e2e` | `apps/nexus-e2e` | e2e |
 | `api` | `apps/api` | Python service |
 | `investigation` | `libs/domain/investigation` | domain |
 | `agent-execution` | `libs/domain/agent-execution` | domain |

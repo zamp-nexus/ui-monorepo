@@ -1,6 +1,6 @@
 """Landing uploaded CSV and Parquet files as queryable ClickHouse tables.
 
-This is ZentraOS-owned storage holding raw customer data by design, and it is
+This is Nexus-owned storage holding raw customer data by design, and it is
 deliberately a *different database* from the audit ledger in ``audit.py``. The
 ledger's guarantee is that it contains no raw customer values; putting uploads
 beside it would make that guarantee a matter of which table you happened to read.
@@ -106,7 +106,7 @@ def _arrow_to_clickhouse(arrow_type) -> str:
 
 
 class ClickHouseLandingZone:
-    """A ``FileLandingZone`` backed by ZentraOS's own ClickHouse."""
+    """A ``FileLandingZone`` backed by Nexus's own ClickHouse."""
 
     def __init__(
         self,

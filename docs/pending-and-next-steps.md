@@ -164,10 +164,10 @@ Either adopt `.scratch/` or delete the references. Right now an agent reading
 
 - **Effort:** minutes · **Affects:** every future agent session
 
-### `zentra-os-e2e` fails locally for anyone with a Clerk key
+### `nexus-e2e` fails locally for anyone with a Clerk key
 
 The test asserts the "Connect Clerk" setup screen, which stops rendering once
-`apps/zentra-os/.env.local` supplies a publishable key. That file is gitignored,
+`apps/nexus/.env.local` supplies a publishable key. That file is gitignored,
 so CI is unaffected and passed — but every developer with a working local setup
 sees a red e2e run and has to remember it is a false alarm.
 
@@ -246,7 +246,7 @@ live model with known-answer cases, and mid-run pipeline recovery.
 
 Recorded so it is a decision rather than an oversight.
 
-- **The local `zentra-os-e2e` failure**, until someone is annoyed enough by it.
+- **The local `nexus-e2e` failure**, until someone is annoyed enough by it.
   CI passes; it is a false alarm with a known cause.
 - **Tests for `foundation-adapters` and `foundation-trackers`.** One source file
   each; there is nothing meaningful to assert yet.

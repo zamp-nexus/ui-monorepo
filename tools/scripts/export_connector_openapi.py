@@ -35,7 +35,7 @@ def connector_spec() -> dict:
     return {
         "openapi": spec["openapi"],
         "info": {
-            "title": "ZentraOS Connector API",
+            "title": "Nexus Connector API",
             "version": spec["info"]["version"],
             "description": (
                 "Data Sources, metadata harvest, and governed field Relations. "

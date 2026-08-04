@@ -22,7 +22,6 @@ from zentra_application_investigation import (
     ConflictError,
     InvestigationNotFoundError,
     PermissionDeniedError,
-    ScenarioUnavailableError,
 )
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_investigation import Tombstone
@@ -40,7 +39,6 @@ from .schemas import (
     DependencyStatus,
     EvidenceCitationResponse,
     EvidenceDeletionRequest,
-    InvestigationCreateRequest,
     InvestigationDetailResponse,
     ReadinessResponse,
     TombstoneResponse,
@@ -88,18 +86,13 @@ async def ready(request: Request) -> JSONResponse:
         name: DependencyStatus(status="ready" if healthy else "unavailable")
         for name, healthy in zip(names, checks, strict=True)
     }
-    thesys_configured = bool(request.app.state.settings.thesys_api_key)
-    statuses["thesys"] = DependencyStatus(
-        status="ready" if thesys_configured else "unavailable"
-    )
-    is_ready = all(checks) and thesys_configured
+    is_ready = all(checks)
     response = ReadinessResponse(
         status="ready" if is_ready else "degraded",
         dependencies=statuses,
         configuration={
             "clerk": bool(request.app.state.settings.clerk_issuer),
             "e2b": bool(request.app.state.settings.e2b_api_key),
-            "thesys": bool(request.app.state.settings.thesys_api_key),
             "telemetry_export": bool(
                 request.app.state.settings.otel_exporter_otlp_endpoint
             ),
@@ -171,38 +164,6 @@ async def catalog(
 @router.get("/v1/agents", response_model=list[PublicAgent])
 async def agents(request: Request, _: AuthenticatedRequest) -> list[PublicAgent]:
     return list(await request.app.state.dependencies.registry.public_agents())
-
-
-@router.post(
-    "/v1/investigations",
-    response_model=InvestigationDetailResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_investigation(
-    body: InvestigationCreateRequest,
-    request: Request,
-    resolved: AuthenticatedRequest,
-) -> InvestigationDetailResponse:
-    dependencies = request.app.state.dependencies
-    try:
-        detail = await dependencies.investigations.start(
-            resolved.actor,
-            question=body.question,
-            data_connection_id=await _active_connection(
-                dependencies, resolved.actor, requested=body.data_connection_id
-            ),
-        )
-    except ValueError as error:
-        # Normalisation refused the text — control characters, or nothing left
-        # after stripping. `ValueError` rather than a bespoke type because the
-        # domain's `normalize_message_content` is what raises it.
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    except PermissionDeniedError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ScenarioUnavailableError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
-
-    return InvestigationDetailResponse.from_detail(detail)
 
 
 @router.get(

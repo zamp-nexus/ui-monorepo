@@ -3204,7 +3204,7 @@
         "type": "string"
       },
       "SourceKind": {
-        "description": "How a Data Source came to exist.\n\nTwo kinds of one concept rather than two concepts. An uploaded file is a\nData Source backed by a ZentraOS-owned table, which is what gives harvest,\nprofiling and inference exactly one implementation \u2014 and what makes\nrelations *across* sources fall out rather than needing separate machinery.",
+        "description": "How a Data Source came to exist.\n\nTwo kinds of one concept rather than two concepts. An uploaded file is a\nData Source backed by a Nexus-owned table, which is what gives harvest,\nprofiling and inference exactly one implementation \u2014 and what makes\nrelations *across* sources fall out rather than needing separate machinery.",
         "enum": [
           "connected",
           "uploaded"
@@ -4621,7 +4621,7 @@
     }
   },
   "info": {
-    "title": "ZentraOS API",
+    "title": "Nexus API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -5105,9 +5105,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatResponse"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -7312,9 +7310,7 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatResponse"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"

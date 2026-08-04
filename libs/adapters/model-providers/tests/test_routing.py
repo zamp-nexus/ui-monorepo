@@ -75,6 +75,13 @@ def test_the_canonical_insight_role_routes_on_both_tiers() -> None:
         assert chain_for(tier, AgentRole.INSIGHT)
 
 
+def test_every_role_an_agent_is_wired_to_routes_on_the_tier_it_runs_at() -> None:
+    """A role an Agent declares but the router cannot resolve is a KeyError
+    waiting for the first request that reaches it — this is exactly how the
+    Conversational Agent's first release broke every non-analytical reply."""
+    assert chain_for(ModelTier.FREE, AgentRole.CONVERSATIONAL)
+
+
 def test_the_legacy_insight_role_has_no_chain() -> None:
     """Routing is a write path. Nothing new may run under the legacy value."""
     for tier in ModelTier:
