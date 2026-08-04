@@ -46,13 +46,13 @@ def _raw_request(
     *, operation_kind: str, operation_parameters: dict, raw_table_id: UUID
 ) -> SequenceStepExecutionRequest:
     return SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind=operation_kind,
         operation_parameters=operation_parameters,
         input_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=raw_table_id, kind="raw"
+            organization_id=TENANT_ID, reference_id=raw_table_id, kind="raw"
         ),
     )
 
@@ -65,8 +65,8 @@ class _StubRawTableLookup:
     def __init__(self, reference) -> None:
         self._reference = reference
 
-    async def resolve(self, *, tenant_id, sequence_id) -> object:
-        del tenant_id, sequence_id
+    async def resolve(self, *, organization_id, sequence_id) -> object:
+        del organization_id, sequence_id
         return self._reference
 
 
@@ -213,7 +213,7 @@ async def test_chained_steps_read_the_prior_prepared_table_not_the_raw_one(
     assert isinstance(first, SequenceStepExecutionResult)
 
     second_request = SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind="dedupe",
@@ -252,13 +252,13 @@ async def test_unknown_prepared_table_reference_is_a_typed_failure(
     port: ChdbSequenceExecutionPort,
 ) -> None:
     request = SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind="dedupe",
         operation_parameters={},
         input_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="prepared"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="prepared"
         ),
     )
     result = await port.apply_operation(request)

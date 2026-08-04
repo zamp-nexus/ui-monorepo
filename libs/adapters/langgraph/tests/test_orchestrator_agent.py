@@ -95,7 +95,7 @@ def agent(
 def agent_input() -> AgentInput:
     return AgentInput(
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         state={"question": QUESTION, "execution_id": str(ANALYSIS_RUN_ID)},
     )
 

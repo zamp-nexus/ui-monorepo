@@ -24,23 +24,23 @@ from zentra_api.settings import Settings
 
 OWNER = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000001"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000002"),
     email="owner@example.com",
-    tenant_name="Acme Europe",
+    organization_name="Acme Europe",
     role="owner",
 )
 OTHER_TENANT = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000009"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000008"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000008"),
     email="stranger@example.com",
-    tenant_name="Other Co",
+    organization_name="Other Co",
     role="owner",
 )
 VIEWER = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000003"),
-    tenant_id=OWNER.tenant_id,
+    organization_id=OWNER.organization_id,
     email="viewer@example.com",
-    tenant_name="Acme Europe",
+    organization_name="Acme Europe",
     role="viewer",
 )
 
@@ -115,38 +115,38 @@ ORDERS_TABLE = SourceTable(
 class SourceRepository:
     """Just enough of a data-source store for `_load_source` to find one."""
 
-    def __init__(self, *, tenant_id: UUID = OWNER.tenant_id) -> None:
-        self.tenant_id = tenant_id
+    def __init__(self, *, organization_id: UUID = OWNER.organization_id) -> None:
+        self.organization_id = organization_id
 
-    async def get(self, data_source_id: UUID, *, tenant_id: UUID):
-        if data_source_id != DATA_SOURCE_ID or tenant_id != self.tenant_id:
+    async def get(self, data_source_id: UUID, *, organization_id: UUID):
+        if data_source_id != DATA_SOURCE_ID or organization_id != self.organization_id:
             return None
 
         @dataclass
         class Source:
             data_source_id: UUID
-            tenant_id: UUID
+            organization_id: UUID
 
-        return Source(data_source_id=data_source_id, tenant_id=tenant_id)
+        return Source(data_source_id=data_source_id, organization_id=organization_id)
 
 
 class CatalogRepository:
     """Holds at most one Catalog Version, for the one data source above."""
 
     def __init__(
-        self, version: CatalogVersion | None, *, tenant_id: UUID = OWNER.tenant_id
+        self, version: CatalogVersion | None, *, organization_id: UUID = OWNER.organization_id
     ) -> None:
         self.version = version
-        self.tenant_id = tenant_id
+        self.organization_id = organization_id
 
-    async def latest_version(self, data_source_id: UUID, *, tenant_id: UUID):
-        if tenant_id != self.tenant_id or self.version is None:
+    async def latest_version(self, data_source_id: UUID, *, organization_id: UUID):
+        if organization_id != self.organization_id or self.version is None:
             return None
         if self.version.data_source_id != data_source_id:
             return None
         return self.version
 
-    async def get_version(self, catalog_version_id: UUID, *, tenant_id: UUID):
+    async def get_version(self, catalog_version_id: UUID, *, organization_id: UUID):
         raise AssertionError("not used by the rows route")
 
 
@@ -158,11 +158,11 @@ class Unused:
         return unreachable
 
 
-def _catalog_version(tenant_id: UUID = OWNER.tenant_id) -> CatalogVersion:
+def _catalog_version(organization_id: UUID = OWNER.organization_id) -> CatalogVersion:
     return CatalogVersion(
         catalog_version_id=uuid4(),
         data_source_id=DATA_SOURCE_ID,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         harvest_run_id=uuid4(),
         created_at=datetime.now(UTC),
         tables=(ORDERS_TABLE,),
@@ -196,7 +196,7 @@ class FakeScopedCubeSemanticLayers:
     def __init__(self, semantic_layer: CubeSemanticLayer) -> None:
         self._semantic_layer = semantic_layer
 
-    async def resolve(self, *, tenant_id: UUID, data_connection_id: UUID | None):
+    async def resolve(self, *, organization_id: UUID, data_connection_id: UUID | None):
         return self._semantic_layer
 
 
@@ -229,7 +229,7 @@ def build(
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
     monkeypatch.setattr(
-        "zentra_api.request_context.correlate_tenant", lambda *_: None
+        "zentra_api.request_context.correlate_organization", lambda *_: None
     )
 
     version = (

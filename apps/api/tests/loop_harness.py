@@ -293,19 +293,19 @@ class FakeBoardRepository:
     async def save(self, board) -> None:
         self._store["boards"][board.board_id] = board
 
-    async def open_gap(self, board_id, tenant_id, gap) -> None:
+    async def open_gap(self, board_id, organization_id, gap) -> None:
         self._store["gaps"][gap.gap_id] = gap
 
-    async def resolve_gap(self, gap_id, tenant_id) -> None:
+    async def resolve_gap(self, gap_id, organization_id) -> None:
         self._store["gaps"][gap_id].resolved = True
 
-    async def record_fact(self, board_id, tenant_id, fact) -> None:
+    async def record_fact(self, board_id, organization_id, fact) -> None:
         self._store["facts"].append(fact)
 
-    async def open_conflict(self, board_id, tenant_id, conflict) -> None:
+    async def open_conflict(self, board_id, organization_id, conflict) -> None:
         self._store["conflicts"][conflict.conflict_id] = conflict
 
-    async def settle_conflict(self, tenant_id, conflict) -> None:
+    async def settle_conflict(self, organization_id, conflict) -> None:
         self._store["conflicts"][conflict.conflict_id] = conflict
 
 
@@ -319,7 +319,7 @@ class FakeWorkItemRepository:
     async def save(self, item) -> None:
         self._store["items"][item.work_item_id] = item
 
-    async def list_for_analysis_run(self, analysis_run_id, tenant_id):
+    async def list_for_analysis_run(self, analysis_run_id, organization_id):
         return tuple(
             item
             for item in self._store["items"].values()
@@ -328,7 +328,7 @@ class FakeWorkItemRepository:
 
 
 class FakePolicies:
-    async def confidence_threshold(self, tenant_id) -> float:
+    async def confidence_threshold(self, organization_id) -> float:
         return 0.7
 
 
@@ -358,7 +358,7 @@ class FakeUnitOfWorkFactory:
             "conflicts": {},
         }
 
-    def __call__(self, tenant_id, trace_id, span_id) -> FakeUnitOfWork:
+    def __call__(self, organization_id, trace_id, span_id) -> FakeUnitOfWork:
         return FakeUnitOfWork(self.store)
 
 
@@ -366,7 +366,7 @@ class FakeSemanticLayers:
     def __init__(self, layer: StubSemanticLayer) -> None:
         self._layer = layer
 
-    async def resolve(self, *, tenant_id, data_connection_id):
+    async def resolve(self, *, organization_id, data_connection_id):
         return self._layer
 
 
@@ -461,6 +461,6 @@ def board_store(loop: OrchestratorLoop) -> dict:
 async def run(loop: OrchestratorLoop):
     return await loop.run(
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         question=QUESTION,
     )

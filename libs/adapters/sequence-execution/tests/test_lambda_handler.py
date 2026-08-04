@@ -22,8 +22,8 @@ class _FixedRawTableLookup:
     def __init__(self, reference) -> None:
         self._reference = reference
 
-    async def resolve(self, *, tenant_id, sequence_id):
-        del tenant_id, sequence_id
+    async def resolve(self, *, organization_id, sequence_id):
+        del organization_id, sequence_id
         return self._reference
 
 
@@ -52,13 +52,13 @@ def _event_for(request: SequenceStepExecutionRequest) -> dict:
 
 def test_handler_executes_a_successful_operation(handler) -> None:
     request = SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind="drop_nulls",
         operation_parameters={"columns": ["email"]},
         input_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
         ),
     )
     response = handler(_event_for(request), context=None)
@@ -68,13 +68,13 @@ def test_handler_executes_a_successful_operation(handler) -> None:
 
 def test_handler_executes_a_typed_failure(handler) -> None:
     request = SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind="drop_table",
         operation_parameters={},
         input_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
         ),
     )
     response = handler(_event_for(request), context=None)

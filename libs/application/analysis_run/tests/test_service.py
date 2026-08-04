@@ -77,7 +77,7 @@ class Pipeline:
         self,
         *,
         analysis_run_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         model_tier: str = "free",
         data_connection_id: UUID | None = None,
@@ -211,10 +211,10 @@ class Policies:
         self.threshold = threshold
         self.tier = tier
 
-    async def confidence_threshold(self, tenant_id: UUID) -> float:
+    async def confidence_threshold(self, organization_id: UUID) -> float:
         return self.threshold
 
-    async def model_tier(self, tenant_id: UUID) -> str:
+    async def model_tier(self, organization_id: UUID) -> str:
         return self.tier
 
 
@@ -238,31 +238,31 @@ class UnitOfWork:
 class UnitOfWorkFactory:
     def __init__(self, unit_of_work: UnitOfWork) -> None:
         self.unit_of_work = unit_of_work
-        self.tenant_ids: list[UUID] = []
+        self.organization_ids: list[UUID] = []
 
     @asynccontextmanager
     async def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
     ) -> AsyncIterator[UnitOfWork]:
-        self.tenant_ids.append(tenant_id)
+        self.organization_ids.append(organization_id)
         yield self.unit_of_work
 
 
 class Audit:
-    async def flush(self, *, tenant_id: UUID, analysis_run_id: UUID) -> bool:
+    async def flush(self, *, organization_id: UUID, analysis_run_id: UUID) -> bool:
         return True
 
-    async def list_timeline(self, *, tenant_id: UUID, analysis_run_id: UUID):
+    async def list_timeline(self, *, organization_id: UUID, analysis_run_id: UUID):
         return ()
 
 
 def actor(role: Role = Role.OWNER) -> AuthenticatedActor:
     return AuthenticatedActor(
         user_id=USER_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         role=role,
         trace_id=UUID("55000000-0000-0000-0000-000000000005"),
         span_id=UUID("56000000-0000-0000-0000-000000000006"),
@@ -549,7 +549,7 @@ async def test_a_question_is_normalised_before_it_is_recorded() -> None:
 def structured_draft() -> DraftFinding:
     return DraftFinding(
         draft_finding_id=UUID("90000000-0000-0000-0000-000000000001"),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
         version=1,
         created_at=NOW,
@@ -636,7 +636,7 @@ async def test_the_phase_1_path_stores_no_draft_and_stays_readable() -> None:
 def cited_draft(*, contradiction: bool = False, cited: bool = True) -> DraftFinding:
     return DraftFinding(
         draft_finding_id=UUID("90000000-0000-0000-0000-000000000002"),
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
         version=1,
         created_at=NOW,
@@ -668,7 +668,7 @@ def cited_draft(*, contradiction: bool = False, cited: bool = True) -> DraftFind
 def active_citation() -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=CITATION_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
         metric="refund_amount",
         filters=(),
@@ -712,7 +712,7 @@ class WorkFeed:
     async def append_for_analysis_run(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         analysis_run_id: UUID,
         kind: WorkFeedEventKind,
         payload: object,
@@ -1062,7 +1062,7 @@ class Erasures:
         self.erase_calls = 0
         self._terminal = terminal
 
-    async def request(self, *, erasure_id, tenant_id, analysis_run_id, category, now):
+    async def request(self, *, erasure_id, organization_id, analysis_run_id, category, now):
         from zentra_domain_analysis_run import (
             ErasureError,
             ErasureOperation,
@@ -1079,7 +1079,7 @@ class Erasures:
             return existing
         return ErasureOperation(
             erasure_id=erasure_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             analysis_run_id=analysis_run_id,
             category=category,
             progress=ErasureProgress.REQUESTED,
@@ -1092,7 +1092,7 @@ class Erasures:
         self.erase_calls += 1
         done = ErasureOperation(
             erasure_id=UUID("93000000-0000-0000-0000-000000000001"),
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             analysis_run_id=analysis_run_id,
             category=category,
             progress=ErasureProgress.COMPLETED,

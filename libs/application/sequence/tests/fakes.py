@@ -29,12 +29,12 @@ class FakeSequenceRepository:
         return self.sequences.get(sequence_id)
 
     async def list_sequences(
-        self, *, tenant_id: UUID, dataset_workspace_id: UUID
+        self, *, organization_id: UUID, dataset_workspace_id: UUID
     ) -> tuple[SequenceListItem, ...]:
         matches = [
             sequence
             for sequence in self.sequences.values()
-            if sequence.tenant_id == tenant_id
+            if sequence.organization_id == organization_id
             and sequence.dataset_workspace_id == dataset_workspace_id
         ]
         matches.sort(key=lambda s: (s.updated_at, s.sequence_id), reverse=True)
@@ -84,9 +84,9 @@ class FakeSequenceUnitOfWorkFactory:
         self.repository = repository
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[FakeSequenceUnitOfWork]:
-        del tenant_id, trace_id, span_id
+        del organization_id, trace_id, span_id
         return FakeSequenceUnitOfWork(self.repository)
 
 
@@ -98,6 +98,6 @@ class FakeRawTableResolver:
         self.known = known or {}
 
     async def label(
-        self, tenant_id: UUID, reference: RawTableReference
+        self, organization_id: UUID, reference: RawTableReference
     ) -> str | None:
-        return self.known.get((tenant_id, raw_table_label(reference)))
+        return self.known.get((organization_id, raw_table_label(reference)))

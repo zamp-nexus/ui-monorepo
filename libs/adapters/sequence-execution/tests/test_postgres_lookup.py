@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_adapter_postgres import Database, PostgresSequenceUnitOfWorkFactory
-from zentra_adapter_postgres.schema import tenants
+from zentra_adapter_postgres.schema import organizations
 from zentra_domain_sequence import DatasetTableVersionReference, Sequence
 
 from zentra_adapter_sequence_execution.postgres_lookup import PostgresRawTableLookup
@@ -28,12 +28,13 @@ NOW = datetime(2026, 8, 1, tzinfo=UTC)
 async def test_resolves_a_persisted_sequences_raw_table_reference() -> None:
     assert OWNER_URL is not None
     assert RUNTIME_URL is not None
-    tenant_id = uuid4()
+    organization_id = uuid4()
 
     owner_engine = create_async_engine(OWNER_URL)
     async with owner_engine.begin() as connection:
         await connection.execute(
-            insert(tenants), [{"tenant_id": tenant_id, "name": "Lookup Tenant"}]
+            insert(organizations),
+            [{"organization_id": organization_id, "name": "Lookup Tenant"}],
         )
     await owner_engine.dispose()
 
@@ -43,7 +44,7 @@ async def test_resolves_a_persisted_sequences_raw_table_reference() -> None:
     )
     sequence = Sequence.create(
         sequence_id=sequence_id,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         dataset_workspace_id=uuid4(),
         raw_table_reference=raw_table,
         now=NOW,
@@ -51,12 +52,14 @@ async def test_resolves_a_persisted_sequences_raw_table_reference() -> None:
 
     database = Database(RUNTIME_URL)
     factory = PostgresSequenceUnitOfWorkFactory(database)
-    async with factory(tenant_id, UUID(int=0), UUID(int=0)) as unit_of_work:
+    async with factory(organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
         await unit_of_work.sequences.add_sequence(sequence)
         await unit_of_work.commit()
 
     lookup = PostgresRawTableLookup(factory)
-    resolved = await lookup.resolve(tenant_id=tenant_id, sequence_id=sequence_id)
+    resolved = await lookup.resolve(
+        organization_id=organization_id, sequence_id=sequence_id
+    )
     assert resolved == raw_table
 
 
@@ -67,5 +70,5 @@ async def test_resolves_to_none_for_an_unknown_sequence() -> None:
     factory = PostgresSequenceUnitOfWorkFactory(database)
     lookup = PostgresRawTableLookup(factory)
 
-    resolved = await lookup.resolve(tenant_id=uuid4(), sequence_id=uuid4())
+    resolved = await lookup.resolve(organization_id=uuid4(), sequence_id=uuid4())
     assert resolved is None

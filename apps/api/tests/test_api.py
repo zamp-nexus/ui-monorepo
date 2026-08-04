@@ -96,9 +96,9 @@ class SemanticLayers:
         self.resolved: list[tuple[object, object]] = []
 
     async def resolve(
-        self, *, tenant_id: object, data_connection_id: object
+        self, *, organization_id: object, data_connection_id: object
     ) -> SemanticLayer:
-        self.resolved.append((tenant_id, data_connection_id))
+        self.resolved.append((organization_id, data_connection_id))
         return SemanticLayer()
 
 
@@ -228,9 +228,9 @@ def test_context_rejects_invalid_bearer_token() -> None:
 def test_context_returns_internal_identity(monkeypatch) -> None:
     expected = IdentityContext(
         user_id=UUID("10000000-0000-0000-0000-000000000001"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
         email="owner@example.com",
-        tenant_name="Acme Europe",
+        organization_name="Acme Europe",
         role="owner",
     )
 
@@ -240,7 +240,7 @@ def test_context_returns_internal_identity(monkeypatch) -> None:
     correlated_tenants = []
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
     monkeypatch.setattr(
-        "zentra_api.request_context.correlate_tenant",
+        "zentra_api.request_context.correlate_organization",
         correlated_tenants.append,
     )
 
@@ -258,12 +258,12 @@ def test_context_returns_internal_identity(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "user_id": str(expected.user_id),
-        "tenant_id": str(expected.tenant_id),
+        "organization_id": str(expected.organization_id),
         "email": expected.email,
-        "tenant_name": expected.tenant_name,
+        "organization_name": expected.organization_name,
         "role": expected.role,
     }
-    assert correlated_tenants == [expected.tenant_id]
+    assert correlated_tenants == [expected.organization_id]
 
 
 def test_context_denies_unbound_organization(monkeypatch) -> None:
@@ -356,9 +356,9 @@ def test_approval_request_validates_reason_before_service(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
@@ -399,9 +399,9 @@ def test_the_catalog_served_is_the_asking_tenants_own(
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
@@ -488,9 +488,9 @@ def test_a_member_cannot_decide_and_is_told_so(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="member@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="member",
         )
 

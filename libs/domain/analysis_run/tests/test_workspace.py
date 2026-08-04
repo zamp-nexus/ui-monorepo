@@ -31,7 +31,7 @@ def test_workspace_names_reject_invalid_values(name: str) -> None:
 def test_group_archive_and_restore_preserve_identity_and_name() -> None:
     group = Group.create(
         group_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         name="Finance",
         now=NOW,
     )
@@ -48,7 +48,7 @@ def test_group_archive_and_restore_preserve_identity_and_name() -> None:
 def test_project_rename_updates_display_and_normalized_names() -> None:
     project = Project.create(
         project_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         group_id=uuid4(),
         name="Weekly Review",
         now=NOW,
@@ -64,7 +64,7 @@ def test_project_rename_updates_display_and_normalized_names() -> None:
 def test_project_activity_advances_independently_of_metadata_updates() -> None:
     project = Project.create(
         project_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         group_id=uuid4(),
         name="Weekly Review",
         now=NOW,

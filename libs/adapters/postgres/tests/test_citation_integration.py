@@ -28,7 +28,7 @@ from zentra_domain_analysis_run import (
     RootCauseState,
 )
 
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.draft_finding import (
     PostgresDraftFindingRepository,
     PostgresEvidenceCitationRepository,
@@ -38,7 +38,7 @@ from zentra_adapter_postgres.schema import (
     analysis_runs,
     draft_findings,
     evidence_citations,
-    tenants,
+    organizations,
 )
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
@@ -61,11 +61,11 @@ async def seed() -> None:
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
         await connection.execute(
-            postgres_insert(tenants)
+            postgres_insert(organizations)
             .values(
                 [
-                    {"tenant_id": TENANT_A, "name": "Citation A"},
-                    {"tenant_id": TENANT_B, "name": "Citation B"},
+                    {"organization_id": TENANT_A, "name": "Citation A"},
+                    {"organization_id": TENANT_B, "name": "Citation B"},
                 ]
             )
             .on_conflict_do_nothing()
@@ -74,7 +74,7 @@ async def seed() -> None:
             postgres_insert(analysis_runs)
             .values(
                 analysis_run_id=ANALYSIS_RUN,
-                tenant_id=TENANT_A,
+                organization_id=TENANT_A,
                 question="Why did EU refunds increase?",
                 status="completed",
             )
@@ -102,7 +102,7 @@ async def cleanup() -> None:
 def citation(citation_id: UUID, period: str, value: str) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=citation_id,
-        tenant_id=TENANT_A,
+        organization_id=TENANT_A,
         analysis_run_id=ANALYSIS_RUN,
         metric="refund_amount",
         filters=(
@@ -124,7 +124,7 @@ def citation(citation_id: UUID, period: str, value: str) -> EvidenceCitation:
 def draft(claims: tuple[Claim, ...]) -> DraftFinding:
     return DraftFinding(
         draft_finding_id=uuid4(),
-        tenant_id=TENANT_A,
+        organization_id=TENANT_A,
         analysis_run_id=ANALYSIS_RUN,
         version=1,
         created_at=NOW,
@@ -160,7 +160,7 @@ async def test_a_claim_keeps_the_order_of_the_evidence_it_cites() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [
                     citation(JULY, "July 2026", "260.00"),
@@ -172,7 +172,7 @@ async def test_a_claim_keeps_the_order_of_the_evidence_it_cites() -> None:
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
             ).latest_for_analysis_run(ANALYSIS_RUN)
@@ -191,7 +191,7 @@ async def test_two_claims_share_one_stored_citation() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [citation(JULY, "July 2026", "260.00")]
             )
@@ -205,7 +205,7 @@ async def test_two_claims_share_one_stored_citation() -> None:
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             stored = await connection.scalar(
                 select(func.count()).select_from(evidence_citations)
             )
@@ -227,13 +227,13 @@ async def test_another_tenant_cannot_read_or_plant_a_citation() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [citation(JULY, "July 2026", "260.00")]
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_B)
+            await set_organization_context(connection, TENANT_B)
             visible = await PostgresEvidenceCitationRepository(
                 connection
             ).for_analysis_run(ANALYSIS_RUN)
@@ -242,7 +242,7 @@ async def test_another_tenant_cannot_read_or_plant_a_citation() -> None:
         # And the WITH CHECK half: B cannot write one owned by A.
         with pytest.raises(DBAPIError):
             async with runtime.begin() as connection:
-                await set_tenant_context(connection, TENANT_B)
+                await set_organization_context(connection, TENANT_B)
                 await PostgresEvidenceCitationRepository(connection).add(
                     [citation(uuid4(), "July 2026", "260.00")]
                 )
@@ -258,13 +258,13 @@ async def test_a_citation_round_trips_its_governed_context() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [citation(JULY, "July 2026", "260.00")]
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             loaded = await PostgresEvidenceCitationRepository(
                 connection
             ).for_analysis_run(ANALYSIS_RUN)
@@ -329,13 +329,13 @@ async def test_resolution_is_blind_to_another_tenants_citation() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [citation(JULY, "July 2026", "260.00")]
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_B)
+            await set_organization_context(connection, TENANT_B)
             repository = PostgresEvidenceCitationRepository(connection)
             # Another Tenant's citation, and one that never existed.
             foreign = await repository.resolve(ANALYSIS_RUN, JULY)
@@ -357,13 +357,13 @@ async def test_a_citation_from_another_analysis_run_does_not_resolve() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [citation(JULY, "July 2026", "260.00")]
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             mismatched = await PostgresEvidenceCitationRepository(
                 connection
             ).resolve(uuid4(), JULY)
@@ -395,7 +395,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
                 .values(
                     execution_id=execution_id,
                     analysis_run_id=ANALYSIS_RUN,
-                    tenant_id=TENANT_A,
+                    organization_id=TENANT_A,
                     agent_id="cube_analyst_v1",
                     step=1,
                     input={},
@@ -409,7 +409,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresEvidenceCitationRepository(connection).add(
                 [
                     replace(
@@ -420,7 +420,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             before = await PostgresEvidenceCitationRepository(connection).resolve(
                 ANALYSIS_RUN, JULY
             )
@@ -445,7 +445,7 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
             await owner.dispose()
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             after = await PostgresEvidenceCitationRepository(connection).resolve(
                 ANALYSIS_RUN, JULY
             )
@@ -488,12 +488,12 @@ async def test_failed_conditions_survive_a_read_after_the_writing_request() -> N
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await PostgresHumanApprovalRepository(connection).add(
                 HumanApproval(
                     approval_id=approval_id,
                     analysis_run_id=ANALYSIS_RUN,
-                    tenant_id=TENANT_A,
+                    organization_id=TENANT_A,
                     reason=ApprovalReason.EVIDENCE_INCOMPLETE,
                     failed_conditions=(
                         PublicationCondition.CONFIDENT,
@@ -506,7 +506,7 @@ async def test_failed_conditions_survive_a_read_after_the_writing_request() -> N
 
         # A different connection, as a later request would be.
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             loaded = await PostgresHumanApprovalRepository(
                 connection
             ).get_for_analysis_run(ANALYSIS_RUN)
@@ -519,7 +519,7 @@ async def test_failed_conditions_survive_a_read_after_the_writing_request() -> N
         assert loaded.reason is ApprovalReason.EVIDENCE_INCOMPLETE
     finally:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT_A)
+            await set_organization_context(connection, TENANT_A)
             await connection.exec_driver_sql(
                 "DELETE FROM human_approvals WHERE approval_id = %s",
                 (str(approval_id),),

@@ -66,7 +66,7 @@ def test_action_kind_cannot_carry_a_generated_or_mismatched_target() -> None:
     with pytest.raises(ValidationError, match="target does not match"):
         VisualizationActionMapping(
             action_id=UUID(int=10),
-            tenant_id=UUID(int=11),
+            organization_id=UUID(int=11),
             visualization_id=UUID(int=12),
             thread_id=UUID(int=13),
             analysis_run_id=UUID(int=14),

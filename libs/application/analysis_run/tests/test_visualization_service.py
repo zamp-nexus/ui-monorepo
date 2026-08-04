@@ -44,7 +44,7 @@ def brief() -> VisualizationBriefV1:
 def pending_artifact() -> VisualizationArtifact:
     return VisualizationArtifact(
         visualization_id=VISUALIZATION_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
         brief_id=BRIEF_ID,
         status=VisualizationArtifactStatus.PENDING,
@@ -120,7 +120,7 @@ class _Factory:
         self.uow = _UnitOfWork(artifact)
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[_UnitOfWork]:
         return self.uow
 
@@ -149,7 +149,7 @@ async def test_a_successful_render_reports_agent_execution_telemetry() -> None:
     )
 
     await instance.execute_visualization_job(
-        tenant_id=TENANT_ID, visualization_id=VISUALIZATION_ID
+        organization_id=TENANT_ID, visualization_id=VISUALIZATION_ID
     )
 
     assert observed == [
@@ -177,7 +177,7 @@ async def test_a_failed_render_reports_the_failure_category_as_error_category() 
     )
 
     await instance.fail_visualization_job(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         visualization_id=VISUALIZATION_ID,
         failure_category="renderer_timeout",
     )
@@ -196,5 +196,5 @@ async def test_no_observer_configured_is_a_silent_no_op() -> None:
     instance, _ = service(artifact=pending_artifact(), observer=None)
 
     await instance.execute_visualization_job(
-        tenant_id=TENANT_ID, visualization_id=VISUALIZATION_ID
+        organization_id=TENANT_ID, visualization_id=VISUALIZATION_ID
     )

@@ -48,7 +48,7 @@ def claim(position: int, kind: ClaimKind = ClaimKind.OBSERVED, **overrides) -> C
 def draft(**overrides) -> DraftFinding:
     defaults = {
         "draft_finding_id": uuid4(),
-        "tenant_id": TENANT_ID,
+        "organization_id": TENANT_ID,
         "analysis_run_id": ANALYSIS_RUN_ID,
         "version": 1,
         "created_at": NOW,
@@ -140,7 +140,7 @@ def test_confidence_is_the_bounded_outcome_not_a_fresh_number() -> None:
 def test_a_draft_is_owned_by_exactly_one_tenant_and_analysis_run() -> None:
     subject = draft()
 
-    assert subject.tenant_id == TENANT_ID
+    assert subject.organization_id == TENANT_ID
     assert subject.analysis_run_id == ANALYSIS_RUN_ID
 
 

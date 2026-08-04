@@ -93,10 +93,30 @@ def test_input_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError):
         AgentInput(
             analysis_run_id=uuid4(),
-            tenant_id=uuid4(),
+            organization_id=uuid4(),
             state={},
             caller_tenant_id=uuid4(),
         )
+
+
+def test_reasoning_defaults_to_none_and_is_accepted_when_given() -> None:
+    """Most Agents have no reasoning worth showing; where one is given, it is
+    carried as-is rather than folded into `fields`."""
+    silent = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+    )
+    assert silent.reasoning is None
+
+    explained = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+        reasoning="EU refunds are the only region with a June-to-July increase.",
+    )
+    assert (
+        explained.reasoning
+        == "EU refunds are the only region with a June-to-July increase."
+    )
 
 
 def test_output_rejects_undeclared_fields() -> None:
@@ -115,7 +135,7 @@ async def test_agent_port_shape_is_usable() -> None:
     output = await agent.invoke(
         AgentInput(
             analysis_run_id=uuid4(),
-            tenant_id=uuid4(),
+            organization_id=uuid4(),
             state={"question": "Why did refunds increase?"},
         )
     )
@@ -130,7 +150,7 @@ def _legacy_execution() -> dict[str, object]:
     return {
         "execution_id": str(uuid4()),
         "investigation_id": str(uuid4()),
-        "tenant_id": str(uuid4()),
+        "organization_id": str(uuid4()),
         "agent_id": "orchestrator_v1",
         "role": "insight_root_cause",
         "step": 3,
@@ -216,6 +236,27 @@ def test_reject_legacy_role_refuses_only_the_legacy_value() -> None:
 
     with pytest.raises(LegacyRoleWriteError, match="insight_root_cause"):
         reject_legacy_role(AgentRole.INSIGHT_ROOT_CAUSE)
+
+
+def test_reasoning_defaults_to_none() -> None:
+    """Most Agents have nothing to say about why -- the field must not force
+    one into inventing a sentence."""
+    output = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+    )
+
+    assert output.reasoning is None
+
+
+def test_reasoning_carries_the_agents_own_sentence() -> None:
+    output = AgentOutput(
+        fields={"claim": "Refunds increased"},
+        outcome=ConfidenceOutcome(score=0.8, calibration_method="test"),
+        reasoning="Refunds rose because June's promo period lapsed.",
+    )
+
+    assert output.reasoning == "Refunds rose because June's promo period lapsed."
 
 
 def test_adding_usage_drops_the_model_rather_than_guessing() -> None:

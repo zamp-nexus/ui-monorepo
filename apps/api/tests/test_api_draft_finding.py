@@ -35,7 +35,7 @@ from .test_api import (
 def structured_citation() -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=UUID("cc000000-0000-0000-0000-000000000001"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
         analysis_run_id=UUID("30000000-0000-0000-0000-000000000003"),
         metric="refund_amount",
         filters=(
@@ -55,7 +55,7 @@ def structured_citation() -> EvidenceCitation:
 def structured_draft() -> DraftFinding:
     return DraftFinding(
         draft_finding_id=UUID("40000000-0000-0000-0000-000000000004"),
-        tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+        organization_id=UUID("20000000-0000-0000-0000-000000000002"),
         analysis_run_id=UUID("30000000-0000-0000-0000-000000000003"),
         version=2,
         created_at=datetime(2026, 7, 29, tzinfo=UTC),
@@ -92,9 +92,9 @@ def authenticated(monkeypatch) -> None:
     async def resolve(*args: object, **kwargs: object) -> IdentityContext:
         return IdentityContext(
             user_id=UUID("10000000-0000-0000-0000-000000000001"),
-            tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
             email="owner@example.com",
-            tenant_name="Acme Europe",
+            organization_name="Acme Europe",
             role="owner",
         )
 
@@ -371,7 +371,7 @@ def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
     seen: list[object] = []
 
     async def resolve(actor, **kwargs: object):
-        seen.append(actor.tenant_id)
+        seen.append(actor.organization_id)
         return structured_citation()
 
     service = AnalysisRunServiceStub()
@@ -380,7 +380,7 @@ def test_the_caller_cannot_name_a_tenant(monkeypatch) -> None:
         response = test_client.get(
             "/v1/analysis-runs/30000000-0000-0000-0000-000000000003"
             "/citations/cc000000-0000-0000-0000-000000000001"
-            "?tenant_id=11111111-1111-4111-8111-111111111111",
+            "?organization_id=11111111-1111-4111-8111-111111111111",
             headers={"Authorization": "Bearer valid"},
         )
 

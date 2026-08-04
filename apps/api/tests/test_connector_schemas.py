@@ -33,7 +33,7 @@ def _version() -> CatalogVersion:
     return CatalogVersion(
         catalog_version_id=uuid4(),
         data_source_id=DATA_SOURCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         harvest_run_id=uuid4(),
         created_at=datetime.now(UTC),
         tables=(
@@ -83,7 +83,7 @@ def test_a_field_override_reports_false_without_hiding_its_siblings() -> None:
         (
             CatalogAccessOverride(
                 override_id=uuid4(),
-                tenant_id=TENANT_ID,
+                organization_id=TENANT_ID,
                 data_source_id=DATA_SOURCE_ID,
                 table_name="customers",
                 field_name="email",
@@ -108,7 +108,7 @@ def test_a_table_override_reports_false_for_the_whole_table() -> None:
         (
             CatalogAccessOverride(
                 override_id=uuid4(),
-                tenant_id=TENANT_ID,
+                organization_id=TENANT_ID,
                 data_source_id=DATA_SOURCE_ID,
                 table_name="customers",
                 field_name=None,

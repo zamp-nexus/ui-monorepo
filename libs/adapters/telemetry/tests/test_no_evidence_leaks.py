@@ -231,7 +231,7 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
     """
     assert frozenset(
         {
-            "zentra.tenant_id",
+            "zentra.organization_id",
             "zentra.analysis_run_id",
             "zentra.thread_id",
             "zentra.insight.agent_id",

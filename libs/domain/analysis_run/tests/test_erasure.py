@@ -25,7 +25,7 @@ TERMINAL = frozenset(status.value for status in TERMINAL_STATUSES)
 def operation(**overrides) -> ErasureOperation:
     defaults = {
         "erasure_id": uuid4(),
-        "tenant_id": UUID("aa000000-0000-0000-0000-000000000001"),
+        "organization_id": UUID("aa000000-0000-0000-0000-000000000001"),
         "analysis_run_id": UUID("bb000000-0000-0000-0000-000000000001"),
         "category": DeletionCategory.TENANT_REQUEST,
         "progress": ErasureProgress.REQUESTED,
@@ -37,7 +37,7 @@ def operation(**overrides) -> ErasureOperation:
 def test_an_operation_is_scoped_to_one_tenant_and_analysis_run() -> None:
     subject = operation()
 
-    assert subject.tenant_id == UUID("aa000000-0000-0000-0000-000000000001")
+    assert subject.organization_id == UUID("aa000000-0000-0000-0000-000000000001")
     assert subject.analysis_run_id == UUID("bb000000-0000-0000-0000-000000000001")
     assert subject.category is DeletionCategory.TENANT_REQUEST
 

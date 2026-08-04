@@ -190,7 +190,7 @@ class FakeLandingZone:
         self,
         stream: AsyncIterator[bytes],
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         upload_id: UUID,
         upload_format: UploadFormat,
         columns: Sequence[SourceFieldDescriptor],
@@ -199,7 +199,7 @@ class FakeLandingZone:
             pass
         table = LandedTable(
             database="zentra_uploads",
-            table=f"t_{tenant_id.hex[:8]}_{upload_id.hex[:8]}",
+            table=f"t_{organization_id.hex[:8]}_{upload_id.hex[:8]}",
             row_count=self.total_rows,
         )
         self.landed.append(table)
@@ -225,23 +225,23 @@ class FakeSourceRepository:
     async def add(self, source: DataSource) -> None:
         self.items[source.data_source_id] = source
 
-    async def get(self, data_source_id: UUID, *, tenant_id: UUID) -> DataSource | None:
+    async def get(self, data_source_id: UUID, *, organization_id: UUID) -> DataSource | None:
         source = self.items.get(data_source_id)
         # Tenant scoping is applied here rather than trusted from the caller,
         # so that a test which forgot to filter still cannot read across tenants.
-        if source is None or source.tenant_id != tenant_id:
+        if source is None or source.organization_id != organization_id:
             return None
         return source
 
-    async def list(self, *, tenant_id: UUID) -> Sequence[DataSource]:
-        return [s for s in self.items.values() if s.tenant_id == tenant_id]
+    async def list(self, *, organization_id: UUID) -> Sequence[DataSource]:
+        return [s for s in self.items.values() if s.organization_id == organization_id]
 
     async def save(self, source: DataSource) -> None:
         self.items[source.data_source_id] = source
 
-    async def delete(self, data_source_id: UUID, *, tenant_id: UUID) -> None:
+    async def delete(self, data_source_id: UUID, *, organization_id: UUID) -> None:
         source = self.items.get(data_source_id)
-        if source is not None and source.tenant_id == tenant_id:
+        if source is not None and source.organization_id == organization_id:
             del self.items[data_source_id]
 
 
@@ -253,33 +253,33 @@ class FakeCatalogRepository:
         self.items[version.catalog_version_id] = version
 
     async def get_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None:
         version = self.items.get(catalog_version_id)
-        if version is None or version.tenant_id != tenant_id:
+        if version is None or version.organization_id != organization_id:
             return None
         return version
 
     async def latest_version(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None:
         matches = [
             v
             for v in self.items.values()
-            if v.data_source_id == data_source_id and v.tenant_id == tenant_id
+            if v.data_source_id == data_source_id and v.organization_id == organization_id
         ]
         if not matches:
             return None
         return max(matches, key=lambda v: v.created_at)
 
     async def list_versions(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogVersion]:
         return sorted(
             (
                 v
                 for v in self.items.values()
-                if v.data_source_id == data_source_id and v.tenant_id == tenant_id
+                if v.data_source_id == data_source_id and v.organization_id == organization_id
             ),
             key=lambda v: v.created_at,
         )
@@ -293,9 +293,9 @@ class FakeRelationRepository:
         for relation in relations:
             self.items[relation.relation_id] = relation
 
-    async def get(self, relation_id: UUID, *, tenant_id: UUID) -> Relation | None:
+    async def get(self, relation_id: UUID, *, organization_id: UUID) -> Relation | None:
         relation = self.items.get(relation_id)
-        if relation is None or relation.tenant_id != tenant_id:
+        if relation is None or relation.organization_id != organization_id:
             return None
         return relation
 
@@ -303,21 +303,21 @@ class FakeRelationRepository:
         self.items[relation.relation_id] = relation
 
     async def list_for_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]:
         return [
             r
             for r in self.items.values()
-            if r.catalog_version_id == catalog_version_id and r.tenant_id == tenant_id
+            if r.catalog_version_id == catalog_version_id and r.organization_id == organization_id
         ]
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]:
         return [
             r
             for r in self.items.values()
-            if r.tenant_id == tenant_id
+            if r.organization_id == organization_id
             and data_source_id in (r.left_data_source_id, r.right_data_source_id)
         ]
 
@@ -333,12 +333,12 @@ class FakeAgentAccessRepository:
         self.items[key] = override
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogAccessOverride]:
         return [
             o
             for o in self.items.values()
-            if o.data_source_id == data_source_id and o.tenant_id == tenant_id
+            if o.data_source_id == data_source_id and o.organization_id == organization_id
         ]
 
 
@@ -349,9 +349,9 @@ class FakeHarvestRunRepository:
     async def add(self, run: HarvestRun) -> None:
         self.items[run.harvest_run_id] = run
 
-    async def get(self, harvest_run_id: UUID, *, tenant_id: UUID) -> HarvestRun | None:
+    async def get(self, harvest_run_id: UUID, *, organization_id: UUID) -> HarvestRun | None:
         run = self.items.get(harvest_run_id)
-        if run is None or run.tenant_id != tenant_id:
+        if run is None or run.organization_id != organization_id:
             return None
         return run
 
@@ -359,21 +359,21 @@ class FakeHarvestRunRepository:
         self.items[run.harvest_run_id] = run
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[HarvestRun]:
         return [
             r
             for r in self.items.values()
-            if r.data_source_id == data_source_id and r.tenant_id == tenant_id
+            if r.data_source_id == data_source_id and r.organization_id == organization_id
         ]
 
     async def active_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> HarvestRun | None:
         for run in self.items.values():
             if (
                 run.data_source_id == data_source_id
-                and run.tenant_id == tenant_id
+                and run.organization_id == organization_id
                 and not run.is_terminal
             ):
                 return run

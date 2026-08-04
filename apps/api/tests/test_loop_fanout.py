@@ -332,7 +332,7 @@ def test_insight_may_not_be_reached_with_an_open_contradiction() -> None:
     board = AnalysisRunBoard.create(
         board_id=uuid4(),
         analysis_run_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         now=datetime(2026, 8, 1, tzinfo=UTC),
     )
     board.open_conflict(

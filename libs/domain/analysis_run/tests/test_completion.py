@@ -25,7 +25,7 @@ def finished_board() -> AnalysisRunBoard:
     board = AnalysisRunBoard.create(
         board_id=BOARD_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         now=NOW,
     )
     gap = KnowledgeGap(
@@ -148,7 +148,7 @@ def test_a_board_with_no_confidence_recorded_is_not_complete() -> None:
     board = AnalysisRunBoard.create(
         board_id=BOARD_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         now=NOW,
     )
 
@@ -164,7 +164,7 @@ def test_every_unmet_criterion_is_reported_not_only_the_first() -> None:
     board = AnalysisRunBoard.create(
         board_id=BOARD_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         now=NOW,
     )
     board.open_gap(

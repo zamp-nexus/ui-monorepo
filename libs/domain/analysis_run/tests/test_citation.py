@@ -20,7 +20,7 @@ EXECUTION_ID = UUID("dd000000-0000-0000-0000-000000000001")
 def citation(**overrides) -> EvidenceCitation:
     defaults = {
         "citation_id": UUID("cc000000-0000-0000-0000-000000000001"),
-        "tenant_id": TENANT_ID,
+        "organization_id": TENANT_ID,
         "analysis_run_id": ANALYSIS_RUN_ID,
         "metric": "refund_amount",
         "filters": (
@@ -70,5 +70,5 @@ def test_loss_and_deliberate_erasure_are_different_states() -> None:
 def test_a_citation_belongs_to_one_tenant_and_analysis_run() -> None:
     subject = citation()
 
-    assert subject.tenant_id == TENANT_ID
+    assert subject.organization_id == TENANT_ID
     assert subject.analysis_run_id == ANALYSIS_RUN_ID

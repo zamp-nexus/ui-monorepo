@@ -58,14 +58,14 @@ async def run_step(
     run_id = uuid4()
     step_id = uuid4()
     request = SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=step_id,
         operation_kind=operation_kind,
         operation_parameters=operation_parameters,
         input_table=input_reference
         or SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=RAW_TABLE_ID, kind="raw"
+            organization_id=TENANT_ID, reference_id=RAW_TABLE_ID, kind="raw"
         ),
     )
     result = await port.apply_operation(request)
@@ -75,7 +75,7 @@ async def run_step(
             SequenceRun(
                 run_id=run_id,
                 sequence_id=SEQUENCE_ID,
-                tenant_id=TENANT_ID,
+                organization_id=TENANT_ID,
                 step_id=step_id,
                 outcome=SequenceRunFailed(reason=result.reason, detail=result.detail),
                 attempted_at=NOW,
@@ -89,7 +89,7 @@ async def run_step(
         SequenceRun(
             run_id=run_id,
             sequence_id=SEQUENCE_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             step_id=step_id,
             outcome=SequenceRunSucceeded(produced_table_id=prepared_table_id),
             attempted_at=NOW,
@@ -98,7 +98,7 @@ async def run_step(
     step = SequenceStep(
         step_id=step_id,
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         operation=build_sequence_operation(operation_kind, operation_parameters),
         input_reference=input_reference,
         produced_table_id=prepared_table_id,
@@ -106,7 +106,7 @@ async def run_step(
     )
     table = PreparedTable(
         prepared_table_id=prepared_table_id,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=step_id,
         parent_table_reference=input_reference,
@@ -124,7 +124,7 @@ async def test_a_full_sequence_can_be_built_incrementally_through_the_fake_port(
 ):
     port = FakeSequenceExecutionPort()
     port.seed_table(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         reference_id=RAW_TABLE_ID,
         kind="raw",
         rows=RAW_ROWS,
@@ -132,7 +132,7 @@ async def test_a_full_sequence_can_be_built_incrementally_through_the_fake_port(
     )
     sequence = Sequence.create(
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=DATASET_WORKSPACE_ID,
         raw_table_reference=DatasetTableVersionReference(
             storage_locator="s3://fixtures/messy_orders.csv", file_format="csv"
@@ -150,7 +150,7 @@ async def test_a_full_sequence_can_be_built_incrementally_through_the_fake_port(
     assert step_1_table_id is not None
 
     step_1_ref = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=step_1_table_id, kind="prepared"
+        organization_id=TENANT_ID, reference_id=step_1_table_id, kind="prepared"
     )
     step_2_table_id = await run_step(
         sequence,
@@ -195,7 +195,7 @@ async def test_a_full_sequence_can_be_built_incrementally_through_the_fake_port(
 async def test_a_sequence_may_branch_into_two_final_tables_via_the_fake_port() -> None:
     port = FakeSequenceExecutionPort()
     port.seed_table(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         reference_id=RAW_TABLE_ID,
         kind="raw",
         rows=RAW_ROWS,
@@ -203,7 +203,7 @@ async def test_a_sequence_may_branch_into_two_final_tables_via_the_fake_port() -
     )
     sequence = Sequence.create(
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=DATASET_WORKSPACE_ID,
         raw_table_reference=DatasetTableVersionReference(
             storage_locator="s3://fixtures/messy_orders.csv", file_format="csv"
@@ -220,7 +220,7 @@ async def test_a_sequence_may_branch_into_two_final_tables_via_the_fake_port() -
     )
     assert root_table_id is not None
     root_ref = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=root_table_id, kind="prepared"
+        organization_id=TENANT_ID, reference_id=root_table_id, kind="prepared"
     )
 
     branch_a = await run_step(

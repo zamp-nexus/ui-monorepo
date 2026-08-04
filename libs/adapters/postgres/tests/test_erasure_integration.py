@@ -28,7 +28,7 @@ from zentra_domain_analysis_run import (
     EvidenceSurface,
 )
 
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.erasure import PostgresErasureRepository
 from zentra_adapter_postgres.schema import (
     agent_executions,
@@ -37,7 +37,7 @@ from zentra_adapter_postgres.schema import (
     draft_findings,
     erasure_operations,
     evidence_citations,
-    tenants,
+    organizations,
 )
 
 OWNER_URL = os.getenv("TEST_DATABASE_OWNER_URL")
@@ -75,8 +75,8 @@ async def seed(status: str = "completed") -> None:
     owner = create_async_engine(OWNER_URL)
     async with owner.begin() as connection:
         await connection.execute(
-            postgres_insert(tenants)
-            .values(tenant_id=TENANT, name="Erasure")
+            postgres_insert(organizations)
+            .values(organization_id=TENANT, name="Erasure")
             .on_conflict_do_nothing()
         )
         await connection.execute(
@@ -92,7 +92,7 @@ async def seed(status: str = "completed") -> None:
         await connection.execute(
             analysis_runs.insert().values(
                 analysis_run_id=ANALYSIS_RUN,
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 question="Why did EU refunds increase?",
                 status=status,
                 state={
@@ -118,7 +118,7 @@ async def seed(status: str = "completed") -> None:
             agent_executions.insert().values(
                 execution_id=EXECUTION,
                 analysis_run_id=ANALYSIS_RUN,
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 agent_id="cube_analyst_v1",
                 step=1,
                 input={"question": MARKERS[EvidenceSurface.AGENT_EXECUTION_INPUT]},
@@ -139,7 +139,7 @@ async def seed(status: str = "completed") -> None:
             draft_findings.insert().values(
                 draft_finding_id=DRAFT,
                 analysis_run_id=ANALYSIS_RUN,
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 version=1,
                 headline=MARKERS[EvidenceSurface.DRAFT_FINDING_NARRATIVE],
                 summary="draft summary",
@@ -158,7 +158,7 @@ async def seed(status: str = "completed") -> None:
             draft_finding_claims.insert().values(
                 claim_id=CLAIM,
                 draft_finding_id=DRAFT,
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 kind="observed",
                 claim_text=MARKERS[EvidenceSurface.DRAFT_FINDING_CLAIMS],
                 metric="refund_amount",
@@ -171,7 +171,7 @@ async def seed(status: str = "completed") -> None:
             evidence_citations.insert().values(
                 citation_id=CITATION,
                 analysis_run_id=ANALYSIS_RUN,
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 metric="refund_amount",
                 filters=[{"member": "Commerce.region", "operator": "equals",
                           "values": ["EU"]}],
@@ -255,23 +255,23 @@ async def test_every_surface_is_present_before_and_absent_after() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             before = await surviving_markers(connection)
         assert before == set(MARKERS.values()), "the harness did not seed a surface"
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             operation = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
 
@@ -279,7 +279,7 @@ async def test_every_surface_is_present_before_and_absent_after() -> None:
         assert operation.completed_at is not None
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             after = await surviving_markers(connection)
         assert after == set(), f"content survived the erasure: {sorted(after)}"
     finally:
@@ -295,23 +295,23 @@ async def test_process_survives_what_content_does_not() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             row = (
                 await connection.execute(
                     select(
@@ -368,23 +368,23 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             citation = (
                 await connection.execute(
                     select(
@@ -421,12 +421,12 @@ async def test_a_running_analysis_run_cannot_be_erased() -> None:
     try:
         with pytest.raises(ErasureError, match="terminal"):
             async with runtime.begin() as connection:
-                await set_tenant_context(connection, TENANT)
+                await set_organization_context(connection, TENANT)
                 await PostgresErasureRepository(connection).request(
                     erasure_id=uuid4(),
-                    tenant_id=TENANT,
+                    organization_id=TENANT,
                     analysis_run_id=ANALYSIS_RUN,
-                    category=DeletionCategory.TENANT_REQUEST,
+                    category=DeletionCategory.ORGANIZATION_REQUEST,
                     now=NOW,
                 )
     finally:
@@ -441,20 +441,20 @@ async def test_asking_twice_reaches_the_same_operation() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             first = await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             second = await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             count = await connection.scalar(
@@ -478,23 +478,23 @@ async def test_erasing_twice_keeps_the_original_completion_time() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             first = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             again = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=later,
             )
 
@@ -512,23 +512,23 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             await repository.mark_failed(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 failure_code="storage_unavailable",
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             failed = (
                 await connection.execute(
                     select(
@@ -545,10 +545,10 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
 
         # And the retry succeeds, from the same operation.
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             retried = await PostgresErasureRepository(connection).erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
         assert retried.progress is ErasureProgress.COMPLETED
@@ -568,24 +568,24 @@ async def test_a_rolled_back_erasure_leaves_everything_intact() -> None:
     try:
         with pytest.raises(RuntimeError, match="interrupted"):
             async with runtime.begin() as connection:
-                await set_tenant_context(connection, TENANT)
+                await set_organization_context(connection, TENANT)
                 repository = PostgresErasureRepository(connection)
                 await repository.request(
                     erasure_id=uuid4(),
-                    tenant_id=TENANT,
+                    organization_id=TENANT,
                     analysis_run_id=ANALYSIS_RUN,
-                    category=DeletionCategory.TENANT_REQUEST,
+                    category=DeletionCategory.ORGANIZATION_REQUEST,
                     now=NOW,
                 )
                 await repository.erase(
                     analysis_run_id=ANALYSIS_RUN,
-                    category=DeletionCategory.TENANT_REQUEST,
+                    category=DeletionCategory.ORGANIZATION_REQUEST,
                     now=NOW,
                 )
                 raise RuntimeError("interrupted after erasing, before commit")
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             survived = await surviving_markers(connection)
             operation = await connection.scalar(
                 select(erasure_operations.c.progress).where(
@@ -621,7 +621,7 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
                 audit_outbox.insert().values(
                     event_id=event_id,
                     analysis_run_id=ANALYSIS_RUN,
-                    tenant_id=TENANT,
+                    organization_id=TENANT,
                     payload={
                         "event_type": "analysis_run.completed",
                         "status": "completed",
@@ -635,7 +635,7 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             before = json.dumps(
                 await connection.scalar(
                     select(audit_outbox.c.payload).where(
@@ -646,23 +646,23 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             after = json.dumps(
                 await connection.scalar(
                     select(audit_outbox.c.payload).where(
@@ -724,7 +724,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             event_id=uuid4(),
             event_type=event_type,
             analysis_run_id=ANALYSIS_RUN,
-            tenant_id=TENANT,
+            organization_id=TENANT,
             status=AnalysisRunStatus.AWAITING_APPROVAL,
             occurred_at=same_instant,
         )
@@ -739,7 +739,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
             "human_approval.granted",
         ):
             async with runtime.begin() as connection:
-                await set_tenant_context(connection, TENANT)
+                await set_organization_context(connection, TENANT)
                 await PostgresAuditOutboxRepository(
                     connection,
                     trace_id=uuid4(),
@@ -747,7 +747,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
                 ).enqueue([event(event_type)])
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             rows = (
                 await connection.execute(
                     select(audit_outbox.c.created_at, audit_outbox.c.payload)
@@ -766,7 +766,7 @@ async def test_a_timeline_stays_strictly_increasing_across_requests() -> None:
         ]
     finally:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             await connection.execute(
                 audit_outbox.delete().where(
                     audit_outbox.c.analysis_run_id == ANALYSIS_RUN
@@ -792,23 +792,23 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             repository = PostgresErasureRepository(connection)
             await repository.request(
                 erasure_id=uuid4(),
-                tenant_id=TENANT,
+                organization_id=TENANT,
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
-                category=DeletionCategory.TENANT_REQUEST,
+                category=DeletionCategory.ORGANIZATION_REQUEST,
                 now=NOW,
             )
 
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(
                 ANALYSIS_RUN, CITATION
             )
@@ -822,7 +822,7 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
         assert row_count == 1
         assert isinstance(resolved, Tombstone)
         assert resolved.citation_id == CITATION
-        assert resolved.category == "tenant_request"
+        assert resolved.category == "organization_request"
         assert resolved.erased_at is not None
         # Nothing else is reachable through it.
         for leaky in ("metric", "filters", "period", "grain", "aggregate_value"):
@@ -847,7 +847,7 @@ async def test_unexpected_loss_is_still_unavailable_after_a_deletion_elsewhere(
     runtime = create_async_engine(RUNTIME_URL)
     try:
         async with runtime.begin() as connection:
-            await set_tenant_context(connection, TENANT)
+            await set_organization_context(connection, TENANT)
             # This citation names no producing execution, so its evidence is
             # unreachable — a fault, not a deletion.
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(

@@ -18,7 +18,7 @@ PREPARED_TABLE_ID = UUID("61000000-0000-0000-0000-000000000003")
 def prepared_table_factory(**overrides: object) -> PreparedTable:
     fields: dict[str, object] = {
         "prepared_table_id": PREPARED_TABLE_ID,
-        "tenant_id": TENANT_ID,
+        "organization_id": TENANT_ID,
         "sequence_id": SEQUENCE_ID,
         "step_id": STEP_ID,
         "parent_table_reference": None,

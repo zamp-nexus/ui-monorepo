@@ -25,13 +25,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
 from zentra_adapter_postgres import Database, PostgresAnalysisRunUnitOfWorkFactory
-from zentra_adapter_postgres.database import set_tenant_context
+from zentra_adapter_postgres.database import set_organization_context
 from zentra_adapter_postgres.schema import (
     audit_outbox,
     identity_subjects,
-    tenant_identity_bindings,
-    tenant_memberships,
-    tenants,
+    organization_identity_bindings,
+    organization_memberships,
+    organizations,
     users,
 )
 from zentra_application_analysis_run import (
@@ -60,7 +60,7 @@ pytestmark = pytest.mark.skipif(
 _ORG = "org_phase2_acceptance"
 
 
-def _tenant_id():
+def _organization_id():
     return uuid5(NAMESPACE_URL, f"zentraos:acceptance:{_ORG}")
 
 
@@ -124,7 +124,7 @@ class _Probe:
 async def bound_tenant():
     """One Tenant, four memberships, created once per test and torn down."""
     engine = create_async_engine(OWNER_URL)
-    tenant_id = _tenant_id()
+    organization_id = _organization_id()
     user_ids = [
         uuid5(NAMESPACE_URL, f"zentraos:acceptance:user:{role}")
         for role in ("owner", "admin", "member", "viewer")
@@ -133,19 +133,23 @@ async def bound_tenant():
         # Users are not tenant-scoped, so deleting the Tenant leaves them
         # behind and the next run collides on the primary key.
         await connection.execute(
-            tenants.delete().where(tenants.c.tenant_id == tenant_id)
+            organizations.delete().where(
+                organizations.c.organization_id == organization_id
+            )
         )
         await connection.execute(users.delete().where(users.c.user_id.in_(user_ids)))
         await connection.execute(
-            insert(tenants).values(
-                tenant_id=tenant_id,
+            insert(organizations).values(
+                organization_id=organization_id,
                 name="Phase 2 Acceptance",
                 data_residency_zone="us-east",
             )
         )
         await connection.execute(
-            insert(tenant_identity_bindings).values(
-                provider="clerk", external_tenant_id=_ORG, tenant_id=tenant_id
+            insert(organization_identity_bindings).values(
+                provider="clerk",
+                external_organization_id=_ORG,
+                organization_id=organization_id,
             )
         )
         for role in ("owner", "admin", "member", "viewer"):
@@ -154,8 +158,8 @@ async def bound_tenant():
                 insert(users).values(user_id=user_id, email=f"{role}@acceptance.test")
             )
             await connection.execute(
-                insert(tenant_memberships).values(
-                    tenant_id=tenant_id, user_id=user_id, role=role
+                insert(organization_memberships).values(
+                    organization_id=organization_id, user_id=user_id, role=role
                 )
             )
             # The bridge the verifier's subject crosses. Without it the token
@@ -168,10 +172,12 @@ async def bound_tenant():
                     user_id=user_id,
                 )
             )
-    yield tenant_id
+    yield organization_id
     async with engine.begin() as connection:
         await connection.execute(
-            tenants.delete().where(tenants.c.tenant_id == tenant_id)
+            organizations.delete().where(
+                organizations.c.organization_id == organization_id
+            )
         )
         await connection.execute(users.delete().where(users.c.user_id.in_(user_ids)))
     await engine.dispose()
@@ -451,11 +457,11 @@ async def test_the_outbox_orders_events_without_duplicates(bound_tenant) -> None
     """
     engine = create_async_engine(RUNTIME_URL)
     async with engine.connect() as connection:
-        await set_tenant_context(connection, bound_tenant)
+        await set_organization_context(connection, bound_tenant)
         rows = (
             await connection.execute(
                 select(audit_outbox.c.event_id, audit_outbox.c.created_at)
-                .where(audit_outbox.c.tenant_id == bound_tenant)
+                .where(audit_outbox.c.organization_id == bound_tenant)
                 .order_by(audit_outbox.c.created_at)
             )
         ).all()

@@ -52,13 +52,13 @@ class _FakeLambdaClient:
 
 def _request() -> SequenceStepExecutionRequest:
     return SequenceStepExecutionRequest(
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=uuid4(),
         operation_kind="drop_nulls",
         operation_parameters={"columns": ["email"]},
         input_table=SequenceTableReference(
-            tenant_id=TENANT_ID, reference_id=uuid4(), kind="raw"
+            organization_id=TENANT_ID, reference_id=uuid4(), kind="raw"
         ),
     )
 
@@ -69,7 +69,7 @@ async def test_invokes_the_correct_function_with_the_request_as_payload() -> Non
     client.response_body = {
         "kind": "result",
         "output_table": {
-            "tenant_id": str(TENANT_ID),
+            "organization_id": str(TENANT_ID),
             "reference_id": str(uuid4()),
             "kind": "prepared",
         },
@@ -88,7 +88,7 @@ async def test_invokes_the_correct_function_with_the_request_as_payload() -> Non
     assert result.columns == ("email", "amount")
     function_name, payload = client.invocations[0]
     assert function_name == "sequence-execution"
-    assert payload["request"]["tenant_id"] == str(TENANT_ID)
+    assert payload["request"]["organization_id"] == str(TENANT_ID)
 
 
 @pytest.mark.asyncio

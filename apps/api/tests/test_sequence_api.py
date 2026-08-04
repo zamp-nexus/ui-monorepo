@@ -38,16 +38,16 @@ from zentra_api.settings import Settings
 
 OWNER = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000001"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000002"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000002"),
     email="owner@example.com",
-    tenant_name="Acme Europe",
+    organization_name="Acme Europe",
     role="owner",
 )
 OTHER_TENANT = IdentityContext(
     user_id=UUID("10000000-0000-0000-0000-000000000009"),
-    tenant_id=UUID("20000000-0000-0000-0000-000000000008"),
+    organization_id=UUID("20000000-0000-0000-0000-000000000008"),
     email="stranger@example.com",
-    tenant_name="Other Co",
+    organization_name="Other Co",
     role="owner",
 )
 AUTH = {"Authorization": "Bearer valid"}
@@ -99,12 +99,12 @@ class FakeSequenceRepository:
         return self.sequences.get(sequence_id)
 
     async def list_sequences(
-        self, *, tenant_id: UUID, dataset_workspace_id: UUID
+        self, *, organization_id: UUID, dataset_workspace_id: UUID
     ) -> tuple[SequenceListItem, ...]:
         matches = [
             s
             for s in self.sequences.values()
-            if s.tenant_id == tenant_id
+            if s.organization_id == organization_id
             and s.dataset_workspace_id == dataset_workspace_id
         ]
         matches.sort(key=lambda s: (s.updated_at, s.sequence_id), reverse=True)
@@ -149,21 +149,21 @@ class FakeSequenceUnitOfWorkFactory:
         self.repository = repository
 
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[FakeSequenceUnitOfWork]:
-        del tenant_id, trace_id, span_id
+        del organization_id, trace_id, span_id
         return FakeSequenceUnitOfWork(self.repository)
 
 
 class AlwaysResolvesRawTable(RawTableResolver):
-    async def label(self, tenant_id: UUID, reference: RawTableReference) -> str | None:
-        del tenant_id
+    async def label(self, organization_id: UUID, reference: RawTableReference) -> str | None:
+        del organization_id
         return raw_table_label(reference)
 
 
 class NeverResolvesRawTable(RawTableResolver):
-    async def label(self, tenant_id: UUID, reference: RawTableReference) -> str | None:
-        del tenant_id, reference
+    async def label(self, organization_id: UUID, reference: RawTableReference) -> str | None:
+        del organization_id, reference
         return None
 
 
@@ -213,7 +213,7 @@ def build(
 
     monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
     monkeypatch.setattr(
-        "zentra_api.request_context.correlate_tenant", lambda *_: None
+        "zentra_api.request_context.correlate_organization", lambda *_: None
     )
 
     repository = repository if repository is not None else FakeSequenceRepository()
@@ -244,13 +244,13 @@ def build(
 def _seed_sequence(
     repository: FakeSequenceRepository,
     *,
-    tenant_id: UUID = OWNER.tenant_id,
+    organization_id: UUID = OWNER.organization_id,
     thread_id: UUID | None = None,
 ) -> Sequence:
     sequence = Sequence.create(
         sequence_id=uuid4(),
-        tenant_id=tenant_id,
-        dataset_workspace_id=dataset_workspace_id_for(tenant_id),
+        organization_id=organization_id,
+        dataset_workspace_id=dataset_workspace_id_for(organization_id),
         raw_table_reference=ConnectorSourceTableReference(
             catalog_version_id="cv-1", source_table_name="clickathon.orders"
         ),
@@ -286,8 +286,8 @@ def test_listing_returns_503_when_sequence_is_not_configured(monkeypatch) -> Non
 
 def test_listing_returns_only_this_tenants_sequences(monkeypatch) -> None:
     repository = FakeSequenceRepository()
-    mine = _seed_sequence(repository, tenant_id=OWNER.tenant_id)
-    _seed_sequence(repository, tenant_id=OTHER_TENANT.tenant_id)
+    mine = _seed_sequence(repository, organization_id=OWNER.organization_id)
+    _seed_sequence(repository, organization_id=OTHER_TENANT.organization_id)
 
     with build(monkeypatch, repository=repository)[0] as test_client:
         response = test_client.get("/v1/sequences", headers=AUTH)
@@ -325,7 +325,7 @@ def test_get_returns_404_for_an_unknown_sequence(monkeypatch) -> None:
 
 def test_get_returns_404_for_another_tenants_sequence(monkeypatch) -> None:
     repository = FakeSequenceRepository()
-    theirs = _seed_sequence(repository, tenant_id=OTHER_TENANT.tenant_id)
+    theirs = _seed_sequence(repository, organization_id=OTHER_TENANT.organization_id)
 
     with build(monkeypatch, repository=repository)[0] as test_client:
         response = test_client.get(f"/v1/sequences/{theirs.sequence_id}", headers=AUTH)
@@ -396,9 +396,9 @@ def test_a_viewer_cannot_be_blocked_from_reading_sequences(monkeypatch) -> None:
     role, and those gate inside `ThreadService`, not here."""
     viewer = IdentityContext(
         user_id=uuid4(),
-        tenant_id=OWNER.tenant_id,
+        organization_id=OWNER.organization_id,
         email="viewer@example.com",
-        tenant_name="Acme Europe",
+        organization_name="Acme Europe",
         role="viewer",
     )
     with build(monkeypatch, identity=viewer)[0] as test_client:

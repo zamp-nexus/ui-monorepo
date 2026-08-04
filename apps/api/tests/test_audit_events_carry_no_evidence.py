@@ -41,7 +41,7 @@ class _Record:
         self.payload = payload
         self.created_at = datetime.now(UTC)
         self.event_id = uuid4()
-        self.tenant_id = uuid4()
+        self.organization_id = uuid4()
         self.analysis_run_id = uuid4()
 
 
@@ -50,7 +50,7 @@ def _payload(errors: tuple[str, ...]) -> dict:
         "entry_id": str(uuid4()),
         "trace_id": str(uuid4()),
         "span_id": str(uuid4()),
-        "tenant_id": str(uuid4()),
+        "organization_id": str(uuid4()),
         "analysis_run_id": str(uuid4()),
         "event_type": "agent.execution_failed",
         "occurred_at": datetime.now(UTC).isoformat(),

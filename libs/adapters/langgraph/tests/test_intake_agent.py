@@ -77,7 +77,7 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
     output = await agent.invoke(
         AgentInput(
             analysis_run_id=ANALYSIS_RUN_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             state={"question": "hi there"},
         )
     )
@@ -85,3 +85,4 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
     assert output.fields["disposition"] == "not_analytical"
     assert output.outcome.passed is False
     assert output.outcome.issues == ("The message is not a business question.",)
+    assert output.reasoning == "This is a greeting, not a business question."

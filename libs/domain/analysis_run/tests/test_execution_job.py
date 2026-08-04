@@ -18,7 +18,7 @@ ANALYSIS_RUN_ID = UUID("30000000-0000-0000-0000-000000000003")
 def queued_job() -> ExecutionJob:
     return ExecutionJob.create(
         job_id=JOB_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         analysis_run_id=ANALYSIS_RUN_ID,
         now=NOW,
     )

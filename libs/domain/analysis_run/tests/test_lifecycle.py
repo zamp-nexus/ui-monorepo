@@ -57,7 +57,7 @@ def confidence(score: float) -> ConfidenceOutcome:
 def new_analysis_run() -> AnalysisRun:
     return AnalysisRun.create(
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         question="Why did EU refunds increase from June to July 2026?",
         now=NOW,
     )
@@ -79,7 +79,7 @@ def test_thread_link_must_be_complete_with_a_positive_sequence(
     with pytest.raises(AnalysisRunTransitionError):
         AnalysisRun.create(
             analysis_run_id=ANALYSIS_RUN_ID,
-            tenant_id=TENANT_ID,
+            organization_id=TENANT_ID,
             question="Why did EU refunds increase?",
             now=NOW,
             thread_id=thread_id,
@@ -268,7 +268,7 @@ def test_same_decision_is_idempotent_but_conflicting_decision_is_rejected() -> N
     approval = HumanApproval(
         approval_id=UUID("33000000-0000-0000-0000-000000000003"),
         analysis_run_id=ANALYSIS_RUN_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         reason="tenant_policy",
         status=HumanApprovalStatus.PENDING,
         requested_at=NOW,

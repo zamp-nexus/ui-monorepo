@@ -36,7 +36,7 @@ RAW_TABLE = DatasetTableVersionReference(
 def new_sequence() -> Sequence:
     return Sequence.create(
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         dataset_workspace_id=DATASET_WORKSPACE_ID,
         raw_table_reference=RAW_TABLE,
         now=NOW,
@@ -48,7 +48,7 @@ def prepared_table(
 ) -> PreparedTable:
     return PreparedTable(
         prepared_table_id=prepared_table_id,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         sequence_id=SEQUENCE_ID,
         step_id=step_id,
         parent_table_reference=parent,
@@ -64,7 +64,7 @@ def step(
     return SequenceStep(
         step_id=step_id,
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         operation=build_sequence_operation("drop_nulls", {"columns": ["email"]}),
         input_reference=input_reference,
         produced_table_id=produced,
@@ -85,7 +85,7 @@ def test_multi_step_lineage_chains_parent_to_child_correctly() -> None:
     )
 
     table_1_ref = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=table_1_id, kind="prepared"
+        organization_id=TENANT_ID, reference_id=table_1_id, kind="prepared"
     )
     table_2 = prepared_table(
         prepared_table_id=table_2_id, step_id=step_2_id, parent=table_1_ref
@@ -135,7 +135,7 @@ def test_marking_an_unrelated_table_final_is_rejected() -> None:
 def test_appending_a_step_whose_input_is_not_in_this_sequence_is_rejected() -> None:
     sequence = new_sequence()
     dangling_reference = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=UUID(int=777), kind="prepared"
+        organization_id=TENANT_ID, reference_id=UUID(int=777), kind="prepared"
     )
     step_id, table_id = UUID(int=1), UUID(int=2)
     table = prepared_table(
@@ -162,7 +162,7 @@ def test_a_sequence_may_branch_into_multiple_final_tables() -> None:
         root_table,
     )
     root_ref = SequenceTableReference(
-        tenant_id=TENANT_ID, reference_id=root_table_id, kind="prepared"
+        organization_id=TENANT_ID, reference_id=root_table_id, kind="prepared"
     )
 
     branch_a_step, branch_a_table = UUID(int=10), UUID(int=11)
@@ -202,7 +202,7 @@ def test_a_failed_run_is_recorded_without_producing_a_table() -> None:
     run = SequenceRun(
         run_id=UUID(int=1),
         sequence_id=SEQUENCE_ID,
-        tenant_id=TENANT_ID,
+        organization_id=TENANT_ID,
         step_id=UUID(int=2),
         outcome=SequenceRunFailed(
             reason=SequenceExecutionFailureReason.DATA_INCOMPATIBLE,
@@ -221,7 +221,7 @@ def test_record_run_rejects_a_run_from_another_tenant_or_sequence() -> None:
     foreign_run = SequenceRun(
         run_id=UUID(int=1),
         sequence_id=SEQUENCE_ID,
-        tenant_id=OTHER_TENANT_ID,
+        organization_id=OTHER_TENANT_ID,
         step_id=UUID(int=2),
         outcome=SequenceRunSucceeded(produced_table_id=UUID(int=3)),
         attempted_at=NOW,

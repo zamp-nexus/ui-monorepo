@@ -59,7 +59,7 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
     now = datetime.now(UTC)
     record = OutboxRecord(
         event_id=uuid4(),
-        tenant_id=uuid4(),
+        organization_id=uuid4(),
         analysis_run_id=uuid4(),
         payload={
             "trace_id": str(uuid4()),
@@ -84,7 +84,7 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
 
     assert (
         await coordinator.flush(
-            tenant_id=record.tenant_id,
+            organization_id=record.organization_id,
             analysis_run_id=record.analysis_run_id,
         )
         is False
@@ -94,7 +94,7 @@ async def test_outbox_delivery_retries_with_the_same_event_id() -> None:
     audit.fail = False
     assert (
         await coordinator.flush(
-            tenant_id=record.tenant_id,
+            organization_id=record.organization_id,
             analysis_run_id=record.analysis_run_id,
         )
         is True
@@ -159,7 +159,7 @@ def test_the_delivered_entry_keeps_the_outbox_ordering_floor() -> None:
 
     record = OutboxRecord(
         event_id=_UUID("50000000-0000-0000-0000-000000000005"),
-        tenant_id=_UUID("20000000-0000-0000-0000-000000000002"),
+        organization_id=_UUID("20000000-0000-0000-0000-000000000002"),
         analysis_run_id=_UUID("30000000-0000-0000-0000-000000000003"),
         payload={
             "trace_id": str(_UUID(int=0)),
@@ -223,7 +223,7 @@ async def test_an_event_in_both_sources_appears_once() -> None:
             return [
                 OutboxRecord(
                     event_id=shared,
-                    tenant_id=tenant,
+                    organization_id=tenant,
                     analysis_run_id=analysis_run,
                     payload={
                         "event_type": "analysis_run.completed",
@@ -259,7 +259,7 @@ async def test_an_event_in_both_sources_appears_once() -> None:
     )
 
     timeline = await coordinator.list_timeline(
-        tenant_id=tenant,
+        organization_id=tenant,
         analysis_run_id=analysis_run,
     )
 
