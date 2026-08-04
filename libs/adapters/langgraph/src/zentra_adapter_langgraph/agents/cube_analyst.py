@@ -157,6 +157,8 @@ class CubeAnalystAgent:
             raw_query_tool if raw_query_tool.last_query is not None else query_tool
         )
 
+        reasoning = str(analysis.get("result_summary", ""))
+
         return validate_agent_output(
             self,
             AgentOutput(
@@ -168,12 +170,13 @@ class CubeAnalystAgent:
                         if ran_tool.last_query is not None
                         else {}
                     ),
-                    "reasoning": str(analysis.get("result_summary", "")),
+                    "reasoning": reasoning,
                     "result_summary": analysis["result_summary"],
                     "metrics": analysis["metrics"],
                     "sample_size": int(analysis["sample_size"]),
                     "rows": list(ran_tool.last_rows),
                 },
+                reasoning=reasoning or None,
                 evidence_refs=(f"artifact://execution/{execution_id}",),
                 outcome=ConfidenceOutcome(
                     score=_clamp(analysis["confidence"]),

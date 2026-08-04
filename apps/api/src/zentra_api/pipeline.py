@@ -329,6 +329,7 @@ class PostgresExecutionRecorder:
                     summary=(
                         f"{execution.role.value.replace('_', ' ').title()} completed."
                     ),
+                    reasoning=execution.reasoning,
                     provider=_provider_of(execution.usage.model),
                     model=execution.usage.model,
                     fallback_count=len(execution.fallbacks),

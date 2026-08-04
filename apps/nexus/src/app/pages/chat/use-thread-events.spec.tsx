@@ -22,6 +22,7 @@ const event = (sequence: number, eventId: string): ThreadEvent => ({
     from_agent_id: null,
     to_agent_id: null,
     summary: `update ${sequence}`,
+    reasoning: null,
     provider: null,
     model: null,
     fallback_count: 0,

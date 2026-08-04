@@ -1075,6 +1075,7 @@ def _execution_record(
         usage=output.usage if output is not None else ExecutionUsage(),
         evidence_refs=output.evidence_refs if output else (),
         fallbacks=output.fallbacks if output else (),
+        reasoning=output.reasoning if output else None,
         errors=errors,
         started_at=started_at,
         completed_at=completed_at,
