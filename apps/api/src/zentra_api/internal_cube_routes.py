@@ -98,11 +98,11 @@ class ConnectorCubeModelSchema(BaseModel):
 
 
 @router.get(
-    "/model/{tenant_id}/{data_connection_id}",
+    "/model/{organization_id}/{data_connection_id}",
     response_model=ConnectorCubeModelSchema,
 )
 async def get_connector_cube_model(
-    tenant_id: UUID,
+    organization_id: UUID,
     data_connection_id: UUID,
     request: Request,
     _internal: InternalRequest,
@@ -111,7 +111,7 @@ async def get_connector_cube_model(
     try:
         model = await connector_cube_model(
             connector,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             data_connection_id=data_connection_id,
         )
     except ConnectorNotConfiguredError as error:

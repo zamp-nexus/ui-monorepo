@@ -86,10 +86,10 @@ class Contradiction:
 
 @dataclass(frozen=True, slots=True)
 class DraftFinding:
-    """An unpublished conclusion, owned by one Tenant and one Investigation."""
+    """An unpublished conclusion, owned by one Organization and one Investigation."""
 
     draft_finding_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     version: int
     created_at: datetime
@@ -124,7 +124,7 @@ class DraftFinding:
                 #
                 # `is None`, not falsiness: erasure empties a value while
                 # leaving the field. Rejecting an empty string would make every
-                # Investigation whose evidence a Tenant deleted permanently
+                # Investigation whose evidence an Organization deleted permanently
                 # unreadable — the draft would raise on load, so the deletion
                 # would destroy the process record it was supposed to preserve.
                 raise DraftFindingError(

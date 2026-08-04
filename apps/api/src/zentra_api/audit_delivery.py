@@ -84,7 +84,7 @@ def error_categories(errors: tuple[str, ...]) -> tuple[str, ...]:
 
 
 class AuditDeliveryCoordinator:
-    """Moves tenant-scoped outbox events into the immutable audit ledger."""
+    """Moves organization-scoped outbox events into the immutable audit ledger."""
 
     def __init__(
         self,
@@ -96,14 +96,14 @@ class AuditDeliveryCoordinator:
         self._unit_of_work_factory = unit_of_work_factory
         self._audit = audit
         self._retry_interval_seconds = retry_interval_seconds
-        self._active_tenants: set[UUID] = set()
+        self._active_organizations: set[UUID] = set()
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
-    async def flush(self, *, tenant_id: UUID, investigation_id: UUID) -> bool:
-        self._active_tenants.add(tenant_id)
+    async def flush(self, *, organization_id: UUID, investigation_id: UUID) -> bool:
+        self._active_organizations.add(organization_id)
         async with self._unit_of_work_factory(
-            tenant_id,
+            organization_id,
             SYSTEM_TRACE_ID,
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
@@ -118,7 +118,7 @@ class AuditDeliveryCoordinator:
             except Exception:
                 delivered = False
                 async with self._unit_of_work_factory(
-                    tenant_id,
+                    organization_id,
                     SYSTEM_TRACE_ID,
                     SYSTEM_SPAN_ID,
                 ) as unit_of_work:
@@ -129,7 +129,7 @@ class AuditDeliveryCoordinator:
                     await unit_of_work.commit()
                 continue
             async with self._unit_of_work_factory(
-                tenant_id,
+                organization_id,
                 SYSTEM_TRACE_ID,
                 SYSTEM_SPAN_ID,
             ) as unit_of_work:
@@ -143,19 +143,19 @@ class AuditDeliveryCoordinator:
     async def list_timeline(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
     ) -> Sequence[TimelineEntry]:
-        self._active_tenants.add(tenant_id)
+        self._active_organizations.add(organization_id)
         try:
             delivered_rows = await self._audit.list_for_investigation(
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 investigation_id=investigation_id,
             )
         except Exception:
             delivered_rows = []
         async with self._unit_of_work_factory(
-            tenant_id,
+            organization_id,
             SYSTEM_TRACE_ID,
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
@@ -241,13 +241,15 @@ class AuditDeliveryCoordinator:
 
     async def _retry_loop(self) -> None:
         while not self._stop.is_set():
-            tenant_ids = set(self._active_tenants)
+            organization_ids = set(self._active_organizations)
             with suppress(Exception):
-                tenant_ids.update(await self._unit_of_work_factory.bound_tenant_ids())
-            for tenant_id in tenant_ids:
+                organization_ids.update(
+                    await self._unit_of_work_factory.bound_organization_ids()
+                )
+            for organization_id in organization_ids:
                 try:
                     async with self._unit_of_work_factory(
-                        tenant_id,
+                        organization_id,
                         SYSTEM_TRACE_ID,
                         SYSTEM_SPAN_ID,
                     ) as unit_of_work:
@@ -255,7 +257,7 @@ class AuditDeliveryCoordinator:
                     investigation_ids = {record.investigation_id for record in pending}
                     for investigation_id in investigation_ids:
                         await self.flush(
-                            tenant_id=tenant_id,
+                            organization_id=organization_id,
                             investigation_id=investigation_id,
                         )
                 except Exception:
@@ -272,7 +274,7 @@ class AuditDeliveryCoordinator:
             entry_id=record.event_id,
             trace_id=UUID(str(payload["trace_id"])),
             span_id=UUID(str(payload["span_id"])),
-            tenant_id=record.tenant_id,
+            organization_id=record.organization_id,
             investigation_id=record.investigation_id,
             event_type=str(payload["event_type"]),
             agent_id=metadata.get("agent_id"),

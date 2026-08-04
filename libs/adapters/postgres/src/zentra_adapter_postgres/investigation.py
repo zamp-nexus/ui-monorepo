@@ -29,7 +29,7 @@ from zentra_domain_investigation import (
     RejectionReason,
 )
 
-from .database import Database, set_tenant_context
+from .database import Database, set_organization_context
 from .draft_finding import (
     PostgresDraftFindingRepository,
     PostgresEvidenceCitationRepository,
@@ -45,8 +45,8 @@ from .schema import (
     analysis_runs,
     audit_outbox,
     human_approvals,
-    tenant_identity_bindings,
-    tenants,
+    organization_identity_bindings,
+    organizations,
 )
 from .visualization import PostgresVisualizationRepository
 from .work_feed import PostgresWorkFeedRepository
@@ -153,7 +153,7 @@ def _investigation_from_row(row: Any) -> Investigation:
     data_connection_value = state.get("data_connection_id")
     return Investigation(
         investigation_id=row.analysis_run_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         question=row.question,
         scenario_key=row.scenario_key,
         status=InvestigationStatus(row.status),
@@ -186,7 +186,7 @@ class PostgresInvestigationRepository:
         await self._connection.execute(
             insert(analysis_runs).values(
                 analysis_run_id=investigation.investigation_id,
-                tenant_id=investigation.tenant_id,
+                organization_id=investigation.organization_id,
                 question=investigation.question,
                 status=investigation.status.value,
                 state=_state_to_json(investigation),
@@ -281,7 +281,7 @@ class PostgresHumanApprovalRepository:
             insert(human_approvals).values(
                 approval_id=approval.approval_id,
                 analysis_run_id=approval.investigation_id,
-                tenant_id=approval.tenant_id,
+                organization_id=approval.organization_id,
                 reason=approval.reason.value,
                 failed_conditions=[c.value for c in approval.failed_conditions],
                 status=approval.status.value,
@@ -310,7 +310,7 @@ class PostgresHumanApprovalRepository:
         return HumanApproval(
             approval_id=row.approval_id,
             investigation_id=row.analysis_run_id,
-            tenant_id=row.tenant_id,
+            organization_id=row.organization_id,
             reason=ApprovalReason(row.reason),
             failed_conditions=tuple(
                 PublicationCondition(condition)
@@ -347,7 +347,7 @@ class PostgresHumanApprovalRepository:
 @dataclass(frozen=True, slots=True)
 class OutboxRecord:
     event_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     payload: dict[str, Any]
     attempts: int
@@ -411,7 +411,7 @@ class PostgresAuditOutboxRepository:
             rows.append(
                 {
                     "event_id": event.event_id,
-                    "tenant_id": event.tenant_id,
+                    "organization_id": event.organization_id,
                     "analysis_run_id": event.investigation_id,
                     "payload": {
                         "trace_id": str(self._trace_id),
@@ -447,7 +447,7 @@ class PostgresAuditOutboxRepository:
         return tuple(
             OutboxRecord(
                 event_id=row.event_id,
-                tenant_id=row.tenant_id,
+                organization_id=row.organization_id,
                 investigation_id=row.analysis_run_id,
                 payload=row.payload,
                 attempts=row.attempts,
@@ -471,7 +471,7 @@ class PostgresAuditOutboxRepository:
         return tuple(
             OutboxRecord(
                 event_id=row.event_id,
-                tenant_id=row.tenant_id,
+                organization_id=row.organization_id,
                 investigation_id=row.analysis_run_id,
                 payload=row.payload,
                 attempts=row.attempts,
@@ -502,7 +502,7 @@ class PostgresAuditOutboxRepository:
 class PostgresAgentExecutionRepository:
     """Holds the full agent output, including result rows.
 
-    This is the tenant-scoped, RLS-protected store an `artifact://execution/{id}`
+    This is the organization-scoped, RLS-protected store an `artifact://execution/{id}`
     pointer resolves to. Raw values live here and never in the audit ledger.
     """
 
@@ -515,7 +515,7 @@ class PostgresAgentExecutionRepository:
             insert(agent_executions).values(
                 execution_id=execution.execution_id,
                 analysis_run_id=execution.investigation_id,
-                tenant_id=execution.tenant_id,
+                organization_id=execution.organization_id,
                 agent_id=execution.agent_id,
                 role=execution.role.value,
                 step=execution.step,
@@ -567,25 +567,27 @@ class PostgresAgentExecutionRepository:
         )
 
 
-class PostgresTenantPolicyRepository:
+class PostgresOrganizationPolicyRepository:
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
 
-    async def confidence_threshold(self, tenant_id: UUID) -> float:
+    async def confidence_threshold(self, organization_id: UUID) -> float:
         value = (
             await self._connection.execute(
-                select(tenants.c.confidence_threshold).where(
-                    tenants.c.tenant_id == tenant_id
+                select(organizations.c.confidence_threshold).where(
+                    organizations.c.organization_id == organization_id
                 )
             )
         ).scalar_one()
         return float(value)
 
-    async def model_tier(self, tenant_id: UUID) -> str:
+    async def model_tier(self, organization_id: UUID) -> str:
         return str(
             (
                 await self._connection.execute(
-                    select(tenants.c.model_tier).where(tenants.c.tenant_id == tenant_id)
+                    select(organizations.c.model_tier).where(
+                        organizations.c.organization_id == organization_id
+                    )
                 )
             ).scalar_one()
         )
@@ -606,7 +608,7 @@ class PostgresInvestigationUnitOfWork(InvestigationUnitOfWork):
         self.draft_findings = PostgresDraftFindingRepository(connection)
         self.citations = PostgresEvidenceCitationRepository(connection)
         self.erasures = PostgresErasureRepository(connection)
-        self.policies = PostgresTenantPolicyRepository(connection)
+        self.policies = PostgresOrganizationPolicyRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
             connection,
             trace_id=trace_id,
@@ -626,11 +628,11 @@ class PostgresInvestigationUnitOfWorkFactory:
     def __init__(self, database: Database) -> None:
         self._database = database
 
-    async def bound_tenant_ids(self) -> tuple[UUID, ...]:
+    async def bound_organization_ids(self) -> tuple[UUID, ...]:
         async with self._database.engine.connect() as connection:
             rows = (
                 await connection.execute(
-                    select(tenant_identity_bindings.c.tenant_id).distinct()
+                    select(organization_identity_bindings.c.organization_id).distinct()
                 )
             ).scalars()
             return tuple(rows)
@@ -638,13 +640,13 @@ class PostgresInvestigationUnitOfWorkFactory:
     @asynccontextmanager
     async def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
     ) -> AsyncIterator[PostgresInvestigationUnitOfWork]:
         async with self._database.engine.connect() as connection:
             transaction = await connection.begin()
-            await set_tenant_context(connection, tenant_id)
+            await set_organization_context(connection, organization_id)
             unit_of_work = PostgresInvestigationUnitOfWork(
                 connection,
                 trace_id=trace_id,

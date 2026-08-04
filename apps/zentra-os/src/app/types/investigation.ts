@@ -18,9 +18,9 @@ export interface ReadinessResponse {
 
 export interface IdentityContext {
   readonly user_id: string;
-  readonly tenant_id: string;
+  readonly organization_id: string;
   readonly email: string;
-  readonly tenant_name: string;
+  readonly organization_name: string;
   readonly role: 'owner' | 'admin' | 'member' | 'viewer';
 }
 

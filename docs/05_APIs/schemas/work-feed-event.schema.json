@@ -481,6 +481,11 @@
       "title": "Occurred At",
       "type": "string"
     },
+    "organization_id": {
+      "format": "uuid",
+      "title": "Organization Id",
+      "type": "string"
+    },
     "payload": {
       "discriminator": {
         "mapping": {
@@ -524,11 +529,6 @@
       "title": "Sequence",
       "type": "integer"
     },
-    "tenant_id": {
-      "format": "uuid",
-      "title": "Tenant Id",
-      "type": "string"
-    },
     "thread_id": {
       "format": "uuid",
       "title": "Thread Id",
@@ -537,7 +537,7 @@
   },
   "required": [
     "event_id",
-    "tenant_id",
+    "organization_id",
     "thread_id",
     "sequence",
     "kind",

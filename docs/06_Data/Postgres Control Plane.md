@@ -16,10 +16,7 @@ related: ["[[Data MOC]]", "[[Postgres Adapter]]", "[[Tenancy Security]]"]
 repo_path: libs/adapters/postgres
 code_refs:
   - libs/adapters/postgres/src/zentra_adapter_postgres/schema.py
-  - libs/adapters/postgres/migrations/versions/0001_phase0_foundation.py
-  - libs/adapters/postgres/migrations/versions/0002_phase1a_investigation.py
-  - libs/adapters/postgres/migrations/versions/0014_workspace_groups_projects.py
-  - libs/adapters/postgres/migrations/versions/0015_draft_investigation_threads.py
+  - libs/adapters/postgres/migrations/versions/0001_initial_schema.py
 ---
 
 # Postgres Control Plane

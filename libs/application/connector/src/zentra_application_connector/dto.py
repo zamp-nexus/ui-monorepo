@@ -49,7 +49,7 @@ HARVEST_ROLES: frozenset[Role] = frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}
 @dataclass(frozen=True, slots=True)
 class AuthenticatedActor:
     user_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     role: Role
 
 
@@ -279,10 +279,11 @@ class JoinGraphView:
 class DeletionPreview:
     """What removing a Data Source would take with it.
 
-    Informs rather than gates: deletion stays unconditional, because a Tenant
-    who wants their data gone should not be argued with. But "this also destroys
-    fourteen confirmed Relations, three of which join your uploaded file to your
-    warehouse" is something they should learn before, not after.
+    Informs rather than gates: deletion stays unconditional, because an
+    Organization who wants their data gone should not be argued with. But "this
+    also destroys fourteen confirmed Relations, three of which join your
+    uploaded file to your warehouse" is something they should learn before, not
+    after.
     """
 
     data_source_id: UUID

@@ -1,6 +1,6 @@
 """The registration gate itself.
 
-`run_evals.py` decides whether an Agent may reach a Tenant. That decision has
+`run_evals.py` decides whether an Agent may reach an Organization. That decision has
 three ways to say no — the suite is absent, the suite is incomplete, or a case
 failed — and until now none of them had a test. A gate nobody tests is a gate
 that silently opens.

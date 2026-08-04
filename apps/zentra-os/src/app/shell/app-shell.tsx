@@ -36,7 +36,7 @@ const WorkspaceLockup = ({
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${ready ? 'bg-primary' : 'bg-warning'}`}
           aria-hidden="true"
         />
-        <span className="truncate">{identity.tenant_name}</span>
+        <span className="truncate">{identity.organization_name}</span>
       </span>
       <span>
         {identity.role} · {ready ? 'foundation ready' : 'dependency review'}

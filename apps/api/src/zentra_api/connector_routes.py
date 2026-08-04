@@ -87,7 +87,7 @@ def _as_domain(
     """
     return CatalogAccessOverride(
         override_id=view.override_id,
-        tenant_id=actor.tenant_id,
+        organization_id=actor.organization_id,
         data_source_id=view.data_source_id,
         table_name=view.table_name,
         field_name=view.field_name,
@@ -174,7 +174,7 @@ async def preview_source_deletion(
 ) -> DeletionPreviewResponse:
     """What DELETE would destroy, so it is known beforehand.
 
-    A read. Deletion itself stays unconditional — a Tenant who wants their data
+    A read. Deletion itself stays unconditional — an Organization who wants their data
     gone should not be argued with, only informed.
     """
     with _handle():

@@ -19,7 +19,7 @@ from zentra_domain_investigation import (
     ThreadStatus,
 )
 
-from .database import Database, set_tenant_context
+from .database import Database, set_organization_context
 from .draft_finding import (
     PostgresDraftFindingRepository,
     PostgresEvidenceCitationRepository,
@@ -33,14 +33,14 @@ from .investigation import (
 )
 from .schema import analysis_runs, chat_sessions, messages
 from .work_feed import PostgresWorkFeedRepository
-from .workspace import PostgresOrganizationRepository
+from .workspace import PostgresGroupRepository
 
 
 def _thread_from_row(row: Any) -> InvestigationThread:
     value = row._mapping
     return InvestigationThread(
         thread_id=value["chat_session_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         project_id=value["group_id"],
         initiating_message_id=value["initiating_message_id"],
         title=value["title"],
@@ -63,7 +63,7 @@ def _message_from_row(row: Any) -> ThreadMessage:
     return ThreadMessage(
         message_id=value["message_id"],
         thread_id=value["chat_session_id"],
-        tenant_id=value["tenant_id"],
+        organization_id=value["organization_id"],
         author_id=value["author_id"],
         kind=ThreadMessageKind(value["kind"]),
         content=value["content"],
@@ -79,7 +79,7 @@ class PostgresThreadRepository:
         await self._connection.execute(
             insert(chat_sessions).values(
                 chat_session_id=thread.thread_id,
-                tenant_id=thread.tenant_id,
+                organization_id=thread.organization_id,
                 group_id=thread.project_id,
                 initiating_message_id=thread.initiating_message_id,
                 title=thread.title,
@@ -134,7 +134,7 @@ class PostgresThreadRepository:
             insert(messages).values(
                 message_id=message.message_id,
                 chat_session_id=message.thread_id,
-                tenant_id=message.tenant_id,
+                organization_id=message.organization_id,
                 author_id=message.author_id,
                 kind=message.kind.value,
                 content=message.content,
@@ -260,7 +260,7 @@ class PostgresThreadUnitOfWork:
         self, connection: AsyncConnection, *, trace_id: UUID, span_id: UUID
     ) -> None:
         self.threads = PostgresThreadRepository(connection)
-        self.organization = PostgresOrganizationRepository(connection)
+        self.groups = PostgresGroupRepository(connection)
         self.investigations = PostgresInvestigationRepository(connection)
         self.jobs = PostgresExecutionJobRepository(connection)
         self.outbox = PostgresAuditOutboxRepository(
@@ -284,14 +284,14 @@ class PostgresThreadUnitOfWorkFactory:
     @asynccontextmanager
     async def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
     ) -> AsyncIterator[PostgresThreadUnitOfWork]:
         async with self._database.engine.connect() as connection:
             await connection.execution_options(isolation_level="REPEATABLE READ")
             transaction = await connection.begin()
-            await set_tenant_context(connection, tenant_id)
+            await set_organization_context(connection, organization_id)
             unit_of_work = PostgresThreadUnitOfWork(
                 connection, trace_id=trace_id, span_id=span_id
             )

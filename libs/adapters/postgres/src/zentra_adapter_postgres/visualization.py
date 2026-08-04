@@ -25,7 +25,7 @@ from .schema import (
 def _artifact(row: Any) -> VisualizationArtifact:
     return VisualizationArtifact(
         visualization_id=row.visualization_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         investigation_id=row.analysis_run_id,
         brief_id=row.brief_id,
         status=VisualizationArtifactStatus(row.status),
@@ -51,7 +51,7 @@ def _artifact(row: Any) -> VisualizationArtifact:
 def _action(row: Any) -> VisualizationActionMapping:
     return VisualizationActionMapping(
         action_id=row.action_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         visualization_id=row.visualization_id,
         thread_id=row.chat_session_id,
         investigation_id=row.analysis_run_id,
@@ -81,7 +81,7 @@ class PostgresVisualizationRepository:
         await self._connection.execute(
             insert(visualization_briefs).values(
                 brief_id=brief_id,
-                tenant_id=artifact.tenant_id,
+                organization_id=artifact.organization_id,
                 analysis_run_id=artifact.investigation_id,
                 schema_version=brief.schema_version,
                 content=brief.model_dump(mode="json"),
@@ -95,7 +95,7 @@ class PostgresVisualizationRepository:
         await self._connection.execute(
             insert(visualization_artifacts).values(
                 visualization_id=artifact.visualization_id,
-                tenant_id=artifact.tenant_id,
+                organization_id=artifact.organization_id,
                 analysis_run_id=artifact.investigation_id,
                 brief_id=brief_id,
                 status=artifact.status.value,
@@ -130,7 +130,7 @@ class PostgresVisualizationRepository:
         await self._connection.execute(
             insert(visualization_artifacts).values(
                 visualization_id=artifact.visualization_id,
-                tenant_id=artifact.tenant_id,
+                organization_id=artifact.organization_id,
                 analysis_run_id=artifact.investigation_id,
                 brief_id=artifact.brief_id,
                 status=artifact.status.value,

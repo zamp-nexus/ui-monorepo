@@ -52,7 +52,7 @@ class AuditEntry(BaseModel):
     entry_id: UUID = Field(default_factory=uuid4)
     trace_id: UUID
     span_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     event_type: str = Field(min_length=1)
     agent_id: str | None = None
@@ -120,7 +120,7 @@ class AuditRepository:
         "entry_id",
         "trace_id",
         "span_id",
-        "tenant_id",
+        "organization_id",
         "investigation_id",
         "event_type",
         "agent_id",
@@ -216,7 +216,7 @@ class AuditRepository:
     async def list_for_investigation(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
     ) -> list[dict[str, Any]]:
         result = await asyncio.to_thread(
@@ -224,12 +224,12 @@ class AuditRepository:
                 """
                 SELECT *
                 FROM audit_entries
-                WHERE tenant_id = {tenant_id:UUID}
+                WHERE organization_id = {organization_id:UUID}
                   AND investigation_id = {investigation_id:UUID}
                 ORDER BY created_at, entry_id
                 """,
                 parameters={
-                    "tenant_id": str(tenant_id),
+                    "organization_id": str(organization_id),
                     "investigation_id": str(investigation_id),
                 },
             )

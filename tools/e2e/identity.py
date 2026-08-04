@@ -31,7 +31,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 #: One organization, four memberships. Every journey runs against the same
-#: Tenant so that a role difference is the only variable.
+#: Organization so that a role difference is the only variable.
 ORGANIZATION_ID = "org_e2e_forensic_observatory"
 
 ROLES = ("owner", "admin", "member", "viewer")
@@ -48,7 +48,7 @@ def subject_id(role: str) -> str:
     return f"user_e2e_{role}"
 
 
-def tenant_id():
+def organization_id():
     """The same derivation `bootstrap()` uses, so the rows line up."""
     return uuid5(NAMESPACE_URL, f"zentraos:clerk:tenant:{ORGANIZATION_ID}")
 
@@ -114,7 +114,7 @@ def write_jwks(key: SigningKey, directory: Path) -> Path:
 
 
 async def bind_identities(owner_url: str) -> None:
-    """Create the Tenant, the four users, and their memberships.
+    """Create the Organization, the four users, and their memberships.
 
     Reuses `bootstrap()` rather than reimplementing the upserts, so the rows the
     journeys authenticate against are made the same way a real deployment makes

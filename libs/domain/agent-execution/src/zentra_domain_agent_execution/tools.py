@@ -2,8 +2,8 @@
 
 Agents made a fixed sequence of model calls before this: plan, then interpret.
 That is enough to answer a question whose shape is known in advance, and it is
-not enough to explore a tenant's own catalog — where the right query is not
-knowable until you have looked at what the tenant actually has.
+not enough to explore an organization's own catalog — where the right query is
+not knowable until you have looked at what the organization actually has.
 
 A Tool is the unit of that exploration. `ToolScope` and
 `AgentDescriptor.tool_permissions` already existed and are the enforcement

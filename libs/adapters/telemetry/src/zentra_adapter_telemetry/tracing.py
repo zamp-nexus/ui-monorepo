@@ -21,8 +21,10 @@ class TelemetrySettings:
     otlp_headers: str | None = None
 
 
-def correlate_tenant(tenant_id: UUID) -> None:
-    trace.get_current_span().set_attribute("zentra.tenant_id", str(tenant_id))
+def correlate_organization(organization_id: UUID) -> None:
+    trace.get_current_span().set_attribute(
+        "zentra.organization_id", str(organization_id)
+    )
 
 
 #: Every attribute this module is allowed to set. An allowlist rather than a
@@ -31,7 +33,7 @@ def correlate_tenant(tenant_id: UUID) -> None:
 #: regression test walks this list; adding a key here is a deliberate act.
 SAFE_ATTRIBUTES: frozenset[str] = frozenset(
     {
-        "zentra.tenant_id",
+        "zentra.organization_id",
         "zentra.investigation_id",
         # Chat Session correlation (paired with zentra.investigation_id)
         "zentra.thread_id",
@@ -154,7 +156,7 @@ def record_publication_decision(
     """Which conditions failed, in the policy's own vocabulary.
 
     The condition names are a closed set the product already publishes; none
-    of them carries a figure, a claim or a Tenant's data.
+    of them carries a figure, a claim or an Organization's data.
     """
     _record(
         {
@@ -318,7 +320,7 @@ def record_skill_activation(*, role: str, skill_names: tuple[str, ...]) -> None:
 def correlate_investigation(investigation_id: UUID) -> None:
     """Internal identifier only, so a trace can be followed to its work.
 
-    Never the question, which is a Tenant's own words.
+    Never the question, which is an Organization's own words.
     """
     trace.get_current_span().set_attribute(
         "zentra.investigation_id", str(investigation_id)

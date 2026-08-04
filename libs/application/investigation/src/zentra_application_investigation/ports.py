@@ -44,7 +44,7 @@ class InvestigationPipeline(Protocol):
         self,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         model_tier: str,
         data_connection_id: UUID | None = None,
@@ -149,7 +149,7 @@ class ErasureRepository(Protocol):
         self,
         *,
         erasure_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         category: DeletionCategory,
         now: datetime,
@@ -213,10 +213,10 @@ class DraftFindingRepository(Protocol):
     ) -> DraftFinding | None: ...
 
 
-class TenantPolicyRepository(Protocol):
-    async def confidence_threshold(self, tenant_id: UUID) -> float: ...
+class OrganizationPolicyRepository(Protocol):
+    async def confidence_threshold(self, organization_id: UUID) -> float: ...
 
-    async def model_tier(self, tenant_id: UUID) -> str: ...
+    async def model_tier(self, organization_id: UUID) -> str: ...
 
 
 class AuditOutboxRepository(Protocol):
@@ -227,7 +227,7 @@ class WorkFeedRepository(Protocol):
     async def append(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         thread_id: UUID,
         kind: WorkFeedEventKind,
         payload: WorkFeedPayload,
@@ -238,7 +238,7 @@ class WorkFeedRepository(Protocol):
     async def append_for_investigation(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         kind: WorkFeedEventKind,
         payload: WorkFeedPayload,
@@ -259,20 +259,20 @@ class InvestigationBoardRepository(Protocol):
     async def save(self, board: InvestigationBoard) -> None: ...
 
     async def open_gap(
-        self, board_id: UUID, tenant_id: UUID, gap: KnowledgeGap
+        self, board_id: UUID, organization_id: UUID, gap: KnowledgeGap
     ) -> None: ...
 
-    async def resolve_gap(self, gap_id: UUID, tenant_id: UUID) -> None: ...
+    async def resolve_gap(self, gap_id: UUID, organization_id: UUID) -> None: ...
 
     async def record_fact(
-        self, board_id: UUID, tenant_id: UUID, fact: Fact
+        self, board_id: UUID, organization_id: UUID, fact: Fact
     ) -> None: ...
 
     async def open_conflict(
-        self, board_id: UUID, tenant_id: UUID, conflict: Conflict
+        self, board_id: UUID, organization_id: UUID, conflict: Conflict
     ) -> None: ...
 
-    async def settle_conflict(self, tenant_id: UUID, conflict: Conflict) -> None:
+    async def settle_conflict(self, organization_id: UUID, conflict: Conflict) -> None:
         """Persist a Conflict's status and the explanation that settled it.
 
         Takes the whole Conflict rather than its id and a status: `resolved`
@@ -288,7 +288,7 @@ class WorkItemRepository(Protocol):
     async def save(self, item: WorkItem) -> None: ...
 
     async def list_for_investigation(
-        self, investigation_id: UUID, tenant_id: UUID
+        self, investigation_id: UUID, organization_id: UUID
     ) -> tuple[WorkItem, ...]: ...
 
 
@@ -300,7 +300,7 @@ class InvestigationUnitOfWork(Protocol):
     draft_findings: DraftFindingRepository
     citations: EvidenceCitationRepository
     erasures: ErasureRepository
-    policies: TenantPolicyRepository
+    policies: OrganizationPolicyRepository
     outbox: AuditOutboxRepository
     work_feed: WorkFeedRepository
     visualizations: VisualizationRepository
@@ -311,11 +311,11 @@ class InvestigationUnitOfWork(Protocol):
 
 
 class InvestigationUnitOfWorkFactory(Protocol):
-    async def bound_tenant_ids(self) -> tuple[UUID, ...]: ...
+    async def bound_organization_ids(self) -> tuple[UUID, ...]: ...
 
     def __call__(
         self,
-        tenant_id: UUID,
+        organization_id: UUID,
         trace_id: UUID,
         span_id: UUID,
     ) -> AbstractAsyncContextManager[InvestigationUnitOfWork]: ...
@@ -325,7 +325,7 @@ class PublicationObserver(Protocol):
     """Somewhere to report a publication decision that is not the audit log.
 
     A port rather than a direct call because the application may not import an
-    adapter, and because an operator's dashboard and the Tenant's Replay record
+    adapter, and because an operator's dashboard and the Organization's Replay record
     are different obligations: one may be dropped under load, the other may
     not.
     """
@@ -387,13 +387,13 @@ class AgentExecutionObserver(Protocol):
 
 
 class AuditWriter(Protocol):
-    async def flush(self, *, tenant_id: UUID, investigation_id: UUID) -> bool: ...
+    async def flush(self, *, organization_id: UUID, investigation_id: UUID) -> bool: ...
 
 
 class AuditReader(Protocol):
     async def list_timeline(
         self,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
     ) -> Sequence[TimelineEntry]: ...

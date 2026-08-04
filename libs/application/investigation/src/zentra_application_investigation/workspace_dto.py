@@ -7,24 +7,24 @@ from datetime import datetime
 from uuid import UUID
 
 
-class OrganizationNotFoundError(LookupError):
+class GroupNotFoundError(LookupError):
     pass
 
 
-class OrganizationConflictError(RuntimeError):
+class GroupConflictError(RuntimeError):
     pass
 
 
-class OrganizationNameConflictError(OrganizationConflictError):
+class GroupNameConflictError(GroupConflictError):
     pass
 
 
-class OrganizationCursorError(ValueError):
+class GroupCursorError(ValueError):
     pass
 
 
 @dataclass(frozen=True, slots=True)
-class OrganizationCursor:
+class GroupCursor:
     sort_at: datetime
     resource_id: UUID
 
@@ -37,7 +37,7 @@ class OrganizationCursor:
         return base64.urlsafe_b64encode(payload).rstrip(b"=").decode()
 
     @classmethod
-    def decode(cls, value: str) -> OrganizationCursor:
+    def decode(cls, value: str) -> GroupCursor:
         try:
             padded = value + "=" * (-len(value) % 4)
             payload = json.loads(base64.urlsafe_b64decode(padded).decode())
@@ -52,7 +52,7 @@ class OrganizationCursor:
             UnicodeDecodeError,
             json.JSONDecodeError,
         ) as error:
-            raise OrganizationCursorError("The workspace cursor is invalid") from error
+            raise GroupCursorError("The workspace cursor is invalid") from error
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,12 +66,12 @@ class GroupDetail:
 
 
 @dataclass(frozen=True, slots=True)
-class OrganizationPage[T]:
+class GroupPage[T]:
     items: tuple[T, ...]
     next_cursor: str | None
 
 
 @dataclass(frozen=True, slots=True)
-class OrganizationSlice[T]:
+class GroupSlice[T]:
     items: tuple[T, ...]
-    next_cursor: OrganizationCursor | None
+    next_cursor: GroupCursor | None

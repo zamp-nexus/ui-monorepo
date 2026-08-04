@@ -238,10 +238,11 @@ def _require_settled_conflicts(board: InvestigationBoard) -> None:
 #: many run at once — the same number, because accepting more than can run
 #: concurrently would only queue them behind each other.
 #:
-#: A constructor parameter with this default rather than a per-Tenant column:
-#: there is no budget field on `tenants` to extend, and inventing one before
-#: anybody has asked what a Tenant's analytical budget *is* would be guessing
-#: at a schema. This is the seam that change lands on.
+#: A constructor parameter with this default rather than a per-Organization
+#: column: there is no budget field on `organizations` to extend, and
+#: inventing one before anybody has asked what an Organization's analytical
+#: budget *is* would be guessing at a schema. This is the seam that change
+#: lands on.
 MAX_FANOUT_WORK_ITEMS = 3
 
 
@@ -298,7 +299,7 @@ def build_agents_factory(
     """A per-tier factory, parameterized by the semantic layer.
 
     The semantic layer is a runtime argument rather than closed over here
-    because it must be scoped per (Tenant, Data Connection), not per tier —
+    because it must be scoped per (Organization, Data Connection), not per tier —
     see `ScopedCubeSemanticLayers`.
 
     A `registry` produces a planner. Insight is required in its required
@@ -383,13 +384,13 @@ class OrchestratorLoop:
         self,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         model_tier: str = ModelTier.FREE.value,
         data_connection_id: UUID | None = None,
     ) -> PipelineResult:
         semantic_layer = await self._semantic_layers.resolve(
-            tenant_id=tenant_id, data_connection_id=data_connection_id
+            organization_id=organization_id, data_connection_id=data_connection_id
         )
         agents = self._agent_factories[ModelTier(model_tier)](semantic_layer)
         # Held in memory for the length of the run and written through on every
@@ -399,7 +400,7 @@ class OrchestratorLoop:
         board = InvestigationBoard.create(
             board_id=self._new_id(),
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             now=self._now(),
         )
         seed_gap = KnowledgeGap(
@@ -419,7 +420,7 @@ class OrchestratorLoop:
         followups = await self._plan(
             agents.planner,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             question=question,
             steps=steps,
         )
@@ -427,7 +428,7 @@ class OrchestratorLoop:
         primary = await self._measure(
             agents,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             question=question,
             objective=f"Measure what the question asks: {question}",
             steps=steps,
@@ -438,7 +439,7 @@ class OrchestratorLoop:
             agents,
             board=board,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             followups=followups,
             parent=primary,
             steps=steps,
@@ -457,7 +458,7 @@ class OrchestratorLoop:
             agent=agents.insight,
             role=AgentRole.INSIGHT,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             objective="Draft a Finding from the validated evidence",
             payload={
                 "question": question,
@@ -508,7 +509,7 @@ class OrchestratorLoop:
                 evidence=primary.evidence,
             ),
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
         )
 
         await self._finish_board(
@@ -544,7 +545,7 @@ class OrchestratorLoop:
         finished, which is a different question with a different answer.
         """
         outcome = bounded_outcome(result)
-        threshold = await self._confidence_threshold(board.tenant_id)
+        threshold = await self._confidence_threshold(board.organization_id)
         board.set_confidence(
             BoardConfidence(
                 score=(
@@ -561,16 +562,16 @@ class OrchestratorLoop:
         )
         board.set_narrative(assessment.describe(), now=self._now())
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.investigation_boards.save(board)
             await unit_of_work.commit()
 
-    async def _confidence_threshold(self, tenant_id: UUID) -> float:
+    async def _confidence_threshold(self, organization_id: UUID) -> float:
         async with self._unit_of_work_factory(
-            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            return await unit_of_work.policies.confidence_threshold(tenant_id)
+            return await unit_of_work.policies.confidence_threshold(organization_id)
 
     # -- the unit that fans out -------------------------------------------
 
@@ -579,7 +580,7 @@ class OrchestratorLoop:
         agents: StepAgents,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         objective: str,
         steps: Iterator[int],
@@ -595,7 +596,7 @@ class OrchestratorLoop:
         analyst_state, analyst_item_id = await self._run_analyst(
             agents.cube_analyst,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             question=question,
             objective=objective,
             steps=steps,
@@ -610,7 +611,7 @@ class OrchestratorLoop:
                 agent=agents.evaluator,
                 role=AgentRole.EVALUATOR,
                 investigation_id=investigation_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 objective="Independently verify the Analyst's measurement",
                 payload={"question": question, "analyst": analyst_state},
                 depends_on=(analyst_item_id,),
@@ -626,7 +627,7 @@ class OrchestratorLoop:
             analyst_state, analyst_item_id = await self._run_analyst(
                 agents.cube_analyst,
                 investigation_id=investigation_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 question=question,
                 objective="Re-measure after the Evaluator's recheck disagreed",
                 steps=steps,
@@ -648,7 +649,7 @@ class OrchestratorLoop:
         planner: OrchestratorAgent | None,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         steps: Iterator[int],
     ) -> tuple[str, ...]:
@@ -668,7 +669,7 @@ class OrchestratorLoop:
             agent=planner,
             role=AgentRole.ORCHESTRATOR,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             objective="Propose the follow-up measurements this question needs",
             payload={"question": question},
             depends_on=(),
@@ -687,7 +688,7 @@ class OrchestratorLoop:
         *,
         board: InvestigationBoard,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         followups: Sequence[str],
         parent: _Measurement,
         steps: Iterator[int],
@@ -724,7 +725,7 @@ class OrchestratorLoop:
                 self._measure(
                     agents,
                     investigation_id=investigation_id,
-                    tenant_id=tenant_id,
+                    organization_id=organization_id,
                     question=objective,
                     objective=objective,
                     steps=steps,
@@ -802,22 +803,22 @@ class OrchestratorLoop:
                 documented_only=True,
             )
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             for conflict in settled:
                 await unit_of_work.investigation_boards.settle_conflict(
-                    board.tenant_id, conflict
+                    board.organization_id, conflict
                 )
             await unit_of_work.commit()
 
     async def _open_board(self, board: InvestigationBoard, gap: KnowledgeGap) -> None:
         board.open_gap(gap, now=self._now())
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.investigation_boards.create(board)
             await unit_of_work.investigation_boards.open_gap(
-                board.board_id, board.tenant_id, gap
+                board.board_id, board.organization_id, gap
             )
             await unit_of_work.commit()
 
@@ -825,12 +826,12 @@ class OrchestratorLoop:
         self, board: InvestigationBoard, gaps: Sequence[KnowledgeGap]
     ) -> None:
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             for gap in gaps:
                 board.open_gap(gap, now=self._now())
                 await unit_of_work.investigation_boards.open_gap(
-                    board.board_id, board.tenant_id, gap
+                    board.board_id, board.organization_id, gap
                 )
             await unit_of_work.commit()
 
@@ -844,14 +845,14 @@ class OrchestratorLoop:
         recording that anybody noticed.
         """
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.investigation_boards.record_fact(
-                board.board_id, board.tenant_id, fact
+                board.board_id, board.organization_id, fact
             )
             if conflict is not None:
                 await unit_of_work.investigation_boards.open_conflict(
-                    board.board_id, board.tenant_id, conflict
+                    board.board_id, board.organization_id, conflict
                 )
             await unit_of_work.commit()
 
@@ -875,12 +876,12 @@ class OrchestratorLoop:
         if not settled:
             return
         async with self._unit_of_work_factory(
-            board.tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             for gap in settled:
                 board.resolve_gap(gap.gap_id, now=self._now())
                 await unit_of_work.investigation_boards.resolve_gap(
-                    gap.gap_id, board.tenant_id
+                    gap.gap_id, board.organization_id
                 )
             await unit_of_work.commit()
 
@@ -889,7 +890,7 @@ class OrchestratorLoop:
         agent: CubeAnalystAgent,
         *,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         question: str,
         objective: str,
         steps: Iterator[int],
@@ -904,7 +905,7 @@ class OrchestratorLoop:
             agent=agent,
             role=AgentRole.CUBE_ANALYST,
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             objective=objective,
             payload=payload,
             depends_on=depends_on,
@@ -919,7 +920,7 @@ class OrchestratorLoop:
         agent: AgentPort,
         role: AgentRole,
         investigation_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         objective: str,
         payload: dict[str, Any],
         depends_on: tuple[UUID, ...],
@@ -936,13 +937,13 @@ class OrchestratorLoop:
         """
         # Before the Work Item exists, not after: a run cancelled here should
         # leave no pending row behind claiming work nobody will ever do.
-        await self._cancellation_checkpoint(tenant_id, investigation_id)
+        await self._cancellation_checkpoint(organization_id, investigation_id)
 
         now = self._now()
         item = WorkItem.create(
             work_item_id=self._new_id(),
             investigation_id=investigation_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             role=role,
             objective=objective,
             now=now,
@@ -950,7 +951,7 @@ class OrchestratorLoop:
             depends_on=depends_on,
         )
         async with self._unit_of_work_factory(
-            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.work_items.add(item)
             await unit_of_work.commit()
@@ -963,7 +964,7 @@ class OrchestratorLoop:
             AgentExecutionStart(
                 execution_id=execution_id,
                 investigation_id=investigation_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 agent_id=agent.descriptor.agent_id,
                 role=role,
                 step=step,
@@ -972,7 +973,7 @@ class OrchestratorLoop:
         )
         item.start(now=self._now())
         async with self._unit_of_work_factory(
-            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.work_items.save(item)
             await unit_of_work.commit()
@@ -981,7 +982,7 @@ class OrchestratorLoop:
             output = await agent.invoke(
                 AgentInput(
                     investigation_id=investigation_id,
-                    tenant_id=tenant_id,
+                    organization_id=organization_id,
                     state=agent_state,
                 )
             )
@@ -991,7 +992,7 @@ class OrchestratorLoop:
                 _execution_record(
                     execution_id=execution_id,
                     investigation_id=investigation_id,
-                    tenant_id=tenant_id,
+                    organization_id=organization_id,
                     agent_id=agent.descriptor.agent_id,
                     role=role,
                     step=step,
@@ -1004,7 +1005,7 @@ class OrchestratorLoop:
                 )
             )
             async with self._unit_of_work_factory(
-                tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+                organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
             ) as unit_of_work:
                 item.reject(now=completed_at, reason=str(error))
                 await unit_of_work.work_items.save(item)
@@ -1016,7 +1017,7 @@ class OrchestratorLoop:
             _execution_record(
                 execution_id=execution_id,
                 investigation_id=investigation_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 agent_id=agent.descriptor.agent_id,
                 role=role,
                 step=step,
@@ -1032,7 +1033,7 @@ class OrchestratorLoop:
             artifact_refs=(EvidenceReference(f"artifact://execution/{execution_id}"),),
         )
         async with self._unit_of_work_factory(
-            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             await unit_of_work.work_items.save(item)
             await unit_of_work.commit()
@@ -1040,7 +1041,7 @@ class OrchestratorLoop:
         # And again once the step is durable, so a cancellation requested
         # mid-call stops the loop before the next Agent is paid for rather
         # than after the whole three-attempt trust loop has run.
-        await self._cancellation_checkpoint(tenant_id, investigation_id)
+        await self._cancellation_checkpoint(organization_id, investigation_id)
         return _for_state(output), execution_id, item.work_item_id
 
 
@@ -1048,7 +1049,7 @@ def _execution_record(
     *,
     execution_id: UUID,
     investigation_id: UUID,
-    tenant_id: UUID,
+    organization_id: UUID,
     agent_id: str,
     role: AgentRole,
     step: int,
@@ -1062,7 +1063,7 @@ def _execution_record(
     return AgentExecutionRecord(
         execution_id=execution_id,
         investigation_id=investigation_id,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         agent_id=agent_id,
         role=role,
         step=step,

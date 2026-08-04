@@ -64,7 +64,7 @@ class SequenceRun:
 
     run_id: UUID
     sequence_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     step_id: UUID
     outcome: SequenceRunOutcome
     attempted_at: datetime
@@ -77,7 +77,7 @@ class SequenceStep:
 
     step_id: UUID
     sequence_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     operation: SequenceOperation
     # None means this step reads the Sequence's Raw Table directly.
     input_reference: SequenceTableReference | None
@@ -91,7 +91,7 @@ class Sequence:
     from one Raw Table to one or more Final Tables."""
 
     sequence_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     dataset_workspace_id: UUID
     raw_table_reference: RawTableReference
     created_at: datetime
@@ -109,7 +109,7 @@ class Sequence:
         cls,
         *,
         sequence_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         dataset_workspace_id: UUID,
         raw_table_reference: RawTableReference,
         now: datetime,
@@ -117,7 +117,7 @@ class Sequence:
     ) -> Sequence:
         return cls(
             sequence_id=sequence_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             dataset_workspace_id=dataset_workspace_id,
             raw_table_reference=raw_table_reference,
             created_at=now,
@@ -134,7 +134,10 @@ class Sequence:
         Every attempt is recorded here, before append_step (which only
         happens on success) — so a failed run is never silently dropped.
         """
-        if run.sequence_id != self.sequence_id or run.tenant_id != self.tenant_id:
+        if (
+            run.sequence_id != self.sequence_id
+            or run.organization_id != self.organization_id
+        ):
             raise SequenceTransitionError(
                 "Sequence Run does not belong to this Sequence"
             )
@@ -152,9 +155,12 @@ class Sequence:
             raise SequenceTransitionError(
                 "Sequence Step or Prepared Table does not belong to this Sequence"
             )
-        if step.tenant_id != self.tenant_id or table.tenant_id != self.tenant_id:
+        if (
+            step.organization_id != self.organization_id
+            or table.organization_id != self.organization_id
+        ):
             raise SequenceTransitionError(
-                "Sequence Step or Prepared Table does not belong to this Tenant"
+                "Sequence Step or Prepared Table does not belong to this Organization"
             )
         if step.produced_table_id != table.prepared_table_id:
             raise SequenceTransitionError(

@@ -25,7 +25,7 @@ class PreparedTable:
     """
 
     prepared_table_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     sequence_id: UUID
     step_id: UUID
     parent_table_reference: SequenceTableReference | None

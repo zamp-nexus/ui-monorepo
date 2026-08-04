@@ -51,9 +51,9 @@ sequences = Table(
         server_default=text("gen_random_uuid()"),
     ),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("dataset_workspace_id", UUID(as_uuid=True), nullable=False),
@@ -77,7 +77,9 @@ sequences = Table(
         nullable=False,
         server_default=text("now()"),
     ),
-    UniqueConstraint("sequence_id", "tenant_id", name="uq_sequences_tenant_identity"),
+    UniqueConstraint(
+        "sequence_id", "organization_id", name="uq_sequences_organization_identity"
+    ),
     CheckConstraint(
         "raw_table_kind IN ('connector_source_table', 'dataset_table_version')",
         name="ck_sequences_raw_table_kind",
@@ -85,7 +87,7 @@ sequences = Table(
 )
 Index(
     "ix_sequences_workspace_activity",
-    sequences.c.tenant_id,
+    sequences.c.organization_id,
     sequences.c.dataset_workspace_id,
     sequences.c.updated_at.desc(),
     sequences.c.sequence_id.desc(),
@@ -103,9 +105,9 @@ sequence_steps = Table(
     ),
     Column("sequence_id", UUID(as_uuid=True), nullable=False),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column("operation_kind", Text, nullable=False),
@@ -124,17 +126,19 @@ sequence_steps = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("sequence_id", "tenant_id"),
-        ("sequences.sequence_id", "sequences.tenant_id"),
-        name="fk_sequence_steps_sequence_tenant",
+        ("sequence_id", "organization_id"),
+        ("sequences.sequence_id", "sequences.organization_id"),
+        name="fk_sequence_steps_sequence_organization",
         ondelete="CASCADE",
     ),
-    UniqueConstraint("step_id", "tenant_id", name="uq_sequence_steps_tenant_identity"),
+    UniqueConstraint(
+        "step_id", "organization_id", name="uq_sequence_steps_organization_identity"
+    ),
     CheckConstraint(_operation_kind_check(), name="ck_sequence_steps_operation_kind"),
 )
 Index(
     "ix_sequence_steps_sequence_created",
-    sequence_steps.c.tenant_id,
+    sequence_steps.c.organization_id,
     sequence_steps.c.sequence_id,
     sequence_steps.c.created_at,
 )
@@ -152,9 +156,9 @@ prepared_tables = Table(
     Column("sequence_id", UUID(as_uuid=True), nullable=False),
     Column("step_id", UUID(as_uuid=True), nullable=False),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     # NULL means this table was produced directly from the Sequence's Raw
@@ -170,32 +174,32 @@ prepared_tables = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("sequence_id", "tenant_id"),
-        ("sequences.sequence_id", "sequences.tenant_id"),
-        name="fk_prepared_tables_sequence_tenant",
+        ("sequence_id", "organization_id"),
+        ("sequences.sequence_id", "sequences.organization_id"),
+        name="fk_prepared_tables_sequence_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("step_id", "tenant_id"),
-        ("sequence_steps.step_id", "sequence_steps.tenant_id"),
-        name="fk_prepared_tables_step_tenant",
+        ("step_id", "organization_id"),
+        ("sequence_steps.step_id", "sequence_steps.organization_id"),
+        name="fk_prepared_tables_step_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("parent_prepared_table_id", "tenant_id"),
-        ("prepared_tables.prepared_table_id", "prepared_tables.tenant_id"),
-        name="fk_prepared_tables_parent_tenant",
+        ("parent_prepared_table_id", "organization_id"),
+        ("prepared_tables.prepared_table_id", "prepared_tables.organization_id"),
+        name="fk_prepared_tables_parent_organization",
     ),
     UniqueConstraint(
         "prepared_table_id",
-        "tenant_id",
-        name="uq_prepared_tables_tenant_identity",
+        "organization_id",
+        name="uq_prepared_tables_organization_identity",
     ),
     CheckConstraint("row_count >= 0", name="ck_prepared_tables_row_count"),
 )
 Index(
     "ix_prepared_tables_sequence_created",
-    prepared_tables.c.tenant_id,
+    prepared_tables.c.organization_id,
     prepared_tables.c.sequence_id,
     prepared_tables.c.created_at,
 )
@@ -212,9 +216,9 @@ sequence_runs = Table(
     ),
     Column("sequence_id", UUID(as_uuid=True), nullable=False),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     # Informational only, not a foreign key: on a failed run, no
@@ -232,9 +236,9 @@ sequence_runs = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("sequence_id", "tenant_id"),
-        ("sequences.sequence_id", "sequences.tenant_id"),
-        name="fk_sequence_runs_sequence_tenant",
+        ("sequence_id", "organization_id"),
+        ("sequences.sequence_id", "sequences.organization_id"),
+        name="fk_sequence_runs_sequence_organization",
         ondelete="CASCADE",
     ),
     CheckConstraint(
@@ -252,7 +256,7 @@ sequence_runs = Table(
 )
 Index(
     "ix_sequence_runs_sequence_attempted",
-    sequence_runs.c.tenant_id,
+    sequence_runs.c.organization_id,
     sequence_runs.c.sequence_id,
     sequence_runs.c.attempted_at,
 )
@@ -264,9 +268,9 @@ sequence_final_tables = Table(
     Column("sequence_id", UUID(as_uuid=True), primary_key=True),
     Column("prepared_table_id", UUID(as_uuid=True), primary_key=True),
     Column(
-        "tenant_id",
+        "organization_id",
         UUID(as_uuid=True),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
         nullable=False,
     ),
     Column(
@@ -276,15 +280,15 @@ sequence_final_tables = Table(
         server_default=text("now()"),
     ),
     ForeignKeyConstraint(
-        ("sequence_id", "tenant_id"),
-        ("sequences.sequence_id", "sequences.tenant_id"),
-        name="fk_sequence_final_tables_sequence_tenant",
+        ("sequence_id", "organization_id"),
+        ("sequences.sequence_id", "sequences.organization_id"),
+        name="fk_sequence_final_tables_sequence_organization",
         ondelete="CASCADE",
     ),
     ForeignKeyConstraint(
-        ("prepared_table_id", "tenant_id"),
-        ("prepared_tables.prepared_table_id", "prepared_tables.tenant_id"),
-        name="fk_sequence_final_tables_table_tenant",
+        ("prepared_table_id", "organization_id"),
+        ("prepared_tables.prepared_table_id", "prepared_tables.organization_id"),
+        name="fk_sequence_final_tables_table_organization",
         ondelete="CASCADE",
     ),
 )

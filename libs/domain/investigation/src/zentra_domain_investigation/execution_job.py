@@ -37,7 +37,7 @@ class ExecutionJob:
     """A durable request to execute one Investigation pipeline."""
 
     job_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     investigation_id: UUID
     status: ExecutionJobStatus
     attempts: int
@@ -59,7 +59,7 @@ class ExecutionJob:
         cls,
         *,
         job_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         now: datetime,
         max_attempts: int = 3,
@@ -74,7 +74,7 @@ class ExecutionJob:
             raise ValueError("Execution Job target does not match its kind")
         return cls(
             job_id=job_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             investigation_id=investigation_id,
             status=ExecutionJobStatus.QUEUED,
             attempts=0,

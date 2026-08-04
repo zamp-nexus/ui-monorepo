@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from .schema import (
     identity_subjects,
-    tenant_identity_bindings,
-    tenant_memberships,
-    tenants,
+    organization_identity_bindings,
+    organization_memberships,
+    organizations,
     users,
 )
 
@@ -31,36 +31,38 @@ async def bootstrap() -> None:
         raise RuntimeError(f"BOOTSTRAP_ROLE must be one of {sorted(ALLOWED_ROLES)}")
 
     engine = create_async_engine(required_env("DATABASE_OWNER_URL"))
-    external_tenant_id = required_env("CLERK_ORGANIZATION_ID")
+    external_organization_id = required_env("CLERK_ORGANIZATION_ID")
     external_subject_id = required_env("CLERK_USER_ID")
-    tenant_id = uuid5(NAMESPACE_URL, f"zentraos:clerk:tenant:{external_tenant_id}")
+    organization_id = uuid5(
+        NAMESPACE_URL, f"zentraos:clerk:tenant:{external_organization_id}"
+    )
     user_id = uuid5(NAMESPACE_URL, f"zentraos:clerk:user:{external_subject_id}")
     async with engine.begin() as connection:
         await connection.execute(
-            insert(tenants)
+            insert(organizations)
             .values(
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 name=required_env("BOOTSTRAP_TENANT_NAME"),
                 data_residency_zone=os.getenv("BOOTSTRAP_RESIDENCY", "us-east"),
             )
             .on_conflict_do_update(
-                index_elements=[tenants.c.tenant_id],
+                index_elements=[organizations.c.organization_id],
                 set_={"name": required_env("BOOTSTRAP_TENANT_NAME")},
             )
         )
         await connection.execute(
-            insert(tenant_identity_bindings)
+            insert(organization_identity_bindings)
             .values(
                 provider="clerk",
-                external_tenant_id=external_tenant_id,
-                tenant_id=tenant_id,
+                external_organization_id=external_organization_id,
+                organization_id=organization_id,
             )
             .on_conflict_do_update(
                 index_elements=[
-                    tenant_identity_bindings.c.provider,
-                    tenant_identity_bindings.c.external_tenant_id,
+                    organization_identity_bindings.c.provider,
+                    organization_identity_bindings.c.external_organization_id,
                 ],
-                set_={"tenant_id": tenant_id},
+                set_={"organization_id": organization_id},
             )
         )
 
@@ -95,12 +97,12 @@ async def bootstrap() -> None:
             )
         )
         await connection.execute(
-            insert(tenant_memberships)
-            .values(tenant_id=tenant_id, user_id=user_id, role=role)
+            insert(organization_memberships)
+            .values(organization_id=organization_id, user_id=user_id, role=role)
             .on_conflict_do_update(
                 index_elements=[
-                    tenant_memberships.c.tenant_id,
-                    tenant_memberships.c.user_id,
+                    organization_memberships.c.organization_id,
+                    organization_memberships.c.user_id,
                 ],
                 set_={"role": role},
             )

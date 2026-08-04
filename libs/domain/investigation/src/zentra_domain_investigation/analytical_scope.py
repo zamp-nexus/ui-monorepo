@@ -1,8 +1,8 @@
-"""The Tenant-configured slice of the governed catalog Intake may resolve a
+"""The Organization-configured slice of the governed catalog Intake may resolve a
 question against.
 
 See ADR-0027: this replaces the two-scenario keyword whitelist. An
-Analytical Scope can only narrow what a Tenant may be asked about — it is
+Analytical Scope can only narrow what an Organization may be asked about — it is
 validated against, and can never widen past, `SemanticCatalog.reject_ungoverned`
 (`libs/domain/agent-execution/.../ports.py`), which stays the absolute floor.
 """
@@ -17,7 +17,7 @@ from zentra_domain_agent_execution import SemanticCatalog
 
 @dataclass(frozen=True, slots=True)
 class AnalyticalScope:
-    """A cube allowlist, with optional member-level overrides, for one Tenant.
+    """A cube allowlist, with optional member-level overrides, for one Organization.
 
     `cubes` names which Cube cubes (the part of a member name before its
     first `.`) are visible in full. `member_overrides` adds individual
@@ -25,19 +25,19 @@ class AnalyticalScope:
     allowed cube already grants.
     """
 
-    tenant_id: UUID
+    organization_id: UUID
     cubes: frozenset[str] = frozenset()
     member_overrides: frozenset[str] = frozenset()
 
     @classmethod
-    def unrestricted(cls, tenant_id: UUID) -> AnalyticalScope:
+    def unrestricted(cls, organization_id: UUID) -> AnalyticalScope:
         """The default: no cube list narrows the governed catalog.
 
-        This is the demo Tenant's configuration, so local and demo chat can
+        This is the demo Organization's configuration, so local and demo chat can
         ask about anything the catalog already governs without a separate
         scope-configuration step.
         """
-        return cls(tenant_id=tenant_id)
+        return cls(organization_id=organization_id)
 
     @property
     def is_unrestricted(self) -> bool:
@@ -48,7 +48,7 @@ class AnalyticalScope:
 
         Never adds a member `catalog` does not already have — a Scope can
         only subtract, so a cube or member this Scope does not name is
-        simply absent, exactly as if the Tenant's governed model never
+        simply absent, exactly as if the Organization's governed model never
         defined it.
         """
         if self.is_unrestricted:

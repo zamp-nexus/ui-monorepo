@@ -12,7 +12,7 @@ lifecycle, publication decisions and Human Approvals survive, because Replay
 must still prove the work happened after its content is gone.
 
 Internal until the user-facing workflow lands. Building it the other way round
-means the first thing a Tenant can do is the thing that has never run.
+means the first thing an Organization can do is the thing that has never run.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class ErasureIncompleteError(RuntimeError):
 
 
 class PostgresErasureRepository:
-    """Tenant-scoped like everything else; RLS decides what is reachable."""
+    """Organization-scoped like everything else; RLS decides what is reachable."""
 
     def __init__(self, connection: AsyncConnection) -> None:
         self._connection = connection
@@ -74,7 +74,7 @@ class PostgresErasureRepository:
         self,
         *,
         erasure_id: UUID,
-        tenant_id: UUID,
+        organization_id: UUID,
         investigation_id: UUID,
         category: DeletionCategory,
         now: datetime,
@@ -104,7 +104,7 @@ class PostgresErasureRepository:
             .values(
                 erasure_id=erasure_id,
                 analysis_run_id=investigation_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 category=category.value,
                 progress=ErasureProgress.REQUESTED.value,
                 requested_at=now,
@@ -119,7 +119,7 @@ class PostgresErasureRepository:
             return existing
         return ErasureOperation(
             erasure_id=erasure_id,
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             investigation_id=investigation_id,
             category=category,
             progress=ErasureProgress.REQUESTED,
@@ -451,7 +451,7 @@ class PostgresErasureRepository:
 def _operation_from_row(row: object) -> ErasureOperation:
     return ErasureOperation(
         erasure_id=row.erasure_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         investigation_id=row.analysis_run_id,
         category=DeletionCategory(row.category),
         progress=ErasureProgress(row.progress),

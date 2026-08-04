@@ -20,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
-from identity import tenant_id
+from identity import organization_id
 from sqlalchemy import text
 from zentra_adapter_postgres import Database
 from zentra_adapter_postgres.investigation import (
@@ -119,7 +119,7 @@ def _claim(index: int, position: int, *, kind: ClaimKind, text: str, **extra) ->
 def _citation(index: int, investigation: UUID, *, metric: str, value: str) -> EvidenceCitation:
     return EvidenceCitation(
         citation_id=UUID(f"e2e00000-0000-4000-8002-{index:012d}"),
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         investigation_id=investigation,
         metric=metric,
         filters=(CitationFilter(member="Commerce.region", operator="equals", values=("EU",)),),
@@ -136,7 +136,7 @@ def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     """Every condition satisfied: cited, uncontradicted, converged, confident."""
     investigation = Investigation.create(
         investigation_id=PUBLISHED,
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         question="Why did EU refunds increase from June to July 2026?",
         now=_NOW,
     )
@@ -147,7 +147,7 @@ def _published() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     ]
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000001"),
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         investigation_id=PUBLISHED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
@@ -205,7 +205,7 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     """Held back: an observed claim whose only citation is unavailable."""
     investigation = Investigation.create(
         investigation_id=GATED,
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         question=(
             "Which sales channel accounted for the increase in North America "
             "revenue from October to November 2026?"
@@ -224,7 +224,7 @@ def _gated() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]]:
     )
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000002"),
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         investigation_id=GATED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
@@ -260,7 +260,7 @@ def _contradicted() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]
     """Cited and confident, but the Evaluator disagreed and nobody resolved it."""
     investigation = Investigation.create(
         investigation_id=CONTRADICTED,
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         question="Why did EU refunds increase from June to July 2026?",
         now=_NOW,
     )
@@ -268,7 +268,7 @@ def _contradicted() -> tuple[Investigation, DraftFinding, list[EvidenceCitation]
     citations = [_citation(4, CONTRADICTED, metric="refund_rate", value="0.0388")]
     draft = DraftFinding(
         draft_finding_id=UUID("e2e00000-0000-4000-8003-000000000003"),
-        tenant_id=tenant_id(),
+        organization_id=organization_id(),
         investigation_id=CONTRADICTED,
         version=1,
         created_at=_NOW + timedelta(seconds=30),
@@ -320,7 +320,7 @@ async def _purge(database) -> None:
     """
     async with database.engine.begin() as connection:
         await connection.execute(
-            text("DELETE FROM investigations WHERE investigation_id = ANY(:ids)"),
+            text("DELETE FROM analysis_runs WHERE analysis_run_id = ANY(:ids)"),
             {"ids": [str(i) for i in (PUBLISHED, GATED, CONTRADICTED)]},
         )
 
@@ -341,7 +341,7 @@ async def seed() -> dict:
         ("contradicted", _contradicted),
     ):
         investigation, draft, citations = build()
-        async with factory(tenant_id(), _TRACE_ID, _SPAN_ID) as uow:
+        async with factory(organization_id(), _TRACE_ID, _SPAN_ID) as uow:
             await uow.investigations.add(investigation)
             # Citations before the draft: the claim/citation join has a foreign
             # key, so a draft written first cites rows that do not exist yet.

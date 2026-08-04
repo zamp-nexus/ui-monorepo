@@ -181,10 +181,10 @@ class PostgresExecutionRecorder:
         self._skills = skills or SkillRegistry.from_directory()
 
     async def cancellation_checkpoint(
-        self, tenant_id: UUID, investigation_id: UUID
+        self, organization_id: UUID, investigation_id: UUID
     ) -> None:
         async with self._unit_of_work_factory(
-            tenant_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
+            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
             job = await unit_of_work.jobs.get_for_investigation(investigation_id)
         if job is not None and job.cancel_requested_at is not None:
@@ -193,13 +193,13 @@ class PostgresExecutionRecorder:
     async def record_started(self, start: AgentExecutionStart) -> None:
         reject_legacy_role(start.role)
         async with self._unit_of_work_factory(
-            start.tenant_id,
+            start.organization_id,
             SYSTEM_TRACE_ID,
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
             await unit_of_work.outbox.enqueue([_started_event(start)])
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=start.tenant_id,
+                organization_id=start.organization_id,
                 investigation_id=start.investigation_id,
                 kind=WorkFeedEventKind.AGENT_STARTED,
                 payload=AgentEventPayload(
@@ -213,7 +213,7 @@ class PostgresExecutionRecorder:
             )
             capability = _CAPABILITY_BY_ROLE[start.role]
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=start.tenant_id,
+                organization_id=start.organization_id,
                 investigation_id=start.investigation_id,
                 kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
                 payload=AgentEventPayload(
@@ -229,7 +229,7 @@ class PostgresExecutionRecorder:
             predecessor = _PREDECESSOR_BY_ROLE.get(start.role)
             if predecessor is not None:
                 await unit_of_work.work_feed.append_for_investigation(
-                    tenant_id=start.tenant_id,
+                    organization_id=start.organization_id,
                     investigation_id=start.investigation_id,
                     kind=WorkFeedEventKind.AGENT_HANDOFF,
                     payload=AgentEventPayload(
@@ -244,7 +244,7 @@ class PostgresExecutionRecorder:
                     event_id=uuid5(_HANDOFF_NAMESPACE, str(start.execution_id)),
                 )
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=start.tenant_id,
+                organization_id=start.organization_id,
                 investigation_id=start.investigation_id,
                 kind=WorkFeedEventKind.AGENT_PUBLIC_UPDATE,
                 payload=AgentEventPayload(
@@ -281,7 +281,7 @@ class PostgresExecutionRecorder:
         # written there could never be corrected.
         reject_legacy_role(execution.role)
         async with self._unit_of_work_factory(
-            execution.tenant_id,
+            execution.organization_id,
             SYSTEM_TRACE_ID,
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
@@ -296,7 +296,7 @@ class PostgresExecutionRecorder:
             # `AgentEventPayload` has nowhere to put them.
             for index, invocation in enumerate(execution.tool_calls):
                 await unit_of_work.work_feed.append_for_investigation(
-                    tenant_id=execution.tenant_id,
+                    organization_id=execution.organization_id,
                     investigation_id=execution.investigation_id,
                     kind=WorkFeedEventKind.AGENT_CAPABILITY_USED,
                     payload=AgentEventPayload(
@@ -319,7 +319,7 @@ class PostgresExecutionRecorder:
                     ),
                 )
             await unit_of_work.work_feed.append_for_investigation(
-                tenant_id=execution.tenant_id,
+                organization_id=execution.organization_id,
                 investigation_id=execution.investigation_id,
                 kind=WorkFeedEventKind.AGENT_COMPLETED,
                 payload=AgentEventPayload(
@@ -352,7 +352,7 @@ def _started_event(start: AgentExecutionStart) -> DomainEvent:
         event_id=uuid5(_STARTED_NAMESPACE, str(start.execution_id)),
         event_type="agent.execution_started",
         investigation_id=start.investigation_id,
-        tenant_id=start.tenant_id,
+        organization_id=start.organization_id,
         status=InvestigationStatus.RUNNING,
         occurred_at=start.started_at,
         metadata={
@@ -378,7 +378,7 @@ def _audit_event(execution: AgentExecutionRecord) -> DomainEvent:
             else "agent.execution_failed"
         ),
         investigation_id=execution.investigation_id,
-        tenant_id=execution.tenant_id,
+        organization_id=execution.organization_id,
         status=InvestigationStatus.RUNNING,
         occurred_at=execution.completed_at,
         artifact_refs=tuple(
@@ -410,7 +410,7 @@ def _pipeline_result(
     outcome: PipelineOutcome,
     *,
     investigation_id: UUID,
-    tenant_id: UUID,
+    organization_id: UUID,
 ) -> PipelineResult:
     """Adapt what the run established to what the application expects.
 
@@ -423,7 +423,7 @@ def _pipeline_result(
         outcome.evidence,
         evaluator_outcome=outcome.outcome,
         investigation_id=investigation_id,
-        tenant_id=tenant_id,
+        organization_id=organization_id,
     )
     return PipelineResult(
         finding=Finding(
@@ -464,7 +464,7 @@ def _draft_with_citations(
     *,
     evaluator_outcome: OutcomeSignal,
     investigation_id: UUID,
-    tenant_id: UUID,
+    organization_id: UUID,
 ) -> tuple[DraftFinding, tuple[EvidenceCitation, ...]]:
     """Assemble the Draft Finding and the Citations its claims rest on.
 
@@ -516,7 +516,7 @@ def _draft_with_citations(
                     period=period,
                     evaluator_outcome=evaluator_outcome,
                     investigation_id=investigation_id,
-                    tenant_id=tenant_id,
+                    organization_id=organization_id,
                 )
             citation_ids = (citations[key].citation_id,)
 
@@ -535,7 +535,7 @@ def _draft_with_citations(
 
     draft = DraftFinding(
         draft_finding_id=uuid4(),
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         investigation_id=investigation_id,
         version=1,
         created_at=datetime.now(UTC),
@@ -561,7 +561,7 @@ def _citation(
     period: str | None,
     evaluator_outcome: OutcomeSignal,
     investigation_id: UUID,
-    tenant_id: UUID,
+    organization_id: UUID,
 ) -> EvidenceCitation:
     """The citation's figure *is* the claim's figure.
 
@@ -581,7 +581,7 @@ def _citation(
         )
     return EvidenceCitation(
         citation_id=uuid4(),
-        tenant_id=tenant_id,
+        organization_id=organization_id,
         investigation_id=investigation_id,
         metric=measured.metric,
         filters=tuple(

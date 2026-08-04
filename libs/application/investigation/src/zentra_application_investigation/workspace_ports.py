@@ -6,10 +6,10 @@ from uuid import UUID
 
 from zentra_domain_investigation import Group
 
-from .workspace_dto import OrganizationCursor, OrganizationSlice
+from .workspace_dto import GroupCursor, GroupSlice
 
 
-class OrganizationRepository(Protocol):
+class GroupRepository(Protocol):
     async def add_group(self, group: Group) -> None: ...
 
     async def get_group(
@@ -23,17 +23,17 @@ class OrganizationRepository(Protocol):
         *,
         include_archived: bool,
         limit: int,
-        after: OrganizationCursor | None,
-    ) -> OrganizationSlice[Group]: ...
+        after: GroupCursor | None,
+    ) -> GroupSlice[Group]: ...
 
 
-class OrganizationUnitOfWork(Protocol):
-    organization: OrganizationRepository
+class GroupUnitOfWork(Protocol):
+    groups: GroupRepository
 
     async def commit(self) -> None: ...
 
 
-class OrganizationUnitOfWorkFactory(Protocol):
+class GroupUnitOfWorkFactory(Protocol):
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
-    ) -> AbstractAsyncContextManager[OrganizationUnitOfWork]: ...
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
+    ) -> AbstractAsyncContextManager[GroupUnitOfWork]: ...

@@ -138,7 +138,7 @@ class CatalogVersion:
 
     catalog_version_id: UUID
     data_source_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     harvest_run_id: UUID
     created_at: datetime
     tables: tuple[SourceTable, ...] = ()
@@ -241,7 +241,7 @@ def diff_catalogs(previous: CatalogVersion, current: CatalogVersion) -> CatalogD
 
 @dataclass(slots=True)
 class DataSource:
-    """A tenant-owned origin of queryable data ZentraOS may read.
+    """An organization-owned origin of queryable data ZentraOS may read.
 
     Credentials live behind ``sealed_credentials`` and are never held in the
     clear on this object, so there is no representation of a Data Source that
@@ -249,7 +249,7 @@ class DataSource:
     """
 
     data_source_id: UUID
-    tenant_id: UUID
+    organization_id: UUID
     name: str
     kind: SourceKind
     sealed_credentials: bytes | None = None

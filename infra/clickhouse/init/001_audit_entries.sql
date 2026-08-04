@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS zentra_audit.audit_entries
     entry_id UUID,
     trace_id UUID,
     span_id UUID,
-    tenant_id UUID,
+    organization_id UUID,
     investigation_id UUID,
     event_type LowCardinality(String),
     agent_id Nullable(String),
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS zentra_audit.audit_entries
     created_at DateTime64(6, 'UTC')
 )
 ENGINE = MergeTree
-ORDER BY (tenant_id, investigation_id, created_at, entry_id);
+ORDER BY (organization_id, investigation_id, created_at, entry_id);
 
 CREATE USER IF NOT EXISTS zentra_audit_app
 IDENTIFIED WITH plaintext_password BY 'zentra_audit_app';

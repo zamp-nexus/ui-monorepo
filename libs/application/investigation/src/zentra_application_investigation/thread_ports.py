@@ -17,11 +17,11 @@ from .ports import (
     WorkFeedRepository,
 )
 from .thread_dto import RoutingResult, ThreadCursor, ThreadSlice
-from .workspace_ports import OrganizationRepository
+from .workspace_ports import GroupRepository
 
 
 class IntakePort(Protocol):
-    """Resolves a message against the Tenant's Analytical Scope (ADR-0027).
+    """Resolves a message against the Organization's Analytical Scope (ADR-0027).
 
     Replaces the keyword-matched scenario whitelist that used to sit in
     `thread_routing.py`: same `RoutingResult` shape, but decided by an Agent
@@ -32,7 +32,7 @@ class IntakePort(Protocol):
         self,
         question: str,
         *,
-        tenant_id: UUID,
+        organization_id: UUID,
         data_connection_id: UUID | None = None,
     ) -> RoutingResult: ...
 
@@ -40,7 +40,7 @@ class IntakePort(Protocol):
 class ConversationalPort(Protocol):
     """Replies to a non-analytical message (ADR-0033)."""
 
-    async def reply(self, message: str, *, tenant_id: UUID) -> str: ...
+    async def reply(self, message: str, *, organization_id: UUID) -> str: ...
 
 
 class ThreadRepository(Protocol):
@@ -79,7 +79,7 @@ class ThreadRepository(Protocol):
 
 class ThreadUnitOfWork(Protocol):
     threads: ThreadRepository
-    organization: OrganizationRepository
+    groups: GroupRepository
     investigations: InvestigationRepository
     jobs: ExecutionJobRepository
     outbox: AuditOutboxRepository
@@ -94,5 +94,5 @@ class ThreadUnitOfWork(Protocol):
 
 class ThreadUnitOfWorkFactory(Protocol):
     def __call__(
-        self, tenant_id: UUID, trace_id: UUID, span_id: UUID
+        self, organization_id: UUID, trace_id: UUID, span_id: UUID
     ) -> AbstractAsyncContextManager[ThreadUnitOfWork]: ...

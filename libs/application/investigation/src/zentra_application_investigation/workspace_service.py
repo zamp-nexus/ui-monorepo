@@ -8,23 +8,23 @@ from zentra_domain_investigation import Group
 
 from .dto import AuthenticatedActor, PermissionDeniedError, Role
 from .workspace_dto import (
+    GroupCursor,
     GroupDetail,
-    OrganizationCursor,
-    OrganizationNotFoundError,
-    OrganizationPage,
+    GroupNotFoundError,
+    GroupPage,
 )
-from .workspace_ports import OrganizationUnitOfWorkFactory
+from .workspace_ports import GroupUnitOfWorkFactory
 
 MANAGER_ROLES = frozenset({Role.OWNER, Role.ADMIN})
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
 
 
-class OrganizationService:
+class GroupService:
     def __init__(
         self,
         *,
-        unit_of_work_factory: OrganizationUnitOfWorkFactory,
+        unit_of_work_factory: GroupUnitOfWorkFactory,
         now: Callable[[], datetime],
         new_id: Callable[[], UUID],
     ) -> None:
@@ -38,18 +38,18 @@ class OrganizationService:
         self._require_manager(actor)
         group = Group.create(
             group_id=self._new_id(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             name=name,
             now=self._now(),
         )
         async with self._uow(actor) as unit_of_work:
-            await unit_of_work.organization.add_group(group)
+            await unit_of_work.groups.add_group(group)
             await unit_of_work.commit()
         return self._group_detail(group, actor)
 
     async def get_group(self, actor: AuthenticatedActor, group_id: UUID) -> GroupDetail:
         async with self._uow(actor) as unit_of_work:
-            group = await unit_of_work.organization.get_group(group_id)
+            group = await unit_of_work.groups.get_group(group_id)
         return self._group_detail(self._require_group(group), actor)
 
     async def list_groups(
@@ -59,14 +59,14 @@ class OrganizationService:
         include_archived: bool = False,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
-    ) -> OrganizationPage[GroupDetail]:
+    ) -> GroupPage[GroupDetail]:
         limit = self._page_size(limit)
-        after = OrganizationCursor.decode(cursor) if cursor is not None else None
+        after = GroupCursor.decode(cursor) if cursor is not None else None
         async with self._uow(actor) as unit_of_work:
-            page = await unit_of_work.organization.list_groups(
+            page = await unit_of_work.groups.list_groups(
                 include_archived=include_archived, limit=limit, after=after
             )
-        return OrganizationPage(
+        return GroupPage(
             items=tuple(self._group_detail(group, actor) for group in page.items),
             next_cursor=page.next_cursor.encode() if page.next_cursor else None,
         )
@@ -101,16 +101,16 @@ class OrganizationService:
         self._require_manager(actor)
         async with self._uow(actor) as unit_of_work:
             group = self._require_group(
-                await unit_of_work.organization.get_group(group_id, for_update=True)
+                await unit_of_work.groups.get_group(group_id, for_update=True)
             )
             change(group)
-            await unit_of_work.organization.save_group(group)
+            await unit_of_work.groups.save_group(group)
             await unit_of_work.commit()
         return self._group_detail(group, actor)
 
     def _uow(self, actor: AuthenticatedActor):
         return self._unit_of_work_factory(
-            actor.tenant_id, actor.trace_id, actor.span_id
+            actor.organization_id, actor.trace_id, actor.span_id
         )
 
     @staticmethod
@@ -121,7 +121,7 @@ class OrganizationService:
     @staticmethod
     def _require_group(group: Group | None) -> Group:
         if group is None:
-            raise OrganizationNotFoundError("Group was not found")
+            raise GroupNotFoundError("Group was not found")
         return group
 
     @staticmethod

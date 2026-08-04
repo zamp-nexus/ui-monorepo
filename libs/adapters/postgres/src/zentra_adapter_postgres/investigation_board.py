@@ -33,12 +33,10 @@ class PostgresInvestigationBoardRepository:
         await self._connection.execute(
             insert(analysis_workspaces).values(
                 workspace_id=board.board_id,
-                tenant_id=board.tenant_id,
+                organization_id=board.organization_id,
                 analysis_run_id=board.investigation_id,
                 narrative=board.narrative,
-                confidence_score=(
-                    board.confidence.score if board.confidence else None
-                ),
+                confidence_score=(board.confidence.score if board.confidence else None),
                 confidence_threshold=(
                     board.confidence.threshold if board.confidence else None
                 ),
@@ -52,13 +50,11 @@ class PostgresInvestigationBoardRepository:
             update(analysis_workspaces)
             .where(
                 analysis_workspaces.c.workspace_id == board.board_id,
-                analysis_workspaces.c.tenant_id == board.tenant_id,
+                analysis_workspaces.c.organization_id == board.organization_id,
             )
             .values(
                 narrative=board.narrative,
-                confidence_score=(
-                    board.confidence.score if board.confidence else None
-                ),
+                confidence_score=(board.confidence.score if board.confidence else None),
                 confidence_threshold=(
                     board.confidence.threshold if board.confidence else None
                 ),
@@ -67,32 +63,37 @@ class PostgresInvestigationBoardRepository:
         )
 
     async def open_gap(
-        self, board_id: UUID, tenant_id: UUID, gap: KnowledgeGap
+        self, board_id: UUID, organization_id: UUID, gap: KnowledgeGap
     ) -> None:
         await self._connection.execute(
             insert(board_gaps).values(
                 gap_id=gap.gap_id,
                 workspace_id=board_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 description=gap.description,
                 priority=gap.priority.value,
                 resolved=gap.resolved,
             )
         )
 
-    async def resolve_gap(self, gap_id: UUID, tenant_id: UUID) -> None:
+    async def resolve_gap(self, gap_id: UUID, organization_id: UUID) -> None:
         await self._connection.execute(
             update(board_gaps)
-            .where(board_gaps.c.gap_id == gap_id, board_gaps.c.tenant_id == tenant_id)
+            .where(
+                board_gaps.c.gap_id == gap_id,
+                board_gaps.c.organization_id == organization_id,
+            )
             .values(resolved=True)
         )
 
-    async def record_fact(self, board_id: UUID, tenant_id: UUID, fact: Fact) -> None:
+    async def record_fact(
+        self, board_id: UUID, organization_id: UUID, fact: Fact
+    ) -> None:
         await self._connection.execute(
             insert(board_facts).values(
                 fact_id=fact.fact_id,
                 workspace_id=board_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 metric=fact.metric,
                 value=fact.value,
                 period=fact.period,
@@ -102,25 +103,25 @@ class PostgresInvestigationBoardRepository:
         )
 
     async def open_conflict(
-        self, board_id: UUID, tenant_id: UUID, conflict: Conflict
+        self, board_id: UUID, organization_id: UUID, conflict: Conflict
     ) -> None:
         await self._connection.execute(
             insert(board_conflicts).values(
                 conflict_id=conflict.conflict_id,
                 workspace_id=board_id,
-                tenant_id=tenant_id,
+                organization_id=organization_id,
                 description=conflict.description,
                 status=conflict.status.value,
                 resolution=conflict.resolution,
             )
         )
 
-    async def settle_conflict(self, tenant_id: UUID, conflict: Conflict) -> None:
+    async def settle_conflict(self, organization_id: UUID, conflict: Conflict) -> None:
         await self._connection.execute(
             update(board_conflicts)
             .where(
                 board_conflicts.c.conflict_id == conflict.conflict_id,
-                board_conflicts.c.tenant_id == tenant_id,
+                board_conflicts.c.organization_id == organization_id,
             )
             .values(status=conflict.status.value, resolution=conflict.resolution)
         )
@@ -130,7 +131,7 @@ def _work_item_from_row(row: Any) -> WorkItem:
     return WorkItem(
         work_item_id=row.work_item_id,
         investigation_id=row.analysis_run_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         role=AgentRole(row.role),
         objective=row.objective,
         status=WorkItemStatus(row.status),
@@ -138,9 +139,7 @@ def _work_item_from_row(row: Any) -> WorkItem:
         updated_at=row.updated_at,
         parent_work_item_id=row.parent_work_item_id,
         depends_on=tuple(UUID(value) for value in row.depends_on),
-        artifact_refs=tuple(
-            EvidenceReference(value) for value in row.artifact_refs
-        ),
+        artifact_refs=tuple(EvidenceReference(value) for value in row.artifact_refs),
         rejection_reason=row.rejection_reason,
     )
 
@@ -153,7 +152,7 @@ class PostgresWorkItemRepository:
         await self._connection.execute(
             insert(work_items).values(
                 work_item_id=item.work_item_id,
-                tenant_id=item.tenant_id,
+                organization_id=item.organization_id,
                 analysis_run_id=item.investigation_id,
                 role=item.role.value,
                 objective=item.objective,
@@ -172,7 +171,7 @@ class PostgresWorkItemRepository:
             update(work_items)
             .where(
                 work_items.c.work_item_id == item.work_item_id,
-                work_items.c.tenant_id == item.tenant_id,
+                work_items.c.organization_id == item.organization_id,
             )
             .values(
                 status=item.status.value,
@@ -183,14 +182,14 @@ class PostgresWorkItemRepository:
         )
 
     async def list_for_investigation(
-        self, investigation_id: UUID, tenant_id: UUID
+        self, investigation_id: UUID, organization_id: UUID
     ) -> tuple[WorkItem, ...]:
         rows = (
             await self._connection.execute(
                 select(work_items)
                 .where(
                     work_items.c.analysis_run_id == investigation_id,
-                    work_items.c.tenant_id == tenant_id,
+                    work_items.c.organization_id == organization_id,
                 )
                 .order_by(work_items.c.created_at)
             )

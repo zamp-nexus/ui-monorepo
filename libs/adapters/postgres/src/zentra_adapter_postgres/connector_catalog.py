@@ -145,11 +145,13 @@ class PostgresCatalogRepository:
         self._database = database
 
     async def add_version(self, version: CatalogVersion) -> None:
-        async with self._database.tenant_connection(version.tenant_id) as connection:
+        async with self._database.organization_connection(
+            version.organization_id
+        ) as connection:
             await connection.execute(
                 insert(catalog_versions).values(
                     catalog_version_id=version.catalog_version_id,
-                    tenant_id=version.tenant_id,
+                    organization_id=version.organization_id,
                     data_source_id=version.data_source_id,
                     harvest_run_id=version.harvest_run_id,
                     created_at=version.created_at,
@@ -162,42 +164,44 @@ class PostgresCatalogRepository:
         return CatalogVersion(
             catalog_version_id=row.catalog_version_id,
             data_source_id=row.data_source_id,
-            tenant_id=row.tenant_id,
+            organization_id=row.organization_id,
             harvest_run_id=row.harvest_run_id,
             created_at=row.created_at,
             tables=tuple(_table_from_json(t) for t in payload.get("tables") or ()),
             unreadable=tuple(
-                UnreadableTable(
-                    qualified_name=u["qualified_name"], reason=u["reason"]
-                )
+                UnreadableTable(qualified_name=u["qualified_name"], reason=u["reason"])
                 for u in payload.get("unreadable") or ()
             ),
         )
 
     async def get_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(catalog_versions).where(
                         catalog_versions.c.catalog_version_id == catalog_version_id,
-                        catalog_versions.c.tenant_id == tenant_id,
+                        catalog_versions.c.organization_id == organization_id,
                     )
                 )
             ).one_or_none()
         return None if row is None else self._to_entity(row)
 
     async def latest_version(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> CatalogVersion | None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(catalog_versions)
                     .where(
                         catalog_versions.c.data_source_id == data_source_id,
-                        catalog_versions.c.tenant_id == tenant_id,
+                        catalog_versions.c.organization_id == organization_id,
                     )
                     .order_by(catalog_versions.c.created_at.desc())
                     .limit(1)
@@ -206,15 +210,17 @@ class PostgresCatalogRepository:
         return None if row is None else self._to_entity(row)
 
     async def list_versions(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[CatalogVersion]:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(catalog_versions)
                     .where(
                         catalog_versions.c.data_source_id == data_source_id,
-                        catalog_versions.c.tenant_id == tenant_id,
+                        catalog_versions.c.organization_id == organization_id,
                     )
                     .order_by(catalog_versions.c.created_at.desc())
                 )
@@ -285,7 +291,7 @@ def _relation_values(relation: Relation) -> dict[str, Any]:
 def _relation_from_row(row: Any) -> Relation:
     return Relation(
         relation_id=row.relation_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         catalog_version_id=row.catalog_version_id,
         left_field_id=row.left_field_id,
         right_field_id=row.right_field_id,
@@ -319,15 +325,17 @@ class PostgresRelationRepository:
     async def add_many(self, proposals: Sequence[Relation]) -> None:
         if not proposals:
             return
-        # Every relation in one batch belongs to one harvest, so one tenant.
-        tenant_id = proposals[0].tenant_id
-        async with self._database.tenant_connection(tenant_id) as connection:
+        # Every relation in one batch belongs to one harvest, so one organization.
+        organization_id = proposals[0].organization_id
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             await connection.execute(
                 insert(relations),
                 [
                     {
                         "relation_id": relation.relation_id,
-                        "tenant_id": relation.tenant_id,
+                        "organization_id": relation.organization_id,
                         "catalog_version_id": relation.catalog_version_id,
                         "left_field_id": relation.left_field_id,
                         "right_field_id": relation.right_field_id,
@@ -342,45 +350,51 @@ class PostgresRelationRepository:
                 ],
             )
 
-    async def get(self, relation_id: UUID, *, tenant_id: UUID) -> Relation | None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+    async def get(self, relation_id: UUID, *, organization_id: UUID) -> Relation | None:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(relations).where(
                         relations.c.relation_id == relation_id,
-                        relations.c.tenant_id == tenant_id,
+                        relations.c.organization_id == organization_id,
                     )
                 )
             ).one_or_none()
         return None if row is None else _relation_from_row(row)
 
     async def save(self, relation: Relation) -> None:
-        async with self._database.tenant_connection(relation.tenant_id) as connection:
+        async with self._database.organization_connection(
+            relation.organization_id
+        ) as connection:
             await connection.execute(
                 update(relations)
                 .where(
                     relations.c.relation_id == relation.relation_id,
-                    relations.c.tenant_id == relation.tenant_id,
+                    relations.c.organization_id == relation.organization_id,
                 )
                 .values(**_relation_values(relation))
             )
 
     async def list_for_version(
-        self, catalog_version_id: UUID, *, tenant_id: UUID
+        self, catalog_version_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(relations).where(
                         relations.c.catalog_version_id == catalog_version_id,
-                        relations.c.tenant_id == tenant_id,
+                        relations.c.organization_id == organization_id,
                     )
                 )
             ).all()
         return [_relation_from_row(row) for row in rows]
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[Relation]:
         """Relations touching this source from either side.
 
@@ -388,11 +402,13 @@ class PostgresRelationRepository:
         matching only the left would hide half of them from the source that
         sits on the right.
         """
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(relations).where(
-                        relations.c.tenant_id == tenant_id,
+                        relations.c.organization_id == organization_id,
                         (relations.c.left_data_source_id == data_source_id)
                         | (relations.c.right_data_source_id == data_source_id),
                     )
@@ -438,7 +454,7 @@ def _run_from_row(row: Any) -> HarvestRun:
     return HarvestRun(
         harvest_run_id=row.harvest_run_id,
         data_source_id=row.data_source_id,
-        tenant_id=row.tenant_id,
+        organization_id=row.organization_id,
         phase=HarvestPhase(row.phase),
         scope=HarvestScope(
             databases=tuple(scope.get("databases") or ()),
@@ -466,49 +482,59 @@ class PostgresHarvestRunRepository:
         self._database = database
 
     async def add(self, run: HarvestRun) -> None:
-        async with self._database.tenant_connection(run.tenant_id) as connection:
+        async with self._database.organization_connection(
+            run.organization_id
+        ) as connection:
             await connection.execute(
                 insert(harvest_runs).values(
                     harvest_run_id=run.harvest_run_id,
-                    tenant_id=run.tenant_id,
+                    organization_id=run.organization_id,
                     data_source_id=run.data_source_id,
                     **_run_values(run),
                 )
             )
 
-    async def get(self, harvest_run_id: UUID, *, tenant_id: UUID) -> HarvestRun | None:
-        async with self._database.tenant_connection(tenant_id) as connection:
+    async def get(
+        self, harvest_run_id: UUID, *, organization_id: UUID
+    ) -> HarvestRun | None:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(harvest_runs).where(
                         harvest_runs.c.harvest_run_id == harvest_run_id,
-                        harvest_runs.c.tenant_id == tenant_id,
+                        harvest_runs.c.organization_id == organization_id,
                     )
                 )
             ).one_or_none()
         return None if row is None else _run_from_row(row)
 
     async def save(self, run: HarvestRun) -> None:
-        async with self._database.tenant_connection(run.tenant_id) as connection:
+        async with self._database.organization_connection(
+            run.organization_id
+        ) as connection:
             await connection.execute(
                 update(harvest_runs)
                 .where(
                     harvest_runs.c.harvest_run_id == run.harvest_run_id,
-                    harvest_runs.c.tenant_id == run.tenant_id,
+                    harvest_runs.c.organization_id == run.organization_id,
                 )
                 .values(**_run_values(run))
             )
 
     async def list_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[HarvestRun]:
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             rows = (
                 await connection.execute(
                     select(harvest_runs)
                     .where(
                         harvest_runs.c.data_source_id == data_source_id,
-                        harvest_runs.c.tenant_id == tenant_id,
+                        harvest_runs.c.organization_id == organization_id,
                     )
                     .order_by(harvest_runs.c.started_at.desc().nullslast())
                 )
@@ -516,7 +542,7 @@ class PostgresHarvestRunRepository:
         return [_run_from_row(row) for row in rows]
 
     async def active_for_source(
-        self, data_source_id: UUID, *, tenant_id: UUID
+        self, data_source_id: UUID, *, organization_id: UUID
     ) -> HarvestRun | None:
         """The run still in flight, if there is one.
 
@@ -530,13 +556,15 @@ class PostgresHarvestRunRepository:
             HarvestPhase.FAILED.value,
             HarvestPhase.CANCELLED.value,
         )
-        async with self._database.tenant_connection(tenant_id) as connection:
+        async with self._database.organization_connection(
+            organization_id
+        ) as connection:
             row = (
                 await connection.execute(
                     select(harvest_runs)
                     .where(
                         harvest_runs.c.data_source_id == data_source_id,
-                        harvest_runs.c.tenant_id == tenant_id,
+                        harvest_runs.c.organization_id == organization_id,
                         harvest_runs.c.phase.notin_(terminal),
                     )
                     .limit(1)

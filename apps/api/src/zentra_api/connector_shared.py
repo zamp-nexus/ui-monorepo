@@ -88,6 +88,6 @@ def _actor(context: RequestContext) -> AuthenticatedActor:
     """
     return AuthenticatedActor(
         user_id=context.actor.user_id,
-        tenant_id=context.actor.tenant_id,
+        organization_id=context.actor.organization_id,
         role=Role(context.actor.role.value),
     )

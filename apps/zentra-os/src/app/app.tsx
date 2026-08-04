@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 
-import { useAuth, useAuthSession } from '@open-zentra/foundation-auth';
+import { useAuth, useAuthSession, useAuthTenant } from '@open-zentra/foundation-auth';
+import { SignIn, SignUp, useOrganizationMemberships } from '@open-zentra/foundation-auth/clerk-ui';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { apiUrl, requestJson, type TokenSource } from './api';
+import { ApiError, apiUrl, requestJson, type TokenSource } from './api';
 import { ChatPage } from './pages/chat/chat-page';
 import { ComingSoon } from './pages/coming-soon';
 import { ConnectionsPage } from './pages/connections/connections-page';
@@ -15,7 +16,9 @@ import { DatasetsPage } from './pages/datasets/datasets-page';
 import { RowsPage } from './pages/datasets/rows-page';
 import {
   MembershipUnavailable,
-  OrganizationRequired,
+  NoOrganizations,
+  OrganizationPicker,
+  OrganizationSetupDelayed,
   ResolvingIdentity,
   SetupRequired,
   SignedOut,
@@ -36,9 +39,25 @@ const requestReadiness = async (): Promise<ReadinessResponse> => {
   return (await response.json()) as ReadinessResponse;
 };
 
+// The Clerk webhook that provisions the backing tenant for a freshly created
+// (or freshly joined) Clerk organization can take a few seconds to land.
+// `GET /v1/context` answers 403 with this exact detail string in the
+// meantime — the API has no structured error code for it yet, so this is a
+// deliberate, narrow string match rather than a status-code check (403 is
+// shared with the unrelated "no membership in this organization" case,
+// which must NOT retry).
+const ORGANIZATION_NOT_YET_PROVISIONED_DETAIL =
+  'Identity organization is not bound to any organization';
+const IDENTITY_RETRY_LIMIT = 8;
+
+const isOrganizationNotYetProvisionedError = (error: unknown): boolean =>
+  error instanceof ApiError && error.message === ORGANIZATION_NOT_YET_PROVISIONED_DETAIL;
+
 const AuthenticatedWorkspace = () => {
   const { logout, tenant } = useAuth();
+  const { setActiveTenant } = useAuthTenant();
   const { getAccessToken } = useAuthSession();
+  const { isLoaded: membershipsLoaded, memberships } = useOrganizationMemberships();
   // A Clerk session token lives 60 seconds. Holding one in component state and
   // reusing it means the first click on a page left open sends a dead token —
   // the API answers "Invalid bearer token" and it reads like a configuration
@@ -58,17 +77,48 @@ const AuthenticatedWorkspace = () => {
     queryKey: ['identity-context', tenant?.id],
     queryFn: () => requestJson<IdentityContext>('/v1/context', getToken),
     enabled: Boolean(tenant?.id),
-    retry: false,
+    // Only the "webhook hasn't landed yet" case retries. A genuine "no
+    // membership in this organization" error must still fail immediately.
+    retry: (attempt, error) =>
+      attempt < IDENTITY_RETRY_LIMIT && isOrganizationNotYetProvisionedError(error),
+    // Capped exponential backoff: 1s, 2s, 4s, 5s, 5s, 5s, 5s ≈ 27s total.
+    retryDelay: (attempt) => Math.min(1000 * 2 ** (attempt - 1), 5000),
   });
 
   if (!tenant?.id) {
-    return <OrganizationRequired onSignOut={() => void logout()} />;
+    if (!membershipsLoaded) {
+      return <ResolvingIdentity message="Loading your organizations…" />;
+    }
+    if (memberships.length === 0) {
+      return <NoOrganizations />;
+    }
+    return (
+      <OrganizationPicker
+        memberships={memberships}
+        onSelect={(organizationId) => void setActiveTenant(organizationId)}
+        onSignOut={() => void logout()}
+      />
+    );
   }
   if (identity.isPending) {
-    return <ResolvingIdentity message="Resolving governed tenant context…" />;
+    return (
+      <ResolvingIdentity
+        message={
+          identity.failureCount > 0
+            ? 'Finishing organization setup…'
+            : 'Resolving governed tenant context…'
+        }
+      />
+    );
   }
-  if (identity.error || !identity.data) {
-    return <MembershipUnavailable detail={identity.error?.message} />;
+  if (identity.error) {
+    if (isOrganizationNotYetProvisionedError(identity.error)) {
+      return <OrganizationSetupDelayed onRetry={() => void identity.refetch()} />;
+    }
+    return <MembershipUnavailable detail={identity.error.message} />;
+  }
+  if (!identity.data) {
+    return <MembershipUnavailable detail={undefined} />;
   }
 
   return (
@@ -136,19 +186,34 @@ const AuthenticatedWorkspace = () => {
 };
 
 const AuthenticatedEntry = () => {
-  const { isAuthenticated, isInitializing, login } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
 
   if (isInitializing) {
     return <ResolvingIdentity message="Resolving your identity…" />;
   }
   if (!isAuthenticated) {
-    return <SignedOut login={() => login()} />;
+    return <SignedOut />;
   }
   return <AuthenticatedWorkspace />;
 };
 
 export function App({ clerkConfigured = false }: AppProps) {
-  return clerkConfigured ? <AuthenticatedEntry /> : <SetupRequired />;
+  if (!clerkConfigured) {
+    return <SetupRequired />;
+  }
+  return (
+    <Routes>
+      <Route
+        path="/sign-in"
+        element={<SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" />}
+      />
+      <Route
+        path="/sign-up"
+        element={<SignUp path="/sign-up" routing="path" signInUrl="/sign-in" />}
+      />
+      <Route path="*" element={<AuthenticatedEntry />} />
+    </Routes>
+  );
 }
 
 export default App;

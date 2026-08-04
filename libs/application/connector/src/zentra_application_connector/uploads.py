@@ -118,7 +118,7 @@ class UploadOperations:
         chosen = tuple(columns) if columns else preview.columns
         landed = await self._landing.land(
             _replay(payload),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             upload_id=upload_id,
             upload_format=preview.upload_format,
             columns=chosen,  # type: ignore[arg-type]
@@ -126,7 +126,7 @@ class UploadOperations:
         now = self._clock.now()
         source = DataSource(
             data_source_id=uuid4(),
-            tenant_id=actor.tenant_id,
+            organization_id=actor.organization_id,
             name=name,
             kind=SourceKind.UPLOADED,
             description=f"Uploaded from {preview.filename}",

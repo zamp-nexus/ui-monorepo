@@ -17,7 +17,7 @@ repo_path: libs/adapters/postgres/migrations
 code_refs:
   - libs/adapters/postgres/alembic.ini
   - libs/adapters/postgres/migrations/env.py
-  - libs/adapters/postgres/migrations/versions/0002_phase1a_investigation.py
+  - libs/adapters/postgres/migrations/versions/0001_initial_schema.py
 ---
 
 # Recover Failed Postgres Migration
