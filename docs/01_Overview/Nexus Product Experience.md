@@ -1,0 +1,53 @@
+---
+id: overview-nexus-product-experience
+title: Nexus Product Experience
+type: overview
+status: active
+owner: unassigned
+source: repository
+created: 2026-08-04
+updated: 2026-08-04
+reviewed: 2026-08-04
+confidence: verified
+priority: high
+tags: [product, experience, design-system, nexus]
+related: ["[[Overview MOC]]", "[[User Workflows]]", "[[Phase 3 - Governed Bring Your Own Data]]"]
+repo_path: apps/nexus
+---
+
+# Nexus Product Experience
+
+Nexus is a self-service analytical workspace for a person who needs to bring
+data, ask a question, and understand the answer without being a specialist
+analyst.
+
+## Product loop
+
+The primary path is **Upload → Context → Ask → Insight**.
+
+- An uploaded file is private by default and receives a concise data profile.
+- Contextual suggestions help the user begin, but a free-form question is
+  always available.
+- The chat response adapts to the question rather than forcing a report shape.
+- Source scope, evidence, caveats, and method appear when useful or requested.
+
+## Information architecture
+
+- **Analyze** is the primary workspace and route destination.
+- **Data** owns uploads, datasets, and data connections.
+- **Sequences** are advanced workflows reached from the relevant data context;
+  direct links remain valid for existing work.
+- Shared spaces organize collaboration, while work stays private unless shared.
+
+## Experience standards
+
+The interface is desktop-first and mobile-capable. It uses the root `DESIGN.md`
+light analytical system: neutral surfaces, indigo interaction signal,
+accessible focus and contrast, compact AI progress, and human visual approval
+at 1440px, 1024px, 768px, and 390px.
+
+The primary product outcome is time to first useful insight: a successful
+upload, first question, and useful response. Completion, latency, and follow-up
+engagement are supporting measures.
+
+Parent: [[Overview MOC]]

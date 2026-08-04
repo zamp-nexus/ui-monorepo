@@ -20,11 +20,13 @@ export interface NavItem {
  * answers with a placeholder rather than a dead link.
  */
 export const navItems: readonly NavItem[] = [
-  { label: 'Datasets', to: '/datasets', icon: 'database' },
-  { label: 'Sequences', to: '/sequences', icon: 'columns' },
-  { label: 'Chat', to: '/chats', icon: 'message_square' },
-  { label: 'Connections', to: '/connections', icon: 'network' },
-  { label: 'Settings', to: '/settings', icon: 'settings' },
+  { label: 'Analyze', to: '/chats', icon: 'message_square' },
+  {
+    label: 'Data',
+    to: '/datasets',
+    icon: 'database',
+    matches: ['/connections', '/cube-schema', '/sequences'],
+  },
 ];
 
 /**

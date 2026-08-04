@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 
-import { Badge, Button, IconButton } from '@open-zentra/foundation-design-system';
+import { Badge, Button, IconButton, Textarea } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { parseComposerCommands } from './composer-commands';
@@ -46,11 +46,11 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
 
   return (
     <form
-      className="w-full border-t border-border bg-card p-4"
+      className="w-full border-t border-border bg-background px-4 pb-4 pt-3 sm:px-6"
       onSubmit={submit}
       aria-label="Send a message"
     >
-      <div className="flex flex-col gap-3 rounded-md border border-border bg-background p-3 focus-within:ring-2 focus-within:ring-border-focus focus-within:ring-offset-2">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-depth-01)] transition-shadow focus-within:shadow-[var(--shadow-depth-02)] focus-within:ring-2 focus-within:ring-border-focus focus-within:ring-offset-2">
         {hasCommands ? (
           <div className="flex flex-wrap items-center gap-2" aria-live="polite">
             {parsed.datasetHint ? (
@@ -83,13 +83,13 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
         <label className="sr-only" htmlFor="chat-message">
           Message
         </label>
-        <textarea
+        <Textarea
           id="chat-message"
-          className="max-h-48 w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed"
+          className="max-h-48 w-full resize-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed"
           rows={rows}
           value={draft}
           disabled={disabled}
-          placeholder={disabled ? 'Sending…' : 'Ask a governed question…'}
+          placeholder={disabled ? 'Working on your question…' : 'Ask anything about your data…'}
           onKeyDown={handleKeyDown}
           onChange={(event) => {
             onDraftChange(event.target.value);

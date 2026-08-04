@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssistantRuntimeProvider, ThreadPrimitive } from '@assistant-ui/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
@@ -43,8 +43,10 @@ export const ChatPage = ({
 }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const { chatId } = useParams();
   const { groupId } = useWorkspace();
+  const sourceName = new URLSearchParams(location.search).get('sourceName');
 
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const activeThreadId = chatId ?? NEW_THREAD;
@@ -140,10 +142,15 @@ export const ChatPage = ({
   return (
     <div className="flex h-full min-h-0">
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-x-4 border-b border-border px-6 py-5 group/header">
-          <h1 className="font-serif text-2xl font-normal tracking-[-0.03em] truncate max-w-lg">
-            {thread?.title ?? 'Chat'}
-          </h1>
+        <header className="flex items-center gap-x-3 border-b border-border bg-card px-5 py-4 sm:px-6 group/header">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+              Analyze
+            </p>
+            <h1 className="mt-1 max-w-lg truncate text-base font-semibold tracking-[-0.025em]">
+              {thread?.title ?? 'New analysis'}
+            </h1>
+          </div>
           {thread && (
             <IconButton
               intent="ghost"
@@ -200,12 +207,13 @@ export const ChatPage = ({
                   <ChatEmptyState
                     greetingName={identity.email.split('@')[0]}
                     suggestions={suggestionsFromCatalog(catalog.data ?? null)}
+                    sourceName={sourceName}
                     onChoose={setDraft}
                   />
                 </ThreadPrimitive.Empty>
 
                 <ThreadPrimitive.If empty={false}>
-                  <ThreadPrimitive.Viewport className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-8">
+                  <ThreadPrimitive.Viewport className="mx-auto flex max-w-3xl flex-col gap-8 px-5 py-8 sm:px-6">
                     <ThreadPrimitive.Messages components={{ UserMessage, AssistantMessage }} />
 
                     {send.error ? (

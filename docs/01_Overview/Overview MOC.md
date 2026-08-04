@@ -20,6 +20,7 @@ repo_path: docs/01_Overview
 - [[Repository Overview]]
 - [[Product Boundaries]]
 - [[User Workflows]]
+- [[Nexus Product Experience]]
 - [[Current Implementation Status]]
 - [[Phase 2 - Insight Auditor and Replay]]
 - [[Phase 3 - Governed Bring Your Own Data]]

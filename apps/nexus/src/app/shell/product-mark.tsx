@@ -18,11 +18,11 @@ export const ProductMark = ({ showRelease = false, compact = false }: ProductMar
     to="/"
     aria-label={`${PRODUCT_NAME} home`}
   >
-    <span className="font-serif text-2xl font-bold uppercase leading-none tracking-[0.02em] text-primary">
+    <span className="text-lg font-semibold leading-none tracking-[-0.035em] text-foreground">
       {compact ? PRODUCT_NAME.charAt(0) : PRODUCT_NAME}
     </span>
     {showRelease && !compact ? (
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-foreground-muted">
+      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-foreground-muted">
         {PRODUCT_RELEASE_LABEL}
       </span>
     ) : null}

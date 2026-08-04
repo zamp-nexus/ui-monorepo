@@ -36,7 +36,7 @@ export type { LightTheme } from './light';
  * Default theme export
  * Dark theme is the primary/default theme
  */
-export const defaultTheme = darkTheme;
+export const defaultTheme = lightTheme;
 
 /**
  * All available themes

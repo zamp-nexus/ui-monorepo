@@ -16,7 +16,7 @@ const ConnectorTile = ({ connector, onSelect }: ConnectorTileProps) => (
   <button
     type="button"
     onClick={() => onSelect(connector)}
-    className="group flex w-full items-center gap-3 rounded-lg border border-border bg-card px-4 py-4 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    className="group flex w-full items-center gap-3 rounded-lg border border-border bg-card px-4 py-4 text-left shadow-[var(--shadow-depth-01)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[var(--shadow-depth-02)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
   >
     <ConnectorLogo name={connector.logo} className="h-7 w-7 shrink-0" />
     <span className="min-w-0 flex-1">
@@ -46,17 +46,18 @@ export const ConnectorPicker = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="px-8 py-10">
-      <Button component={Link} to="/connections" intent="ghost" size="sm" className="-ml-2">
-        <Icon name="arrow_left" size="sm" /> Connections
+    <section className="px-5 py-8 sm:px-8 sm:py-10">
+      <Button component={Link} to="/datasets" intent="ghost" size="sm" className="-ml-2">
+        <Icon name="arrow_left" size="sm" /> Back to data
       </Button>
 
-      <h1 className="mt-4 font-serif text-[clamp(1.75rem,3.2vw,2.5rem)] font-normal tracking-[-0.035em]">
-        Select a source connector
+      <p className="mt-7 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">Add data</p>
+      <h1 className="mt-3 text-[clamp(1.75rem,3.2vw,2.5rem)] font-semibold tracking-[-0.045em]">
+        Choose how to add data
       </h1>
-      <p className="mt-3 max-w-2xl text-sm text-foreground-muted">
-        Nexus reads from the source in place. Nothing is copied out of it until a harvest is
-        started, and credentials are sealed the moment they are accepted.
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted">
+        Upload a file for immediate analysis, or connect a source for data your workspace can
+        return to later. Credentials are sealed when accepted.
       </p>
 
       {CONNECTOR_CATEGORIES.map((category) => {

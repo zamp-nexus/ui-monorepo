@@ -4,9 +4,9 @@
  * `agent-progress.tsx` already reduces the Work Feed to the lines worth
  * showing -- this only regroups those lines per turn (one collapsible block
  * per Analysis Run rather than one continuous rail) and adds the two things a
- * grouped view needs that a single stream did not: a stable color per agent,
- * so a reader can tell two agents apart at a glance, and an expand/collapse
- * lifecycle tied to whether the turn is still in flight.
+ * grouped view needs that a single stream did not: a compact, readable status
+ * treatment and an expand/collapse lifecycle tied to whether the turn is in
+ * flight.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -46,22 +46,6 @@ export const groupEventsByAnalysisRun = (
 
   return groups;
 };
-
-/**
- * A stable hue per agent (keyed by `agentId`, falling back to `role`), so the
- * same agent reads as the same color everywhere in the block and two
- * concurrently-active agents land on visibly different ones. No palette to
- * run out of: any key hashes to a hue on the wheel.
- */
-const hueFor = (key: string): number => {
-  let hash = 0;
-  for (let index = 0; index < key.length; index += 1) {
-    hash = (hash * 31 + key.charCodeAt(index)) % 360;
-  }
-  return hash < 0 ? hash + 360 : hash;
-};
-
-const colorFor = (key: string): string => `hsl(${hueFor(key)}deg 68% 46%)`;
 
 interface AgentActivityBlockProps {
   /** This turn's Work Feed events only -- see `groupEventsByAnalysisRun`. */
@@ -137,7 +121,6 @@ export const AgentActivityBlock = ({ events, agents, finalized }: AgentActivityB
               <AnimatePresence initial={false}>
                 {lines.map((line) => {
                   const key = line.agentId ?? line.role ?? 'system';
-                  const color = colorFor(key);
                   return (
                     <motion.li
                       key={line.id}
@@ -149,7 +132,7 @@ export const AgentActivityBlock = ({ events, agents, finalized }: AgentActivityB
                       data-agent-key={key}
                       className="flex items-start gap-3 overflow-hidden py-1"
                     >
-                      <span className="mt-1" style={{ color }} aria-hidden="true">
+                      <span className={line.done ? 'mt-1 text-foreground-muted' : 'mt-1 text-primary'} aria-hidden="true">
                         <Icon
                           name={
                             ROLE_ICON[roleOf(line.agentId, line.role) ?? ''] ?? DEFAULT_ROLE_ICON
@@ -159,10 +142,7 @@ export const AgentActivityBlock = ({ events, agents, finalized }: AgentActivityB
                       </span>
                       <span className="min-w-0 flex-1 text-sm text-foreground-muted">
                         {line.agentId || line.role ? (
-                          <strong
-                            className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em]"
-                            style={{ color }}
-                          >
+                          <strong className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
                             {nameOf(line.agentId)}
                           </strong>
                         ) : null}

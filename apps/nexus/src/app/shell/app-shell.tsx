@@ -105,6 +105,13 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
 
       {collapsed ? null : (
         <>
+          <Link
+            className="flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline transition-colors hover:text-foreground"
+            to="/settings"
+          >
+            <Icon name="settings" size="sm" />
+            Settings
+          </Link>
           <a
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
             href="https://github.com/openzentra/nexus"
@@ -154,12 +161,13 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   );
 
   return (
-    <div className="flex h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
+    <div className="flex h-screen bg-background text-foreground selection:bg-primary/15 selection:text-primary-foreground">
       <SideNav
         aria-label="Primary"
         width={collapsed ? 'compact' : 'default'}
+        className="hidden md:flex"
         brand={
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-5">
             <ProductMark showRelease compact={collapsed} />
           </div>
         }
@@ -177,21 +185,18 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
           </SideNav.Item>
         ))}
 
-        <div className={`mt-2 ${collapsed ? '' : 'border-t border-border pt-4'}`}>
+        <div className={`mt-4 ${collapsed ? '' : 'border-t border-border pt-5'}`}>
           {collapsed ? null : (
             <div className="flex items-center justify-between px-3 pb-2">
-              <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted">
-                Groups
+              <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+                Shared spaces
               </h2>
               <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <Modal.Trigger asChild>
-                  <IconButton
-                    intent="ghost"
-                    size="sm"
-                    aria-label="New Group"
-                  >
-                    <Icon name="plus" size="sm" />
-                  </IconButton>
+                <Modal.Trigger
+                  aria-label="New Group"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  <Icon name="plus" size="sm" />
                 </Modal.Trigger>
                 <Modal.Content>
                   <Modal.Header>
@@ -244,6 +249,20 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
       </SideNav>
 
       <main className="min-w-0 flex-1 overflow-y-auto">
+        <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
+          <ProductMark compact />
+          <nav className="flex items-center gap-1" aria-label="Mobile primary">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`inline-flex min-h-10 items-center rounded-md px-3 text-sm font-medium no-underline ${isNavItemActive(item, pathname) ? 'bg-primary/10 text-primary' : 'text-foreground-muted'}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </header>
         <WorkspaceContext.Provider value={{ groupId }}>
           {children}
         </WorkspaceContext.Provider>

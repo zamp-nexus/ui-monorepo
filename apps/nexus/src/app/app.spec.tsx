@@ -144,7 +144,7 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('reaches the Sequence page from the navigation rail', async () => {
+  it('keeps the Sequence page available by direct link while Data owns navigation', async () => {
     mockApi();
     authMocks.useAuth.mockReturnValue({
       isAuthenticated: true,
@@ -157,7 +157,7 @@ describe('App', () => {
     renderApp('/sequences');
 
     expect(await screen.findByRole('heading', { name: /^sequences$/i })).toBeTruthy();
-    const link = screen.getByRole('link', { name: /sequences/i });
-    expect(link.getAttribute('href')).toBe('/sequences');
+    const [dataLink] = screen.getAllByRole('link', { name: /^data$/i });
+    expect(dataLink.getAttribute('href')).toBe('/datasets');
   });
 });

@@ -41,9 +41,12 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
         name: connectionName,
         columns: preview!.columns,
       }),
-    onSuccess: () => {
+    onSuccess: (source) => {
       queryClient.invalidateQueries({ queryKey: ['connector-sources'] });
-      navigate('/connections');
+      queryClient.invalidateQueries({ queryKey: ['catalog', source.data_source_id] });
+      navigate(
+        `/chats?source=${encodeURIComponent(source.data_source_id)}&sourceName=${encodeURIComponent(source.name)}`,
+      );
     },
   });
 
@@ -68,29 +71,36 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
   };
 
   return (
-    <section className="mx-auto max-w-4xl px-8 py-10">
-      <Button component={Link} to="/connections/new" intent="ghost" size="sm" className="-ml-2">
-        <Icon name="arrow_left" size="sm" /> Pick a different source
+    <section className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
+      <Button component={Link} to="/datasets" intent="ghost" size="sm" className="-ml-2">
+        <Icon name="arrow_left" size="sm" /> Back to data
       </Button>
 
-      <h1 className="mt-4 font-serif text-[clamp(1.75rem,3.2vw,2.5rem)] font-normal tracking-[-0.035em]">
-        Upload a file
+      <p className="mt-7 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">
+        Add data
+      </p>
+      <h1 className="mt-3 text-[clamp(1.75rem,3.2vw,2.5rem)] font-semibold tracking-[-0.045em]">
+        Upload a file to analyze
       </h1>
-      <p className="mt-3 text-sm text-foreground-muted">
-        Upload a CSV, Parquet, or Excel file. The data will be stored securely in Nexus.
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted">
+        Start with a CSV, Parquet, or Excel file. Nexus profiles its structure before you begin
+        asking questions. Your upload is private until you choose to share it.
       </p>
 
       {!preview ? (
-        <div className="mt-10">
-          <div className="flex max-w-md flex-col gap-4">
-            <Label htmlFor="file-upload">Select file</Label>
+        <div className="mt-10 max-w-2xl rounded-xl border border-dashed border-border-emphasis bg-card p-6 shadow-[var(--shadow-depth-01)] sm:p-8">
+          <div className="flex flex-col gap-4">
+            <div>
+              <Label htmlFor="file-upload">Choose a file</Label>
+              <p className="mt-1 text-sm text-foreground-muted">CSV, Parquet, or Excel. You can inspect it before it is added.</p>
+            </div>
             <input
               id="file-upload"
               type="file"
               accept=".csv,.parquet,.xlsx,.xls"
               onChange={handleFileChange}
               disabled={previewMutation.isPending || !canWrite}
-              className="flex h-10 w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-4 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50"
             />
             {previewMutation.error && (
               <Alert intent="error" title="Preview failed">
@@ -102,17 +112,28 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
               loading={previewMutation.isPending}
               onClick={() => previewMutation.mutate()}
             >
-              Preview
+              Inspect file
             </Button>
           </div>
         </div>
       ) : (
-        <div className="mt-10 flex flex-col gap-8">
+        <div className="mt-10 flex flex-col gap-7">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-y border-border py-5">
+            <div>
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">Data profile</p>
+              <h2 className="mt-2 text-lg font-semibold tracking-[-0.025em]">{preview.filename}</h2>
+              <p className="mt-1 text-sm text-foreground-muted">{preview.columns.length} columns · previewing {preview.rows.length} rows</p>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
+              <Icon name="check" size="sm" /> Ready to analyze
+            </span>
+          </div>
+
           <Alert intent="success" title="File inspected successfully">
-            Found {preview.columns.length} columns and previewing {preview.rows.length} rows.
+            Review the sample below, name the data source, then continue directly to Analyze.
           </Alert>
 
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-depth-01)]">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-border bg-secondary text-foreground-muted">
                 <tr>
@@ -142,9 +163,9 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
             </table>
           </div>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          <form onSubmit={onSubmit} className="max-w-xl border-t border-border pt-6">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="connection-name">Connection Name</Label>
+              <Label htmlFor="connection-name">Name this data source</Label>
               <Input
                 id="connection-name"
                 value={connectionName}
@@ -161,7 +182,7 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
               </Alert>
             )}
 
-            <div className="mt-4 flex justify-end gap-3">
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
               <Button type="button" intent="secondary" onClick={() => setPreview(null)}>
                 Change File
               </Button>
@@ -170,7 +191,7 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
                 disabled={commitMutation.isPending || !canWrite || !connectionName.trim()}
                 loading={commitMutation.isPending}
               >
-                Commit Upload
+                Add and start analyzing
               </Button>
             </div>
           </form>

@@ -1,8 +1,8 @@
 /**
  * Open Zentra Design System - Design Tokens
  * 
- * Enterprise-grade, Linear-inspired design tokens
- * Dark mode primary, light mode secondary
+ * Enterprise-grade, analytical design tokens
+ * Light mode primary, dark mode optional
  * 
  * @generated - Generated from TypeScript token definitions
  * @see libs/foundation/design-system/src/tokens/
@@ -324,43 +324,41 @@
 }
 
 /* =============================================================================
- * DARK THEME (DEFAULT)
+ * LIGHT THEME (DEFAULT)
  * ============================================================================= */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Backgrounds - deep true black, pristine layers */
-  --bg-layer-00: hsl(0 0% 0%);
-  --bg-layer-01: hsl(0 0% 4%);
-  --bg-layer-02: hsl(0 0% 7%);
-  --bg-layer-03: hsl(0 0% 11%);
-  --bg-overlay: hsla(0 0% 0% / 0.85);
+  --bg-layer-00: hsl(225 24% 98%);
+  --bg-layer-01: hsl(0 0% 100%);
+  --bg-layer-02: hsl(225 20% 97%);
+  --bg-layer-03: hsl(0 0% 100%);
+  --bg-overlay: hsla(225 30% 12% / 0.32);
   
   /* Glass & Glow */
-  --bg-glass: hsla(0 0% 7% / 0.6);
-  --border-glass: hsla(0 0% 100% / 0.08);
-  --glow-primary: radial-gradient(circle at center, hsla(88, 100%, 70%, 0.15) 0%, transparent 65%);
-  --glow-smart: radial-gradient(circle at center, hsla(263, 83%, 58%, 0.2) 0%, transparent 65%);
+  --bg-glass: hsla(0 0% 100% / 0.8);
+  --border-glass: hsla(225 20% 20% / 0.08);
+  --glow-primary: none;
+  --glow-smart: none;
 
   /* Text */
-  --text-highlight: hsl(96 14% 96%);
-  --text-primary: hsl(96 10% 92%);
-  --text-secondary: hsl(140 5% 70%);
-  --text-tertiary: hsl(140 5% 57%);
-  --text-muted: hsl(140 5% 40%);
-  --text-inverted: hsl(140 10% 4%);
+  --text-highlight: hsl(228 27% 11%);
+  --text-primary: hsl(228 24% 16%);
+  --text-secondary: hsl(225 12% 38%);
+  --text-tertiary: hsl(225 10% 50%);
+  --text-muted: hsl(225 10% 64%);
+  --text-inverted: hsl(0 0% 100%);
 
-  /* Interactive - Primary (signal lime) */
-  --interactive-primary: hsl(88 100% 70%);
-  --interactive-primary-hover: hsl(88 100% 78%);
-  --interactive-primary-active: hsl(88 92% 63%);
-  --interactive-primary-disabled: hsl(88 20% 40%);
+  --interactive-primary: hsl(238 63% 44%);
+  --interactive-primary-hover: hsl(238 63% 38%);
+  --interactive-primary-active: hsl(238 63% 32%);
+  --interactive-primary-disabled: hsl(238 24% 72%);
 
   /* Interactive - Secondary */
-  --interactive-secondary: hsl(140 6% 14%);
-  --interactive-secondary-hover: hsl(140 6% 18%);
-  --interactive-secondary-active: hsl(140 6% 22%);
+  --interactive-secondary: hsl(0 0% 100%);
+  --interactive-secondary-hover: hsl(225 20% 96%);
+  --interactive-secondary-active: hsl(225 18% 93%);
 
   /* Interactive - Destructive */
   --interactive-destructive: hsl(0 74% 54%);
@@ -373,99 +371,26 @@
   --interactive-smart-active: hsl(263 83% 52%);
 
   /* Borders */
-  --border-default: hsla(0 0% 100% / 0.1);
-  --border-subtle: hsla(0 0% 100% / 0.05);
-  --border-emphasis: hsla(0 0% 100% / 0.15);
-  --border-focus: hsl(88 100% 70%);
+  --border-default: hsl(225 18% 89%);
+  --border-subtle: hsl(225 20% 94%);
+  --border-emphasis: hsl(225 16% 82%);
+  --border-focus: hsl(238 63% 44%);
 
   /* Feedback */
-  --feedback-success: hsl(92 72% 60%);
-  --feedback-warning: hsl(45 90% 60%);
-  --feedback-error: hsl(0 78% 63%);
-  --feedback-info: hsl(210 80% 65%);
+  --feedback-success: hsl(150 58% 31%);
+  --feedback-warning: hsl(38 88% 35%);
+  --feedback-error: hsl(0 72% 46%);
+  --feedback-info: hsl(215 78% 43%);
 
   /* Shadows */
-  --shadow-depth-01: 0 0 2px 0 hsla(140 10% 2% / 0.4), 0 2px 4px 0 hsla(140 10% 2% / 0.3);
-  --shadow-depth-02: 0 2px 12px 0 hsla(140 10% 2% / 0.45);
-  --shadow-depth-03: 0 0 6px 1px hsla(140 10% 2% / 0.3), 0 2px 24px 0 hsla(140 10% 2% / 0.4);
-  --shadow-depth-04: 0 4px 32px 0 hsla(140 10% 2% / 0.55), 0 16px 48px 0 hsla(140 10% 2% / 0.45);
+  --shadow-depth-01: 0 1px 2px hsla(228 30% 15% / 0.04);
+  --shadow-depth-02: 0 6px 18px hsla(228 30% 15% / 0.06);
+  --shadow-depth-03: 0 12px 32px hsla(228 30% 15% / 0.08);
+  --shadow-depth-04: 0 20px 52px hsla(228 30% 15% / 0.12);
 
   /* Focus */
-  --focus-ring: 0 0 0 2px hsla(88 100% 70% / 0.35);
-  --focus-ring-offset: 0 0 0 4px hsla(88 100% 70% / 0.12);
-}
-
-/* =============================================================================
- * LIGHT THEME
- * ============================================================================= */
-
-.light,
-[data-theme='light'] {
-  color-scheme: light;
-
-  /* Backgrounds */
-  --bg-layer-00: hsl(0 0% 98%);
-  --bg-layer-01: hsl(0 0% 100%);
-  --bg-layer-02: hsl(0 0% 100%);
-  --bg-layer-03: hsl(0 0% 100%);
-  --bg-overlay: hsla(0 0% 8% / 0.3);
-
-  /* Glass & Glow */
-  --bg-glass: hsla(0 0% 100% / 0.7);
-  --border-glass: hsla(0 0% 0% / 0.06);
-  --glow-primary: radial-gradient(circle at center, hsla(88, 72%, 28%, 0.1) 0%, transparent 65%);
-  --glow-smart: radial-gradient(circle at center, hsla(263, 83%, 52%, 0.15) 0%, transparent 65%);
-
-  /* Text */
-  --text-highlight: hsl(140 8% 8%);
-  --text-primary: hsl(140 8% 12%);
-  --text-secondary: hsl(140 6% 36%);
-  --text-tertiary: hsl(140 6% 48%);
-  --text-muted: hsl(140 6% 62%);
-  --text-inverted: hsl(140 6% 96%);
-
-  /* Interactive - Primary (lime darkened to carry white text) */
-  --interactive-primary: hsl(88 72% 28%);
-  --interactive-primary-hover: hsl(88 72% 24%);
-  --interactive-primary-active: hsl(88 72% 20%);
-  --interactive-primary-disabled: hsl(88 20% 70%);
-
-  /* Interactive - Secondary */
-  --interactive-secondary: hsl(140 6% 100%);
-  --interactive-secondary-hover: hsl(140 6% 96%);
-  --interactive-secondary-active: hsl(140 6% 92%);
-
-  /* Interactive - Destructive */
-  --interactive-destructive: hsl(0 74% 46%);
-  --interactive-destructive-hover: hsl(0 74% 42%);
-  --interactive-destructive-active: hsl(0 74% 38%);
-
-  /* Interactive - Smart */
-  --interactive-smart: hsl(263 83% 52%);
-  --interactive-smart-hover: hsl(263 83% 46%);
-  --interactive-smart-active: hsl(263 83% 42%);
-
-  /* Borders */
-  --border-default: hsl(140 6% 92%);
-  --border-subtle: hsl(140 6% 94%);
-  --border-emphasis: hsl(140 6% 88%);
-  --border-focus: hsl(88 72% 28%);
-
-  /* Feedback */
-  --feedback-success: hsl(92 66% 32%);
-  --feedback-warning: hsl(45 82% 38%);
-  --feedback-error: hsl(0 74% 46%);
-  --feedback-info: hsl(210 80% 45%);
-
-  /* Shadows - Lighter for light mode */
-  --shadow-depth-01: 0 0 2px 0 hsla(140 8% 8% / 0.05), 0 2px 4px 0 hsla(140 8% 8% / 0.03);
-  --shadow-depth-02: 0 2px 12px 0 hsla(140 8% 8% / 0.08);
-  --shadow-depth-03: 0 0 6px 1px hsla(140 8% 8% / 0.03), 0 2px 24px 0 hsla(140 8% 8% / 0.06);
-  --shadow-depth-04: 0 4px 32px 0 hsla(140 8% 8% / 0.12), 0 16px 48px 0 hsla(140 8% 8% / 0.08);
-
-  /* Focus */
-  --focus-ring: 0 0 0 2px hsla(88 72% 28% / 0.2);
-  --focus-ring-offset: 0 0 0 4px hsla(88 72% 28% / 0.1);
+  --focus-ring: 0 0 0 2px hsla(238 63% 44% / 0.24);
+  --focus-ring-offset: 0 0 0 4px hsla(238 63% 44% / 0.1);
 }
 
 /* =============================================================================

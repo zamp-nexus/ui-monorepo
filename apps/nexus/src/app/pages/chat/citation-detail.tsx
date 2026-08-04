@@ -7,7 +7,7 @@
  * "erased" from "broken" cannot trust either answer.
  */
 
-import { Card } from '@open-zentra/foundation-design-system';
+import { Card, IconButton } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { isTombstone, type ResolvedCitation } from '../../types';
@@ -24,14 +24,14 @@ export const CitationDetail = ({
       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
         Evidence · {citation.citation_id.slice(0, 8)}
       </p>
-      <button
-        type="button"
-        className="cursor-pointer border-0 bg-transparent p-0 text-foreground-muted"
+      <IconButton
+        intent="ghost"
+        size="sm"
         onClick={onClose}
         aria-label="Close this evidence"
       >
         <Icon name="x" size="sm" />
-      </button>
+      </IconButton>
     </div>
 
     {isTombstone(citation) ? (

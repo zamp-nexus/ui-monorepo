@@ -27,6 +27,7 @@
   :root {
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
+    color-scheme: light;
   }
 
   body {
@@ -34,6 +35,7 @@
     background: var(--bg-layer-00);
     color: var(--text-primary);
     font-family: var(--font-family-sans);
+    letter-spacing: -0.01em;
   }
 
   button,
