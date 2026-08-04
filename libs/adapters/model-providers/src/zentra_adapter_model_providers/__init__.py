@@ -2,7 +2,7 @@
 
 from zentra_domain_agent_execution import model_family
 
-from .anthropic_client import AnthropicModelClient
+from .anthropic_client import AnthropicModelClient, AnthropicModelResponse
 from .breaker import BreakerState, ProviderCircuitBreaker
 from .cassette import (
     RecordingModelClient,
@@ -34,6 +34,7 @@ __all__ = [
     "PROVIDERS",
     "ROUTING",
     "AnthropicModelClient",
+    "AnthropicModelResponse",
     "BreakerState",
     "ChainExhaustedError",
     "ModelChoice",

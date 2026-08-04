@@ -107,6 +107,13 @@ class ModelChoice:
     # checked — the same discipline the strict-json_schema notes in
     # `routing.py` already record.
     supports_tools: bool = False
+    # Whether this rung should be asked for extended-thinking/reasoning
+    # output. Anthropic-only today (see AnthropicModelClient.complete()'s
+    # `thinking` parameter) — the field lives here rather than on a
+    # provider-specific type so a future reasoning-capable rung on another
+    # provider has somewhere to declare it too. Default False for the same
+    # reason `supports_tools` defaults False: opted in deliberately, per rung.
+    supports_thinking: bool = False
 
     @property
     def trains_on_input(self) -> bool:
