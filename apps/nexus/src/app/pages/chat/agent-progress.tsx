@@ -24,7 +24,7 @@ import type { FeedStatus } from './use-thread-events';
  * `AgentEventPayload` already carries (`AgentRole` values from the backend) —
  * no new lookup, just rendering a field that was already there.
  */
-const ROLE_ICON: Record<string, IconName> = {
+export const ROLE_ICON: Record<string, IconName> = {
   orchestrator: 'compass',
   cube_analyst: 'database',
   sql_analyst: 'database',
@@ -37,7 +37,7 @@ const ROLE_ICON: Record<string, IconName> = {
   knowledge: 'compass',
   visualization: 'grid',
 };
-const DEFAULT_ROLE_ICON: IconName = 'sparkles';
+export const DEFAULT_ROLE_ICON: IconName = 'sparkles';
 
 interface Line {
   readonly id: string;

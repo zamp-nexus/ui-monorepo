@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { useAuth } from '@open-zentra/foundation-auth';
 import {
@@ -139,7 +140,7 @@ export const AppShell = ({ children, identity, readiness }: AppShellProps) => {
   );
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
       <SideNav
         aria-label="Primary"
         width={collapsed ? 'compact' : 'default'}
@@ -164,7 +165,20 @@ export const AppShell = ({ children, identity, readiness }: AppShellProps) => {
         ))}
       </SideNav>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+      <main className="min-w-0 flex-1 overflow-hidden relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="h-full w-full overflow-y-auto"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

@@ -1,10 +1,19 @@
 /// <reference types="vitest/globals" />
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import type { IdentityContext, Thread, VisualizationBrief } from '../../types';
+import type {
+  Agent,
+  AgentEventPayload,
+  IdentityContext,
+  Thread,
+  ThreadAnalysisRun,
+  ThreadEvent,
+  VisualizationBrief,
+} from '../../types';
+import { AgentActivityBlock } from './agent-activity-block';
 import { ChatPage } from './chat-page';
 import { toTimeline } from './to-chat-message';
 
@@ -167,12 +176,12 @@ const baseRoutes = {
   },
 };
 
-const renderPage = () => {
+const renderPage = (initialPath = '/chats') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <MemoryRouter initialEntries={['/chats']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={queryClient}>
         {/* `chat-page.tsx` reads the open Thread from the URL (`useParams`)
             and moves to it via `navigate` -- both need an actual matched
@@ -512,5 +521,426 @@ describe('the brief a reader falls back to', () => {
 
     expect(await screen.findByText(/rendered view was erased/, { exact: false })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Render again' })).toBeFalsy();
+  });
+});
+
+describe('Agent Activity', () => {
+  const AGENT_A: Agent = {
+    agent_id: 'agent-a',
+    role: 'sql_analyst',
+    version: '1',
+    display_name: 'Cube Analyst',
+    description: '',
+    enabled: true,
+    evaluation_status: 'passed',
+    capabilities: [],
+  };
+  const AGENT_B: Agent = {
+    agent_id: 'agent-b',
+    role: 'insight',
+    version: '1',
+    display_name: 'Insight Agent',
+    description: '',
+    enabled: true,
+    evaluation_status: 'passed',
+    capabilities: [],
+  };
+
+  const agentPayload = (over: Partial<AgentEventPayload>): AgentEventPayload => ({
+    type: 'agent',
+    execution_id: 'exec-1',
+    agent_id: AGENT_A.agent_id,
+    role: AGENT_A.role,
+    capability_id: null,
+    from_agent_id: null,
+    to_agent_id: null,
+    summary: null,
+    provider: null,
+    model: null,
+    fallback_count: 0,
+    latency_ms: null,
+    input_tokens: 0,
+    output_tokens: 0,
+    cost_usd: '0',
+    ...over,
+  });
+
+  const threadEvent = (
+    id: string,
+    threadId: string,
+    sequence: number,
+    kind: ThreadEvent['kind'],
+    payload: ThreadEvent['payload'],
+  ): ThreadEvent => ({
+    event_id: id,
+    organization_id: identity.organization_id,
+    thread_id: threadId,
+    sequence,
+    kind,
+    occurred_at: `2026-08-04T10:00:${String(sequence).padStart(2, '0')}Z`,
+    payload,
+  });
+
+  const baseAnalysisRun = (over: Partial<ThreadAnalysisRun>): ThreadAnalysisRun => ({
+    analysis_run_id: 'ar-1',
+    sequence: 1,
+    status: 'running',
+    parent_analysis_run_id: null,
+    retry_of_analysis_run_id: null,
+    created_at: '2026-08-04T10:00:00Z',
+    updated_at: '2026-08-04T10:00:00Z',
+    canonical_question: 'Why did EU refunds increase?',
+    finding: null,
+    draft_finding: null,
+    outcome: null,
+    approval: null,
+    citations: [],
+    audit_delivery: 'pending',
+    usage: USAGE,
+    ...over,
+  });
+
+  /** A body that yields every event in one chunk, as `useThreadEvents` reads it. */
+  const eventsStreamBody = (frames: readonly ThreadEvent[]) => {
+    const text = frames.map((value) => `data: ${JSON.stringify(value)}\n\n`).join('');
+    const bytes = encoder.encode(text);
+    let sent = false;
+    return {
+      getReader: () => ({
+        read: async () => {
+          if (sent) return { done: true, value: undefined };
+          sent = true;
+          return { done: false, value: bytes };
+        },
+      }),
+    };
+  };
+
+  /**
+   * `route()` plus one extra branch: the Work Feed's `GET .../events` reads
+   * `response.body` as a stream rather than `.json()`, so it needs a real
+   * (fake) stream, not the plain object every other endpoint here returns.
+   */
+  const routeWithEvents = (
+    handlers: Record<string, { status?: number; body: unknown }>,
+    threadId: string,
+    feedEvents: readonly ThreadEvent[],
+  ) =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (method === 'GET' && url.includes(`/v1/chats/${threadId}/events`)) {
+        return {
+          ok: true,
+          status: 200,
+          body: eventsStreamBody(feedEvents),
+          json: async () => ({}),
+        } as unknown as Response;
+      }
+      const key = Object.keys(handlers)
+        .sort((a, b) => b.length - a.length)
+        .find((fragment) => {
+          const [wanted, path] = fragment.includes(' ') ? fragment.split(' ') : [method, fragment];
+          return wanted === method && url.includes(path);
+        });
+      const handler = key ? handlers[key] : undefined;
+      if (!handler) throw new Error(`unhandled ${method}: ${url}`);
+      const ok = (handler.status ?? 200) < 400;
+      return {
+        ok,
+        status: handler.status ?? 200,
+        body: sseBody(
+          method === 'POST' && ok && isThread(handler.body)
+            ? [
+                { event: 'routing', data: { thread_id: handler.body.thread_id } },
+                { event: 'thread', data: handler.body },
+              ]
+            : [],
+        ),
+        json: async () => handler.body,
+      } as unknown as Response;
+    });
+
+  it('groups a live turn into one block, expanded, tagging its two agents distinctly', async () => {
+    const threadId = '43000000-0000-0000-0000-000000000050';
+    const runningThread: Thread = {
+      ...clarifiedThread,
+      thread_id: threadId,
+      messages: [
+        {
+          message_id: 'm-1',
+          kind: 'user_question',
+          content: 'Why did EU refunds increase?',
+          created_at: '2026-08-04T10:00:00Z',
+          authored_by_user: true,
+        },
+      ],
+      analysis_run_id: 'ar-1',
+      analysis_runs: [baseAnalysisRun({})],
+      routing: null,
+      event_cursor: 0,
+    };
+
+    // One turn, two agents, one handoff between them -- exactly the shape a
+    // grouped block exists to make sense of.
+    const feedEvents: ThreadEvent[] = [
+      threadEvent('e1', threadId, 1, 'analysis_run.queued', {
+        type: 'analysis_run',
+        analysis_run_id: 'ar-1',
+        status: 'pending',
+        parent_analysis_run_id: null,
+        retry_of_analysis_run_id: null,
+        failure_category: null,
+      }),
+      threadEvent(
+        'e2',
+        threadId,
+        2,
+        'agent.started',
+        agentPayload({
+          agent_id: AGENT_A.agent_id,
+          role: AGENT_A.role,
+          summary: 'Reading governed metrics…',
+        }),
+      ),
+      threadEvent(
+        'e3',
+        threadId,
+        3,
+        'agent.handoff',
+        agentPayload({
+          agent_id: AGENT_A.agent_id,
+          role: AGENT_A.role,
+          from_agent_id: AGENT_A.agent_id,
+          to_agent_id: AGENT_B.agent_id,
+          summary: 'Handing off for independent review',
+        }),
+      ),
+      threadEvent(
+        'e4',
+        threadId,
+        4,
+        'agent.completed',
+        agentPayload({ agent_id: AGENT_B.agent_id, role: AGENT_B.role }),
+      ),
+      threadEvent('e5', threadId, 5, 'finding.published', {
+        type: 'finding',
+        analysis_run_id: 'ar-1',
+        citation_count: 1,
+      }),
+    ];
+
+    // The snapshot the server hands back for every GET stays `running` here
+    // -- this turn never settles, on purpose, so the block's own expanded
+    // state can be observed without racing a background refetch. The
+    // collapse-on-finalize transition itself is covered directly against
+    // `AgentActivityBlock` below, where `finalized` is a prop, not a network
+    // event several promises away.
+    routeWithEvents(
+      {
+        ...baseRoutes,
+        '/v1/agents': { body: [AGENT_A, AGENT_B] },
+        [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: runningThread },
+        [`/v1/chats/${threadId}`]: { body: runningThread },
+      },
+      threadId,
+      feedEvents,
+    );
+
+    renderPage();
+    await ask('Why did EU refunds increase?');
+
+    const block = await screen.findByTestId('agent-activity-block');
+    // In flight: expanded, and the two agents read as two distinct lines.
+    expect(within(block).getByRole('button', { expanded: true })).toBeTruthy();
+
+    const analystLine = within(block).getByText('Cube Analyst').closest('[data-agent-key]');
+    const insightLine = within(block).getByText('Insight Agent').closest('[data-agent-key]');
+    expect(analystLine).toBeTruthy();
+    expect(insightLine).toBeTruthy();
+    expect(analystLine?.getAttribute('data-agent-key')).not.toBe(
+      insightLine?.getAttribute('data-agent-key'),
+    );
+    expect((analystLine as HTMLElement).querySelector('strong')?.getAttribute('style')).not.toBe(
+      (insightLine as HTMLElement).querySelector('strong')?.getAttribute('style'),
+    );
+
+    // No side panel exists anywhere in this tree.
+    expect(screen.queryByTestId('activity-inspector')).toBeNull();
+    expect(screen.queryByRole('button', { name: /activity panel/i })).toBeNull();
+    expect(screen.queryByRole('separator', { name: /resize the activity panel/i })).toBeNull();
+  });
+
+  it('auto-collapses the instant its turn finalizes, and stays manually toggleable either way', async () => {
+    const events: readonly ThreadEvent[] = [
+      threadEvent(
+        'e1',
+        'thread-1',
+        1,
+        'agent.started',
+        agentPayload({ agent_id: AGENT_A.agent_id, role: AGENT_A.role, summary: 'Working…' }),
+      ),
+      threadEvent(
+        'e2',
+        'thread-1',
+        2,
+        'agent.completed',
+        agentPayload({ agent_id: AGENT_A.agent_id, role: AGENT_A.role }),
+      ),
+    ];
+
+    const { rerender } = render(
+      <AgentActivityBlock events={events} agents={[AGENT_A]} finalized={false} />,
+    );
+
+    // Still in flight: expanded with nobody having clicked anything.
+    expect(screen.getByRole('button', { expanded: true })).toBeTruthy();
+
+    // The turn finalizes -- the block collapses on its own.
+    rerender(<AgentActivityBlock events={events} agents={[AGENT_A]} finalized={true} />);
+    expect(screen.getByRole('button', { expanded: false })).toBeTruthy();
+
+    // From here it is freely toggleable by hand, in either direction.
+    await userEvent.click(screen.getByRole('button'));
+    expect(screen.getByRole('button', { expanded: true })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button'));
+    expect(screen.getByRole('button', { expanded: false })).toBeTruthy();
+  });
+
+  it('renders one collapsed block per already-completed turn, each independently toggleable, with no side panel', async () => {
+    const threadId = '43000000-0000-0000-0000-000000000051';
+
+    const historicalRun = (id: string, question: string): ThreadAnalysisRun =>
+      baseAnalysisRun({
+        analysis_run_id: id,
+        status: 'completed',
+        audit_delivery: 'complete',
+        canonical_question: question,
+        finding: {
+          headline: `${question} -- answered`,
+          summary: 'Answered.',
+          metrics: [],
+          evidence_references: [],
+        },
+      });
+
+    const historicalThread: Thread = {
+      ...clarifiedThread,
+      thread_id: threadId,
+      messages: [
+        {
+          message_id: 'h-1',
+          kind: 'user_question',
+          content: 'Why did EU refunds increase?',
+          created_at: '2026-08-01T09:00:00Z',
+          authored_by_user: true,
+        },
+        {
+          message_id: 'h-2',
+          kind: 'user_question',
+          content: 'And in August?',
+          created_at: '2026-08-01T09:05:00Z',
+          authored_by_user: true,
+        },
+      ],
+      analysis_run_id: 'ar-2',
+      analysis_runs: [
+        historicalRun('ar-1', 'Why did EU refunds increase?'),
+        historicalRun('ar-2', 'And in August?'),
+      ],
+      routing: null,
+      event_cursor: 0,
+    };
+
+    // Both turns' Work Feed events, still sitting in the retained backlog --
+    // one agent per turn is enough here; the handoff case is covered above.
+    const feedEvents: ThreadEvent[] = [
+      threadEvent('e1', threadId, 1, 'analysis_run.queued', {
+        type: 'analysis_run',
+        analysis_run_id: 'ar-1',
+        status: 'pending',
+        parent_analysis_run_id: null,
+        retry_of_analysis_run_id: null,
+        failure_category: null,
+      }),
+      threadEvent(
+        'e2',
+        threadId,
+        2,
+        'agent.started',
+        agentPayload({ agent_id: AGENT_A.agent_id, role: AGENT_A.role, summary: 'Working…' }),
+      ),
+      threadEvent(
+        'e3',
+        threadId,
+        3,
+        'agent.completed',
+        agentPayload({ agent_id: AGENT_A.agent_id, role: AGENT_A.role }),
+      ),
+      threadEvent('e4', threadId, 4, 'finding.published', {
+        type: 'finding',
+        analysis_run_id: 'ar-1',
+        citation_count: 1,
+      }),
+      threadEvent('e5', threadId, 5, 'analysis_run.queued', {
+        type: 'analysis_run',
+        analysis_run_id: 'ar-2',
+        status: 'pending',
+        parent_analysis_run_id: null,
+        retry_of_analysis_run_id: null,
+        failure_category: null,
+      }),
+      threadEvent(
+        'e6',
+        threadId,
+        6,
+        'agent.started',
+        agentPayload({ agent_id: AGENT_B.agent_id, role: AGENT_B.role, summary: 'Working…' }),
+      ),
+      threadEvent(
+        'e7',
+        threadId,
+        7,
+        'agent.completed',
+        agentPayload({ agent_id: AGENT_B.agent_id, role: AGENT_B.role }),
+      ),
+      threadEvent('e8', threadId, 8, 'finding.published', {
+        type: 'finding',
+        analysis_run_id: 'ar-2',
+        citation_count: 1,
+      }),
+    ];
+
+    routeWithEvents(
+      {
+        ...baseRoutes,
+        '/v1/agents': { body: [AGENT_A, AGENT_B] },
+        [`/v1/chats/${threadId}`]: { body: historicalThread },
+      },
+      threadId,
+      feedEvents,
+    );
+
+    renderPage(`/chats/${threadId}`);
+
+    const blocks = await screen.findAllByTestId('agent-activity-block');
+    expect(blocks).toHaveLength(2);
+    for (const block of blocks) {
+      expect(within(block).getByRole('button', { expanded: false })).toBeTruthy();
+    }
+
+    // Expanding the first leaves the second exactly as it was.
+    await userEvent.click(within(blocks[0]).getByRole('button'));
+    expect(within(blocks[0]).getByRole('button', { expanded: true })).toBeTruthy();
+    expect(within(blocks[0]).getByText('Cube Analyst')).toBeTruthy();
+    expect(within(blocks[1]).getByRole('button', { expanded: false })).toBeTruthy();
+    expect(within(blocks[1]).queryByText('Cube Analyst')).toBeNull();
+
+    await userEvent.click(within(blocks[0]).getByRole('button'));
+    expect(within(blocks[0]).getByRole('button', { expanded: false })).toBeTruthy();
+
+    expect(screen.queryByTestId('activity-inspector')).toBeNull();
+    expect(screen.queryByRole('button', { name: /activity panel/i })).toBeNull();
+    expect(screen.queryByRole('separator', { name: /resize the activity panel/i })).toBeNull();
   });
 });

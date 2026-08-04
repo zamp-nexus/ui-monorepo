@@ -3,6 +3,7 @@
  * @module components/button
  */
 import React from 'react';
+import { motion } from 'framer-motion';
 
 import { Slot } from '../../primitives/slot';
 import { VisuallyHidden } from '../../primitives/visually-hidden';
@@ -54,6 +55,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
 ) {
   const theme = useTheme('button', buttonDefaultTheme);
   const Element = component ?? 'button';
+  const MotionElement = React.useMemo(() => motion.create(Element as React.ElementType), [Element]);
 
   // Effective disabled state includes loading
   // Boolean(), not `||`: with disabled={false} and loading unset this yields
@@ -65,8 +67,11 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
   const spinnerSize = size === 'lg' ? 'md' : size === 'md' ? 'sm' : 'xs';
 
   return (
-    <Element
+    <MotionElement
       ref={ref}
+      whileTap={!isDisabled ? { scale: 0.97 } : undefined}
+      whileHover={!isDisabled ? { scale: 1.02 } : undefined}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className={theme.root({
         className,
         intent,
@@ -132,7 +137,7 @@ export const Button = React.forwardRef(function Button<T extends React.ElementTy
           aria-hidden="true"
         />
       )}
-    </Element>
+    </MotionElement>
   );
 }) as ButtonComponent;
 

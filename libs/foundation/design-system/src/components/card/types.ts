@@ -82,7 +82,7 @@ export interface CardComponent {
  */
 export const cardDefaultTheme: ComponentThemeConfigStructure = {
   root: {
-    base: 'flex flex-col bg-card border border-border rounded-sm',
+    base: 'flex flex-col bg-glass backdrop-blur-xl border border-glass-border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden',
     variants: {
       padding: {
         none: 'p-0',
