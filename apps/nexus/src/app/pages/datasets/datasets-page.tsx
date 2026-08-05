@@ -194,7 +194,7 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button component={Link} to="/sequences" intent="secondary">
-            <Icon name="columns" size="sm" /> Open workflows
+            <Icon name="columns" size="sm" /> Open sequences
           </Button>
           <Button component={Link} to="/connections/new/upload" disabled={!canWrite}>
             <Icon name="upload" size="sm" /> Upload file

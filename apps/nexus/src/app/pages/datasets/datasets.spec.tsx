@@ -118,6 +118,7 @@ describe('Datasets', () => {
     renderPage();
 
     expect(await screen.findByText(/No datasets yet/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open sequences' })).toHaveAttribute('href', '/sequences');
   });
 
   it('requires an uploaded source to be harvested before it can be analyzed', async () => {

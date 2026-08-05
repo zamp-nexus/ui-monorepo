@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     clickhouse_password: str = "zentra_audit_app"
     clickhouse_database: str = "zentra_audit"
     clickhouse_secure: bool = False
-    upload_clickhouse_host: str = "localhost"
-    upload_clickhouse_port: int = 8123
-    upload_clickhouse_username: str = "zentra_audit_app"
-    upload_clickhouse_password: str = "zentra_audit_app"
-    upload_clickhouse_secure: bool = False
+    upload_clickhouse_host: str | None = None
+    upload_clickhouse_port: int | None = None
+    upload_clickhouse_username: str | None = None
+    upload_clickhouse_password: str | None = Field(default=None, repr=False)
+    upload_clickhouse_secure: bool | None = None
     cube_url: str = "http://localhost:4000"
     cube_api_secret: str | None = None
     #: Separate from cube_api_secret so the two roles — end-to-end tenant
@@ -95,6 +95,23 @@ class Settings(BaseSettings):
             else value
             for key, value in values.items()
         }
+
+    def upload_clickhouse_connection(self) -> tuple[str, int, str, str, bool]:
+        """Return the upload landing connection, defaulting to the audit store.
+
+        Uploads and audit records normally share one ClickHouse deployment. A
+        deployment only needs the ``UPLOAD_CLICKHOUSE_*`` variables when upload
+        data is intentionally kept on a different deployment.
+        """
+        return (
+            self.upload_clickhouse_host or self.clickhouse_host,
+            self.upload_clickhouse_port or self.clickhouse_port,
+            self.upload_clickhouse_username or self.clickhouse_username,
+            self.upload_clickhouse_password or self.clickhouse_password,
+            self.clickhouse_secure
+            if self.upload_clickhouse_secure is None
+            else self.upload_clickhouse_secure,
+        )
 
     def provider_api_keys(self) -> dict[str, str | None]:
         """Keyed by the env var each provider config names."""

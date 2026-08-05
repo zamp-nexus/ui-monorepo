@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 priority: critical
 tags: [domain, sequence, data-steward, semantic-modeler, chdb]
-related: ["[[Domains MOC]]", "[[Data Source Domain]]", "[[Connector Domain]]", "[[Agent Execution Domain]]", "[[Semantic Modeling]]", "[[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]]"]
+related: ["[[Domains MOC]]", "[[Data Source Domain]]", "[[Connector Domain]]", "[[Agent Execution Domain]]", "[[Semantic Modeling]]", "[[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]]", "[[adr/0041-sequence-prepared-tables-live-in-nexus-managed-clickhouse]]"]
 repo_path: libs/domain/sequence
 code_refs: [libs/domain/sequence/CONTEXT.md, libs/domain/sequence/src/zentra_domain_sequence/sequence.py, libs/adapters/sequence-execution/src/zentra_adapter_sequence_execution/chdb_execution.py]
 ---
@@ -56,6 +56,11 @@ A Final Table is the only thing the Semantic Modeler Agent may turn into a
 Semantic Metric; it never models a Raw Table or an intermediate Prepared
 Table directly. The resulting Metric Draft follows the same Human Approval
 path as any other Semantic Model change.
+
+ADR-0041 proposes the persistence target: every immutable Prepared
+Table will live in tenant-scoped, Nexus-managed ClickHouse storage, while a
+Final Table remains the query-eligible marker on that same data. The governed
+query integration is planned, not implemented.
 
 ## The Sequence page (Phase 4)
 

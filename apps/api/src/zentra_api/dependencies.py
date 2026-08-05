@@ -285,6 +285,9 @@ class AppDependencies:
             continuation=threads,
             agent_execution_observer=record_agent_execution,
         )
+        upload_host, upload_port, upload_username, upload_password, upload_secure = (
+            settings.upload_clickhouse_connection()
+        )
         connector = (
             ConnectorService(
                 sources=PostgresDataSourceRepository(database),
@@ -300,11 +303,11 @@ class AppDependencies:
                     bytes.fromhex(settings.connector_credential_key)
                 ),
                 landing_zone=ClickHouseLandingZone(
-                    host=settings.upload_clickhouse_host,
-                    port=settings.upload_clickhouse_port,
-                    username=settings.upload_clickhouse_username,
-                    password=settings.upload_clickhouse_password,
-                    secure=settings.upload_clickhouse_secure,
+                    host=upload_host,
+                    port=upload_port,
+                    username=upload_username,
+                    password=upload_password,
+                    secure=upload_secure,
                 ),
                 clock=_UtcClock(),
             )

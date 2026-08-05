@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-08-05
-reviewed: 2026-08-05
+updated: 2026-08-06
+reviewed: 2026-08-06
 confidence: verified
 implementation: current
 priority: high
@@ -32,6 +32,7 @@ Never record values or tokens in this vault.
 | Runtime | `ENVIRONMENT`, `FRONTEND_ORIGIN` |
 | Postgres | `DATABASE_URL`, operator-only `DATABASE_OWNER_URL` |
 | ClickHouse | `CLICKHOUSE_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `DATABASE`, `SECURE` |
+| Optional upload ClickHouse override | `UPLOAD_CLICKHOUSE_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `SECURE` |
 | Cube | `CUBE_URL`, `CUBE_API_SECRET` |
 | Clerk | `CLERK_ISSUER`, `CLERK_AUDIENCE` |
 | Model providers | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` |
@@ -42,6 +43,10 @@ Never record values or tokens in this vault.
 
 `DATABASE_OWNER_URL` is consumed by migration tooling, not ordinary request
 handling.
+
+Uploaded files use the primary ClickHouse connection by default. Set every
+`UPLOAD_CLICKHOUSE_*` variable only when their landing tables must use a
+separate ClickHouse deployment.
 
 Apply Alembic migrations with the owner connection before starting a local API
 against an existing database. This keeps persisted Workflow Studio tables and

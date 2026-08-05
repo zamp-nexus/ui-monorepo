@@ -532,6 +532,43 @@ def test_a_blank_required_setting_is_left_alone() -> None:
     assert Settings(database_url="").database_url == ""
 
 
+def test_upload_landing_inherits_the_main_clickhouse_connection() -> None:
+    settings = Settings(
+        clickhouse_host="clickhouse.example",
+        clickhouse_port=8443,
+        clickhouse_username="audit-user",
+        clickhouse_password="audit-password",
+        clickhouse_secure=True,
+    )
+
+    assert settings.upload_clickhouse_connection() == (
+        "clickhouse.example",
+        8443,
+        "audit-user",
+        "audit-password",
+        True,
+    )
+
+
+def test_upload_landing_can_use_a_dedicated_clickhouse_connection() -> None:
+    settings = Settings(
+        clickhouse_host="audit.example",
+        upload_clickhouse_host="uploads.example",
+        upload_clickhouse_port=9440,
+        upload_clickhouse_username="upload-user",
+        upload_clickhouse_password="upload-password",
+        upload_clickhouse_secure=False,
+    )
+
+    assert settings.upload_clickhouse_connection() == (
+        "uploads.example",
+        9440,
+        "upload-user",
+        "upload-password",
+        False,
+    )
+
+
 def test_a_blank_audience_means_unconfigured_not_configured_as_empty() -> None:
     """`CLERK_AUDIENCE=` in a .env file parses as "", not None. Treating that as
     a configured audience switches verification on and rejects every valid token
