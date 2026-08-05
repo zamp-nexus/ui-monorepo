@@ -25,12 +25,19 @@ def required_env(name: str) -> str:
     return value
 
 
+def sqlalchemy_url(url: str) -> str:
+    """Use psycopg for standard PostgreSQL URLs supplied by hosted providers."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
 async def bootstrap() -> None:
     role = os.getenv("BOOTSTRAP_ROLE", "owner")
     if role not in ALLOWED_ROLES:
         raise RuntimeError(f"BOOTSTRAP_ROLE must be one of {sorted(ALLOWED_ROLES)}")
 
-    engine = create_async_engine(required_env("DATABASE_OWNER_URL"))
+    engine = create_async_engine(sqlalchemy_url(required_env("DATABASE_OWNER_URL")))
     external_organization_id = required_env("CLERK_ORGANIZATION_ID")
     external_subject_id = required_env("CLERK_USER_ID")
     organization_id = uuid5(
