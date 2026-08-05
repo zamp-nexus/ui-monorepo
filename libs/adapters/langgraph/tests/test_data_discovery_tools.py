@@ -41,9 +41,7 @@ class SemanticLayer:
     async def catalog(self) -> SemanticCatalog:
         return SemanticCatalog(
             measures=(
-                SemanticMeasure(
-                    name=f"{CONNECTION_ID}::Orders.count", type="number"
-                ),
+                SemanticMeasure(name=f"{CONNECTION_ID}::Orders.count", type="number"),
             ),
             dimensions=(),
         )
@@ -141,3 +139,89 @@ async def test_data_query_rejects_foreign_and_cross_source_members() -> None:
     assert "not available" in foreign.content
     assert mixed.is_error
     assert "cross-source" in mixed.content
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [],
+            "sql": "SELECT * FROM Orders",
+        },
+        {
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [],
+        },
+        {
+            "source_id": 1,
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [],
+        },
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+        },
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [
+                {
+                    "dimension": f"{CONNECTION_ID}::Orders.createdAt",
+                    "granularity": None,
+                    "date_range": ["2026-01-01"],
+                }
+            ],
+            "filters": [],
+        },
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [
+                {
+                    "member": f"{CONNECTION_ID}::Orders.region",
+                    "operator": "equals",
+                    "values": "EU",
+                }
+            ],
+        },
+    ],
+)
+async def test_data_query_rejects_unknown_or_malformed_shapes(arguments) -> None:
+    result = await DataQueryTool(SemanticLayer()).invoke(arguments)
+
+    assert result.is_error
+
+
+@pytest.mark.asyncio
+async def test_data_query_keeps_filter_values_opaque() -> None:
+    result = await DataQueryTool(SemanticLayer()).invoke(
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{CONNECTION_ID}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [
+                {
+                    "member": f"{CONNECTION_ID}::Orders.region",
+                    "operator": "equals",
+                    "values": ["SELECT is ordinary data here"],
+                }
+            ],
+        }
+    )
+
+    assert not result.is_error

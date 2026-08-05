@@ -96,8 +96,9 @@ MAX_LISTED_VALUES = 25
 class CubeSemanticLayer:
     """Reads metrics through Cube.
 
-    `query()` enforces the governed-catalog restriction; `query_raw()` and
-    `load_raw()` do not, for tenants/agents that have opted out of it."""
+    `query()` enforces the governed-catalog restriction. `query_raw()` serves
+    the structured, selected-source `data_query` path; callers must not use it
+    as an arbitrary-SQL or cross-source query interface."""
 
     def __init__(self, client: CubeMetaLoader) -> None:
         self._client = client
@@ -161,12 +162,11 @@ class CubeSemanticLayer:
         )
 
     async def query_raw(self, request: SemanticQuery) -> SemanticResult:
-        """Like `query`, but skips `reject_ungoverned`.
+        """Run the governed selected-source, structured compiled-member path.
 
-        For tenants that have opted out of the governed-catalog restriction:
-        any member Cube has compiled is queryable, not only ones a caller
-        already knows to be governed. Still scoped by this layer's own
-        tenant/Data Connection security context — never cross-tenant.
+        The Analyst and Evaluator may use compiled members only after selecting
+        this layer's source. It sends a Cube query object, never SQL, and this
+        layer's tenant/Data Connection context prevents cross-source joins.
         """
         payload = await self._client.load(_to_cube_query(request))
         return SemanticResult(

@@ -26,6 +26,7 @@ from zentra_domain_agent_execution import (
 )
 from zentra_domain_analysis_run import WorkItemStatus
 
+from zentra_api.agent_data_discovery import DiscoveryRunMetrics
 from zentra_api.orchestrator_loop import OrchestratorLoop
 from zentra_api.pipeline import CancellationRequested
 
@@ -42,9 +43,7 @@ ANALYST_QUERY = {
             "date_range": ["2026-06-01", "2026-07-31"],
         }
     ],
-    "filters": [
-        {"member": "Commerce.region", "operator": "equals", "values": ["EU"]}
-    ],
+    "filters": [{"member": "Commerce.region", "operator": "equals", "values": ["EU"]}],
 }
 ANALYST_METRIC = {
     "metric": "refund_amount",
@@ -380,6 +379,16 @@ async def test_run_emits_one_terminal_telemetry_aggregate(
     async def run_once(**_kwargs: object):
         if exception is not None:
             raise exception
+        from zentra_api.orchestrator_loop import _RUN_TELEMETRY
+
+        telemetry = _RUN_TELEMETRY.get()
+        assert telemetry is not None
+        telemetry.discovery = SimpleNamespace(
+            metrics=DiscoveryRunMetrics(
+                inventory_cache_hits=2, schema_snapshot_reuses=3
+            )
+        )
+        telemetry.tool_call_count = 4
         return object()
 
     monkeypatch.setattr(loop, "_run", run_once)
@@ -403,4 +412,15 @@ async def test_run_emits_one_terminal_telemetry_aggregate(
             )
 
     assert len(aggregates) == 1
-    assert aggregates[0]["status"] == status
+    aggregate = aggregates[0]
+    assert aggregate["status"] == status
+    assert isinstance(aggregate["duration_ms"], int)
+    assert aggregate["duration_ms"] >= 0
+    if status == "success":
+        assert aggregate["tool_call_count"] == 4
+        assert aggregate["inventory_cache_hits"] == 2
+        assert aggregate["schema_snapshot_reuses"] == 3
+    else:
+        assert aggregate["tool_call_count"] == 0
+        assert aggregate["inventory_cache_hits"] == 0
+        assert aggregate["schema_snapshot_reuses"] == 0

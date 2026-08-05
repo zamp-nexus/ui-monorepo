@@ -21,12 +21,11 @@ from .active_connection import active_data_connection_id
 from .agent_data_discovery import ConnectorDataDiscovery
 from .request_context import RequestContext, authenticated_context
 from .workflow_execution_service import WorkflowExecutionService
-from .workflow_policy import workflow_role_error
+from .workflow_policy import WORKFLOW_TOOL_CATALOG, workflow_role_error
 from .workflow_schemas import (
     DEFAULT_WORKFLOW_DEFINITION,
     DEFAULT_WORKFLOW_ID,
     NEW_WORKFLOW_DEFINITION,
-    WORKFLOW_TOOL_CATALOG,
     CloneDefaultRequest,
     CreateWorkflowRequest,
     WorkflowDetailResponse,

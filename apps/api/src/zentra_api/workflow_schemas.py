@@ -7,13 +7,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-WORKFLOW_TOOL_CATALOG = (
-    "connection_inventory",
-    "schema_inspect",
-    "data_query",
-)
-
-
 class WorkflowRoutingProfile(BaseModel):
     """Author-controlled, safe metadata used to offer a Workflow to Intake."""
 

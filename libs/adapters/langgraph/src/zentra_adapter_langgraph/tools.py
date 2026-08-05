@@ -33,7 +33,7 @@ from zentra_domain_agent_execution import (
 from .schemas import (
     DATA_QUERY_SCHEMA,
     MalformedAgentResponseError,
-    semantic_query_from_json,
+    data_query_from_json,
 )
 
 #: Rows come back to the model, so this bounds a prompt as much as a payload.
@@ -178,7 +178,7 @@ class DataQueryTool:
 
     async def invoke(self, arguments: dict[str, JsonValue]) -> ToolResult:
         try:
-            query = semantic_query_from_json(dict(arguments))
+            query = data_query_from_json(dict(arguments))
             if query.source_id is None:
                 raise MalformedAgentResponseError("source_id is required")
             await self._validate_source_scope(query)

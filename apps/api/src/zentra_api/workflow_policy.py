@@ -7,9 +7,12 @@ from typing import Any
 
 from zentra_domain_agent_execution import AgentRole
 
-DATA_DISCOVERY_TOOLS = frozenset(
-    {"connection_inventory", "schema_inspect", "data_query"}
+WORKFLOW_TOOL_CATALOG = (
+    "connection_inventory",
+    "schema_inspect",
+    "data_query",
 )
+DATA_DISCOVERY_TOOLS = frozenset(WORKFLOW_TOOL_CATALOG)
 DATA_DISCOVERY_ROLES = frozenset({AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR})
 _ROLE_ALIASES: dict[str, AgentRole] = {
     "controller": AgentRole.ORCHESTRATOR,
@@ -56,6 +59,6 @@ def workflow_role_error(data: Mapping[str, Any], tools: Sequence[object]) -> str
         return "Workflow agents need a supported canonical role"
     if data.get("controller") and role is not AgentRole.ORCHESTRATOR:
         return "The Workflow controller must have the orchestrator role"
-    if tools and role not in DATA_DISCOVERY_ROLES:
+    if any(tool in DATA_DISCOVERY_TOOLS for tool in tools) and role not in DATA_DISCOVERY_ROLES:
         return "Only Cube Analyst and Evaluator may use data tools"
     return None

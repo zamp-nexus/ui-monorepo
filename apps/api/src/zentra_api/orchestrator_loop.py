@@ -14,13 +14,12 @@ the analysis run is finished, are decided by rule here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import count
 from time import perf_counter
-from typing import Any
 from uuid import UUID, uuid4
 
 from zentra_adapter_cube import CubeSemanticLayer
@@ -39,209 +38,49 @@ from zentra_adapter_model_providers import (
     ProviderClients,
     RoutedModelClient,
 )
-from zentra_adapter_postgres import PostgresAnalysisRunUnitOfWorkFactory
 from zentra_adapter_telemetry import record_analysis_run
-from zentra_application_analysis_run import PipelineResult, bounded_outcome
+from zentra_application_analysis_run import PipelineResult
 from zentra_domain_agent_execution import (
-    OUTCOME_ADAPTER,
-    AgentExecutionRecord,
     AgentExecutionRecorder,
-    AgentExecutionStart,
-    AgentInput,
-    AgentOutput,
-    AgentPort,
     AgentRegistryPort,
     AgentRole,
-    ConfidenceOutcome,
-    ExecutionStatus,
-    ExecutionUsage,
-    OutcomeSignal,
 )
-from zentra_domain_analysis_run import (
-    AnalysisRunBoard,
-    BoardConfidence,
-    Conflict,
-    ConflictStatus,
-    EvidenceReference,
-    Fact,
-    GapPriority,
-    KnowledgeGap,
-    WorkItem,
-    assess_completion,
-)
+from zentra_domain_analysis_run import AnalysisRunBoard, GapPriority, KnowledgeGap
 
 from .agent_data_discovery import DiscoveryRunMetrics
 from .cube_scope import ScopedCubeSemanticLayers
-from .outcomes import InsightOutcome, PipelineOutcome, ValidatedEvidence
+from .orchestrator_board import BoardCoordinator
+from .orchestrator_evidence import (
+    UnsettledConflictError as _UnsettledConflictError,
+)
+from .orchestrator_evidence import (
+    accept_followups as _accept_followups,
+)
+from .orchestrator_evidence import (
+    documented_conflicts,
+    insight_outcome_from_state,
+    outcome_signal,
+    require_settled_conflicts,
+)
+from .orchestrator_measurements import MeasurementCoordinator
+from .orchestrator_steps import StepRunner
+from .orchestrator_uow import AnalysisRunUnitOfWorkFactory
+from .outcomes import PipelineOutcome
 from .pipeline import (
-    SYSTEM_SPAN_ID,
-    SYSTEM_TRACE_ID,
     CancellationRequested,
     _pipeline_result,
 )
+
+# Kept as module imports for the existing direct rule tests while the concrete
+# implementations live with the other evidence transformations.
+UnsettledConflictError = _UnsettledConflictError
+_accept = _accept_followups
+_require_settled_conflicts = require_settled_conflicts
 
 
 async def _no_cancellation(_: UUID, __: UUID) -> None:
     """The default for tests and eval harnesses, which have no job to cancel."""
     return None
-
-
-# Mirrors `AnalysisRunGraph`'s `_EXCLUDED_FROM_STATE` (graph.py): result rows
-# stay in `agent_executions.output`, reachable only through the artifact://
-# pointer, never carried in the state a later Agent or the Board sees.
-_EXCLUDED_FROM_STATE = frozenset({"rows"})
-
-
-def _for_state(output: AgentOutput) -> dict[str, Any]:
-    """The subset of an Agent's output the next step (or the Board) may see.
-
-    Identical in shape to `AnalysisRunGraph._for_state` on purpose: Insight
-    and the Evaluator are unmodified and still expect exactly this shape,
-    whichever mechanism produced it.
-    """
-    return {
-        "fields": {
-            key: value
-            for key, value in output.fields.items()
-            if key not in _EXCLUDED_FROM_STATE
-        },
-        "metrics": output.fields.get("metrics", []),
-        "result_summary": output.fields.get("result_summary", ""),
-        "issues": output.fields.get("issues", []),
-        "recheck_passed": output.fields.get("recheck_passed"),
-        "discrepancy_pct": output.fields.get("discrepancy_pct"),
-        "outcome": output.outcome.model_dump(mode="json"),
-        "evidence_refs": list(output.evidence_refs),
-        "model": output.usage.model,
-        "fallbacks": list(output.fallbacks),
-        "sample_size": output.fields.get("sample_size"),
-    }
-
-
-def _outcome_signal(payload: dict[str, Any]) -> OutcomeSignal:
-    return OUTCOME_ADAPTER.validate_python(payload)
-
-
-def _insight_outcome_from_state(state: dict[str, Any]) -> InsightOutcome:
-    fields = state["fields"]
-    return InsightOutcome(
-        execution_id=UUID(state["execution_id"]),
-        headline=str(fields["headline"]),
-        summary=str(fields["summary"]),
-        claims=list(fields.get("claims", [])),
-        contradictions=tuple(fields.get("contradictions", [])),
-        root_cause=str(fields["root_cause"]),
-        outcome=_outcome_signal(state["outcome"]),
-        model=state.get("model"),
-        fallbacks=tuple(state.get("fallbacks", [])),
-    )
-
-
-def _validated_evidence_from_state(
-    analyst_state: dict[str, Any],
-) -> tuple[ValidatedEvidence, ...]:
-    """Mirrors `AnalysisRunGraph._validated_evidence` (graph.py)."""
-    execution_id = analyst_state.get("execution_id")
-    if not execution_id:
-        return ()
-    query = _mapping(_mapping(analyst_state.get("fields")).get("query"))
-    time_dimensions = [_mapping(item) for item in query.get("time_dimensions", [])]
-    grain = next(
-        (
-            str(item["granularity"])
-            for item in time_dimensions
-            if item.get("granularity")
-        ),
-        None,
-    )
-    filters = tuple(_mapping(item) for item in query.get("filters", []))
-    return tuple(
-        ValidatedEvidence(
-            metric=str(metric.get("metric")),
-            previous_value=str(metric.get("previous_value")),
-            current_value=str(metric.get("current_value")),
-            previous_period=metric.get("previous_label"),
-            current_period=metric.get("current_label"),
-            filters=filters,
-            grain=grain,
-            producing_execution_id=UUID(str(execution_id)),
-        )
-        for metric in (_mapping(m) for m in analyst_state.get("metrics", []))
-        if metric.get("metric")
-    )
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-class UnsettledConflictError(RuntimeError):
-    """Insight was reached with a contradiction nobody accounted for."""
-
-
-def _accept(
-    proposals: Sequence[dict[str, Any]], *, question: str, limit: int
-) -> tuple[str, ...]:
-    """Which proposed follow-ups become Work Items.
-
-    Rule-based on purpose (ADR-0026): the planner may propose anything, and
-    what it proposes is model output. Three rules decide.
-
-    A proposal is accepted only if the loop can actually execute its role —
-    the Analyst is the only role with a runtime that measures, so a proposal
-    naming a role nobody implements is a plan for work that would sit pending
-    forever. It must carry an objective, and that objective must be new: a
-    follow-up restating the question would spend a second measurement
-    re-deriving the answer the primary Analyst already has. The cap is last,
-    so it truncates a list that is already legitimate rather than admitting
-    junk that happened to arrive early.
-    """
-    seen = {question.strip().casefold()}
-    accepted: list[str] = []
-    for proposal in proposals:
-        if proposal.get("role") != AgentRole.CUBE_ANALYST.value:
-            continue
-        objective = str(proposal.get("objective", "")).strip()
-        if not objective or objective.casefold() in seen:
-            continue
-        seen.add(objective.casefold())
-        accepted.append(objective)
-        if len(accepted) == limit:
-            break
-    return tuple(accepted)
-
-
-def _documented(board: AnalysisRunBoard) -> tuple[str, ...]:
-    """The contradictions the Board found that Insight never saw.
-
-    Insight drafts from the primary measurement alone, so a follow-up that
-    disagreed with it is invisible in the draft. Carrying these onto the
-    outcome is what stops fan-out from quietly discovering a problem and
-    filing it where nobody reads.
-    """
-    return tuple(
-        conflict.description
-        for conflict in board.conflicts
-        if conflict.status is not ConflictStatus.OPEN
-    )
-
-
-def _require_settled_conflicts(board: AnalysisRunBoard) -> None:
-    """Fail closed rather than draft over an open contradiction.
-
-    `_document_conflicts` settles every Conflict immediately before this runs,
-    so today this cannot fire. It exists for the path that does not yet exist:
-    a Phase 4 loop that defers a Conflict to a human, or a future merge that
-    opens one later, must not reach Insight without deciding what to do about
-    it. A Draft Finding written over a live contradiction is exactly the kind
-    of confident wrong answer this product exists to not produce.
-    """
-    open_conflicts = board.unresolved_conflicts
-    if open_conflicts:
-        raise UnsettledConflictError(
-            f"{len(open_conflicts)} contradiction(s) on the Board were neither "
-            f"resolved nor documented before Insight"
-        )
 
 
 #: How many follow-up measurements one Analysis Run may fan out to, and how
@@ -292,30 +131,6 @@ class StepAgents:
 
 
 AgentsFactory = Callable[[CubeSemanticLayer], "StepAgents"]
-
-
-@dataclass(frozen=True, slots=True)
-class _Measurement:
-    """One question measured by the Analyst and rechecked by the Evaluator.
-
-    The unit Phase 3 fans out: the primary question and every follow-up go
-    through exactly this, so a child measurement carries the same trust
-    guarantee as the answer to the question the user actually asked.
-    """
-
-    objective: str
-    analyst_state: dict[str, Any]
-    evaluator_state: dict[str, Any]
-    analyst_item_id: UUID
-    attempts: int
-
-    @property
-    def converged(self) -> bool:
-        return bool(self.evaluator_state.get("recheck_passed"))
-
-    @property
-    def evidence(self) -> tuple[ValidatedEvidence, ...]:
-        return _validated_evidence_from_state(self.analyst_state)
 
 
 def build_agents_factory(
@@ -400,7 +215,7 @@ class OrchestratorLoop:
         agent_factories: Mapping[ModelTier, AgentsFactory],
         semantic_layers: ScopedCubeSemanticLayers,
         *,
-        unit_of_work_factory: PostgresAnalysisRunUnitOfWorkFactory,
+        unit_of_work_factory: AnalysisRunUnitOfWorkFactory,
         recorder: AgentExecutionRecorder,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
@@ -417,6 +232,29 @@ class OrchestratorLoop:
         self._new_id = new_id
         self._cancellation_checkpoint = cancellation_checkpoint
         self._max_fanout = max_fanout
+        self._step_runner = StepRunner(
+            unit_of_work_factory=unit_of_work_factory,
+            recorder=recorder,
+            now=now,
+            new_id=new_id,
+            cancellation_checkpoint=cancellation_checkpoint,
+            record_tool_calls=self._record_tool_calls,
+        )
+        self._board = BoardCoordinator(
+            unit_of_work_factory=unit_of_work_factory, now=now, new_id=new_id
+        )
+        self._measurements = MeasurementCoordinator(
+            step_runner=self._step_runner,
+            board=self._board,
+            new_id=new_id,
+            max_fanout=max_fanout,
+        )
+
+    @staticmethod
+    def _record_tool_calls(count: int) -> None:
+        telemetry = _RUN_TELEMETRY.get()
+        if telemetry is not None:
+            telemetry.tool_call_count += count
 
     async def run(
         self,
@@ -484,26 +322,14 @@ class OrchestratorLoop:
         seed_gap = KnowledgeGap(
             gap_id=self._new_id(), description=question, priority=GapPriority.HIGH
         )
-        await self._open_board(board, seed_gap)
+        await self._board.open_board(board, seed_gap)
 
         # Shared by every concurrent branch, so the ledger orders the whole
         # analysis run rather than each branch privately. `next` on a counter
         # does not await, so no two Work Items can take the same step.
         steps = count(1)
 
-        # Planning first, before a single measurement is paid for. The planner
-        # refuses outright when the registry has not promoted a required role,
-        # and a deployment that would refuse must do so before it spends, not
-        # after the Analyst and its recheck have already run.
-        followups = await self._plan(
-            agents.planner,
-            analysis_run_id=analysis_run_id,
-            organization_id=organization_id,
-            question=question,
-            steps=steps,
-        )
-
-        primary = await self._measure(
+        primary = await self._measurements.measure(
             agents,
             analysis_run_id=analysis_run_id,
             organization_id=organization_id,
@@ -511,9 +337,18 @@ class OrchestratorLoop:
             objective=f"Measure what the question asks: {question}",
             steps=steps,
         )
-        await self._merge(board, primary)
+        # Follow-ups spend only after the primary measurement has completed
+        # its independent recheck. The planner proposes; policy accepts.
+        followups = await self._measurements.plan(
+            agents.planner,
+            analysis_run_id=analysis_run_id,
+            organization_id=organization_id,
+            question=question,
+            steps=steps,
+        )
+        await self._board.merge(board, primary)
 
-        children = await self._fan_out(
+        children = await self._measurements.fan_out(
             agents,
             board=board,
             analysis_run_id=analysis_run_id,
@@ -523,16 +358,16 @@ class OrchestratorLoop:
             steps=steps,
         )
         for child in children:
-            await self._merge(board, child)
+            await self._board.merge(board, child)
 
         # Every Conflict the merges opened is settled here — the loop cannot
         # resolve one without evidence it does not have, so it documents them.
         # `_require_settled_conflicts` then fails closed if any path ever
         # reaches Insight with one still open.
-        await self._document_conflicts(board)
-        _require_settled_conflicts(board)
+        await self._board.document_conflicts(board)
+        require_settled_conflicts(board)
 
-        insight_state, insight_execution_id, _ = await self._run_step(
+        insight_state, insight_execution_id, _ = await self._step_runner.run(
             agent=agents.insight,
             role=AgentRole.INSIGHT,
             analysis_run_id=analysis_run_id,
@@ -546,13 +381,13 @@ class OrchestratorLoop:
             depends_on=(primary.analyst_item_id,),
             steps=steps,
         )
-        insight = _insight_outcome_from_state(
+        insight = insight_outcome_from_state(
             {**insight_state, "execution_id": str(insight_execution_id)}
         )
 
         # The question is answered because Insight drafted from a rechecked
         # measurement; a follow-up is answered only if its own branch survived.
-        await self._close_board(
+        await self._board.close_board(
             board, [question, *(child.objective for child in children)]
         )
 
@@ -572,12 +407,12 @@ class OrchestratorLoop:
                 evidence_refs=tuple(dict.fromkeys(evidence_refs)),
                 # The Evaluator's recheck is the authoritative confidence: it is
                 # already capped at the analyst's own score.
-                outcome=_outcome_signal(primary.evaluator_state["outcome"]),
+                outcome=outcome_signal(primary.evaluator_state["outcome"]),
                 converged=primary.converged,
                 # What Insight found, plus what the Board found by cross-checking
                 # itself. A follow-up that disagrees with the primary answer is a
                 # contradiction the reader is owed, and Insight never saw it.
-                contradictions=insight.contradictions + _documented(board),
+                contradictions=insight.contradictions + documented_conflicts(board),
                 attempts=primary.attempts,
                 insight=insight,
                 analyst_model=primary.analyst_state.get("model"),
@@ -590,7 +425,7 @@ class OrchestratorLoop:
             organization_id=organization_id,
         )
 
-        await self._finish_board(
+        await self._board.finish(
             board,
             result,
             evidence_validated=primary.converged,
@@ -600,563 +435,3 @@ class OrchestratorLoop:
             ),
         )
         return result
-
-    async def _finish_board(
-        self,
-        board: AnalysisRunBoard,
-        result: PipelineResult,
-        *,
-        evidence_validated: bool,
-        budget_exhausted: bool,
-    ) -> None:
-        """Record what the Board concluded about itself, and why it stopped.
-
-        The score is `bounded_outcome`'s — the same number the application will
-        publish — rather than the Evaluator's raw one. The Evaluator's is
-        capped at the Analyst's but not by sample size or by how independent
-        the recheck actually was, so recording it here would leave the Board
-        more confident than the Finding built from it. A second, higher number
-        is exactly what ADR-0010 exists to prevent.
-
-        This is not a publication decision. `evaluate_publication` owns that
-        (ADR-0011) and is untouched; this says whether the Analysis Run is
-        finished, which is a different question with a different answer.
-        """
-        outcome = bounded_outcome(result)
-        threshold = await self._confidence_threshold(board.organization_id)
-        board.set_confidence(
-            BoardConfidence(
-                score=(
-                    outcome.score if isinstance(outcome, ConfidenceOutcome) else None
-                ),
-                threshold=threshold,
-            ),
-            now=self._now(),
-        )
-        assessment = assess_completion(
-            board,
-            evidence_validated=evidence_validated,
-            budget_exhausted=budget_exhausted,
-        )
-        board.set_narrative(assessment.describe(), now=self._now())
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.analysis_run_boards.save(board)
-            await unit_of_work.commit()
-
-    async def _confidence_threshold(self, organization_id: UUID) -> float:
-        async with self._unit_of_work_factory(
-            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            return await unit_of_work.policies.confidence_threshold(organization_id)
-
-    # -- the unit that fans out -------------------------------------------
-
-    async def _measure(
-        self,
-        agents: StepAgents,
-        *,
-        analysis_run_id: UUID,
-        organization_id: UUID,
-        question: str,
-        objective: str,
-        steps: Iterator[int],
-        parent_work_item_id: UUID | None = None,
-        depends_on: tuple[UUID, ...] = (),
-    ) -> _Measurement:
-        """Measure one question and recheck it independently.
-
-        The Evaluator-Optimizer loop, unchanged and now reusable: a follow-up
-        question earns the same recheck the primary one does, because evidence
-        nobody rechecked is not evidence this product is willing to cite.
-        """
-        analyst_state, analyst_item_id = await self._run_analyst(
-            agents.cube_analyst,
-            analysis_run_id=analysis_run_id,
-            organization_id=organization_id,
-            question=question,
-            objective=objective,
-            steps=steps,
-            parent_work_item_id=parent_work_item_id,
-            depends_on=depends_on,
-            previous_issues=None,
-        )
-
-        attempts = 0
-        while True:
-            evaluator_state, _, _ = await self._run_step(
-                agent=agents.evaluator,
-                role=AgentRole.EVALUATOR,
-                analysis_run_id=analysis_run_id,
-                organization_id=organization_id,
-                objective="Independently verify the Analyst's measurement",
-                payload={"question": question, "analyst": analyst_state},
-                depends_on=(analyst_item_id,),
-                steps=steps,
-                parent_work_item_id=analyst_item_id,
-            )
-            attempts += 1
-            if (
-                bool(evaluator_state.get("recheck_passed"))
-                or attempts >= MAX_EVALUATION_ATTEMPTS
-            ):
-                break
-            analyst_state, analyst_item_id = await self._run_analyst(
-                agents.cube_analyst,
-                analysis_run_id=analysis_run_id,
-                organization_id=organization_id,
-                question=question,
-                objective="Re-measure after the Evaluator's recheck disagreed",
-                steps=steps,
-                parent_work_item_id=parent_work_item_id,
-                depends_on=depends_on,
-                previous_issues=evaluator_state.get("issues", []),
-            )
-
-        return _Measurement(
-            objective=objective,
-            analyst_state=analyst_state,
-            evaluator_state=evaluator_state,
-            analyst_item_id=analyst_item_id,
-            attempts=attempts,
-        )
-
-    async def _plan(
-        self,
-        planner: OrchestratorAgent | None,
-        *,
-        analysis_run_id: UUID,
-        organization_id: UUID,
-        question: str,
-        steps: Iterator[int],
-    ) -> tuple[str, ...]:
-        """Ask what else is worth measuring, then decide by rule.
-
-        The planner's output is a proposal, never an instruction — see
-        ADR-0026. Its own job is the registry's capability match: it raises
-        `NoEnabledAgentError` when a required role has no promoted agent, and
-        that refusal propagates from here, before anything has been measured.
-        What this method adds is `_accept`, the rules deciding which proposals
-        become Work Items.
-        """
-        if planner is None or self._max_fanout < 1:
-            return ()
-
-        state, _, _ = await self._run_step(
-            agent=planner,
-            role=AgentRole.ORCHESTRATOR,
-            analysis_run_id=analysis_run_id,
-            organization_id=organization_id,
-            objective="Propose the follow-up measurements this question needs",
-            payload={"question": question},
-            depends_on=(),
-            steps=steps,
-        )
-        proposals = tuple(
-            task
-            for task in state.get("fields", {}).get("tasks", [])
-            if isinstance(task, dict)
-        )
-        return _accept(proposals, question=question, limit=self._max_fanout)
-
-    async def _fan_out(
-        self,
-        agents: StepAgents,
-        *,
-        board: AnalysisRunBoard,
-        analysis_run_id: UUID,
-        organization_id: UUID,
-        followups: Sequence[str],
-        parent: _Measurement,
-        steps: Iterator[int],
-    ) -> tuple[_Measurement, ...]:
-        """Run the accepted follow-ups concurrently, as children of the answer.
-
-        They run after the primary measurement, not beside it: each one exists
-        to interrogate a result that does not exist until the primary Analyst
-        has produced it.
-        """
-        accepted = tuple(followups)
-        if not accepted:
-            return ()
-
-        gaps = [
-            KnowledgeGap(
-                gap_id=self._new_id(),
-                description=objective,
-                # Never HIGH: a follow-up is worth asking, but an analysis run
-                # that cannot answer one has still answered the question the
-                # user asked. Only the seed gap is allowed to be HIGH.
-                priority=GapPriority.MEDIUM,
-            )
-            for objective in accepted
-        ]
-        await self._open_gaps(board, gaps)
-
-        # `return_exceptions`: a follow-up that fails must not sink the answer
-        # the user actually asked for. Its Work Item is already REJECTED and
-        # its Agent Execution recorded, so the failure stays visible in Replay
-        # rather than being swallowed here.
-        results = await asyncio.gather(
-            *(
-                self._measure(
-                    agents,
-                    analysis_run_id=analysis_run_id,
-                    organization_id=organization_id,
-                    question=objective,
-                    objective=objective,
-                    steps=steps,
-                    parent_work_item_id=parent.analyst_item_id,
-                    depends_on=(parent.analyst_item_id,),
-                )
-                for objective in accepted
-            ),
-            return_exceptions=True,
-        )
-        return tuple(r for r in results if isinstance(r, _Measurement))
-
-    # -- the Board --------------------------------------------------------
-
-    async def _merge(self, board: AnalysisRunBoard, measurement: _Measurement) -> None:
-        """Record what a measurement established, and notice disagreement.
-
-        The Board is what makes fan-out worth anything: two Work Items that
-        measured the same metric over the same period and disagree is a
-        contradiction nobody would have seen while each result lived only in
-        its own agent's state.
-        """
-        for measured in measurement.evidence:
-            fact = Fact(
-                fact_id=self._new_id(),
-                metric=measured.metric,
-                value=measured.current_value,
-                period=measured.current_period,
-                producing_work_item_id=measurement.analyst_item_id,
-                evidence_refs=(
-                    EvidenceReference(
-                        f"artifact://execution/{measured.producing_execution_id}"
-                    ),
-                ),
-            )
-            incumbent = board.contradicted_by(fact)
-            board.record_fact(fact, now=self._now())
-            conflict = (
-                None
-                if incumbent is None
-                else Conflict(
-                    conflict_id=self._new_id(),
-                    description=(
-                        f"{fact.metric} over {fact.period or 'the whole period'} "
-                        f"was measured as {incumbent.value} and as {fact.value}"
-                    ),
-                )
-            )
-            if conflict is not None:
-                board.open_conflict(conflict, now=self._now())
-            await self._persist_merge(board, fact, conflict)
-
-    async def _document_conflicts(self, board: AnalysisRunBoard) -> None:
-        """Settle every open Conflict as documented, never as resolved.
-
-        Resolving one means establishing which measurement was right, and the
-        loop has no evidence to do that with — a third query would be a third
-        opinion, not an arbiter. Documenting is the honest outcome: the
-        disagreement reaches the reader instead of one side being picked
-        silently.
-        """
-        settled = list(board.unresolved_conflicts)
-        if not settled:
-            return
-        for conflict in settled:
-            board.resolve_conflict(
-                conflict.conflict_id,
-                resolution=(
-                    "Recorded as an unreconciled disagreement between two "
-                    "independent measurements; neither was discarded."
-                ),
-                now=self._now(),
-                documented_only=True,
-            )
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            for conflict in settled:
-                await unit_of_work.analysis_run_boards.settle_conflict(
-                    board.organization_id, conflict
-                )
-            await unit_of_work.commit()
-
-    async def _open_board(self, board: AnalysisRunBoard, gap: KnowledgeGap) -> None:
-        board.open_gap(gap, now=self._now())
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.analysis_run_boards.create(board)
-            await unit_of_work.analysis_run_boards.open_gap(
-                board.board_id, board.organization_id, gap
-            )
-            await unit_of_work.commit()
-
-    async def _open_gaps(
-        self, board: AnalysisRunBoard, gaps: Sequence[KnowledgeGap]
-    ) -> None:
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            for gap in gaps:
-                board.open_gap(gap, now=self._now())
-                await unit_of_work.analysis_run_boards.open_gap(
-                    board.board_id, board.organization_id, gap
-                )
-            await unit_of_work.commit()
-
-    async def _persist_merge(
-        self, board: AnalysisRunBoard, fact: Fact, conflict: Conflict | None
-    ) -> None:
-        """One transaction, because they are one event.
-
-        A Fact committed without the Conflict it provoked would leave the
-        Board claiming two values for the same measurement with nothing
-        recording that anybody noticed.
-        """
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.analysis_run_boards.record_fact(
-                board.board_id, board.organization_id, fact
-            )
-            if conflict is not None:
-                await unit_of_work.analysis_run_boards.open_conflict(
-                    board.board_id, board.organization_id, conflict
-                )
-            await unit_of_work.commit()
-
-    async def _close_board(
-        self, board: AnalysisRunBoard, answered: Sequence[str]
-    ) -> None:
-        """Resolve the gaps this run actually closed, and only those.
-
-        A follow-up whose measurement failed leaves its Knowledge Gap open —
-        that is the honest record, and it is what a later run (or an operator)
-        needs in order to know there is something still unanswered here.
-        Marking every gap resolved because the run finished would make the
-        Board agree with itself by construction.
-        """
-        closing = {description.strip().casefold() for description in answered}
-        settled = [
-            gap
-            for gap in board.open_gaps
-            if gap.description.strip().casefold() in closing
-        ]
-        if not settled:
-            return
-        async with self._unit_of_work_factory(
-            board.organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            for gap in settled:
-                board.resolve_gap(gap.gap_id, now=self._now())
-                await unit_of_work.analysis_run_boards.resolve_gap(
-                    gap.gap_id, board.organization_id
-                )
-            await unit_of_work.commit()
-
-    async def _run_analyst(
-        self,
-        agent: CubeAnalystAgent,
-        *,
-        analysis_run_id: UUID,
-        organization_id: UUID,
-        question: str,
-        objective: str,
-        steps: Iterator[int],
-        previous_issues: list[Any] | None,
-        parent_work_item_id: UUID | None = None,
-        depends_on: tuple[UUID, ...] = (),
-    ) -> tuple[dict[str, Any], UUID]:
-        payload: dict[str, Any] = {"question": question}
-        if previous_issues is not None:
-            payload["previous_issues"] = previous_issues
-        state, execution_id, work_item_id = await self._run_step(
-            agent=agent,
-            role=AgentRole.CUBE_ANALYST,
-            analysis_run_id=analysis_run_id,
-            organization_id=organization_id,
-            objective=objective,
-            payload=payload,
-            depends_on=depends_on,
-            steps=steps,
-            parent_work_item_id=parent_work_item_id,
-        )
-        return {**state, "execution_id": str(execution_id)}, work_item_id
-
-    async def _run_step(
-        self,
-        *,
-        agent: AgentPort,
-        role: AgentRole,
-        analysis_run_id: UUID,
-        organization_id: UUID,
-        objective: str,
-        payload: dict[str, Any],
-        depends_on: tuple[UUID, ...],
-        steps: Iterator[int],
-        parent_work_item_id: UUID | None = None,
-    ) -> tuple[dict[str, Any], UUID, UUID]:
-        """Runs one Agent as one Work Item, recording a started event, the
-        Agent Execution, and the same Work Feed events chat already reads.
-        Returns the resulting state, the execution id, and the Work Item id.
-
-        `steps` is shared across concurrent branches so the ledger orders the
-        whole analysis run, and `parent_work_item_id` is what makes the queue
-        a graph the Board grew rather than a DAG somebody drew in advance.
-        """
-        # Before the Work Item exists, not after: a run cancelled here should
-        # leave no pending row behind claiming work nobody will ever do.
-        await self._cancellation_checkpoint(organization_id, analysis_run_id)
-
-        now = self._now()
-        item = WorkItem.create(
-            work_item_id=self._new_id(),
-            analysis_run_id=analysis_run_id,
-            organization_id=organization_id,
-            role=role,
-            objective=objective,
-            now=now,
-            parent_work_item_id=parent_work_item_id,
-            depends_on=depends_on,
-        )
-        async with self._unit_of_work_factory(
-            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.work_items.add(item)
-            await unit_of_work.commit()
-
-        step = next(steps)
-        execution_id = self._new_id()
-        started_at = self._now()
-        agent_state = {**payload, "execution_id": str(execution_id)}
-        await self._recorder.record_started(
-            AgentExecutionStart(
-                execution_id=execution_id,
-                analysis_run_id=analysis_run_id,
-                organization_id=organization_id,
-                agent_id=agent.descriptor.agent_id,
-                role=role,
-                step=step,
-                started_at=started_at,
-            )
-        )
-        item.start(now=self._now())
-        async with self._unit_of_work_factory(
-            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.work_items.save(item)
-            await unit_of_work.commit()
-
-        try:
-            output = await agent.invoke(
-                AgentInput(
-                    analysis_run_id=analysis_run_id,
-                    organization_id=organization_id,
-                    state=agent_state,
-                )
-            )
-        except Exception as error:
-            completed_at = self._now()
-            await self._recorder.record(
-                _execution_record(
-                    execution_id=execution_id,
-                    analysis_run_id=analysis_run_id,
-                    organization_id=organization_id,
-                    agent_id=agent.descriptor.agent_id,
-                    role=role,
-                    step=step,
-                    input_state=agent_state,
-                    output=None,
-                    status=ExecutionStatus.FAILURE,
-                    started_at=started_at,
-                    completed_at=completed_at,
-                    errors=(f"{type(error).__name__}: {error}",),
-                )
-            )
-            async with self._unit_of_work_factory(
-                organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-            ) as unit_of_work:
-                item.reject(now=completed_at, reason=str(error))
-                await unit_of_work.work_items.save(item)
-                await unit_of_work.commit()
-            raise
-
-        completed_at = self._now()
-        telemetry = _RUN_TELEMETRY.get()
-        if telemetry is not None:
-            telemetry.tool_call_count += len(output.tool_calls)
-        await self._recorder.record(
-            _execution_record(
-                execution_id=execution_id,
-                analysis_run_id=analysis_run_id,
-                organization_id=organization_id,
-                agent_id=agent.descriptor.agent_id,
-                role=role,
-                step=step,
-                input_state=agent_state,
-                output=output,
-                status=ExecutionStatus.SUCCESS,
-                started_at=started_at,
-                completed_at=completed_at,
-            )
-        )
-        item.complete(
-            now=completed_at,
-            artifact_refs=(EvidenceReference(f"artifact://execution/{execution_id}"),),
-        )
-        async with self._unit_of_work_factory(
-            organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
-        ) as unit_of_work:
-            await unit_of_work.work_items.save(item)
-            await unit_of_work.commit()
-
-        # And again once the step is durable, so a cancellation requested
-        # mid-call stops the loop before the next Agent is paid for rather
-        # than after the whole three-attempt trust loop has run.
-        await self._cancellation_checkpoint(organization_id, analysis_run_id)
-        return _for_state(output), execution_id, item.work_item_id
-
-
-def _execution_record(
-    *,
-    execution_id: UUID,
-    analysis_run_id: UUID,
-    organization_id: UUID,
-    agent_id: str,
-    role: AgentRole,
-    step: int,
-    input_state: dict[str, Any],
-    output: AgentOutput | None,
-    status: ExecutionStatus,
-    started_at: datetime,
-    completed_at: datetime,
-    errors: tuple[str, ...] = (),
-) -> AgentExecutionRecord:
-    return AgentExecutionRecord(
-        execution_id=execution_id,
-        analysis_run_id=analysis_run_id,
-        organization_id=organization_id,
-        agent_id=agent_id,
-        role=role,
-        step=step,
-        input=input_state,
-        output=dict(output.fields) if output else None,
-        outcome=output.outcome if output else None,
-        status=status,
-        latency_ms=max(0, int((completed_at - started_at).total_seconds() * 1000)),
-        usage=output.usage if output is not None else ExecutionUsage(),
-        evidence_refs=output.evidence_refs if output else (),
-        fallbacks=output.fallbacks if output else (),
-        tool_calls=output.tool_calls if output else (),
-        reasoning=output.reasoning if output else None,
-        errors=errors,
-        started_at=started_at,
-        completed_at=completed_at,
-    )
