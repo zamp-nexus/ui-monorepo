@@ -54,6 +54,7 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0033-private-chat-sessions-and-assistant-reply-messages]]
 - [[adr/0034-supersede-investigation-and-hidden-analysis]]
 - [[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]
+- [[adr/0036-workflow-engine-executes-bounded-custom-workflows]] (supersedes 0035)
 
 ## Governance
 
