@@ -294,9 +294,24 @@ async def _custom_workflow_thread(
         workflow_version=body.workflow_version,
         message=body.message,
     )
-    detail = await request.app.state.dependencies.threads.create_workflow_reply(
-        actor, project_id=group_id, content=body.message, reply=output
-    )
+    try:
+        detail = await request.app.state.dependencies.threads.create_workflow_reply(
+            actor, project_id=group_id, content=body.message, reply=output
+        )
+    except Exception as error:
+        async with request.app.state.dependencies.database.organization_connection(
+            actor.organization_id
+        ) as connection:
+            await connection.execute(
+                update(workflow_executions)
+                .where(workflow_executions.c.workflow_execution_id == execution_id)
+                .values(
+                    status="failed",
+                    error=f"Chat persistence failed: {error}",
+                    finished_at=datetime.now(UTC),
+                )
+            )
+        raise
     async with request.app.state.dependencies.database.organization_connection(
         actor.organization_id
     ) as connection:

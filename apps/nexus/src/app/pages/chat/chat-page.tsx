@@ -63,6 +63,7 @@ export const ChatPage = ({
 
   const [draft, setDraft] = useState('');
   const [workflowId, setWorkflowId] = useState('default-analytics');
+  const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const snapshot = useQuery({
@@ -90,6 +91,12 @@ export const ChatPage = ({
   });
 
   const thread = snapshot.data ?? null;
+
+  useEffect(() => {
+    if (!workflowExecution.data || workflowId !== 'default-analytics') return;
+    setWorkflowId(workflowExecution.data.workflow_id);
+    setWorkflowVersion(workflowExecution.data.workflow_version);
+  }, [workflowExecution.data, workflowId]);
 
   // A direct link to a chat has no preceding sidebar click. Its owning Group
   // is still the active project, so subsequent New chat actions stay there.
@@ -140,7 +147,7 @@ export const ChatPage = ({
       groupId,
       content,
       workflowId,
-      workflowVersion: selectedWorkflow?.published_version,
+      workflowVersion: workflowVersion ?? selectedWorkflow?.published_version,
     });
   };
 
@@ -258,13 +265,19 @@ export const ChatPage = ({
           </ChatContextProvider>
         </div>
 
-        <ChatComposer
+          <ChatComposer
           draft={draft}
           onDraftChange={setDraft}
           onSend={submit}
           disabled={send.isPending || !canSend}
           workflowId={workflowId}
-          onWorkflowChange={setWorkflowId}
+            onWorkflowChange={(nextWorkflowId) => {
+              setWorkflowId(nextWorkflowId);
+              setWorkflowVersion(
+                workflows.data?.find((workflow) => workflow.workflow_id === nextWorkflowId)
+                  ?.published_version ?? null,
+              );
+            }}
           workflows={workflows.data}
         />
       </section>

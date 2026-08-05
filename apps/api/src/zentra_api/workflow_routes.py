@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -284,7 +285,15 @@ async def clone_default(
     body: CloneDefaultRequest, request: Request, context: AuthenticatedRequest
 ) -> WorkflowDetailResponse:
     _require_manager(context)
-    _require_raw_query_admin(context, DEFAULT_WORKFLOW_DEFINITION)
+    definition = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    if context.actor.role is not Role.ADMIN:
+        for node in definition["nodes"]:
+            if node.get("type") == "agent":
+                node["data"]["tools"] = [
+                    tool
+                    for tool in node["data"].get("tools", [])
+                    if tool != "raw_query"
+                ]
     workflow_id = uuid4()
     now = datetime.now(UTC)
     async with request.app.state.dependencies.database.organization_connection(
@@ -295,7 +304,7 @@ async def clone_default(
                 workflow_id=workflow_id,
                 organization_id=context.actor.organization_id,
                 name=body.name.strip(),
-                draft_definition=DEFAULT_WORKFLOW_DEFINITION,
+                draft_definition=definition,
                 created_at=now,
                 updated_at=now,
             )
