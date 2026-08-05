@@ -1,5 +1,5 @@
 import type { TextMessagePartProps } from '@assistant-ui/react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { Markdown } from '../../components/markdown';
 
@@ -11,17 +11,23 @@ import { Markdown } from '../../components/markdown';
  * `content`, and marking the synthesized message `status: { type: 'running' }`
  * (see `chat-runtime.ts`) is what makes this part report `running` too.
  */
-export const ChatTextPart = ({ text, status }: TextMessagePartProps) => (
-  <>
-    <Markdown>{text}</Markdown>
-    {status?.type === 'running' ? (
-      <motion.span
-        initial={{ opacity: 0.3 }}
-        animate={{ opacity: 1 }}
-        transition={{ repeat: Infinity, repeatType: 'reverse', duration: 0.7, ease: 'easeInOut' }}
-        className="ml-1.5 inline-block h-2.5 w-2.5 rounded-full bg-primary align-middle shadow-[0_0_12px_var(--color-primary)]"
-        aria-hidden="true"
-      />
-    ) : null}
-  </>
-);
+export const ChatTextPart = ({ text, status }: TextMessagePartProps) => {
+  const prefersReducedMotion = useReducedMotion();
+  const isLive = status?.type === 'running';
+
+  return (
+    <motion.div
+      initial={isLive && !prefersReducedMotion ? { opacity: 0, y: 4 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
+    >
+      <Markdown>{text}</Markdown>
+      {isLive ? (
+        <span
+          className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-foreground align-text-bottom motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      ) : null}
+    </motion.div>
+  );
+};

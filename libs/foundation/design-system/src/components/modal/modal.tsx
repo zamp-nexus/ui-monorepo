@@ -36,12 +36,7 @@ import type { ModalComponent, ModalContextValue } from './types';
  *     <Modal.Body>
  *       Content goes here
  *     </Modal.Body>
- *     <Modal.Footer>
- *       <Modal.Close asChild>
- *         <Button variant="outline">Cancel</Button>
- *       </Modal.Close>
- *       <Button>Save</Button>
- *     </Modal.Footer>
+ *     <Modal.Footer><Button>Save</Button></Modal.Footer>
  *   </Modal.Content>
  * </Modal>
  */

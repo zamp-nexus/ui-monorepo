@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { Alert, Button, Card, Input, Label, Switch } from '@open-zentra/foundation-design-system';
+import { Alert, Button, Card, IconButton, Input, Label, Switch } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { ApiError, type TokenSource } from '../../api';
@@ -276,14 +276,14 @@ export const ClickHouseConfig = ({ getToken, canWrite }: ClickHouseConfigProps) 
                 autoComplete="new-password"
                 required
                 end={
-                  <button
-                    type="button"
+                  <IconButton
+                    intent="ghost"
+                    size="sm"
                     onClick={() => setRevealPassword((shown) => !shown)}
                     aria-label={revealPassword ? 'Hide password' : 'Show password'}
-                    className="text-foreground-muted transition-colors hover:text-foreground"
                   >
                     <Icon name={revealPassword ? 'eye_off' : 'eye'} size="sm" />
-                  </button>
+                  </IconButton>
                 }
               />
             </Field>

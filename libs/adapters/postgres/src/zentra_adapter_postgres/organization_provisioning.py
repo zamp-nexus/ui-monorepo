@@ -88,6 +88,14 @@ class PostgresOrganizationProvisioningRepository:
             )
         )
 
+    async def rename_organization(self, organization_id: UUID, *, name: str) -> None:
+        await set_organization_context(self._connection, organization_id)
+        await self._connection.execute(
+            update(organizations)
+            .where(organizations.c.organization_id == organization_id)
+            .values(name=name)
+        )
+
     async def add_organization_binding(
         self,
         provider: str,

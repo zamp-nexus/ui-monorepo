@@ -35,6 +35,9 @@ export const listGroups = (getToken: TokenSource) =>
 export const createGroup = (getToken: TokenSource, name: string) =>
   requestJson<Group>('/v1/groups', getToken, post({ name }));
 
+export const renameGroup = (getToken: TokenSource, groupId: string, name: string) =>
+  requestJson<Group>(`/v1/groups/${groupId}`, getToken, { method: 'PATCH', body: JSON.stringify({ name }) });
+
 /* -------------------------------------------------------------------------- */
 /* Chat Sessions                                                               */
 /* -------------------------------------------------------------------------- */
@@ -54,6 +57,9 @@ export const createChat = (getToken: TokenSource, groupId: string, message: stri
 
 export const getChat = (getToken: TokenSource, threadId: string) =>
   requestJson<Thread>(`/v1/chats/${threadId}`, getToken);
+
+export const renameChat = (getToken: TokenSource, threadId: string, title: string) =>
+  requestJson<Thread>(`/v1/chats/${threadId}`, getToken, { method: 'PATCH', body: JSON.stringify({ title }) });
 
 /** The same endpoint serves an initial clarification and a later follow-up. */
 export const appendMessage = (getToken: TokenSource, threadId: string, message: string) =>

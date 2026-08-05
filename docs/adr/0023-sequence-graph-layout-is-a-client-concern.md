@@ -1,5 +1,5 @@
 ---
-id: adr-0023
+id: adr-0036
 title: Sequence graph layout is a client concern, and the API adds no new Work Feed event kinds
 type: adr
 status: active

@@ -21,7 +21,7 @@ import { useState } from 'react';
 import type { ToolCallMessagePartComponent } from '@assistant-ui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { Badge, Button, Card } from '@open-zentra/foundation-design-system';
+import { Badge, Button, Card, Select } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { AgentActivityBlock } from './agent-activity-block';
@@ -101,7 +101,7 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
   return (
     <div className="flex gap-4">
       <span
-        className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-accent text-accent-foreground"
+        className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary"
         aria-hidden="true"
       >
         <Icon name="sparkles" size="sm" />
@@ -188,18 +188,19 @@ export const AnalysisRunFindingMessage: ToolCallMessagePartComponent<
                   >
                     Approve
                   </Button>
-                  <select
-                    className="rounded-sm border border-border bg-background px-2 py-1 text-sm"
+                  <Select
                     value={reason}
-                    aria-label="Reason for rejecting"
-                    onChange={(event) => setReason(event.target.value)}
+                    onValueChange={setReason}
                   >
-                    {REJECTION_REASONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    <Select.Trigger aria-label="Reason for rejecting" />
+                    <Select.Content>
+                      {REJECTION_REASONS.map((option) => (
+                        <Select.Item key={option.value} value={option.value}>
+                          {option.label}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select>
                   <Button
                     intent="danger"
                     size="sm"

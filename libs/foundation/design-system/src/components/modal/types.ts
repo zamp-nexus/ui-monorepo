@@ -99,7 +99,6 @@ export interface ModalFooterProps extends OIDefaultProps {
 export interface ModalCloseProps extends OIDefaultProps {
   children?: React.ReactNode;
   className?: string;
-  asChild?: boolean;
 }
 
 /**
@@ -194,7 +193,7 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
     header: {
       // `shrink-0`: with the body flexing, a long modal would otherwise
       // compress the header and footer rather than scrolling the body.
-      base: 'flex shrink-0 flex-col gap-1.5 border-b px-6 py-4',
+      base: 'flex shrink-0 flex-col gap-1.5 border-b border-border-subtle px-6 py-4',
       variants: {},
       modifiers: {},
     },
@@ -214,7 +213,7 @@ export const modalDefaultTheme: ComponentThemeConfigStructure = {
       modifiers: {},
     },
     footer: {
-      base: 'flex shrink-0 items-center justify-end gap-2 border-t px-6 py-4',
+      base: 'flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle px-6 py-4',
       variants: {},
       modifiers: {},
     },

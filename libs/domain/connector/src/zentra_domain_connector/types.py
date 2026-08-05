@@ -152,6 +152,7 @@ TERMINAL_PHASES: frozenset[HarvestPhase] = frozenset(
 class UploadFormat(StrEnum):
     CSV = "csv"
     PARQUET = "parquet"
+    EXCEL = "excel"
 
 
 @dataclass(frozen=True, slots=True)

@@ -44,28 +44,30 @@ version = "1.0.0"
 description = "Nexus FastAPI composition root"
 requires-python = ">=3.13,<3.14"
 readme = "README.md"
-dependencies = [
- "fastapi>=0.119,<1",
- "httpx>=0.28,<1",
- "pydantic-settings>=2.11,<3",
- "pyjwt[crypto]>=2.10,<3",
- "python-multipart>=0.0.20,<0.1",
- "svix>=1.61,<2",
- "uvicorn[standard]>=0.37,<1",
- "zentra-adapter-clickhouse",
- "zentra-adapter-cube",
- "zentra-adapter-langgraph",
- "zentra-adapter-model-providers",
- "zentra-adapter-postgres",
- "zentra-adapter-telemetry",
- "zentra-adapter-thesys",
- "zentra-application-analysis-run",
- "zentra-application-connector",
- "zentra-application-sequence",
- "zentra-domain-agent-execution",
- "zentra-domain-analysis-run",
- "zentra-domain-sequence",
-]
+ dependencies = [
+  "fastapi>=0.119,<1",
+  "httpx>=0.28,<1",
+  "openpyxl>=3.1,<4",
+  "pandas>=2.2,<3",
+  "pydantic-settings>=2.11,<3",
+  "pyjwt[crypto]>=2.10,<3",
+  "python-multipart>=0.0.20,<0.1",
+  "svix>=1.61,<2",
+  "uvicorn[standard]>=0.37,<1",
+  "zentra-adapter-clickhouse",
+  "zentra-adapter-cube",
+  "zentra-adapter-langgraph",
+  "zentra-adapter-model-providers",
+  "zentra-adapter-postgres",
+  "zentra-adapter-telemetry",
+  "zentra-adapter-thesys",
+  "zentra-application-analysis-run",
+  "zentra-application-connector",
+  "zentra-application-sequence",
+  "zentra-domain-agent-execution",
+  "zentra-domain-analysis-run",
+  "zentra-domain-sequence",
+ ]
 
 [build-system]
 requires = [ "uv_build>=0.8.9,<0.9.0" ]

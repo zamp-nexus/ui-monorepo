@@ -15,7 +15,7 @@ import { modalDefaultTheme } from './types';
 /**
  * Modal.Close component
  *
- * Button that closes the modal. Can be used standalone or wrap custom content.
+ * The modal's top-right close button.
  */
 export const ModalClose: React.FC<ModalCloseProps> = ({ children, className, ozid, ...rest }) => {
   const theme = useTheme('modal', modalDefaultTheme);

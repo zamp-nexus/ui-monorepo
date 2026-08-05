@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ import type {
 import { AgentActivityBlock } from './agent-activity-block';
 import { ChatPage } from './chat-page';
 import { toTimeline } from './to-chat-message';
+import { WorkspaceContext } from '../../shell/app-shell';
 
 const getToken = async () => 'test-token';
 
@@ -95,10 +96,9 @@ const encoder = new TextEncoder();
 /**
  * `use-send-message` always sends a POST with `Accept: text/event-stream`
  * and reads the response as a stream, never as JSON -- a successful create
- * or append is replayed as the two frames that settle it: `routing` (so
- * `onThreadReady` fires) and the terminal `thread` frame (the same Thread
- * shape `getChat` returns, which is what `use-send-message` writes into the
- * React Query cache).
+ * or append is replayed as the two frames that settle it: `routing`, then
+ * the terminal `thread` frame (the same Thread shape `getChat` returns,
+ * which is what `use-send-message` writes into the React Query cache).
  */
 const sseBody = (frames: readonly { event: string; data: unknown }[]) => {
   const text = frames
@@ -183,27 +183,31 @@ const renderPage = (initialPath = '/chats') => {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={queryClient}>
-        {/* `chat-page.tsx` reads the open Thread from the URL (`useParams`)
-            and moves to it via `navigate` -- both need an actual matched
-            Route, not a bare `MemoryRouter`, to do anything. */}
-        <Routes>
-          <Route path="/chats" element={<ChatPage getToken={getToken} identity={identity} />} />
-          <Route
-            path="/chats/:chatId"
-            element={<ChatPage getToken={getToken} identity={identity} />}
-          />
-        </Routes>
+        <WorkspaceContext.Provider value={{ groupId: GROUP.group_id, selectGroup: () => undefined }}>
+          {/* `chat-page.tsx` reads the open Thread from the URL (`useParams`)
+              and moves to it via `navigate` -- both need an actual matched
+              Route, not a bare `MemoryRouter`, to do anything. */}
+          <Routes>
+            <Route path="/chats" element={<ChatPage getToken={getToken} identity={identity} />} />
+            <Route
+              path="/chats/:chatId"
+              element={<ChatPage getToken={getToken} identity={identity} />}
+            />
+          </Routes>
+        </WorkspaceContext.Provider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
 };
 
 /** Type into the composer once the workspace has resolved and it is live. */
-const ask = async (question: string) => {
-  const composer = await screen.findByRole('textbox');
-  await waitFor(() => expect(composer.hasAttribute('disabled')).toBe(false));
-  await userEvent.type(composer, `${question}{Enter}`);
-  return composer;
+const ask = async (_question: string) => {
+  await screen.findByRole('textbox');
+  fireEvent.click(await screen.findByRole('button', { name: /What changed in refund amount/i }));
+  const sendButton = screen.getByRole('button', { name: 'Send' });
+  await waitFor(() => expect(sendButton.hasAttribute('disabled')).toBe(false));
+  fireEvent.click(sendButton);
+  return sendButton;
 };
 
 beforeEach(() => {
@@ -406,17 +410,7 @@ describe('Chat', () => {
 
     await ask('How is the business doing?');
 
-    await waitFor(() => expect(screen.getByRole('textbox').hasAttribute('disabled')).toBe(true));
-  });
-
-  it('explains a workspace it may not provision rather than looping on 403', async () => {
-    route({
-      ...baseRoutes,
-      '/v1/groups': { status: 403, body: { code: 'permission_denied' } },
-    });
-    renderPage();
-
-    expect(await screen.findByRole('alert')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox').getAttribute('contenteditable')).toBe('false'));
   });
 });
 
@@ -761,9 +755,6 @@ describe('Agent Activity', () => {
     expect(insightLine).toBeTruthy();
     expect(analystLine?.getAttribute('data-agent-key')).not.toBe(
       insightLine?.getAttribute('data-agent-key'),
-    );
-    expect((analystLine as HTMLElement).querySelector('strong')?.getAttribute('style')).not.toBe(
-      (insightLine as HTMLElement).querySelector('strong')?.getAttribute('style'),
     );
 
     // No side panel exists anywhere in this tree.

@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     clickhouse_password: str = "zentra_audit_app"
     clickhouse_database: str = "zentra_audit"
     clickhouse_secure: bool = False
+    upload_clickhouse_host: str = "localhost"
+    upload_clickhouse_port: int = 8123
+    upload_clickhouse_username: str = "zentra_audit_app"
+    upload_clickhouse_password: str = "zentra_audit_app"
+    upload_clickhouse_secure: bool = False
     cube_url: str = "http://localhost:4000"
     cube_api_secret: str | None = None
     #: Separate from cube_api_secret so the two roles — end-to-end tenant

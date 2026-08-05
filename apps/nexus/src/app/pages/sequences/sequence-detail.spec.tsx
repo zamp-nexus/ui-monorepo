@@ -262,7 +262,7 @@ describe('SequenceDetailPage', () => {
     const twoSteps: SequenceGraph = {
       ...oneStep,
       prepared_tables: [
-        oneStep.prepared_tables[0],
+        { ...oneStep.prepared_tables[0], is_final: false },
         {
           prepared_table_id: 't2',
           step_id: 's2',
@@ -284,9 +284,6 @@ describe('SequenceDetailPage', () => {
         },
       ],
     };
-    // The first Prepared Table is no longer final once the second exists.
-    twoSteps.prepared_tables[0] = { ...twoSteps.prepared_tables[0], is_final: false };
-
     let servedGraph = oneStep;
     let resolveEventStream: ((chunk: { done: boolean; value?: Uint8Array }) => void) | null = null;
 
@@ -333,7 +330,8 @@ describe('SequenceDetailPage', () => {
       }) +
       '\n\n';
     await waitFor(() => expect(resolveEventStream).toBeTruthy());
-    resolveEventStream?.({ done: false, value: new TextEncoder().encode(frame) });
+    const resolveStream = resolveEventStream as ((chunk: { done: boolean; value?: Uint8Array }) => void) | null;
+    resolveStream?.({ done: false, value: new TextEncoder().encode(frame) });
 
     expect(await screen.findByText('Dedupe')).toBeTruthy();
     // Reconciled by node id, not remounted — the first node's element

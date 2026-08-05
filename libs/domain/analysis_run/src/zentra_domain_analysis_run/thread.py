@@ -139,6 +139,13 @@ class AnalysisRunThread:
         self.updated_at = now
         self.latest_activity_at = now
 
+    def rename(self, title: str, now: datetime) -> None:
+        normalized_title = " ".join(title.split()).strip()
+        if not normalized_title or len(normalized_title) > MAX_THREAD_TITLE_LENGTH:
+            raise ThreadMessageError("A Thread title is invalid")
+        self.title = normalized_title
+        self.updated_at = now
+
     def ensure_writable(self) -> None:
         if self.status is ThreadStatus.ARCHIVED:
             raise ThreadTransitionError("Archived Threads cannot accept messages")

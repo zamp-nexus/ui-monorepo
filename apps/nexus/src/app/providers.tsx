@@ -8,6 +8,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { useAuth } from '@open-zentra/foundation-auth';
 import { ClerkAuthProvider } from '@open-zentra/foundation-auth/clerk';
 import { ClerkAuthzProvider } from '@open-zentra/foundation-authz/clerk';
+import { ThemeModeProvider } from '@open-zentra/foundation-design-system';
 
 interface AppProvidersProps {
   readonly children: ReactNode;
@@ -30,7 +31,9 @@ const ProductProviders = ({ children }: AppProvidersProps) => {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+        <ThemeModeProvider>
+          <MotionConfig reducedMotion="user">{children}</MotionConfig>
+        </ThemeModeProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );

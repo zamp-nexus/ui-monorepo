@@ -57,6 +57,13 @@
     "@open-zentra/foundation-design-system": "^0.0.1",
     "@open-zentra/foundation-icons": "^0.0.1",
     "@tanstack/react-query": "^5.101.4",
+    "@tiptap/extension-table": "^3.29.2",
+    "@tiptap/extension-task-item": "^3.29.2",
+    "@tiptap/extension-task-list": "^3.29.2",
+    "@tiptap/markdown": "^3.29.2",
+    "@tiptap/pm": "^3.29.2",
+    "@tiptap/react": "^3.29.2",
+    "@tiptap/starter-kit": "^3.29.2",
     "@xyflow/react": "^12.11.2",
     "motion": "^12.43.0",
     "react-router-dom": "^7.18.1"

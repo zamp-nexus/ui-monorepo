@@ -42,7 +42,7 @@ const SourceRow = ({ source, onTest, testing, canWrite }: SourceRowProps) => (
   // `flex-row` is explicit: Card's own base is `flex flex-col`, and since
   // direction and wrapping are different properties, `flex-wrap` alone leaves
   // the column intact — the row silently stacks.
-  <Card padding="md" className="flex flex-row flex-wrap items-center gap-x-5 gap-y-3">
+  <Card padding="md" className="flex flex-row flex-wrap items-center gap-x-5 gap-y-3 border-border shadow-[var(--shadow-depth-01)]">
     <ConnectorLogo
       name={source.kind === 'uploaded' ? 'sftp' : 'clickhouse'}
       className="h-6 w-6 shrink-0"
@@ -100,19 +100,27 @@ export const ConnectionsPage = ({ getToken, identity }: ConnectionsPageProps) =>
       : undefined;
 
   return (
-    <section className="px-8 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <section className="px-5 py-8 sm:px-8 sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-7">
         <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-            Sources
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">
+            Data
           </p>
-          <h1 className="mt-3 font-serif text-[clamp(2rem,4vw,3rem)] font-normal tracking-[-0.035em]">
+          <h1 className="mt-3 text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.045em]">
             Connections
           </h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground-muted">
+            Add a file for a quick analysis or connect a source that your workspace can keep in sync.
+          </p>
         </div>
-        <Button component={Link} to="/connections/new" size="lg" disabled={!canWrite}>
-          <Icon name="plus" size="sm" /> Create connection
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button component={Link} to="/connections/new/upload" disabled={!canWrite}>
+            <Icon name="upload" size="sm" /> Upload file
+          </Button>
+          <Button component={Link} to="/connections/new" intent="secondary" disabled={!canWrite}>
+            <Icon name="plus" size="sm" /> Add connection
+          </Button>
+        </div>
       </div>
 
       {sources.isPending ? (
@@ -154,18 +162,18 @@ export const ConnectionsPage = ({ getToken, identity }: ConnectionsPageProps) =>
 
       {sources.data && sources.data.length === 0 ? (
         <EmptyState
-          className="mt-12 border border-border bg-card"
+          className="mt-10 border-0 bg-transparent shadow-none"
           size="lg"
           icon={<Icon name="network" size="xl" />}
         >
           <EmptyState.Title>No sources connected</EmptyState.Title>
           <EmptyState.Description>
-            An Analysis Run can only cite data it can reach. Connect a ClickHouse service to give
-            this tenant something to harvest.
+            Upload a file to ask questions right away, or add a data connection for a source that
+            Nexus can keep available.
           </EmptyState.Description>
           <EmptyState.Actions>
-            <Button component={Link} to="/connections/new" disabled={!canWrite}>
-              Create connection
+            <Button component={Link} to="/connections/new/upload" disabled={!canWrite}>
+              Upload a file
             </Button>
           </EmptyState.Actions>
         </EmptyState>

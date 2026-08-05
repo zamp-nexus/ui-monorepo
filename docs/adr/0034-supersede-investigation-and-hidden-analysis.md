@@ -11,7 +11,7 @@ reviewed: 2026-08-04
 confidence: verified
 implementation: current
 tags: [adr, chat, analysis-run, investigation]
-related: ["[[Analysis Run Domain]]", "[[Nexus Domain]]", "[[adr/0006-metadata-only-audit-ledger]]", "[[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]", "[[adr/0029-activity-feed-replaces-the-work-feed]]"]
+related: ["[[Analysis Run Domain]]", "[[adr/0006-metadata-only-audit-ledger]]", "[[adr/0028-chat-session-and-analysis-run-replace-investigation-thread-and-investigation]]", "[[adr/0029-activity-feed-replaces-the-work-feed]]"]
 repo_path: libs/domain/analysis_run
 ---
 

@@ -1,0 +1,135 @@
+
+
+import { useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useMatch } from 'react-router-dom';
+
+import { Accordion, Button, SideNav, Modal, IconButton, Input } from '@open-zentra/foundation-design-system';
+import { Icon } from '@open-zentra/foundation-icons';
+
+import type { TokenSource } from '../api';
+import type { Group } from '../types';
+import { listChats, renameGroup } from '../pages/chat/api';
+interface GroupFolderProps {
+  readonly group: Group;
+  readonly getToken: TokenSource;
+  readonly collapsed: boolean;
+  readonly active: boolean;
+  readonly onSelect: (groupId: string) => void;
+}
+
+export const GroupFolder = ({ group, getToken, collapsed, active, onSelect }: GroupFolderProps) => {
+  const queryClient = useQueryClient();
+  const match = useMatch('/chats/:chatId');
+  const activeThreadId = match?.params.chatId ?? null;
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+
+  const renameMutation = useMutation({
+    mutationFn: (newName: string) => renameGroup(getToken, group.group_id, newName),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['groups'] });
+      setIsRenameModalOpen(false);
+    },
+  });
+
+  const history = useInfiniteQuery({
+    queryKey: ['threads', group.group_id],
+    queryFn: ({ pageParam }) => listChats(getToken, group.group_id, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor,
+  });
+
+  const threads = history.data ? history.data.pages.flatMap((page) => page.items) : [];
+
+  return (
+    <Accordion.Item value={group.group_id} className="border-none">
+      <div className="group/folder flex w-full items-center gap-1">
+        <Accordion.Trigger
+          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-secondary hover:text-foreground hover:no-underline [&[data-panel-open]>svg]:rotate-90 ${
+            active ? 'bg-primary/10 text-primary' : 'text-foreground-muted'
+          } ${collapsed ? 'justify-center p-0 h-11 w-11' : ''}`}
+          onClick={() => onSelect(group.group_id)}
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <Icon name="folder" size="sm" className="shrink-0" />
+            {collapsed ? null : <span className="truncate font-medium">{group.name}</span>}
+          </span>
+        </Accordion.Trigger>
+        {collapsed ? null : (
+          <IconButton
+            intent="ghost"
+            size="sm"
+            aria-label="Rename Group"
+            className="shrink-0 opacity-0 transition-opacity group-hover/folder:opacity-100"
+            onClick={() => setIsRenameModalOpen(true)}
+          >
+            <Icon name="edit" size="xs" />
+          </IconButton>
+        )}
+      </div>
+
+      <Modal open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+        <Modal.Content onClick={(e) => e.stopPropagation()}>
+          <Modal.Header>
+            <Modal.Title>Rename Group</Modal.Title>
+            <Modal.Description>Enter a new name for this group.</Modal.Description>
+            <Modal.Close />
+          </Modal.Header>
+          <Modal.Body>
+            <Input
+              autoFocus
+              defaultValue={group.name}
+              placeholder="e.g. Sales Team"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== group.name) {
+                    renameMutation.mutate(e.currentTarget.value.trim());
+                  } else {
+                    setIsRenameModalOpen(false);
+                  }
+                }
+              }}
+            />
+          </Modal.Body>
+        </Modal.Content>
+      </Modal>
+
+      <Accordion.Content className={collapsed ? 'hidden' : ''}>
+        <div className="flex flex-col gap-1 pb-2 pl-7 pr-2 pt-1">
+          {history.isFetching && !history.data ? (
+            <p className="px-3 py-2 text-xs text-foreground-muted">Loading...</p>
+          ) : threads.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-foreground-muted">No chats</p>
+          ) : (
+            threads.map((thread) => (
+              <SideNav.Item
+                key={thread.thread_id}
+                component={Link}
+                to={`/chats/${thread.thread_id}`}
+                active={thread.thread_id === activeThreadId}
+                className="h-auto py-1.5 px-3 rounded-md transition-colors"
+                onClick={() => onSelect(group.group_id)}
+              >
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm">{thread.title}</span>
+                </div>
+              </SideNav.Item>
+            ))
+          )}
+          {history.hasNextPage && (
+            <Button
+              intent="ghost"
+              size="sm"
+              onClick={() => void history.fetchNextPage()}
+              disabled={history.isFetching}
+              className="mt-1 h-7 text-xs justify-start px-3"
+            >
+              Load older
+            </Button>
+          )}
+        </div>
+      </Accordion.Content>
+    </Accordion.Item>
+  );
+};

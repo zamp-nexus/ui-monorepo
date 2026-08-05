@@ -24,6 +24,21 @@ interface OpenTable {
   readonly dataSourceId: string;
 }
 
+const UploadedSource = ({ source }: { readonly source: { readonly data_source_id: string; readonly name: string } }) => (
+  <article className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-depth-01)]">
+    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
+      <Icon name="upload" size="sm" />
+    </span>
+    <div className="min-w-0 flex-1">
+      <p className="font-medium">{source.name}</p>
+      <p className="mt-1 text-sm text-foreground-muted">Uploaded data · private to you until shared</p>
+    </div>
+    <Button component={Link} to={`/chats?source=${encodeURIComponent(source.data_source_id)}&sourceName=${encodeURIComponent(source.name)}`} size="sm">
+      Analyze
+    </Button>
+  </article>
+);
+
 /**
  * What Nexus can actually read, per connected source.
  *
@@ -105,19 +120,32 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
   });
 
   const connected = (sources.data ?? []).filter((source) => source.kind === 'connected');
+  const uploaded = (sources.data ?? []).filter((source) => source.kind === 'uploaded');
 
   return (
-    <section className="px-8 py-10">
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-        Catalog
-      </p>
-      <h1 className="mt-3 font-serif text-[clamp(2rem,4vw,3rem)] font-normal tracking-[-0.035em]">
-        Datasets
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm text-foreground-muted">
-        The tables each connected source exposes, as the last harvest found them. Open one to see
-        its columns, their declared types and what profiling observed.
-      </p>
+    <section className="px-5 py-8 sm:px-8 sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7">
+        <div>
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">
+            Data
+          </p>
+          <h1 className="mt-3 text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.045em]">
+            Your data
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted">
+            Review the sources available to this workspace and the tables Nexus can use when
+            answering your questions.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button component={Link} to="/sequences" intent="secondary">
+            <Icon name="columns" size="sm" /> Open workflows
+          </Button>
+          <Button component={Link} to="/connections/new/upload" disabled={!canWrite}>
+            <Icon name="upload" size="sm" /> Upload file
+          </Button>
+        </div>
+      </div>
 
       {sources.isPending ? (
         <div className="mt-10 flex flex-col gap-3">
@@ -132,26 +160,35 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
         </Alert>
       ) : null}
 
-      {sources.data && connected.length === 0 ? (
+      {sources.data && sources.data.length === 0 ? (
         <EmptyState
-          className="mt-12 border border-border bg-card"
+          className="mt-10 border-0 bg-transparent shadow-none"
           size="lg"
           icon={<Icon name="database" size="xl" />}
         >
           <EmptyState.Title>No datasets yet</EmptyState.Title>
           <EmptyState.Description>
-            Datasets come from harvesting a connected source. Connect a ClickHouse service and this
-            page fills with its tables.
+            Upload a file to begin immediately, or connect a warehouse when your data already
+            lives elsewhere.
           </EmptyState.Description>
           <EmptyState.Actions>
-            <Button component={Link} to="/connections/new/clickhouse" disabled={!canWrite}>
-              Connect ClickHouse
+            <Button component={Link} to="/connections/new/upload" disabled={!canWrite}>
+              Upload a file
             </Button>
-            <Button component={Link} to="/connections" intent="secondary">
-              View connections
+            <Button component={Link} to="/connections/new/clickhouse" intent="secondary" disabled={!canWrite}>
+              Connect a warehouse
             </Button>
           </EmptyState.Actions>
         </EmptyState>
+      ) : null}
+
+      {uploaded.length > 0 ? (
+        <section className="mt-9">
+          <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-foreground-muted">Uploads</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {uploaded.map((source) => <UploadedSource key={source.data_source_id} source={source} />)}
+          </div>
+        </section>
       ) : null}
 
       <div className="mt-10">

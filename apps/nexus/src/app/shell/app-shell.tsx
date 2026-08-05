@@ -1,18 +1,26 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@open-zentra/foundation-auth';
 import {
   Avatar,
   Button,
   IconButton,
+  Input,
+  Modal,
   SideNav,
   Tooltip,
+  Accordion,
 } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
+import { listGroups, createGroup } from '../pages/chat/api';
+import { useActiveGroup } from '../pages/chat/use-active-group';
+import { GroupFolder } from './project-folder';
+
+import type { TokenSource } from '../api';
 import type { IdentityContext, ReadinessResponse } from '../types';
 import { isNavItemActive, navItems } from './nav-items';
 import { ProductMark } from './product-mark';
@@ -21,76 +29,100 @@ interface AppShellProps {
   readonly children: ReactNode;
   readonly identity: IdentityContext;
   readonly readiness: ReadinessResponse | undefined;
+  readonly getToken: TokenSource;
 }
 
-/**
- * Which tenant this is and whether its dependencies answered.
- *
- * It sits in the rail rather than in a bar across every page: it is context for
- * the whole session, not a heading for the page being read.
- */
-const WorkspaceLockup = ({
-  identity,
-  readiness,
-}: {
-  readonly identity: IdentityContext;
-  readonly readiness: ReadinessResponse | undefined;
-}) => {
-  const ready = readiness?.status === 'ready';
-  return (
-    <div className="mt-4 flex flex-col gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted">
-      <span className="flex items-center gap-2 text-foreground">
-        <i
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${ready ? 'bg-primary' : 'bg-warning'}`}
-          aria-hidden="true"
-        />
-        <span className="truncate">{identity.organization_name}</span>
-      </span>
-      <span>
-        {identity.role} · {ready ? 'foundation ready' : 'dependency review'}
-      </span>
-    </div>
-  );
-};
+interface WorkspaceContextValue {
+  groupId: string | null;
+  selectGroup: (groupId: string) => void;
+}
+
+export const WorkspaceContext = createContext<WorkspaceContextValue>({
+  groupId: null,
+  selectGroup: () => undefined,
+});
+export const useWorkspace = () => useContext(WorkspaceContext);
+
 
 /**
  * The frame every authenticated page renders inside: the navigation rail, and
  * the page itself. Nothing is drawn above the page — a section of chrome
  * repeated on every route earns its space only if it does something.
  */
-export const AppShell = ({ children, identity, readiness }: AppShellProps) => {
+export const AppShell = ({ children, identity, readiness, getToken }: AppShellProps) => {
   const { logout, user } = useAuth();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+
+  const initialGroup = useActiveGroup(getToken);
+  const [groupId, setGroupId] = useState<string | null>(null);
+
+  // Track expanded accordion items
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+
+  // The first available Group is a sensible initial destination, but every
+  // later selection is intentional: opening a Group or one of its chats
+  // makes it the destination for the next new chat.
+  useEffect(() => {
+    if (!groupId && initialGroup.data) {
+      setGroupId(initialGroup.data);
+      setExpandedGroups((current) => (current.length === 0 ? [initialGroup.data] : current));
+    }
+  }, [groupId, initialGroup.data]);
+
+  const selectGroup = useCallback((nextGroupId: string) => {
+    setGroupId(nextGroupId);
+    setExpandedGroups((current) =>
+      current.includes(nextGroupId) ? current : [...current, nextGroupId],
+    );
+  }, []);
+
+  const groupsQuery = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => listGroups(getToken),
+    enabled: Boolean(initialGroup.data),
+  });
+
+  const createGroupMutation = useMutation({
+    mutationFn: (name: string) => createGroup(getToken, name),
+    onSuccess: (newGroup) => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      selectGroup(newGroup.group_id);
+      setNewGroupName('');
+      setIsModalOpen(false);
+      navigate('/chats'); // Automatically jump to chats list on workspace switch
+    },
+  });
 
   const railFooter = (
     <>
-      <IconButton
-        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        intent="ghost"
-        size="sm"
-        className={collapsed ? undefined : 'self-end'}
-        onClick={() => setCollapsed((open) => !open)}
-      >
-        <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="sm" />
-      </IconButton>
-
       {/* Collapsed, the primary action is a tile the same size as a nav item,
           so the rail stays one column of squares. */}
       {collapsed ? (
-        <Tooltip content="New analysis" side="right" sideOffset={10}>
-          <Button component={Link} to="/" aria-label="New analysis" className="h-11 w-11 p-0">
+        <Tooltip content="New chat" side="right" sideOffset={10}>
+          <Button component={Link} to="/" aria-label="New chat" className="h-11 w-11 p-0">
             <Icon name="plus" size="sm" />
           </Button>
         </Tooltip>
       ) : (
         <Button component={Link} to="/" fullWidth start={<Icon name="plus" size="sm" />}>
-          New analysis
+          New chat
         </Button>
       )}
 
       {collapsed ? null : (
         <>
+          <Link
+            className="flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline transition-colors hover:text-foreground"
+            to="/settings"
+          >
+            <Icon name="settings" size="sm" />
+            Settings
+          </Link>
           <a
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
             href="https://github.com/openzentra/nexus"
@@ -112,43 +144,67 @@ export const AppShell = ({ children, identity, readiness }: AppShellProps) => {
         </>
       )}
 
-      <div className="mt-1 w-full border-t border-border pt-3">
-        <Tooltip
-          content={`Sign out of ${user?.email ?? 'this account'}`}
-          side="right"
-          sideOffset={10}
+      <div
+        className={`mt-1 min-w-0 border-t border-border pt-3 ${
+          collapsed ? 'w-full' : '-mx-3 w-auto'
+        }`}
+      >
+        <div
+          className={
+            collapsed ? 'flex justify-center' : 'px-3 [&>span]:w-full [&>span]:min-w-0'
+          }
         >
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className={`flex items-center gap-2 rounded-md text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
-              collapsed ? 'h-11 w-11 justify-center p-0' : 'w-full px-3 py-2'
-            }`}
+          <Tooltip
+            content={`Sign out of ${user?.email ?? 'this account'}`}
+            side="right"
+            sideOffset={10}
           >
-            <Avatar size="xs" name={user?.email ?? 'Account'} />
-            {collapsed ? null : (
-              <>
-                <span className="min-w-0 truncate">{user?.email ?? 'Account'}</span>
-                <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
-              </>
-            )}
-            <span className="sr-only">Sign out</span>
-          </button>
-        </Tooltip>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className={`flex min-w-0 items-center gap-2 rounded-md text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
+                collapsed ? 'h-11 w-11 justify-center p-0' : 'w-full px-3 py-2'
+              }`}
+            >
+              <Avatar size="xs" name={user?.email ?? 'Account'} />
+              {collapsed ? null : (
+                <>
+                  <span className="min-w-0 flex-1 truncate">{user?.email ?? 'Account'}</span>
+                  <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
+                </>
+              )}
+              <span className="sr-only">Sign out</span>
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </>
   );
 
   return (
-    <div className="flex h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
+    <div className="flex h-screen bg-background text-foreground selection:bg-primary/15 selection:text-primary-foreground">
       <SideNav
         aria-label="Primary"
         width={collapsed ? 'compact' : 'default'}
+        className="hidden md:flex"
         brand={
-          <>
+          <div className="flex w-full items-start justify-between gap-1">
             <ProductMark showRelease compact={collapsed} />
-            {collapsed ? null : <WorkspaceLockup identity={identity} readiness={readiness} />}
-          </>
+            <Tooltip
+              content={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+              side="right"
+              sideOffset={10}
+            >
+              <IconButton
+                aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                intent="ghost"
+                size="sm"
+                onClick={() => setCollapsed((open) => !open)}
+              >
+                <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="sm" />
+              </IconButton>
+            </Tooltip>
+          </div>
         }
         footer={railFooter}
       >
@@ -163,21 +219,95 @@ export const AppShell = ({ children, identity, readiness }: AppShellProps) => {
             {item.label}
           </SideNav.Item>
         ))}
+
+        <div className={`mt-4 ${collapsed ? '' : '-mx-3 border-t border-border pt-5 px-3'}`}>
+          {collapsed ? null : (
+            <div className="flex items-center justify-between px-3 pb-2">
+              <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+                Groups
+              </h2>
+              <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <Modal.Trigger
+                  aria-label="New Group"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  <Icon name="plus" size="sm" />
+                </Modal.Trigger>
+                <Modal.Content>
+                  <Modal.Header>
+                    <Modal.Title>Create New Group</Modal.Title>
+                    <Modal.Description>Enter a name for your new group.</Modal.Description>
+                    <Modal.Close />
+                  </Modal.Header>
+                  <Modal.Body>
+                    <Input
+                      autoFocus
+                      placeholder="e.g. Acme Corp"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newGroupName.trim().length > 0) {
+                          createGroupMutation.mutate(newGroupName.trim());
+                        }
+                      }}
+                    />
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button intent="ghost" onClick={() => setIsModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      disabled={newGroupName.trim().length === 0 || createGroupMutation.isPending}
+                      onClick={() => createGroupMutation.mutate(newGroupName.trim())}
+                    >
+                      {createGroupMutation.isPending ? 'Creating...' : 'Create'}
+                    </Button>
+                  </Modal.Footer>
+                </Modal.Content>
+              </Modal>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1">
+            <Accordion
+              multiple={true}
+              value={expandedGroups}
+              onValueChange={setExpandedGroups}
+              className="flex flex-col gap-1"
+            >
+              {groupsQuery.data?.items.map((g) => (
+                <GroupFolder
+                  key={g.group_id}
+                  group={g}
+                  getToken={getToken}
+                  collapsed={collapsed}
+                  active={g.group_id === groupId}
+                  onSelect={selectGroup}
+                />
+              ))}
+            </Accordion>
+          </div>
+        </div>
       </SideNav>
 
-      <main className="min-w-0 flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="h-full w-full overflow-y-auto"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
+          <ProductMark compact />
+          <nav className="flex items-center gap-1" aria-label="Mobile primary">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`inline-flex min-h-10 items-center rounded-md px-3 text-sm font-medium no-underline ${isNavItemActive(item, pathname) ? 'bg-primary/10 text-primary' : 'text-foreground-muted'}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </header>
+        <WorkspaceContext.Provider value={{ groupId, selectGroup }}>
+          {children}
+        </WorkspaceContext.Provider>
       </main>
     </div>
   );

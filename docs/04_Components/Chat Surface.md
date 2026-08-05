@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-08-01
-updated: 2026-08-01
-reviewed: 2026-08-01
+updated: 2026-08-05
+reviewed: 2026-08-05
 confidence: verified
 implementation: current
 priority: high
@@ -21,9 +21,9 @@ code_refs:
   - apps/nexus/src/app/pages/chat/api.ts
   - apps/nexus/src/app/pages/chat/use-thread-events.ts
   - apps/nexus/src/app/pages/chat/use-active-group.ts
-  - apps/nexus/src/app/pages/chat/activity-inspector.tsx
-  - apps/nexus/src/app/pages/chat/use-resizable-panel.ts
   - apps/nexus/src/app/pages/chat/composer-commands.ts
+  - apps/nexus/src/app/pages/chat/chat-composer.tsx
+  - apps/nexus/src/app/components/markdown.tsx
   - apps/nexus/src/app/pages/chat/visualization-answer.tsx
   - apps/nexus/src/app/pages/chat/brief-answer.tsx
   - apps/nexus/src/app/types/thread.ts
@@ -51,11 +51,9 @@ buffers partial chunks, ignores the `: heartbeat` comment, and events are
 deduplicated by `event_id` — the sequence is also the resume token, so a
 reconnect legitimately replays it.
 
-Agent activity itself is hidden by default behind the Activity Inspector
-(`activity-inspector.tsx`) — a resizable right panel on desktop, a bottom
-drawer on mobile, opened from a header toggle (ADR-0029). A pending Human
-Approval is the one exception and stays inline in the conversation
-(`investigation-controls.tsx`), never inside the panel.
+Agent activity is grouped inline with the live turn. A pending Human Approval
+also stays inline in the conversation (`investigation-controls.tsx`), so the
+reader never has to leave the chat to understand the work in progress.
 
 ## Workspace resolution
 
@@ -74,6 +72,20 @@ draft message into a clean text body plus recognized hints, shown as chips
 which still validates it against the Tenant's Analytical Scope. Only
 `#dataset` has a real backend effect (Chat Session's dataset default);
 `@user` and `/skill` are parsed and shown, not yet acted on.
+
+## Tiptap editing and reply rendering
+
+The composer is a deliberately plain-text Tiptap editor. It keeps browser-native
+caret movement, selection, IME support, Enter-to-send and Shift+Enter for a new
+line, but exposes no formatting controls or Markdown shortcuts. The submitted
+value remains the same clean text body the Chat Session API has always accepted;
+Tiptap changes editing quality, not the API or persisted message format.
+
+Assistant replies use a read-only Tiptap Markdown renderer. It supports headings,
+lists, tables, links, quotes and code, while escaping raw HTML before it is
+parsed. Live turns receive short opacity/position transitions and the composer
+shell animates focus and resize states; historical messages remain static and all
+new motion respects the user's reduced-motion preference.
 
 ## Server-decided actions
 

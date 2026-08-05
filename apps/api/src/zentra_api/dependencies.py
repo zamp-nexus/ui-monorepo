@@ -293,11 +293,11 @@ class AppDependencies:
                     bytes.fromhex(settings.connector_credential_key)
                 ),
                 landing_zone=ClickHouseLandingZone(
-                    host=settings.clickhouse_host,
-                    port=settings.clickhouse_port,
-                    username=settings.clickhouse_username,
-                    password=settings.clickhouse_password,
-                    secure=settings.clickhouse_secure,
+                    host=settings.upload_clickhouse_host,
+                    port=settings.upload_clickhouse_port,
+                    username=settings.upload_clickhouse_username,
+                    password=settings.upload_clickhouse_password,
+                    secure=settings.upload_clickhouse_secure,
                 ),
                 clock=_UtcClock(),
             )

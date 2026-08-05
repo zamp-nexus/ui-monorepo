@@ -1,5 +1,4 @@
 import { MessagePrimitive } from '@assistant-ui/react';
-import { motion } from 'framer-motion';
 
 import { ChatTextPart } from './chat-text-part';
 import { AnalysisRunFindingMessage } from './investigation-finding-message';
@@ -7,14 +6,9 @@ import { RouterClarificationMessage } from './router-clarification-message';
 
 export const UserMessage = () => (
   <MessagePrimitive.Root className="flex justify-end">
-    <motion.p
-      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      className="max-w-2xl whitespace-pre-wrap rounded-2xl rounded-br-sm border border-border bg-gradient-to-br from-background-muted to-transparent px-4 py-3 text-sm text-foreground shadow-sm"
-    >
+    <p className="max-w-2xl whitespace-pre-wrap rounded-md bg-secondary px-4 py-3 text-sm text-foreground">
       <MessagePrimitive.Content components={{ Text: ({ text }) => <>{text}</> }} />
-    </motion.p>
+    </p>
   </MessagePrimitive.Root>
 );
 
@@ -26,22 +20,16 @@ export const UserMessage = () => (
  */
 export const AssistantMessage = () => (
   <MessagePrimitive.Root>
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-    >
-      <MessagePrimitive.Content
-        components={{
-          Text: ChatTextPart,
-          tools: {
-            by_name: {
-              'analysis-run-finding': AnalysisRunFindingMessage,
-              'router-clarification': RouterClarificationMessage,
-            },
+    <MessagePrimitive.Content
+      components={{
+        Text: ChatTextPart,
+        tools: {
+          by_name: {
+            'analysis-run-finding': AnalysisRunFindingMessage,
+            'router-clarification': RouterClarificationMessage,
           },
-        }}
-      />
-    </motion.div>
+        },
+      }}
+    />
   </MessagePrimitive.Root>
 );

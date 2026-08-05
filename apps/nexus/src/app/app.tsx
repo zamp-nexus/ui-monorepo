@@ -8,7 +8,6 @@ import { SignIn, SignUp, useOrganizationMemberships } from '@open-zentra/foundat
 
 import { ApiError, apiUrl, requestJson, type TokenSource } from './api';
 import { ChatPage } from './pages/chat/chat-page';
-import { ComingSoon } from './pages/coming-soon';
 import { ConnectionsPage } from './pages/connections/connections-page';
 import { ConnectorConfig } from './pages/connections/connector-config';
 import { ConnectorPicker } from './pages/connections/connector-picker';
@@ -26,6 +25,8 @@ import {
 } from './pages/entry-screens';
 import { SequenceDetailPage } from './pages/sequences/sequence-detail-page';
 import { SequencesPage } from './pages/sequences/sequences-page';
+import { SettingsPage } from './pages/settings/settings-page';
+import { WorkflowStudioPage } from './pages/workflows/workflow-studio-page';
 import { AppShell } from './shell/app-shell';
 import type { IdentityContext, ReadinessResponse } from './types';
 
@@ -121,7 +122,7 @@ const AuthenticatedWorkspace = () => {
   }
 
   return (
-    <AppShell identity={identity.data} readiness={readiness.data}>
+    <AppShell identity={identity.data} readiness={readiness.data} getToken={getToken}>
       <Routes>
         <Route path="/" element={<Navigate replace to="/chats" />} />
         <Route path="/chats" element={<ChatPage getToken={getToken} identity={identity.data} />} />
@@ -130,14 +131,8 @@ const AuthenticatedWorkspace = () => {
           element={<ChatPage getToken={getToken} identity={identity.data} />}
         />
         <Route
-          path="/dashboard"
-          element={
-            <ComingSoon
-              title="Dashboard"
-              icon="grid"
-              description="A tenant-wide view of running analysis runs, published findings and the approvals waiting on you."
-            />
-          }
+          path="/workflows"
+          element={<WorkflowStudioPage getToken={getToken} identity={identity.data} />}
         />
         <Route
           path="/datasets"
@@ -165,16 +160,7 @@ const AuthenticatedWorkspace = () => {
           path="/connections/new/:connectorId"
           element={<ConnectorConfig getToken={getToken} identity={identity.data} />}
         />
-        <Route
-          path="/settings"
-          element={
-            <ComingSoon
-              title="Settings"
-              icon="settings"
-              description="Tenant policy, approval thresholds, theme and notification preferences."
-            />
-          }
-        />
+        <Route path="/settings" element={<SettingsPage getToken={getToken} />} />
         <Route path="*" element={<Navigate replace to="/chats" />} />
       </Routes>
     </AppShell>
@@ -193,6 +179,12 @@ const AuthenticatedEntry = () => {
   return <AuthenticatedWorkspace />;
 };
 
+const AuthLayout = ({ children }: { readonly children: React.ReactNode }) => (
+  <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+    {children}
+  </div>
+);
+
 export function App({ clerkConfigured = false }: AppProps) {
   if (!clerkConfigured) {
     return <SetupRequired />;
@@ -201,11 +193,19 @@ export function App({ clerkConfigured = false }: AppProps) {
     <Routes>
       <Route
         path="/sign-in"
-        element={<SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" />}
+        element={
+          <AuthLayout>
+            <SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" />
+          </AuthLayout>
+        }
       />
       <Route
         path="/sign-up"
-        element={<SignUp path="/sign-up" routing="path" signInUrl="/sign-in" />}
+        element={
+          <AuthLayout>
+            <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" />
+          </AuthLayout>
+        }
       />
       <Route path="*" element={<AuthenticatedEntry />} />
     </Routes>

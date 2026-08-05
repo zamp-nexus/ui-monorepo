@@ -1,5 +1,5 @@
 ---
-id: adr-0023
+id: adr-0037
 title: Source Table row browsing bypasses governed query
 type: adr
 status: active

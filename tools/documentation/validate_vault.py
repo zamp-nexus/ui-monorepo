@@ -58,9 +58,9 @@ ALLOWED_TYPES = {
     "open-question",
     "reference",
 }
-ALLOWED_STATUSES = {"draft", "active", "deprecated", "archived"}
+ALLOWED_STATUSES = {"draft", "active", "deprecated", "archived", "proposed"}
 ALLOWED_CONFIDENCE = {"verified", "mixed", "inferred"}
-ALLOWED_IMPLEMENTATION = {"current", "planned", "unknown"}
+ALLOWED_IMPLEMENTATION = {"current", "planned", "unknown", "deprecated"}
 ALLOWED_PRIORITIES = {"critical", "high", "normal", "low"}
 ALLOWED_SOURCES = {
     "repository",

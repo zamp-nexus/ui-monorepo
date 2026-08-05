@@ -131,6 +131,24 @@ class OrganizationProvisioningService:
                 created_at=created_at,
             )
 
+    async def rename_organization(
+        self,
+        *,
+        trace_id: UUID,
+        span_id: UUID,
+        external_organization_id: str,
+        name: str,
+    ) -> OrganizationDetail:
+        async with self._unit_of_work_factory(trace_id, span_id) as unit_of_work:
+            organization_id = await self._require_organization_id(
+                unit_of_work, external_organization_id
+            )
+            await unit_of_work.organizations.rename_organization(organization_id, name=name)
+            organization = await unit_of_work.organizations.get_organization(organization_id)
+            await unit_of_work.commit()
+            assert organization is not None
+            return organization
+
     async def update_member_role(
         self,
         *,

@@ -103,7 +103,7 @@ export interface InputComponent {
  */
 export const inputDefaultTheme: ComponentThemeConfigStructure = {
   root: {
-    base: 'flex w-full rounded-md border bg-background px-3 py-2 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    base: 'flex w-full rounded-md border bg-background px-3 py-2 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus/20 focus-visible:ring-offset-0',
     variants: {
       size: {
         sm: 'h-8 text-sm px-2',
@@ -118,7 +118,7 @@ export const inputDefaultTheme: ComponentThemeConfigStructure = {
       },
       invalid: {
         true: 'border-border-invalid focus-visible:ring-border-invalid',
-        false: 'border-border focus-visible:ring-border-focus',
+        false: 'border-border focus-visible:border-border-focus',
       },
       readOnly: {
         true: 'bg-background-muted cursor-default focus-visible:ring-0',

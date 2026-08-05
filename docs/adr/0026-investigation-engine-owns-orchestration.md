@@ -27,7 +27,7 @@ code_refs:
   - apps/api/src/zentra_api/outcomes.py
   - apps/api/src/zentra_api/orchestrator_loop.py
   - libs/domain/analysis_run/src/zentra_domain_analysis_run/completion.py
-  - libs/domain/analysis_run/src/zentra_domain_analysis_run/investigation_board.py
+  - libs/domain/analysis_run/src/zentra_domain_analysis_run/analysis_run_board.py
   - libs/domain/analysis_run/src/zentra_domain_analysis_run/work_item.py
 ---
 

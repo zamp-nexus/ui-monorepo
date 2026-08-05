@@ -109,30 +109,30 @@ export const sideNavDefaultTheme: ComponentThemeConfigStructure = {
     // `group` so the collapsed state set on the rail can reach the items:
     // labels hide and rows centre from one attribute rather than every item
     // being told what width its parent is.
-    base: 'group flex h-full shrink-0 flex-col gap-6 border-r border-border bg-card py-5 transition-[width] duration-200',
+    base: 'group flex h-full shrink-0 flex-col gap-6 border-r border-border-subtle bg-card py-5 transition-[width] duration-200',
     variants: {
       width: {
         // Wide enough for a 44px tile plus even gutters, so the collapsed rail
         // is a column of squares rather than icons pushed against an edge.
-        compact: 'w-[4.75rem] items-center px-4',
-        default: 'w-60 px-3',
+        compact: 'w-[4.75rem] items-center',
+        default: 'w-60',
       },
     },
     modifiers: {},
   },
   slots: {
     brand: {
-      base: 'px-2 group-data-[collapsed=true]:flex group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0',
+      base: 'px-5 group-data-[collapsed=true]:flex group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },
     list: {
-      base: 'flex flex-1 flex-col gap-1 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-2',
+      base: 'flex flex-1 flex-col gap-1 px-3 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-2 group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },
     footer: {
-      base: 'mt-auto flex flex-col gap-2 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-3',
+      base: 'mt-auto flex flex-col gap-2 px-3 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-3 group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },
@@ -144,7 +144,7 @@ export const sideNavDefaultTheme: ComponentThemeConfigStructure = {
       variants: {},
       modifiers: {
         active: {
-          true: 'bg-accent text-accent-foreground font-medium',
+          true: 'bg-primary/10 text-primary font-medium',
           false: 'text-foreground-muted hover:bg-secondary hover:text-foreground',
         },
       },

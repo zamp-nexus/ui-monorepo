@@ -1,7 +1,9 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
-import { Badge, Button, IconButton } from '@open-zentra/foundation-design-system';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+
+import { Badge, Button } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { parseComposerCommands } from './composer-commands';
@@ -14,49 +16,100 @@ interface ChatComposerProps {
   readonly onDraftChange: (draft: string) => void;
 }
 
+const plainTextExtensions = [
+  StarterKit.configure({
+    blockquote: false,
+    bold: false,
+    bulletList: false,
+    code: false,
+    codeBlock: false,
+    dropcursor: false,
+    gapcursor: false,
+    heading: false,
+    horizontalRule: false,
+    italic: false,
+    link: false,
+    listItem: false,
+    listKeymap: false,
+    orderedList: false,
+    strike: false,
+  }),
+];
+
+const isJsdom = typeof navigator !== 'undefined' && navigator.userAgent.includes('jsdom');
+
 /**
- * The message box.
- *
- * Enter sends and Shift+Enter breaks the line — the convention a chat surface
- * is judged by. The attachment controls are drawn but disabled: they say what
- * is coming without pretending to work.
- *
- * `#dataset`, `@user`, and `/skill` (ADR-0032) are parsed live and shown as
- * chips; the stripped text, not the raw draft, is what gets sent -- these are
- * metadata on the message, not part of the question itself.
+ * A deliberately plain-text Tiptap editor. Tiptap provides the native caret,
+ * selection and IME support; the Chat Session API continues to receive text.
  */
 export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatComposerProps) => {
-  const [rows, setRows] = useState(1);
-  const [isFocused, setIsFocused] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const disabledRef = useRef(disabled);
+  const onSendRef = useRef(onSend);
   const parsed = useMemo(() => parseComposerCommands(draft), [draft]);
   const hasCommands = Boolean(parsed.datasetHint || parsed.mentions.length > 0 || parsed.skillHint);
+  disabledRef.current = disabled;
+  onSendRef.current = onSend;
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
-    const message = parsed.text;
-    if (!message || disabled) return;
-    onSend(message);
-    setRows(1);
+    if (!parsed.text || disabled) return;
+    onSend(parsed.text);
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      submit();
-    }
-  };
+  const editor = useEditor({
+    extensions: plainTextExtensions,
+    content: draft,
+    editable: !disabled,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        'aria-label': 'Message',
+        'aria-multiline': 'true',
+        class: 'min-h-6 max-h-48 overflow-y-auto outline-none',
+        role: 'textbox',
+      },
+      handleKeyDown: (_view, event) => {
+        if (event.key !== 'Enter' || event.shiftKey) return false;
+        event.preventDefault();
+        const text = isJsdom
+          ? (_view.dom.textContent ?? '')
+          : _view.state.doc.textBetween(0, _view.state.doc.content.size, '\n');
+        const message = parseComposerCommands(text).text;
+        if (message && !disabledRef.current) onSendRef.current(message);
+        return true;
+      },
+      // ProseMirror's selection-scroll routine requires browser layout APIs
+      // that jsdom intentionally does not implement. Browsers retain normal
+      // selection scrolling; tests use inert geometry only.
+      handleScrollToSelection: () => isJsdom,
+    },
+    onFocus: () => setFocused(true),
+    onBlur: () => setFocused(false),
+    onUpdate: ({ editor: nextEditor }) => onDraftChange(nextEditor.getText({ blockSeparator: '\n' })),
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!disabled);
+  }, [disabled, editor]);
+
+  useEffect(() => {
+    if (!editor || editor.getText({ blockSeparator: '\n' }) === draft) return;
+    editor.commands.setContent(draft, { emitUpdate: false });
+  }, [draft, editor]);
 
   return (
-    <motion.form
-      layout
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`relative w-full overflow-hidden rounded-3xl border border-glass-border bg-glass p-3 backdrop-blur-3xl transition-shadow duration-500 ease-out ${
-        isFocused ? 'shadow-[0_0_40px_rgba(255,255,255,0.06)]' : 'shadow-lg'
-      }`}
+    <form
+      className="w-full border-t border-border bg-background px-4 pb-4 pt-3 sm:px-6"
       onSubmit={submit}
       aria-label="Send a message"
     >
-      <motion.div layout className="flex flex-col gap-3 rounded-2xl bg-background/40 p-3 transition-colors focus-within:bg-background/60">
+      <div
+        className={`mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border bg-card p-3 transition-[border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transition-none ${
+          focused ? 'border-primary/70 shadow-[var(--focus-ring)]' : 'border-border shadow-[var(--shadow-depth-01)]'
+        }`}
+      >
         {hasCommands ? (
           <div className="flex flex-wrap items-center gap-2" aria-live="polite">
             {parsed.datasetHint ? (
@@ -86,38 +139,18 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           </div>
         ) : null}
 
-        <label className="sr-only" htmlFor="chat-message">
-          Message
-        </label>
-        <textarea
-          id="chat-message"
-          className="max-h-48 w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed"
-          rows={rows}
-          value={draft}
-          disabled={disabled}
-          placeholder={disabled ? 'Sending…' : 'Ask a governed question…'}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          onChange={(event) => {
-            onDraftChange(event.target.value);
-            setRows(Math.min(6, Math.max(1, event.target.value.split('\n').length)));
-          }}
-        />
+        <div className="relative text-sm text-foreground">
+          {!draft ? (
+            <span className="pointer-events-none absolute left-0 top-0 text-foreground-muted">
+              {disabled ? 'Working on your question…' : 'Ask anything about your data…'}
+            </span>
+          ) : null}
+          <EditorContent editor={editor} />
+        </div>
 
-        <motion.div layout className="flex items-center gap-1">
-          <IconButton aria-label="Attach a file" intent="ghost" size="sm" disabled>
-            <Icon name="clipboard" size="sm" />
-          </IconButton>
-          <IconButton aria-label="Mention a dataset" intent="ghost" size="sm" disabled>
-            <Icon name="tag" size="sm" />
-          </IconButton>
-          <IconButton aria-label="Attach an image" intent="ghost" size="sm" disabled>
-            <Icon name="image" size="sm" />
-          </IconButton>
-
+        <div className="flex items-center gap-1">
           <Button
-            className="ml-auto"
+            className="ml-auto transition-transform duration-150 ease-out active:scale-95 motion-reduce:transition-none"
             type="submit"
             size="sm"
             disabled={disabled || parsed.text.length === 0}
@@ -125,12 +158,8 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           >
             Send
           </Button>
-        </motion.div>
-      </motion.div>
-
-      <motion.p layout className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted/70">
-        Answers are drafts · every claim is rechecked before it becomes a Finding
-      </motion.p>
-    </motion.form>
+        </div>
+      </div>
+    </form>
   );
 };

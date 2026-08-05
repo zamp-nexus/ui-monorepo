@@ -22,7 +22,7 @@ const renderAt = (path: string, viewer = false) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const who = viewer ? { ...identity, role: 'viewer' } : identity;
+  const who: IdentityContext = viewer ? { ...identity, role: 'viewer' } : identity;
 
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -86,8 +86,8 @@ describe('Connections', () => {
     expect(screen.getAllByText('ClickHouse').length).toBeGreaterThan(0);
     expect(screen.getByText('Snowflake')).toBeTruthy();
     expect(screen.getByText('AWS S3')).toBeTruthy();
-    // One connector connects; the rest say they do not.
-    expect(screen.getAllByText('Connects')).toHaveLength(1);
+    // ClickHouse and file upload are available; the rest state their status.
+    expect(screen.getAllByText('Connects')).toHaveLength(2);
     expect(screen.getAllByText('Not built').length).toBeGreaterThan(1);
   });
 

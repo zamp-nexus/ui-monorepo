@@ -41,13 +41,13 @@ judgment, and immutable audit trail fit together.
 ## Primary knowledge path
 
 [[07_Workflows/Investigation Trust Loop|Question]]
-→ [[03_Domains/Investigation Domain]]
+→ [[03_Domains/Analysis Run Domain]]
 → [[06_Data/Cube Semantic Model]]
 → [[06_Data/Postgres Control Plane]]
 → [[07_Workflows/Audit Outbox Delivery]]
 → [[06_Data/ClickHouse Audit Ledger]]
 → [[03_Domains/Trust and Verification]]
-→ [[05_APIs/Investigation API]]
+→ [[05_APIs/Analysis Run API]]
 → [[04_Components/Forensic Observatory]]
 
 ## Current boundary

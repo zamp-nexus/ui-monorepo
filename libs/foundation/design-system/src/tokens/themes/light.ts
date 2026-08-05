@@ -1,6 +1,6 @@
 /**
- * Light Theme - Secondary Theme
- * Linear-inspired light theme implementation
+ * Light Theme - Default product theme
+ * Neutral, analytical light theme with a single indigo action color.
  *
  * Design principles:
  * - Inverted layer values (lighter = deeper)
@@ -23,40 +23,40 @@ export const lightTheme = createTheme({
   colors: {
     background: {
       // Layer system: lighter = deeper (inverted)
-      layer00: 'hsl(140 6% 98%)', // Deepest - canvas
-      layer01: 'hsl(140 6% 100%)', // Default surface (white)
-      layer02: 'hsl(140 6% 100%)', // Elevated (same as layer01)
-      layer03: 'hsl(140 6% 100%)', // Highest - modals
-      overlay: 'hsla(140 8% 8% / 0.4)', // Backdrop (semi-transparent)
+      layer00: 'hsl(225 24% 98%)',
+      layer01: 'hsl(0 0% 100%)',
+      layer02: 'hsl(225 20% 97%)',
+      layer03: 'hsl(0 0% 100%)',
+      overlay: 'hsla(225 30% 12% / 0.32)',
     },
 
     text: {
       // Text hierarchy: darker = more emphasis
-      highlight: 'hsl(140 6% 8%)', // Maximum emphasis
-      primary: 'hsl(140 6% 12%)', // High contrast
-      secondary: 'hsl(140 6% 36%)', // Reduced
-      tertiary: 'hsl(140 6% 48%)', // Placeholders
-      muted: 'hsl(140 6% 62%)', // Disabled
-      inverted: 'hsl(140 6% 96%)', // On colored BG
+      highlight: 'hsl(228 27% 11%)',
+      primary: 'hsl(228 24% 16%)',
+      secondary: 'hsl(225 12% 38%)',
+      tertiary: 'hsl(225 10% 50%)',
+      muted: 'hsl(225 10% 64%)',
+      inverted: 'hsl(0 0% 100%)',
     },
 
     interactive: {
       primary: {
-        resting: 'hsl(88 72% 28%)', // Slightly darker for light mode
-        hovered: 'hsl(88 72% 24%)', // Darker on hover
-        pressed: 'hsl(88 72% 20%)', // Even darker on press
-        disabled: 'hsl(88 20% 70%)', // Desaturated, lighter
+        resting: 'hsl(238 63% 44%)',
+        hovered: 'hsl(238 63% 38%)',
+        pressed: 'hsl(238 63% 32%)',
+        disabled: 'hsl(238 24% 72%)',
       },
       secondary: {
-        resting: 'hsl(140 6% 100%)', // White
-        hovered: 'hsl(140 6% 96%)', // Light gray
-        pressed: 'hsl(140 6% 92%)', // Darker gray
-        disabled: 'hsl(140 6% 96%)', // Light gray
+        resting: 'hsl(0 0% 100%)',
+        hovered: 'hsl(225 20% 96%)',
+        pressed: 'hsl(225 18% 93%)',
+        disabled: 'hsl(225 20% 96%)',
       },
       tertiary: {
         resting: 'transparent',
-        hovered: 'hsl(140 6% 96%)',
-        pressed: 'hsl(140 6% 94%)',
+        hovered: 'hsl(225 20% 96%)',
+        pressed: 'hsl(225 18% 93%)',
         disabled: 'transparent',
       },
       destructive: {
@@ -74,14 +74,14 @@ export const lightTheme = createTheme({
     },
 
     border: {
-      default: 'hsl(140 6% 92%)',
-      subtle: 'hsl(140 6% 94%)',
-      emphasis: 'hsl(140 6% 88%)',
-      focus: 'hsl(88 72% 28%)',
+      default: 'hsl(225 18% 89%)',
+      subtle: 'hsl(225 20% 94%)',
+      emphasis: 'hsl(225 16% 82%)',
+      focus: 'hsl(238 63% 44%)',
     },
 
     feedback: {
-      success: 'hsl(92 66% 32%)', // Darker for light mode
+      success: 'hsl(150 58% 31%)',
       warning: 'hsl(45 82% 38%)',
       error: 'hsl(0 74% 46%)',
       info: 'hsl(210 80% 45%)',
@@ -91,14 +91,14 @@ export const lightTheme = createTheme({
   effects: {
     shadow: {
       // Lighter shadows for light mode
-      depth01: '0 0 2px 0 hsla(140 8% 8% / 0.05), 0 2px 4px 0 hsla(140 8% 8% / 0.03)',
-      depth02: '0 2px 12px 0 hsla(140 8% 8% / 0.08)',
-      depth03: '0 0 6px 1px hsla(140 8% 8% / 0.03), 0 2px 24px 0 hsla(140 8% 8% / 0.06)',
-      depth04: '0 4px 32px 0 hsla(140 8% 8% / 0.12), 0 16px 48px 0 hsla(140 8% 8% / 0.08)',
+      depth01: '0 1px 2px hsla(228 30% 15% / 0.04)',
+      depth02: '0 6px 18px hsla(228 30% 15% / 0.06)',
+      depth03: '0 12px 32px hsla(228 30% 15% / 0.08)',
+      depth04: '0 20px 52px hsla(228 30% 15% / 0.12)',
     },
     focus: {
-      ring: '0 0 0 2px hsla(88 72% 28% / 0.2)',
-      ringOffset: '0 0 0 4px hsla(88 72% 28% / 0.1)',
+      ring: '0 0 0 2px hsla(238 63% 44% / 0.24)',
+      ringOffset: '0 0 0 4px hsla(238 63% 44% / 0.1)',
     },
   },
 } as const satisfies ThemeContract);

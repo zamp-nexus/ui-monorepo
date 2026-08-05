@@ -17,7 +17,7 @@ depends_on: ["[[Postgres Control Plane]]", "[[ClickHouse Adapter]]"]
 repo_path: apps/api/src/zentra_api/audit_delivery.py
 code_refs:
   - apps/api/src/zentra_api/audit_delivery.py
-  - libs/adapters/postgres/src/zentra_adapter_postgres/investigation.py
+  - libs/adapters/postgres/src/zentra_adapter_postgres/analysis_run.py
 ---
 
 # Audit Outbox Delivery

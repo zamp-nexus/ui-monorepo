@@ -12,6 +12,18 @@ _Avoid_: Bot, participant, human reviewer
 One bounded invocation of an Agent for one Analysis Run and Tenant.
 _Avoid_: Agent run, task process
 
+**Workflow**:
+A user-authored orchestration definition that specifies its participating Agents and how work moves between them. V1 persists and simulates custom Workflows but does not execute them.
+_Avoid_: Agentic skill, orchestration loop, pipeline, graph
+
+**Default Workflow**:
+The system-owned Workflow selected for analytical runs in V1. It is inspectable and cloneable but not directly editable.
+_Avoid_: Editable template, hard-coded pipeline
+
+**Workflow Version**:
+One immutable published snapshot of a Workflow; its editable draft is separate. Custom Workflow Versions are not executable in V1.
+_Avoid_: Live workflow, mutable deployment
+
 **Orchestrator Loop**:
 The deterministic application service that stewards an Investigation: observes the Investigation Board, matches open Knowledge Gaps to registered Agent capabilities, assigns Work Items, merges returned artifacts, and decides Completion Criteria. Not an Agent and never owns a conclusion — it may consult the Orchestrator Agent for planning proposals, but acceptance and completion are rule-based. See [[adr/0026-investigation-engine-owns-orchestration]].
 _Avoid_: Pipeline, graph, controller
