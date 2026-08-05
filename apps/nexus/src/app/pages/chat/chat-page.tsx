@@ -64,6 +64,7 @@ export const ChatPage = ({
   const [draft, setDraft] = useState('');
   const [workflowId, setWorkflowId] = useState('default-analytics');
   const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
+  const hydratedWorkflowThread = useRef<string | null>(null);
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const snapshot = useQuery({
@@ -93,10 +94,17 @@ export const ChatPage = ({
   const thread = snapshot.data ?? null;
 
   useEffect(() => {
-    if (!workflowExecution.data || workflowId !== 'default-analytics') return;
-    setWorkflowId(workflowExecution.data.workflow_id);
-    setWorkflowVersion(workflowExecution.data.workflow_version);
-  }, [workflowExecution.data, workflowId]);
+    if (!activeThreadId) {
+      hydratedWorkflowThread.current = null;
+      setWorkflowId('default-analytics');
+      setWorkflowVersion(null);
+      return;
+    }
+    if (workflowExecution.isLoading || hydratedWorkflowThread.current === activeThreadId) return;
+    hydratedWorkflowThread.current = activeThreadId;
+    setWorkflowId(workflowExecution.data?.workflow_id ?? 'default-analytics');
+    setWorkflowVersion(workflowExecution.data?.workflow_version ?? null);
+  }, [activeThreadId, workflowExecution.data, workflowExecution.isLoading]);
 
   // A direct link to a chat has no preceding sidebar click. Its owning Group
   // is still the active project, so subsequent New chat actions stay there.

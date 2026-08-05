@@ -324,6 +324,36 @@ async def _custom_workflow_thread(
     return ChatResponse.from_detail(detail)
 
 
+async def _append_custom_workflow_reply(
+    *,
+    request: Request,
+    actor: AuthenticatedActor,
+    thread_id: UUID,
+    content: str,
+    reply: str,
+    execution_id: UUID,
+) -> ChatResponse:
+    try:
+        detail = await request.app.state.dependencies.threads.append_workflow_reply(
+            actor, thread_id=thread_id, content=content, reply=reply
+        )
+    except Exception as error:
+        async with request.app.state.dependencies.database.organization_connection(
+            actor.organization_id
+        ) as connection:
+            await connection.execute(
+                update(workflow_executions)
+                .where(workflow_executions.c.workflow_execution_id == execution_id)
+                .values(
+                    status="failed",
+                    error=f"Chat persistence failed: {error}",
+                    finished_at=datetime.now(UTC),
+                )
+            )
+        raise
+    return ChatResponse.from_detail(detail)
+
+
 @router.post(
     "/groups/{group_id}/chats",
     response_model=None,
@@ -519,7 +549,7 @@ async def append_chat_message(
 ) -> ChatResponse | StreamingResponse:
     dependencies = request.app.state.dependencies
     if body.workflow_id is not None:
-        output, _ = await _run_custom_workflow(
+        output, execution_id = await _run_custom_workflow(
             request=request,
             actor=resolved.actor,
             workflow_id=body.workflow_id,
@@ -527,10 +557,14 @@ async def append_chat_message(
             message=body.message,
             thread_id=chat_id,
         )
-        detail = await dependencies.threads.append_workflow_reply(
-            resolved.actor, thread_id=chat_id, content=body.message, reply=output
+        response = await _append_custom_workflow_reply(
+            request=request,
+            actor=resolved.actor,
+            thread_id=chat_id,
+            content=body.message,
+            reply=output,
+            execution_id=execution_id,
         )
-        response = ChatResponse.from_detail(detail)
         if _wants_event_stream(request):
             async def custom_stream() -> AsyncIterator[str]:
                 yield _sse_frame("thread", response.model_dump(mode="json"))
@@ -557,7 +591,7 @@ async def append_chat_message(
                 )
             ).first()
         if previous is not None and previous.workflow_id is not None:
-            output, _ = await _run_custom_workflow(
+            output, execution_id = await _run_custom_workflow(
                 request=request,
                 actor=resolved.actor,
                 workflow_id=previous.workflow_id,
@@ -565,10 +599,14 @@ async def append_chat_message(
                 message=body.message,
                 thread_id=chat_id,
             )
-            detail = await dependencies.threads.append_workflow_reply(
-                resolved.actor, thread_id=chat_id, content=body.message, reply=output
+            response = await _append_custom_workflow_reply(
+                request=request,
+                actor=resolved.actor,
+                thread_id=chat_id,
+                content=body.message,
+                reply=output,
+                execution_id=execution_id,
             )
-            response = ChatResponse.from_detail(detail)
             if _wants_event_stream(request):
                 async def custom_stream() -> AsyncIterator[str]:
                     yield _sse_frame("thread", response.model_dump(mode="json"))
