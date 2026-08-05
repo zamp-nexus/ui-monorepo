@@ -252,19 +252,19 @@ class PostgresThreadRepository:
         row = (await self._connection.execute(statement)).one_or_none()
         return (row.visibility, row.created_by) if row else None
 
-    async def default_data_connection_id(self, thread_id: UUID) -> UUID | None:
-        statement = select(chat_sessions.c.default_data_connection_id).where(
+    async def source_scope_id(self, thread_id: UUID) -> UUID | None:
+        statement = select(chat_sessions.c.source_scope_id).where(
             chat_sessions.c.chat_session_id == thread_id
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
 
-    async def set_default_data_connection_id(
-        self, thread_id: UUID, data_connection_id: UUID | None
+    async def set_source_scope_id(
+        self, thread_id: UUID, source_scope_id: UUID | None
     ) -> None:
         await self._connection.execute(
             update(chat_sessions)
             .where(chat_sessions.c.chat_session_id == thread_id)
-            .values(default_data_connection_id=data_connection_id)
+            .values(source_scope_id=source_scope_id)
         )
 
 

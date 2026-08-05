@@ -23,7 +23,11 @@ from zentra_application_analysis_run import (
     ConflictError,
     PermissionDeniedError,
 )
-from zentra_application_connector import CatalogVersionNotFoundError
+from zentra_application_connector import (
+    AuthenticatedActor as ConnectorActor,
+    CatalogVersionNotFoundError,
+    Role as ConnectorRole,
+)
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_analysis_run import Tombstone
 
@@ -36,7 +40,8 @@ from .schemas import (
     AnalysisRunDetailResponse,
     ApprovalDecisionRequest,
     CatalogMemberResponse,
-    CatalogSummaryResponse,
+    CatalogSourceResponse,
+    OrganizationCatalogResponse,
     ContextResponse,
     DependencyStatus,
     EvidenceCitationResponse,
@@ -121,11 +126,11 @@ async def context(
     )
 
 
-@router.get("/v1/catalog", response_model=CatalogSummaryResponse)
+@router.get("/v1/catalog", response_model=OrganizationCatalogResponse)
 async def catalog(
     request: Request,
     resolved: AuthenticatedRequest,
-) -> CatalogSummaryResponse:
+) -> OrganizationCatalogResponse:
     """The governed vocabulary this Organization may ask questions about.
 
     Resolved per Organization, so it is the Organization's own catalog and never
@@ -134,38 +139,70 @@ async def catalog(
     dimensions only: no rows, and no physical schema.
     """
     dependencies = request.app.state.dependencies
-    try:
-        semantic_layer = await dependencies.semantic_layers.resolve(
-            organization_id=resolved.actor.organization_id,
-            # The Organization's own connection, not the demo warehouse. Serving the demo
-            # catalog here would offer a question the Analysis Run cannot answer.
-            data_connection_id=await _active_connection(dependencies, resolved.actor),
-        )
-    except CatalogVersionNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No catalog has been harvested for this data connection yet.",
-        ) from error
-    governed = await semantic_layer.catalog()
-    return CatalogSummaryResponse(
-        measures=[
+
+    def members(governed: object) -> tuple[list[CatalogMemberResponse], list[CatalogMemberResponse]]:
+        return [
             CatalogMemberResponse(
                 name=measure.name,
                 type=measure.type,
                 description=measure.description,
             )
-            for measure in governed.measures
-        ],
-        dimensions=[
+            for measure in governed.measures  # type: ignore[attr-defined]
+        ], [
             CatalogMemberResponse(
                 name=dimension.name,
                 type=dimension.type,
                 description=dimension.description,
                 values=list(dimension.values),
             )
-            for dimension in governed.dimensions
-        ],
+            for dimension in governed.dimensions  # type: ignore[attr-defined]
+        ]
+
+    connector = dependencies.connector
+    if connector is None:
+        try:
+            governed = await dependencies.semantic_layers.resolve(
+                organization_id=resolved.actor.organization_id, data_connection_id=None
+            )
+        except CatalogVersionNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No catalog has been harvested for this data connection yet.",
+            ) from error
+        measures, dimensions = members(await governed.catalog())
+        return OrganizationCatalogResponse(
+            measures=measures,
+            dimensions=dimensions,
+            sources=[CatalogSourceResponse(name="Demo warehouse", kind="demo", status="ready", measures=measures, dimensions=dimensions)],
+        )
+
+    actor = ConnectorActor(
+        user_id=resolved.actor.user_id,
+        organization_id=resolved.actor.organization_id,
+        role=ConnectorRole(resolved.actor.role.value),
     )
+    sources: list[CatalogSourceResponse] = []
+    measures: list[CatalogMemberResponse] = []
+    dimensions: list[CatalogMemberResponse] = []
+    for source in await connector.list_sources(actor):
+        if source.health.value != "reachable":
+            sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status="unreachable"))
+            continue
+        try:
+            layer = await dependencies.semantic_layers.resolve(
+                organization_id=resolved.actor.organization_id,
+                data_connection_id=source.data_source_id,
+            )
+            source_measures, source_dimensions = members(await layer.catalog())
+        except CatalogVersionNotFoundError:
+            sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status="not_harvested"))
+            continue
+        status_name = "ready" if source.kind.value == "connected" else "execution_not_supported"
+        sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status=status_name, measures=source_measures, dimensions=source_dimensions))
+        if status_name == "ready":
+            measures.extend(source_measures)
+            dimensions.extend(source_dimensions)
+    return OrganizationCatalogResponse(measures=measures, dimensions=dimensions, sources=sources)
 
 
 @router.get("/v1/agents", response_model=list[PublicAgent])

@@ -126,4 +126,15 @@ export interface CatalogMember {
 export interface CatalogSummary {
   readonly measures: readonly CatalogMember[];
   readonly dimensions: readonly CatalogMember[];
+  /** Source-local catalogs are kept separate so ambiguous member names are visible. */
+  readonly sources: readonly CatalogSource[];
+}
+
+export interface CatalogSource {
+  readonly data_source_id: string | null;
+  readonly name: string;
+  readonly kind: 'connected' | 'uploaded' | 'demo';
+  readonly status: 'ready' | 'unreachable' | 'not_harvested' | 'execution_not_supported';
+  readonly measures: readonly CatalogMember[];
+  readonly dimensions: readonly CatalogMember[];
 }
