@@ -17,7 +17,7 @@ related: ["[[Components MOC]]", "[[Postgres Control Plane]]", "[[Tenancy Securit
 depends_on: ["[[Investigation Core]]"]
 repo_path: libs/adapters/postgres
 code_refs:
-  - libs/adapters/postgres/src/zentra_adapter_postgres/investigation.py
+  - libs/adapters/postgres/src/zentra_adapter_postgres/analysis_run.py
   - libs/adapters/postgres/src/zentra_adapter_postgres/schema.py
 ---
 

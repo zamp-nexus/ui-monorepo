@@ -11,7 +11,7 @@ reviewed: 2026-08-02
 confidence: verified
 implementation: planned
 tags: [adr, chat, investigation, analysis-run]
-related: ["[[Analysis Run Domain]]", "[[Nexus Domain]]", "[[adr/0017-linked-investigation-threads]]"]
+related: ["[[Analysis Run Domain]]", "[[adr/0017-linked-investigation-threads]]"]
 repo_path: libs/domain/analysis_run
 ---
 

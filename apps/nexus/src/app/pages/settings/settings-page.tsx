@@ -71,7 +71,7 @@ export const SettingsPage = ({ getToken }: SettingsPageProps) => {
     return <div className="mx-auto max-w-4xl space-y-5 p-6 md:p-10"><Skeleton className="h-8 w-40" /><Skeleton className="h-60 w-full" /></div>;
   }
   if (settings.error || !settings.data) {
-    return <div className="mx-auto max-w-4xl p-6 md:p-10"><Alert intent="danger" title="Settings are unavailable">{settings.error?.message ?? 'Try again shortly.'}</Alert></div>;
+    return <div className="mx-auto max-w-4xl p-6 md:p-10"><Alert intent="error" title="Settings are unavailable">{settings.error?.message ?? 'Try again shortly.'}</Alert></div>;
   }
 
   const data = settings.data;
@@ -110,7 +110,7 @@ export const SettingsPage = ({ getToken }: SettingsPageProps) => {
           <div><h2 className="font-medium">Organization</h2><p className="mt-1 text-sm text-foreground-muted">Shared workspace identity and plan context.</p></div>
           <div className="space-y-5">
             <div className="flex gap-2"><Input aria-label="Organization name" value={organizationName} disabled={!data.capabilities.can_manage_organization} onChange={(event) => setOrganizationName(event.target.value)} /><Button disabled={!data.capabilities.can_manage_organization || !organizationName.trim() || rename.isPending} onClick={() => rename.mutate()}>{rename.isPending ? 'Saving…' : 'Save name'}</Button></div>
-            {rename.error ? <Alert intent="danger" title="Could not rename organization">{rename.error.message}</Alert> : null}
+            {rename.error ? <Alert intent="error" title="Could not rename organization">{rename.error.message}</Alert> : null}
             <dl className="grid gap-5 sm:grid-cols-2">
               <Detail label="Your role" value={data.membership.role} />
               <Detail label="Joined" value={formatDate(data.membership.joined_at)} />
@@ -128,7 +128,7 @@ export const SettingsPage = ({ getToken }: SettingsPageProps) => {
             <div><Label htmlFor="confidence-threshold">Confidence threshold</Label><Input id="confidence-threshold" type="number" min="0" max="1" step="0.01" value={threshold} disabled={!data.capabilities.can_manage_organization} onChange={(event) => setThreshold(event.target.value)} /></div>
             <div><Label htmlFor="cost-ceiling">Cost ceiling (USD)</Label><Input id="cost-ceiling" type="number" min="0" step="0.01" value={costCeiling} disabled={!data.capabilities.can_manage_organization} onChange={(event) => setCostCeiling(event.target.value)} /></div>
             {data.capabilities.can_manage_organization ? <Button disabled={!canSavePolicy || policy.isPending} onClick={() => policy.mutate()}>{policy.isPending ? 'Saving…' : 'Save policy'}</Button> : <p className="text-sm text-foreground-muted">Only organization owners can change analysis policy.</p>}
-            {policy.error ? <Alert intent="danger" title="Could not save policy">{policy.error.message}</Alert> : null}
+            {policy.error ? <Alert intent="error" title="Could not save policy">{policy.error.message}</Alert> : null}
           </div>
         </section>
 

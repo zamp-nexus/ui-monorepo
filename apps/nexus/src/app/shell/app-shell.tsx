@@ -84,7 +84,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   const groupsQuery = useQuery({
     queryKey: ['groups'],
     queryFn: () => listGroups(getToken),
-    enabled: Boolean(group.data),
+    enabled: Boolean(initialGroup.data),
   });
 
   const createGroupMutation = useMutation({

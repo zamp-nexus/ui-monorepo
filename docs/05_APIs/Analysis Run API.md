@@ -12,8 +12,8 @@ confidence: verified
 implementation: current
 priority: critical
 tags: [api, analysis_run, approval]
-related: ["[[APIs MOC]]", "[[Analysis Run Trust Loop]]", "[[Forensic Observatory]]"]
-depends_on: ["[[Authenticated Tenant Resolution]]", "[[Analysis Run Core]]"]
+related: ["[[APIs MOC]]", "[[Investigation Trust Loop]]", "[[Forensic Observatory]]"]
+depends_on: ["[[Authenticated Tenant Resolution]]", "[[Investigation Core]]"]
 repo_path: apps/api/src/zentra_api/routes.py
 code_refs:
   - apps/api/src/zentra_api/routes.py

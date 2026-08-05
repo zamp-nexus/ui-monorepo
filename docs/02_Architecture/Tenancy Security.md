@@ -28,8 +28,8 @@ Membership, and creates an application actor. Callers never supply a trusted
 organization identifier.
 
 **Disambiguation:** Clerk's own external organization ID and this system's
-internal Organization UUID are distinct concepts — see [[Identity and
-Tenancy]]. `external_organization_id` names Clerk's; bare `organization_id`
+internal Organization UUID are distinct concepts — see [[Identity and Tenancy]].
+`external_organization_id` names Clerk's; bare `organization_id`
 names the internal one.
 
 Organization-owned Postgres records carry explicit `organization_id`. Request

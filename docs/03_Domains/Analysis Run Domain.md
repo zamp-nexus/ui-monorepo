@@ -13,7 +13,7 @@ implementation: current
 priority: critical
 tags: [domain, analysis_run]
 aliases: [analysis_run]
-related: ["[[Domains MOC]]", "[[Analysis Run Trust Loop]]", "[[Analysis Run Core]]", "[[Data Source Domain]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
+related: ["[[Domains MOC]]", "[[Investigation Trust Loop]]", "[[Investigation Core]]", "[[Data Source Domain]]", "[[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]"]
 repo_path: libs/domain/analysis_run
 code_refs:
   - libs/domain/analysis_run/src/zentra_domain_analysis_run/draft_finding.py
@@ -57,7 +57,7 @@ be hard-deleted; archive and restore preserve its evidence lineage.
 Each follow-up and retry is a new immutable Analysis Run. Linear parent,
 retry-of, and Thread-sequence fields preserve intent without rewriting a
 terminal attempt. A Thread may retain an unresolved follow-up clarification
-while remaining active. See [[adr/0017-linked-analysis_run-threads]].
+while remaining active. See [[adr/0017-linked-investigation-threads]].
 
 ## Visualization Brief and artifact
 

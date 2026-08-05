@@ -15,7 +15,7 @@ related: ["[[Decisions MOC]]", "[[Audit Outbox Delivery]]", "[[Audit and Observa
 repo_path: docs/adr/0007-transactional-audit-outbox.md
 code_refs:
   - apps/api/src/zentra_api/audit_delivery.py
-  - libs/adapters/postgres/src/zentra_adapter_postgres/investigation.py
+  - libs/adapters/postgres/src/zentra_adapter_postgres/analysis_run.py
 ---
 
 # Deliver ClickHouse audit entries through a transactional Postgres outbox

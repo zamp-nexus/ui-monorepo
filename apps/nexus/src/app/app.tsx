@@ -8,7 +8,6 @@ import { SignIn, SignUp, useOrganizationMemberships } from '@open-zentra/foundat
 
 import { ApiError, apiUrl, requestJson, type TokenSource } from './api';
 import { ChatPage } from './pages/chat/chat-page';
-import { ComingSoon } from './pages/coming-soon';
 import { ConnectionsPage } from './pages/connections/connections-page';
 import { ConnectorConfig } from './pages/connections/connector-config';
 import { ConnectorPicker } from './pages/connections/connector-picker';

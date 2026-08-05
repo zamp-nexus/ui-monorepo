@@ -50,10 +50,6 @@ export interface PendingUserMessage {
   readonly content: string;
 }
 
-interface RoutingFrame {
-  readonly thread_id: string;
-}
-
 interface DeltaFrame {
   readonly message_id: string;
   readonly text: string;
@@ -217,8 +213,10 @@ export const useSendMessage = (
           for (const frame of frames) {
             switch (frame.event) {
               case 'routing': {
-                const payload = JSON.parse(frame.data) as RoutingFrame;
-                onThreadReady(payload.thread_id);
+                // Routing precedes the durable snapshot. Navigating here
+                // unmounts this surface for a new thread and aborts the
+                // request before its terminal `thread` frame can settle.
+                JSON.parse(frame.data);
                 break;
               }
               case 'delta': {

@@ -155,6 +155,6 @@ describe('RowsPage', () => {
     expect(await screen.findByText('51')).toBeTruthy();
 
     const prevButton = screen.getByRole('button', { name: /prev/i });
-    expect(prevButton).not.toBeDisabled();
+    expect(prevButton.hasAttribute('disabled')).toBe(false);
   });
 });

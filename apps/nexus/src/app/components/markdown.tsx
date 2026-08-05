@@ -1,91 +1,52 @@
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useEffect, useRef } from 'react';
+
+import { Markdown as MarkdownExtension } from '@tiptap/markdown';
+import { TableKit } from '@tiptap/extension-table';
+import TaskItem from '@tiptap/extension-task-item';
+import TaskList from '@tiptap/extension-task-list';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+
+const escapeRawHtml = (markdown: string) => markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const extensions = [
+  StarterKit,
+  TableKit,
+  TaskList,
+  TaskItem.configure({ nested: true }),
+  MarkdownExtension.configure({ markedOptions: { gfm: true } }),
+];
 
 /**
- * Markdown, rendered as elements.
+ * Read-only Markdown rendered by Tiptap.
  *
- * Agent output is markdown, so it is parsed rather than printed. No
- * `dangerouslySetInnerHTML` and no raw-HTML plugin: model output is untrusted
- * input, and the one thing it must never be able to do is inject markup.
- *
- * The design system has no typography plugin, so element styles are supplied
- * per node here — the same tokens the rest of the product uses.
+ * Assistant output is always parsed as Markdown rather than injected HTML.
+ * Escaping angle brackets before parsing keeps embedded model-authored HTML
+ * literal, even though the Markdown extension can otherwise recognize it.
  */
-export const Markdown = ({ children }: { readonly children: string }) => (
-  <div className="text-sm leading-relaxed text-foreground">
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        p: ({ children: content }) => <p className="mb-3 last:mb-0">{content}</p>,
-        h1: ({ children: content }) => (
-          <h1 className="mb-3 mt-5 font-serif text-2xl font-normal first:mt-0">{content}</h1>
-        ),
-        h2: ({ children: content }) => (
-          <h2 className="mb-3 mt-5 font-serif text-xl font-normal first:mt-0">{content}</h2>
-        ),
-        h3: ({ children: content }) => (
-          <h3 className="mb-2 mt-5 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-primary first:mt-0">
-            {content}
-          </h3>
-        ),
-        ul: ({ children: content }) => (
-          <ul className="mb-3 list-disc pl-5 marker:text-primary">{content}</ul>
-        ),
-        ol: ({ children: content }) => (
-          <ol className="mb-3 list-decimal pl-5 marker:text-foreground-muted">{content}</ol>
-        ),
-        li: ({ children: content }) => <li className="mb-1">{content}</li>,
-        strong: ({ children: content }) => (
-          <strong className="font-semibold text-foreground">{content}</strong>
-        ),
-        em: ({ children: content }) => <em className="italic">{content}</em>,
-        a: ({ children: content, href }) => (
-          <a
-            className="text-primary underline underline-offset-2"
-            href={href}
-            target={href?.startsWith('http') ? '_blank' : undefined}
-            rel={href?.startsWith('http') ? 'noreferrer' : undefined}
-          >
-            {content}
-          </a>
-        ),
-        blockquote: ({ children: content }) => (
-          <blockquote className="mb-3 border-l-2 border-primary pl-4 text-foreground-muted">
-            {content}
-          </blockquote>
-        ),
-        code: ({ children: content, className }) =>
-          // A fenced block arrives with a language class; an inline span does
-          // not, and the two want completely different boxes.
-          className ? (
-            <code className="font-mono text-[12px]">{content}</code>
-          ) : (
-            <code className="rounded-sm bg-background-muted px-1.5 py-0.5 font-mono text-[12px] text-primary">
-              {content}
-            </code>
-          ),
-        pre: ({ children: content }) => (
-          <pre className="mb-3 overflow-x-auto rounded-sm border border-border bg-background-muted p-3">
-            {content}
-          </pre>
-        ),
-        table: ({ children: content }) => (
-          <div className="mb-3 overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[13px]">{content}</table>
-          </div>
-        ),
-        th: ({ children: content }) => (
-          <th className="border-b border-border px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground-muted">
-            {content}
-          </th>
-        ),
-        td: ({ children: content }) => (
-          <td className="border-b border-border-subtle px-3 py-2">{content}</td>
-        ),
-        hr: () => <hr className="my-5 border-border" />,
-      }}
-    >
-      {children}
-    </ReactMarkdown>
-  </div>
-);
+export const Markdown = ({ children }: { readonly children: string }) => {
+  const content = escapeRawHtml(children);
+  const renderedContent = useRef(content);
+  const editor = useEditor({
+    extensions,
+    content,
+    contentType: 'markdown',
+    editable: false,
+    immediatelyRender: false,
+  });
+
+  useEffect(() => {
+    if (!editor || renderedContent.current === content) return;
+    renderedContent.current = content;
+    editor.commands.setContent(content, { contentType: 'markdown', emitUpdate: false });
+  }, [content, editor]);
+
+  if (!editor) return null;
+
+  return (
+    <EditorContent
+      editor={editor}
+      className="text-sm leading-relaxed text-foreground [&_.tiptap]:outline-none [&_.tiptap>*>:first-child]:mt-0 [&_.tiptap_a]:text-primary [&_.tiptap_a]:underline [&_.tiptap_a]:underline-offset-2 [&_.tiptap_blockquote]:mb-3 [&_.tiptap_blockquote]:border-l-2 [&_.tiptap_blockquote]:border-primary [&_.tiptap_blockquote]:pl-4 [&_.tiptap_blockquote]:text-foreground-muted [&_.tiptap_code]:rounded-sm [&_.tiptap_code]:bg-background-muted [&_.tiptap_code]:px-1.5 [&_.tiptap_code]:py-0.5 [&_.tiptap_code]:font-mono [&_.tiptap_code]:text-[12px] [&_.tiptap_h1]:mb-3 [&_.tiptap_h1]:mt-5 [&_.tiptap_h1]:font-serif [&_.tiptap_h1]:text-2xl [&_.tiptap_h1]:font-normal [&_.tiptap_h2]:mb-3 [&_.tiptap_h2]:mt-5 [&_.tiptap_h2]:font-serif [&_.tiptap_h2]:text-xl [&_.tiptap_h2]:font-normal [&_.tiptap_h3]:mb-2 [&_.tiptap_h3]:mt-5 [&_.tiptap_h3]:font-mono [&_.tiptap_h3]:text-[11px] [&_.tiptap_h3]:font-bold [&_.tiptap_h3]:uppercase [&_.tiptap_h3]:tracking-[0.16em] [&_.tiptap_h3]:text-primary [&_.tiptap_li]:mb-1 [&_.tiptap_ol]:mb-3 [&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:pl-5 [&_.tiptap_p]:mb-3 [&_.tiptap_p:last-child]:mb-0 [&_.tiptap_pre]:mb-3 [&_.tiptap_pre]:overflow-x-auto [&_.tiptap_pre]:rounded-sm [&_.tiptap_pre]:border [&_.tiptap_pre]:border-border [&_.tiptap_pre]:bg-background-muted [&_.tiptap_pre]:p-3 [&_.tiptap_pre_code]:bg-transparent [&_.tiptap_pre_code]:p-0 [&_.tiptap_table]:mb-3 [&_.tiptap_table]:w-full [&_.tiptap_table]:border-collapse [&_.tiptap_table]:text-left [&_.tiptap_table]:text-[13px] [&_.tiptap_td]:border-b [&_.tiptap_td]:border-border-subtle [&_.tiptap_td]:px-3 [&_.tiptap_td]:py-2 [&_.tiptap_th]:border-b [&_.tiptap_th]:border-border [&_.tiptap_th]:px-3 [&_.tiptap_th]:py-2 [&_.tiptap_th]:font-mono [&_.tiptap_th]:text-[10px] [&_.tiptap_th]:font-semibold [&_.tiptap_th]:uppercase [&_.tiptap_th]:tracking-[0.14em] [&_.tiptap_th]:text-foreground-muted [&_.tiptap_ul]:mb-3 [&_.tiptap_ul]:list-disc [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:marker:text-primary"
+    />
+  );
+};

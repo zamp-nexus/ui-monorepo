@@ -15,7 +15,10 @@ const authMocks = vi.hoisted(() => ({
 vi.mock('@open-zentra/foundation-auth', () => authMocks);
 
 const clerkUiMocks = vi.hoisted(() => ({
-  useOrganizationMemberships: vi.fn(() => ({ isLoaded: true, memberships: [] })),
+  useOrganizationMemberships: vi.fn(() => ({
+    isLoaded: true,
+    memberships: [] as Array<{ readonly id: string; readonly name: string }>,
+  })),
 }));
 
 vi.mock('@open-zentra/foundation-auth/clerk-ui', () => ({

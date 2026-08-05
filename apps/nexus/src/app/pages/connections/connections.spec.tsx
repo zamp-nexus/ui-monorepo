@@ -22,7 +22,7 @@ const renderAt = (path: string, viewer = false) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const who = viewer ? { ...identity, role: 'viewer' } : identity;
+  const who: IdentityContext = viewer ? { ...identity, role: 'viewer' } : identity;
 
   return render(
     <MemoryRouter initialEntries={[path]}>

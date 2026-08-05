@@ -1,8 +1,7 @@
 /// <reference types="vitest/globals" />
 import { useState } from 'react';
 
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ChatComposer } from './chat-composer';
 
@@ -14,7 +13,6 @@ const ComposerHarness = ({ onSend }: { readonly onSend: (message: string) => voi
 
 describe('ChatComposer', () => {
   it('accepts text while rendering no unsupported controls', async () => {
-    const user = userEvent.setup();
     const onSend = vi.fn();
     render(<ComposerHarness onSend={onSend} />);
 
@@ -22,8 +20,10 @@ describe('ChatComposer', () => {
     expect(screen.queryByRole('button', { name: 'Mention a dataset' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Attach an image' })).toBeNull();
 
-    await user.type(screen.getByRole('textbox', { name: 'Message' }), 'Compare refunds{Enter}');
+    const composer = screen.getByRole('textbox', { name: 'Message' });
+    composer.innerHTML = '<p>Compare refunds</p>';
+    fireEvent.keyDown(composer, { key: 'Enter' });
 
-    expect(onSend).toHaveBeenCalledWith('Compare refunds');
+    await waitFor(() => expect(onSend).toHaveBeenCalledWith('Compare refunds'));
   });
 });
