@@ -1,10 +1,8 @@
 """The tools an Agent may be granted, and the registry that gates them.
 
-Every tool here reaches data through `SemanticLayerPort` and nothing else.
-`semantic_query` enforces the governed-catalog restriction (ADR-003);
-`raw_query` deliberately does not, for a tenant that has opted out of it —
-still scoped to that tenant's own Data Connection through Cube, never
-cross-tenant.
+Connection metadata tools receive a safe, tenant-scoped Connector view through
+``DataDiscoveryPort``. `data_query` reaches rows through `SemanticLayerPort`
+and uses its raw compiled-member path, still scoped to one tenant connection.
 
 `AgentDescriptor.tool_permissions` is the gate. A tool outside a descriptor's
 permissions is never offered to the model *and* is refused if named anyway,
@@ -15,6 +13,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import Protocol
+from uuid import UUID
 
 from pydantic.types import JsonValue
 from zentra_domain_agent_execution import (
@@ -32,6 +32,7 @@ from zentra_domain_agent_execution import (
 )
 
 from .schemas import (
+    DATA_QUERY_SCHEMA,
     SEMANTIC_QUERY_SCHEMA,
     MalformedAgentResponseError,
     render_dimension,
@@ -47,6 +48,145 @@ MAX_SEARCH_RESULTS = 40
 #: The Analyst asks for aggregates; a result this long means the query grouped
 #: by something it should not have.
 MAX_QUERY_ROWS = 200
+
+
+class DataDiscoveryPort(Protocol):
+    """Tenant-scoped connection metadata made safe for agent prompts."""
+
+    async def connection_inventory(
+        self, organization_id: UUID
+    ) -> dict[str, JsonValue]: ...
+
+    async def schema_inspect(
+        self, organization_id: UUID, connection_id: UUID, table_name: str | None
+    ) -> dict[str, JsonValue]: ...
+
+
+class ConnectionInventoryTool:
+    name = "connection_inventory"
+
+    def __init__(self, discovery: DataDiscoveryPort, organization_id: UUID) -> None:
+        self._discovery = discovery
+        self._organization_id = organization_id
+
+    @property
+    def definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name=self.name,
+            description=(
+                "List this tenant's data connections with their total count, ids, "
+                "names, readiness, catalog status, table count, and confirmed joins. "
+                "Choose one id before inspecting schema or querying."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        )
+
+    @property
+    def scope(self) -> ToolScope:
+        return ToolScope(tool_name=self.name, access=ToolAccess.READ)
+
+    async def invoke(self, arguments: dict[str, JsonValue]) -> ToolResult:
+        try:
+            content = await self._discovery.connection_inventory(self._organization_id)
+        except (LookupError, ValueError) as error:
+            return _refusal(str(error))
+        return ToolResult(call_id="", content=str(content))
+
+
+class SchemaInspectTool:
+    name = "schema_inspect"
+
+    def __init__(self, discovery: DataDiscoveryPort, organization_id: UUID) -> None:
+        self._discovery = discovery
+        self._organization_id = organization_id
+
+    @property
+    def definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name=self.name,
+            description=(
+                "Inspect one connection's agent-visible schema. Without table_name, "
+                "returns its compact table overview. With a table, returns typed "
+                "fields, available profiles, and confirmed joins touching it."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "connection_id": {"type": "string", "format": "uuid"},
+                    "table_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                },
+                "required": ["connection_id", "table_name"],
+                "additionalProperties": False,
+            },
+        )
+
+    @property
+    def scope(self) -> ToolScope:
+        return ToolScope(tool_name=self.name, access=ToolAccess.READ)
+
+    async def invoke(self, arguments: dict[str, JsonValue]) -> ToolResult:
+        try:
+            connection_id = UUID(str(arguments["connection_id"]))
+        except (KeyError, ValueError):
+            return _refusal(
+                "connection_id must be a UUID returned by connection_inventory"
+            )
+        table_name = arguments.get("table_name")
+        if table_name is not None and not isinstance(table_name, str):
+            return _refusal("table_name must be a string or null")
+        try:
+            content = await self._discovery.schema_inspect(
+                self._organization_id, connection_id, table_name
+            )
+        except (LookupError, ValueError) as error:
+            return _refusal(str(error))
+        return ToolResult(call_id="", content=str(content))
+
+
+class DataQueryTool:
+    """Run one structured raw Cube query against exactly one selected source."""
+
+    name = "data_query"
+
+    def __init__(self, semantic_layer: SemanticLayerPort) -> None:
+        self._semantic_layer = semantic_layer
+        self.last_query: SemanticQuery | None = None
+        self.last_rows: tuple[dict[str, JsonValue], ...] = ()
+
+    @property
+    def definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name=self.name,
+            description=(
+                "Run a structured query against any compiled member in one selected "
+                "tenant connection. source_id is required. SQL and cross-source joins "
+                "are not supported."
+            ),
+            input_schema=DATA_QUERY_SCHEMA,
+        )
+
+    @property
+    def scope(self) -> ToolScope:
+        return ToolScope(tool_name=self.name, access=ToolAccess.READ)
+
+    async def invoke(self, arguments: dict[str, JsonValue]) -> ToolResult:
+        try:
+            query = semantic_query_from_json(dict(arguments))
+            if query.source_id is None:
+                raise MalformedAgentResponseError("source_id is required")
+        except MalformedAgentResponseError as error:
+            return _refusal(str(error))
+        try:
+            result = await self._semantic_layer.query_raw(query)
+        except (UnknownSemanticMemberError, InvalidSemanticQueryError) as error:
+            return _refusal(str(error))
+        self.last_query = query
+        self.last_rows = result.rows
+        return _render_query_result(result.rows)
 
 
 class SemanticCatalogSearchTool:
@@ -382,3 +522,15 @@ def _matches(term: str, name: str, description: str | None) -> bool:
 
 def _refusal(message: str) -> ToolResult:
     return ToolResult(call_id="", content=message, is_error=True)
+
+
+def _render_query_result(rows: tuple[dict[str, JsonValue], ...]) -> ToolResult:
+    if not rows:
+        return ToolResult(call_id="", content="The query returned no rows.")
+    head = rows[:MAX_QUERY_ROWS]
+    body = "\n".join(str(row) for row in head)
+    if len(rows) > MAX_QUERY_ROWS:
+        body += (
+            f"\n({len(rows) - MAX_QUERY_ROWS} more rows withheld — aggregate further.)"
+        )
+    return ToolResult(call_id="", content=body)

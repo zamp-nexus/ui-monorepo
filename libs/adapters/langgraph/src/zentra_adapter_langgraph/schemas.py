@@ -60,6 +60,15 @@ SEMANTIC_QUERY_SCHEMA = _obj(
     }
 )
 
+# Discovery always chooses a connection before it can query. The query remains
+# structured rather than becoming a SQL escape hatch.
+DATA_QUERY_SCHEMA = _obj(
+    {
+        **SEMANTIC_QUERY_SCHEMA["properties"],
+        "source_id": {"type": "string", "format": "uuid"},
+    }
+)
+
 # The labels are nullable rather than absent: _obj requires every property, which
 # strict structured output demands, so nullability is how the schema says "you
 # must answer, and 'this is not a period comparison' is an answer".

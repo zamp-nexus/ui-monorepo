@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
 from zentra_adapter_langgraph import (
     AgentRuntime,
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
+    ConnectionInventoryTool,
+    DataDiscoveryPort,
+    DataQueryTool,
+    SchemaInspectTool,
     SkillRegistry,
     ToolRegistry,
 )
-from zentra_adapter_langgraph.tools import RawQueryTool
 from zentra_adapter_model_providers import (
     ModelTier,
     ProviderCircuitBreaker,
@@ -42,10 +44,15 @@ _OUTPUT_SCHEMA = {
 
 class WorkflowExecutionService:
     def __init__(
-        self, *, models: dict[Any, Any], semantic_layers: ScopedCubeSemanticLayers
+        self,
+        *,
+        models: dict[Any, Any],
+        semantic_layers: ScopedCubeSemanticLayers,
+        discovery_factory: Callable[[], DataDiscoveryPort] | None = None,
     ) -> None:
         self._models = models
         self._semantic_layers = semantic_layers
+        self._discovery_factory = discovery_factory
 
     async def run(
         self,
@@ -63,6 +70,7 @@ class WorkflowExecutionService:
             clients=self._models,
             breaker=ProviderCircuitBreaker(),
         )
+        discovery = self._discovery_factory() if self._discovery_factory else None
 
         async def invoke(node: dict[str, Any], handoff: str) -> WorkflowStep:
             data = node["data"]
@@ -86,15 +94,17 @@ class WorkflowExecutionService:
                 output_fields=frozenset({"handoff", "route"}),
                 eval_suite_ref="workflow-v1",
             )
+            query_tool = DataQueryTool(semantic_layer)
+            registered_tools = [query_tool]
+            if discovery is not None:
+                registered_tools = [
+                    ConnectionInventoryTool(discovery, organization_id),
+                    SchemaInspectTool(discovery, organization_id),
+                    query_tool,
+                ]
             runtime = AgentRuntime(
                 model=model,
-                tools=ToolRegistry(
-                    (
-                        SemanticCatalogSearchTool(semantic_layer),
-                        SemanticQueryTool(semantic_layer),
-                        RawQueryTool(semantic_layer),
-                    )
-                ),
+                tools=ToolRegistry(tuple(registered_tools)),
                 skills=SkillRegistry(),
             )
             system = (

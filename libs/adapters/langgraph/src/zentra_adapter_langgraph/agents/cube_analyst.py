@@ -20,9 +20,10 @@ from ..runtime import AgentRuntime
 from ..schemas import ANALYSIS_SCHEMA
 from ..skills import SkillRegistry
 from ..tools import (
-    RawQueryTool,
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
+    ConnectionInventoryTool,
+    DataDiscoveryPort,
+    DataQueryTool,
+    SchemaInspectTool,
     ToolRegistry,
 )
 
@@ -31,14 +32,12 @@ AGENT_ID = "cube_analyst_v1"
 DESCRIPTOR = AgentDescriptor(
     agent_id=AGENT_ID,
     role=AgentRole.CUBE_ANALYST,
-    # Every capability this agent holds, and all of them reach data through
-    # the semantic layer. `raw_query` skips ADR-0003's governed-catalog
-    # restriction — granted here because this deployment has opted out of it —
-    # but still only ever reaches this tenant's own Data Connection.
+    # Data queries may reach any compiled member in the explicitly selected,
+    # tenant-scoped connection. Metadata tools are separately tenant-scoped.
     tool_permissions=(
-        ToolScope(tool_name="semantic_catalog_search", access=ToolAccess.READ),
-        ToolScope(tool_name="semantic_query", access=ToolAccess.READ),
-        ToolScope(tool_name="raw_query", access=ToolAccess.READ),
+        ToolScope(tool_name="connection_inventory", access=ToolAccess.READ),
+        ToolScope(tool_name="schema_inspect", access=ToolAccess.READ),
+        ToolScope(tool_name="data_query", access=ToolAccess.READ),
     ),
     context_budget_tokens=MAX_TOKENS,
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
@@ -66,11 +65,13 @@ class CubeAnalystAgent:
         model: ModelPort,
         semantic_layer: SemanticLayerPort,
         skills: SkillRegistry | None = None,
+        discovery: DataDiscoveryPort | None = None,
         max_steps: int | None = None,
     ) -> None:
         self._model = model
         self._semantic_layer = semantic_layer
         self._skills = skills or SkillRegistry.from_directory()
+        self._discovery = discovery
         self._max_steps = max_steps
 
     @property
@@ -87,15 +88,15 @@ class CubeAnalystAgent:
         # remembers the last query it ran — shared across attempts, attempt
         # two would cite attempt one's query if the retry never got as far as
         # querying.
-        query_tool = SemanticQueryTool(self._semantic_layer)
-        raw_query_tool = RawQueryTool(self._semantic_layer)
-        registry = ToolRegistry(
-            (
-                SemanticCatalogSearchTool(self._semantic_layer),
+        query_tool = DataQueryTool(self._semantic_layer)
+        tools = [query_tool]
+        if self._discovery is not None:
+            tools = [
+                ConnectionInventoryTool(self._discovery, agent_input.organization_id),
+                SchemaInspectTool(self._discovery, agent_input.organization_id),
                 query_tool,
-                raw_query_tool,
-            )
-        )
+            ]
+        registry = ToolRegistry(tuple(tools))
         runtime = AgentRuntime(
             model=self._model,
             tools=registry,
@@ -127,14 +128,11 @@ class CubeAnalystAgent:
             reports_figures = bool(answer.get("metrics")) or bool(
                 answer.get("sample_size")
             )
-            ran_a_query = (
-                query_tool.last_query is not None
-                or raw_query_tool.last_query is not None
-            )
+            ran_a_query = query_tool.last_query is not None
             if reports_figures and not ran_a_query:
                 return (
-                    "You reported figures without running semantic_query or "
-                    "raw_query, so they rest on no data. Either run the query "
+                    "You reported figures without running data_query, so they "
+                    "rest on no data. Either run the query "
                     "those figures come from, or answer with no metrics and a "
                     "sample_size of 0 if the question is about the catalog "
                     "rather than the data."
@@ -153,9 +151,7 @@ class CubeAnalystAgent:
         # cannot run "first" in a way that matters here — an invocation reaches
         # for one or the other, never a meaningful mix — so the one that has a
         # last_query at all is the one that answered.
-        ran_tool = (
-            raw_query_tool if raw_query_tool.last_query is not None else query_tool
-        )
+        ran_tool = query_tool
 
         reasoning = str(analysis.get("result_summary", ""))
 

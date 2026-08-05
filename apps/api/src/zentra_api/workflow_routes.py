@@ -18,6 +18,7 @@ from zentra_adapter_postgres.schema import (
 from zentra_application_analysis_run import Role
 
 from .active_connection import active_data_connection_id
+from .agent_data_discovery import ConnectorDataDiscovery
 from .request_context import RequestContext, authenticated_context
 from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
@@ -309,14 +310,6 @@ async def clone_default(
 ) -> WorkflowDetailResponse:
     _require_manager(context)
     definition = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
-    if context.actor.role is not Role.ADMIN:
-        for node in definition["nodes"]:
-            if node.get("type") == "agent":
-                node["data"]["tools"] = [
-                    tool
-                    for tool in node["data"].get("tools", [])
-                    if tool != "raw_query"
-                ]
     workflow_id = uuid4()
     now = datetime.now(UTC)
     async with request.app.state.dependencies.database.organization_connection(
@@ -518,6 +511,9 @@ async def execute_workflow(
     service = WorkflowExecutionService(
         models=request.app.state.dependencies.models.as_dict(),
         semantic_layers=request.app.state.dependencies.semantic_layers,
+        discovery_factory=lambda: ConnectorDataDiscovery(
+            lambda: request.app.state.dependencies.connector
+        ),
     )
     try:
         data_connection_id = await active_data_connection_id(

@@ -22,9 +22,10 @@ from ..runtime import AgentRuntime
 from ..schemas import RECHECK_SCHEMA
 from ..skills import SkillRegistry
 from ..tools import (
-    RawQueryTool,
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
+    ConnectionInventoryTool,
+    DataDiscoveryPort,
+    DataQueryTool,
+    SchemaInspectTool,
     ToolRegistry,
 )
 
@@ -34,9 +35,9 @@ DESCRIPTOR = AgentDescriptor(
     agent_id=AGENT_ID,
     role=AgentRole.EVALUATOR,
     tool_permissions=(
-        ToolScope(tool_name="semantic_catalog_search", access=ToolAccess.READ),
-        ToolScope(tool_name="semantic_query", access=ToolAccess.READ),
-        ToolScope(tool_name="raw_query", access=ToolAccess.READ),
+        ToolScope(tool_name="connection_inventory", access=ToolAccess.READ),
+        ToolScope(tool_name="schema_inspect", access=ToolAccess.READ),
+        ToolScope(tool_name="data_query", access=ToolAccess.READ),
     ),
     context_budget_tokens=MAX_TOKENS,
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
@@ -69,11 +70,13 @@ class EvaluatorAgent:
         model: ModelPort,
         semantic_layer: SemanticLayerPort,
         skills: SkillRegistry | None = None,
+        discovery: DataDiscoveryPort | None = None,
         max_steps: int | None = None,
     ) -> None:
         self._model = model
         self._semantic_layer = semantic_layer
         self._skills = skills or SkillRegistry.from_directory()
+        self._discovery = discovery
         self._max_steps = max_steps
 
     @property
@@ -88,15 +91,15 @@ class EvaluatorAgent:
 
         # Per invocation, so a retry's recheck cites its own query. Same
         # reasoning as the Analyst's.
-        query_tool = SemanticQueryTool(self._semantic_layer)
-        raw_query_tool = RawQueryTool(self._semantic_layer)
-        registry = ToolRegistry(
-            (
-                SemanticCatalogSearchTool(self._semantic_layer),
+        query_tool = DataQueryTool(self._semantic_layer)
+        tools = [query_tool]
+        if self._discovery is not None:
+            tools = [
+                ConnectionInventoryTool(self._discovery, agent_input.organization_id),
+                SchemaInspectTool(self._discovery, agent_input.organization_id),
                 query_tool,
-                raw_query_tool,
-            )
-        )
+            ]
+        registry = ToolRegistry(tuple(tools))
         runtime = AgentRuntime(
             model=self._model,
             tools=registry,
@@ -113,9 +116,9 @@ class EvaluatorAgent:
             """
             if not analyst.get("metrics"):
                 return None
-            if query_tool.last_query is None and raw_query_tool.last_query is None:
+            if query_tool.last_query is None:
                 return (
-                    "You have not run raw_query or semantic_query yet, so you "
+                    "You have not run data_query yet, so you "
                     "have checked nothing. Build your own query, run it, and "
                     "compare your figures against the analyst's."
                 )
@@ -154,9 +157,7 @@ class EvaluatorAgent:
             score = min(score, 0.49)
 
         # Whichever tool actually ran the query this Citation must name.
-        ran_tool = (
-            raw_query_tool if raw_query_tool.last_query is not None else query_tool
-        )
+        ran_tool = query_tool
 
         return validate_agent_output(
             self,

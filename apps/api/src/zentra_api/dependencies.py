@@ -57,6 +57,7 @@ from zentra_application_sequence import SequenceService
 from zentra_domain_agent_execution import SemanticLayerPort
 
 from .audit_delivery import AuditDeliveryCoordinator
+from .agent_data_discovery import ConnectorDataDiscovery
 from .auth import ClerkJwtVerifier
 from .connector_model import relation_fingerprint
 from .cube_scope import ScopedCubeSemanticLayers
@@ -137,7 +138,9 @@ class AppDependencies:
         # SQLAlchemy's async engine is the wrong tool for this one connection.
         # `+psycopg` is a SQLAlchemy dialect qualifier; psycopg itself takes a
         # plain `postgresql://` DSN.
-        raw_dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
+        raw_dsn = settings.database_url.replace(
+            "postgresql+psycopg://", "postgresql://"
+        )
         thread_events = ThreadEventNotifier(lambda: listen_for_notify(raw_dsn, CHANNEL))
         audit = AuditRepository.connect(
             host=settings.clickhouse_host,
@@ -187,7 +190,11 @@ class AppDependencies:
         # rather than fanning out to a capability nobody promoted.
         agents_factories = {
             tier: build_agents_factory(
-                tier=tier, models=models, breaker=breaker, registry=registry
+                tier=tier,
+                models=models,
+                breaker=breaker,
+                registry=registry,
+                discovery_factory=lambda: ConnectorDataDiscovery(lambda: connector),
             )
             for tier in ModelTier
         }
@@ -372,5 +379,3 @@ class AppDependencies:
         await self.database.close()
         await self.audit.close()
         await self.models.close()
-
-

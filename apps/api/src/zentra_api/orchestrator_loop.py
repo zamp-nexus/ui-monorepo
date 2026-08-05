@@ -24,6 +24,7 @@ from uuid import UUID, uuid4
 from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
     CubeAnalystAgent,
+    DataDiscoveryPort,
     EvaluatorAgent,
     InsightAgent,
     OrchestratorAgent,
@@ -295,6 +296,7 @@ def build_agents_factory(
     models: ProviderClients,
     breaker: ProviderCircuitBreaker,
     registry: AgentRegistryPort | None = None,
+    discovery_factory: Callable[[], DataDiscoveryPort] | None = None,
 ) -> AgentsFactory:
     """A per-tier factory, parameterized by the semantic layer.
 
@@ -315,12 +317,19 @@ def build_agents_factory(
     skills = SkillRegistry.from_directory()
 
     def build(semantic_layer: CubeSemanticLayer) -> StepAgents:
+        discovery = discovery_factory() if discovery_factory is not None else None
         return StepAgents(
             cube_analyst=CubeAnalystAgent(
-                model=model, semantic_layer=semantic_layer, skills=skills
+                model=model,
+                semantic_layer=semantic_layer,
+                skills=skills,
+                discovery=discovery,
             ),
             evaluator=EvaluatorAgent(
-                model=model, semantic_layer=semantic_layer, skills=skills
+                model=model,
+                semantic_layer=semantic_layer,
+                skills=skills,
+                discovery=discovery,
             ),
             insight=InsightAgent(model=model),
             planner=(
@@ -740,9 +749,7 @@ class OrchestratorLoop:
 
     # -- the Board --------------------------------------------------------
 
-    async def _merge(
-        self, board: AnalysisRunBoard, measurement: _Measurement
-    ) -> None:
+    async def _merge(self, board: AnalysisRunBoard, measurement: _Measurement) -> None:
         """Record what a measurement established, and notice disagreement.
 
         The Board is what makes fan-out worth anything: two Work Items that

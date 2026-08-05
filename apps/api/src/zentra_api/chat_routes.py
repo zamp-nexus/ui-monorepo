@@ -38,6 +38,7 @@ from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_analysis_run import ThreadMessageError, ThreadTransitionError
 
 from .active_connection import active_data_connection_id
+from .agent_data_discovery import ConnectorDataDiscovery
 from .analytics_workflow_executor import AnalyticsWorkflowExecutor
 from .request_context import RequestContext, authenticated_context
 from .thread_schemas import (
@@ -332,6 +333,9 @@ async def _run_custom_workflow(
     service = WorkflowExecutionService(
         models=request.app.state.dependencies.models.as_dict(),
         semantic_layers=request.app.state.dependencies.semantic_layers,
+        discovery_factory=lambda: ConnectorDataDiscovery(
+            lambda: request.app.state.dependencies.connector
+        ),
     )
     try:
         result = await service.run(
