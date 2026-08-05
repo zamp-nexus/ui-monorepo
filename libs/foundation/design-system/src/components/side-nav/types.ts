@@ -114,25 +114,25 @@ export const sideNavDefaultTheme: ComponentThemeConfigStructure = {
       width: {
         // Wide enough for a 44px tile plus even gutters, so the collapsed rail
         // is a column of squares rather than icons pushed against an edge.
-        compact: 'w-[4.75rem] items-center px-4',
-        default: 'w-60 px-3',
+        compact: 'w-[4.75rem] items-center',
+        default: 'w-60',
       },
     },
     modifiers: {},
   },
   slots: {
     brand: {
-      base: 'px-2 group-data-[collapsed=true]:flex group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0',
+      base: 'px-5 group-data-[collapsed=true]:flex group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },
     list: {
-      base: 'flex flex-1 flex-col gap-1 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-2',
+      base: 'flex flex-1 flex-col gap-1 px-3 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-2 group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },
     footer: {
-      base: 'mt-auto flex flex-col gap-2 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-3',
+      base: 'mt-auto flex flex-col gap-2 px-3 group-data-[collapsed=true]:w-full group-data-[collapsed=true]:items-center group-data-[collapsed=true]:gap-3 group-data-[collapsed=true]:px-0',
       variants: {},
       modifiers: {},
     },

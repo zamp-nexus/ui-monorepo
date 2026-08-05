@@ -45,7 +45,7 @@ export const ChatPage = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { chatId } = useParams();
-  const { groupId } = useWorkspace();
+  const { groupId, selectGroup } = useWorkspace();
   const sourceName = new URLSearchParams(location.search).get('sourceName');
 
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -82,6 +82,12 @@ export const ChatPage = ({
   });
 
   const thread = snapshot.data ?? null;
+
+  // A direct link to a chat has no preceding sidebar click. Its owning Group
+  // is still the active project, so subsequent New chat actions stay there.
+  useEffect(() => {
+    if (thread) selectGroup(thread.project_id);
+  }, [thread, selectGroup]);
 
   // A finished Finding, a rendered view, or a decided approval all mean the
   // snapshot is now behind what the feed already knows. Refetch rather than

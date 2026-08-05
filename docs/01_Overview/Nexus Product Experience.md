@@ -6,12 +6,12 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-08-04
-updated: 2026-08-04
-reviewed: 2026-08-04
+updated: 2026-08-05
+reviewed: 2026-08-05
 confidence: verified
 priority: high
 tags: [product, experience, design-system, nexus]
-related: ["[[Overview MOC]]", "[[User Workflows]]", "[[Phase 3 - Governed Bring Your Own Data]]"]
+related: ["[[Overview MOC]]", "[[User Workflows]]", "[[Phase 3 - Governed Bring Your Own Data]]", "[[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]"]
 repo_path: apps/nexus
 ---
 
@@ -27,17 +27,21 @@ The primary path is **Upload → Context → Ask → Insight**.
 
 - An uploaded file is private by default and receives a concise data profile.
 - Contextual suggestions help the user begin, but a free-form question is
-  always available.
+  always available. Chat accepts text questions; files are added through Data.
 - The chat response adapts to the question rather than forcing a report shape.
 - Source scope, evidence, caveats, and method appear when useful or requested.
 
 ## Information architecture
 
 - **Analyze** is the primary workspace and route destination.
+- **Workflows** exposes the system-owned analytical trust loop and a tenant's
+  persisted custom Workflow drafts. Custom Workflows are simulated in this
+  release; only the system Default Workflow executes.
 - **Data** owns uploads, datasets, and data connections.
 - **Sequences** are advanced workflows reached from the relevant data context;
   direct links remain valid for existing work.
-- Shared spaces organize collaboration, while work stays private unless shared.
+- **Projects** organize chats. The selected project is visibly highlighted;
+  opening it or one of its chats makes it the destination for New chat.
 
 ## Experience standards
 

@@ -6,9 +6,9 @@
  * bearer token) — but this is a one-shot read-to-completion loop, not a
  * reconnecting tail: a dropped connection mid-reply is not resumed. The
  * reply was only ever persisted after the model finished (see
- * `ThreadService._stream_conversational_turn`), so a lost connection means a
- * lost reply, not a corrupted one — the same thing a hard refresh does to
- * any other streaming chat surface.
+ * `ThreadService._stream_conversational_turn`), so a lost connection cannot
+ * corrupt a reply; it is surfaced as a failed send rather than silently
+ * appearing successful.
  *
  * The terminal `thread` frame is the same JSON `getChat`/`createChat` always
  * returned — it is what settles the React Query cache. Everything before it
@@ -113,6 +113,7 @@ export const useSendMessage = (
   const revealedRef = useRef('');
   const pendingCharsRef = useRef('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const stopReveal = useCallback(() => {
     if (timerRef.current !== null) {
@@ -146,8 +147,15 @@ export const useSendMessage = (
     }, REVEAL_TICK_MS);
   }, []);
 
-  // Only cleanup on unmount -- ending a send already stops the timer itself.
-  useEffect(() => stopReveal, [stopReveal]);
+  // A route change must stop both local updates and the request the browser
+  // no longer has a surface to render. The server sees the disconnect too.
+  useEffect(
+    () => () => {
+      requestRef.current?.abort();
+      stopReveal();
+    },
+    [stopReveal],
+  );
 
   const send = useCallback(
     async ({
@@ -169,14 +177,18 @@ export const useSendMessage = (
       const optimisticMessageId =
         typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `pending-${Date.now()}`;
       setPendingUserMessage({ messageId: optimisticMessageId, content });
+      let controller: AbortController | null = null;
 
       try {
+        controller = new AbortController();
+        requestRef.current = controller;
         const token = await getToken();
         const url = threadId
           ? `${apiUrl}/v1/chats/${threadId}/messages`
           : `${apiUrl}/v1/groups/${groupId}/chats`;
         const response = await fetch(url, {
           method: 'POST',
+          signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
             Accept: 'text/event-stream',
@@ -241,6 +253,9 @@ export const useSendMessage = (
         stopReveal();
         flushReveal();
         if (streamError) throw new Error(streamError);
+        if (!settledThreadId) {
+          throw new Error('The reply stream ended before Nexus could save the message.');
+        }
         if (settledThreadId) {
           void queryClient.invalidateQueries({ queryKey: ['threads', groupId] });
         }
@@ -249,6 +264,7 @@ export const useSendMessage = (
           caught instanceof Error ? caught : new Error('Nexus could not send this message.'),
         );
       } finally {
+        if (requestRef.current === controller) requestRef.current = null;
         stopReveal();
         setStreaming(null);
         setPendingUserMessage(null);

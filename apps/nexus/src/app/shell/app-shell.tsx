@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,9 +34,13 @@ interface AppShellProps {
 
 interface WorkspaceContextValue {
   groupId: string | null;
+  selectGroup: (groupId: string) => void;
 }
 
-export const WorkspaceContext = createContext<WorkspaceContextValue>({ groupId: null });
+export const WorkspaceContext = createContext<WorkspaceContextValue>({
+  groupId: null,
+  selectGroup: () => undefined,
+});
 export const useWorkspace = () => useContext(WorkspaceContext);
 
 
@@ -54,11 +58,28 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
 
-  const group = useActiveGroup(getToken);
-  const groupId = group.data ?? null;
+  const initialGroup = useActiveGroup(getToken);
+  const [groupId, setGroupId] = useState<string | null>(null);
 
   // Track expanded accordion items
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(groupId ? [groupId] : []);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+
+  // The first available Group is a sensible initial destination, but every
+  // later selection is intentional: opening a project or one of its chats
+  // makes it the destination for the next new chat.
+  useEffect(() => {
+    if (!groupId && initialGroup.data) {
+      setGroupId(initialGroup.data);
+      setExpandedGroups((current) => (current.length === 0 ? [initialGroup.data] : current));
+    }
+  }, [groupId, initialGroup.data]);
+
+  const selectGroup = useCallback((nextGroupId: string) => {
+    setGroupId(nextGroupId);
+    setExpandedGroups((current) =>
+      current.includes(nextGroupId) ? current : [...current, nextGroupId],
+    );
+  }, []);
 
   const groupsQuery = useQuery({
     queryKey: ['groups'],
@@ -70,7 +91,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
     mutationFn: (name: string) => createGroup(getToken, name),
     onSuccess: (newGroup) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
-      setExpandedGroups((prev) => [...prev, newGroup.group_id]);
+      selectGroup(newGroup.group_id);
       setNewProjectName('');
       setIsModalOpen(false);
       navigate('/chats'); // Automatically jump to chats list on workspace switch
@@ -82,14 +103,14 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
       {/* Collapsed, the primary action is a tile the same size as a nav item,
           so the rail stays one column of squares. */}
       {collapsed ? (
-        <Tooltip content="New analysis" side="right" sideOffset={10}>
-          <Button component={Link} to="/" aria-label="New analysis" className="h-11 w-11 p-0">
+        <Tooltip content="New chat" side="right" sideOffset={10}>
+          <Button component={Link} to="/" aria-label="New chat" className="h-11 w-11 p-0">
             <Icon name="plus" size="sm" />
           </Button>
         </Tooltip>
       ) : (
         <Button component={Link} to="/" fullWidth start={<Icon name="plus" size="sm" />}>
-          New analysis
+          New chat
         </Button>
       )}
 
@@ -123,29 +144,39 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
         </>
       )}
 
-      <div className="mt-1 w-full min-w-0 border-t border-border pt-3 [&>span]:w-full [&>span]:min-w-0">
-        <Tooltip
-          content={`Sign out of ${user?.email ?? 'this account'}`}
-          side="right"
-          sideOffset={10}
+      <div
+        className={`mt-1 min-w-0 border-t border-border pt-3 ${
+          collapsed ? 'w-full' : '-mx-3 w-auto'
+        }`}
+      >
+        <div
+          className={
+            collapsed ? 'flex justify-center' : 'px-3 [&>span]:w-full [&>span]:min-w-0'
+          }
         >
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className={`flex min-w-0 items-center gap-2 rounded-md text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
-              collapsed ? 'h-11 w-11 justify-center p-0' : 'w-full px-3 py-2'
-            }`}
+          <Tooltip
+            content={`Sign out of ${user?.email ?? 'this account'}`}
+            side="right"
+            sideOffset={10}
           >
-            <Avatar size="xs" name={user?.email ?? 'Account'} />
-            {collapsed ? null : (
-              <>
-                <span className="min-w-0 flex-1 truncate">{user?.email ?? 'Account'}</span>
-                <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
-              </>
-            )}
-            <span className="sr-only">Sign out</span>
-          </button>
-        </Tooltip>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className={`flex min-w-0 items-center gap-2 rounded-md text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
+                collapsed ? 'h-11 w-11 justify-center p-0' : 'w-full px-3 py-2'
+              }`}
+            >
+              <Avatar size="xs" name={user?.email ?? 'Account'} />
+              {collapsed ? null : (
+                <>
+                  <span className="min-w-0 flex-1 truncate">{user?.email ?? 'Account'}</span>
+                  <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
+                </>
+              )}
+              <span className="sr-only">Sign out</span>
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </>
   );
@@ -189,11 +220,11 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
           </SideNav.Item>
         ))}
 
-        <div className={`mt-4 ${collapsed ? '' : 'border-t border-border pt-5'}`}>
+        <div className={`mt-4 ${collapsed ? '' : '-mx-3 border-t border-border pt-5 px-3'}`}>
           {collapsed ? null : (
             <div className="flex items-center justify-between px-3 pb-2">
               <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-                Shared spaces
+                Projects
               </h2>
               <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <Modal.Trigger
@@ -222,10 +253,10 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
                     />
                   </Modal.Body>
                   <Modal.Footer>
-                    <Modal.Close asChild>
-                      <Button intent="ghost">Cancel</Button>
-                    </Modal.Close>
-                    <Button 
+                    <Button intent="ghost" onClick={() => setIsModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
                       disabled={newProjectName.trim().length === 0 || createGroupMutation.isPending}
                       onClick={() => createGroupMutation.mutate(newProjectName.trim())}
                     >
@@ -245,7 +276,14 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
               className="flex flex-col gap-1"
             >
               {groupsQuery.data?.items.map((g) => (
-                <ProjectFolder key={g.group_id} group={g} getToken={getToken} collapsed={collapsed} />
+                <ProjectFolder
+                  key={g.group_id}
+                  group={g}
+                  getToken={getToken}
+                  collapsed={collapsed}
+                  active={g.group_id === groupId}
+                  onSelect={selectGroup}
+                />
               ))}
             </Accordion>
           </div>
@@ -267,7 +305,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
             ))}
           </nav>
         </header>
-        <WorkspaceContext.Provider value={{ groupId }}>
+        <WorkspaceContext.Provider value={{ groupId, selectGroup }}>
           {children}
         </WorkspaceContext.Provider>
       </main>

@@ -16,9 +16,11 @@ interface ProjectFolderProps {
   readonly group: Group;
   readonly getToken: TokenSource;
   readonly collapsed: boolean;
+  readonly active: boolean;
+  readonly onSelect: (groupId: string) => void;
 }
 
-export const ProjectFolder = ({ group, getToken, collapsed }: ProjectFolderProps) => {
+export const ProjectFolder = ({ group, getToken, collapsed, active, onSelect }: ProjectFolderProps) => {
   const queryClient = useQueryClient();
   useWorkspace(); // Ensure we're in a workspace context if needed, otherwise this can be removed too.
   const match = useMatch('/chats/:chatId');
@@ -49,33 +51,30 @@ export const ProjectFolder = ({ group, getToken, collapsed }: ProjectFolderProps
 
   return (
     <Accordion.Item value={group.group_id} className="border-none">
-      <Accordion.Trigger
-        className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-foreground-muted hover:bg-secondary hover:text-foreground hover:no-underline [&[data-panel-open]>svg]:rotate-90 ${
-          collapsed ? 'justify-center p-0 h-11 w-11' : ''
-        }`}
-      >
-        <div className="flex min-w-0 items-center gap-3 w-full group/folder">
-          <Icon name="folder" size="sm" className="shrink-0" />
-          {!collapsed && (
-            <div className="flex w-full items-center justify-between min-w-0">
-              <span className="truncate font-medium">{group.name}</span>
-              <IconButton
-                intent="ghost"
-                size="sm"
-                aria-label="Rename Group"
-                className="opacity-0 group-hover/folder:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setIsRenameModalOpen(true);
-                }}
-              >
-                <Icon name="edit" size="xs" />
-              </IconButton>
-            </div>
-          )}
-        </div>
-      </Accordion.Trigger>
+      <div className="group/folder flex w-full items-center gap-1">
+        <Accordion.Trigger
+          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-secondary hover:text-foreground hover:no-underline [&[data-panel-open]>svg]:rotate-90 ${
+            active ? 'bg-primary/10 text-primary' : 'text-foreground-muted'
+          } ${collapsed ? 'justify-center p-0 h-11 w-11' : ''}`}
+          onClick={() => onSelect(group.group_id)}
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <Icon name="folder" size="sm" className="shrink-0" />
+            {collapsed ? null : <span className="truncate font-medium">{group.name}</span>}
+          </span>
+        </Accordion.Trigger>
+        {collapsed ? null : (
+          <IconButton
+            intent="ghost"
+            size="sm"
+            aria-label="Rename Group"
+            className="shrink-0 opacity-0 transition-opacity group-hover/folder:opacity-100"
+            onClick={() => setIsRenameModalOpen(true)}
+          >
+            <Icon name="edit" size="xs" />
+          </IconButton>
+        )}
+      </div>
 
       <Modal open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
         <Modal.Content onClick={(e) => e.stopPropagation()}>
@@ -118,6 +117,7 @@ export const ProjectFolder = ({ group, getToken, collapsed }: ProjectFolderProps
                 to={`/chats/${thread.thread_id}`}
                 active={thread.thread_id === activeThreadId}
                 className="h-auto py-1.5 px-3 rounded-md transition-colors"
+                onClick={() => onSelect(group.group_id)}
               >
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm">{thread.title}</span>

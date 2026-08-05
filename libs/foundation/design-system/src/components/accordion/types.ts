@@ -72,6 +72,7 @@ export interface AccordionTriggerProps extends OIDefaultProps {
   icon?: OIComponentSlotProps;
   children?: React.ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
 
 export interface AccordionContentProps extends OIDefaultProps {

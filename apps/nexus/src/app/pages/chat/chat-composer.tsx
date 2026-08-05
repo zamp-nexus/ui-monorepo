@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 
-import { Badge, Button, IconButton, Textarea } from '@open-zentra/foundation-design-system';
+import { Badge, Button, Textarea } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { parseComposerCommands } from './composer-commands';
@@ -17,8 +17,7 @@ interface ChatComposerProps {
  * The message box.
  *
  * Enter sends and Shift+Enter breaks the line — the convention a chat surface
- * is judged by. The attachment controls are drawn but disabled: they say what
- * is coming without pretending to work.
+ * is judged by.
  *
  * `#dataset`, `@user`, and `/skill` (ADR-0032) are parsed live and shown as
  * chips; the stripped text, not the raw draft, is what gets sent -- these are
@@ -98,16 +97,6 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
         />
 
         <div className="flex items-center gap-1">
-          <IconButton aria-label="Attach a file" intent="ghost" size="sm" disabled>
-            <Icon name="clipboard" size="sm" />
-          </IconButton>
-          <IconButton aria-label="Mention a dataset" intent="ghost" size="sm" disabled>
-            <Icon name="tag" size="sm" />
-          </IconButton>
-          <IconButton aria-label="Attach an image" intent="ghost" size="sm" disabled>
-            <Icon name="image" size="sm" />
-          </IconButton>
-
           <Button
             className="ml-auto"
             type="submit"

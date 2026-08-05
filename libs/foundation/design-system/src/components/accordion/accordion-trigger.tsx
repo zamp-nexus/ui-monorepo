@@ -24,6 +24,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
   children,
   className,
   ozid,
+  onClick,
 }) => {
   const theme = useTheme('accordion', accordionDefaultTheme);
   const { disabled } = useAccordionContext();
@@ -34,6 +35,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
         className={theme.trigger?.({ className, disabled }) ?? className}
         data-ozid={ozid}
         data-slot="trigger"
+        onClick={onClick}
       >
         {children}
         <Slot
