@@ -3,12 +3,18 @@ import { MessagePrimitive } from '@assistant-ui/react';
 import { ChatTextPart } from './chat-text-part';
 import { AnalysisRunFindingMessage } from './investigation-finding-message';
 import { RouterClarificationMessage } from './router-clarification-message';
+import { CopyMessageButton } from './copy-message-button';
+
+const UserTextPart = ({ text }: { readonly text: string }) => (
+  <div className="group/message flex max-w-2xl flex-col items-end">
+    <p className="max-w-full self-end whitespace-pre-wrap rounded-md bg-secondary px-4 py-3 text-sm text-foreground">{text}</p>
+    <CopyMessageButton text={text} label="Copy message" />
+  </div>
+);
 
 export const UserMessage = () => (
   <MessagePrimitive.Root className="flex justify-end">
-    <p className="max-w-2xl whitespace-pre-wrap rounded-md bg-secondary px-4 py-3 text-sm text-foreground">
-      <MessagePrimitive.Content components={{ Text: ({ text }) => <>{text}</> }} />
-    </p>
+    <MessagePrimitive.Content components={{ Text: UserTextPart }} />
   </MessagePrimitive.Root>
 );
 

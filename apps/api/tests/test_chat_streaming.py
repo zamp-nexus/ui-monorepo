@@ -18,9 +18,10 @@ from zentra_application_analysis_run import (
     ThreadStreamRouting,
     ThreadStreamSnapshot,
 )
+from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_analysis_run import ThreadMessage, ThreadMessageKind, ThreadStatus
 
-from zentra_api.chat_routes import append_chat_message, create_chat
+from zentra_api.chat_routes import _thread_stream, append_chat_message, create_chat
 
 GROUP_ID = UUID("50000000-0000-0000-0000-000000000001")
 THREAD_ID = UUID("50000000-0000-0000-0000-000000000002")
@@ -106,6 +107,11 @@ async def _failing_stream():
     yield ThreadStreamError(message="every provider failed for conversational")
 
 
+async def _unharvested_catalog_stream():
+    raise CatalogVersionNotFoundError("source_123")
+    yield  # pragma: no cover
+
+
 class Threads:
     def __init__(self, stream) -> None:
         self._stream = stream
@@ -183,6 +189,16 @@ async def test_a_mid_stream_failure_yields_a_terminal_error_not_http() -> None:
     assert len(chunks) == 3
     assert chunks[-1].startswith("event: error\n")
     assert "every provider failed" in chunks[-1]
+
+
+@pytest.mark.asyncio
+async def test_an_unharvested_catalog_yields_an_actionable_stream_error() -> None:
+    chunks = [chunk async for chunk in _thread_stream(_unharvested_catalog_stream())]
+
+    assert chunks == [
+        'event: error\ndata: {"code": "catalog_not_harvested", '
+        '"message": "No catalog has been harvested for this data connection yet."}\n\n'
+    ]
 
 
 @pytest.mark.asyncio

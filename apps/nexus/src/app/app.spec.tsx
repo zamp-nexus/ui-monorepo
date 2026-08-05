@@ -162,5 +162,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: /^sequences$/i })).toBeTruthy();
     const [dataLink] = screen.getAllByRole('link', { name: /^data$/i });
     expect(dataLink.getAttribute('href')).toBe('/datasets');
+    const [connectionsLink] = screen.getAllByRole('link', { name: /^connections$/i });
+    expect(connectionsLink.getAttribute('href')).toBe('/connections');
   });
 });

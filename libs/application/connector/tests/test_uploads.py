@@ -99,6 +99,50 @@ async def test_committing_creates_an_uploaded_data_source(
     assert len(harness.landing.landed) == 1
 
 
+async def test_an_uploaded_source_exposes_landing_credentials_to_cube(
+    harness: Harness, member
+) -> None:
+    harness.landing.columns = _csv_columns()
+    preview = await harness.service.preview_upload(
+        member,
+        filename="customers.csv",
+        upload_format=UploadFormat.CSV,
+        stream=_stream(b"x"),
+    )
+    source = await harness.service.commit_upload(
+        member, preview.upload_id, name="Customer extract"
+    )
+
+    credentials = await harness.service.resolve_driver_credentials(
+        member, source.data_source_id
+    )
+
+    assert credentials.host == "landing"
+    assert credentials.database == "zentra_uploads"
+
+
+async def test_a_failed_commit_keeps_the_preview_available_for_retry(
+    harness: Harness, member
+) -> None:
+    """A transient landing failure must not force the user to upload again."""
+    harness.landing.columns = _csv_columns()
+    preview = await harness.service.preview_upload(
+        member,
+        filename="customers.csv",
+        upload_format=UploadFormat.CSV,
+        stream=_stream(b"customer_id,signup_date\n1,2026-01-01\n"),
+    )
+    harness.landing.land_error = RuntimeError("ClickHouse is temporarily unavailable")
+
+    with pytest.raises(RuntimeError, match="temporarily unavailable"):
+        await harness.service.commit_upload(member, preview.upload_id, name="Customers")
+
+    harness.landing.land_error = None
+    source = await harness.service.commit_upload(member, preview.upload_id, name="Customers")
+
+    assert source.kind is SourceKind.UPLOADED
+
+
 async def test_a_corrected_column_type_is_honoured(harness: Harness, member) -> None:
     """The reviewer's correction must reach the landing zone, not be advisory."""
     harness.landing.columns = _csv_columns()

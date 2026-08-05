@@ -34,6 +34,7 @@ from zentra_application_analysis_run import (
     ThreadStreamRouting,
     ThreadStreamSnapshot,
 )
+from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_analysis_run import ThreadMessageError, ThreadTransitionError
 
 from .active_connection import (
@@ -220,6 +221,14 @@ async def _thread_stream(
             if isinstance(event, ThreadStreamSnapshot) and on_snapshot is not None:
                 await on_snapshot(event)
             yield _stream_event_frame(event)
+    except CatalogVersionNotFoundError:
+        yield _sse_frame(
+            "error",
+            {
+                "code": "catalog_not_harvested",
+                "message": "No catalog has been harvested for this data connection yet.",
+            },
+        )
     except _THREAD_ERRORS as error:
         code, _ = _error_code(error)
         yield _sse_frame("error", {"code": code, "message": str(error)})

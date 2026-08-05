@@ -6,7 +6,7 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-05
 reviewed: 2026-08-01
 confidence: verified
 implementation: current
@@ -70,5 +70,10 @@ Lists use stable activity-descending keyset pagination with opaque cursors,
 default size 50, and maximum size 100. Thread snapshots return server-decided
 action flags; clients do not derive permissions or lifecycle transitions. For
 reconnect semantics, see [[Visualization and Work Feed API]].
+
+When either message endpoint is requested with `Accept: text/event-stream`, an
+unharvested active Data Connection ends the stream with the stable
+`catalog_not_harvested` error and an instruction to harvest it. It does not
+terminate the stream without a response frame.
 
 Parent: [[APIs MOC]]

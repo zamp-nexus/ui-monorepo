@@ -24,6 +24,12 @@ const SOURCE = {
   connection_hint: 'ixirbbg74s.ap-south-1.aws.clickhouse.cloud/clickathon',
 };
 
+const UPLOADED_SOURCE = {
+  ...SOURCE,
+  name: 'fact_demand.csv',
+  kind: 'uploaded',
+};
+
 const CATALOG = {
   catalog_version_id: '50000000-0000-0000-0000-000000000005',
   data_source_id: SOURCE.data_source_id,
@@ -108,6 +114,18 @@ describe('Datasets', () => {
     renderPage();
 
     expect(await screen.findByText(/No datasets yet/i)).toBeTruthy();
+  });
+
+  it('requires an uploaded source to be harvested before it can be analyzed', async () => {
+    route({
+      '/catalog': { status: 404, body: { detail: 'No catalog has been harvested yet.' } },
+      '/v1/connector/sources': { body: [UPLOADED_SOURCE] },
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: /harvest tables/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /analyze/i })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('lists the tables a harvest found, with their shape', async () => {

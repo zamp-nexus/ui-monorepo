@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Link, useMatch } from 'react-router-dom';
 
-import { Button, SideNav, Modal, IconButton, Input } from '@open-zentra/foundation-design-system';
+import { Button, Modal, IconButton, Input } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import type { TokenSource } from '../api';
@@ -62,14 +62,14 @@ export const GroupFolder = ({
           type="button"
           aria-expanded={expanded}
           aria-controls={chatPanelId}
-          className={`flex w-full min-w-0 items-center rounded-md px-3 py-2 pr-20 text-left text-sm hover:bg-secondary hover:text-foreground ${
-            active ? 'bg-primary/10 text-primary' : 'text-foreground-muted'
+          className={`flex w-full min-w-0 items-center rounded-md px-3 py-2 pr-20 text-left text-[15px] transition-colors hover:bg-secondary/70 ${
+            active ? 'text-foreground' : 'text-foreground-muted hover:text-foreground'
           }`}
           onClick={() => onToggle(group.group_id)}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <Icon name={expanded ? 'folder_open' : 'folder'} size="sm" className="shrink-0" />
-            <span className="truncate font-medium">{group.name}</span>
+            <Icon name={expanded ? 'folder_open' : 'folder'} size="sm" className="shrink-0 text-foreground" />
+            <span className="truncate font-medium tracking-[-0.01em]">{group.name}</span>
           </span>
         </button>
         <div className="absolute right-1 top-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/folder:opacity-100 group-focus-within/folder:opacity-100">
@@ -142,26 +142,27 @@ export const GroupFolder = ({
               initial={prefersReducedMotion ? false : { y: 4 }}
               animate={{ y: 0 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.16, ease: 'easeOut' }}
-              className="flex flex-col gap-1 pb-2 pl-7 pr-2 pt-1"
+              className="flex flex-col gap-0.5 pb-3 pt-1"
             >
               {history.isFetching && !history.data ? (
-                <p className="px-3 py-2 text-xs text-foreground-muted">Loading...</p>
+                <p className="px-11 py-2 text-xs text-foreground-muted">Loading...</p>
               ) : threads.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-foreground-muted">No chats</p>
+                <p className="px-11 py-2 text-xs text-foreground-muted">No chats</p>
               ) : (
                 threads.map((thread) => (
-                  <SideNav.Item
+                  <Link
                     key={thread.thread_id}
-                    component={Link}
                     to={`/chats/${thread.thread_id}`}
-                    active={thread.thread_id === activeThreadId}
-                    className="h-auto py-1.5 px-3 rounded-md transition-colors"
+                    aria-current={thread.thread_id === activeThreadId ? 'page' : undefined}
+                    className={`block w-full truncate rounded-xl px-11 py-2 text-[15px] leading-5 no-underline transition-colors ${
+                      thread.thread_id === activeThreadId
+                        ? 'bg-secondary text-foreground'
+                        : 'text-foreground-muted hover:bg-secondary/70 hover:text-foreground'
+                    }`}
                     onClick={() => onSelect(group.group_id)}
                   >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm">{thread.title}</span>
-                    </div>
-                  </SideNav.Item>
+                    {thread.title}
+                  </Link>
                 ))
               )}
               {history.hasNextPage && (
@@ -170,9 +171,9 @@ export const GroupFolder = ({
                   size="sm"
                   onClick={() => void history.fetchNextPage()}
                   disabled={history.isFetching}
-                  className="mt-1 h-7 text-xs justify-start px-3"
+                  className="mt-2 h-7 justify-start px-11 text-xs text-foreground-muted hover:text-foreground"
                 >
-                  Load older
+                  Show more
                 </Button>
               )}
             </motion.div>

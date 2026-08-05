@@ -6,7 +6,7 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-08-05
 reviewed: 2026-07-29
 confidence: verified
 implementation: current
@@ -27,6 +27,7 @@ code_refs:
 | GET | `/health/live` | Process liveness only | `200` | none |
 | GET | `/health/ready` | Postgres, ClickHouse, Cube readiness | `200` or `503` | none |
 | GET | `/v1/context` | Internal User/Tenant/Membership context | `200` | Clerk bearer token |
+| GET | `/v1/catalog` | Governed catalog for the active Data Connection | `200` or `404` when it has not been harvested | Clerk bearer token |
 
 `/health/live` never contacts dependencies. `/health/ready` returns sanitized
 per-dependency `ready`/`unavailable` status and boolean configuration presence;
@@ -36,6 +37,10 @@ it does not expose credentials or connection strings.
 tenant name, email, and one role. Missing/invalid identity returns `401`;
 unbound provider identity or organization is denied without trusting request
 tenant data.
+
+`/v1/catalog` never falls back to the demo warehouse when a tenant's active
+Data Connection has no harvested catalog. It returns `404` with an actionable
+message so the client can direct the tenant to harvest the source first.
 
 Authorization and correlation are implemented by a reusable request dependency.
 See [[Authenticated Tenant Resolution]].

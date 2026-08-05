@@ -110,7 +110,7 @@ class UploadOperations:
         what makes a join between it and that warehouse discoverable at all.
         """
         self._require(actor, HARVEST_ROLES)
-        pending = self._pending_uploads.pop(upload_id, None)
+        pending = self._pending_uploads.get(upload_id)
         if pending is None:
             raise UploadRejectedError("No pending upload with that id")
 
@@ -137,6 +137,7 @@ class UploadOperations:
             metadata={"rows": str(landed.row_count), "filename": preview.filename},
         )
         await self._sources.add(source)
+        del self._pending_uploads[upload_id]
         return to_summary(source)
 
 

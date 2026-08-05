@@ -3,6 +3,7 @@ import type { ToolCallMessagePartComponent } from '@assistant-ui/react';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { useChatContext } from './chat-context';
+import { CopyMessageButton } from './copy-message-button';
 import type { RouterClarificationResult } from './to-chat-message';
 
 /**
@@ -28,8 +29,9 @@ export const RouterClarificationMessage: ToolCallMessagePartComponent<
         <Icon name="help_circle" size="sm" />
       </span>
 
-      <div className="min-w-0 flex-1">
+      <div className="group/message min-w-0 flex-1">
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{result.text}</p>
+        <div className="mt-1 flex h-7 items-center"><CopyMessageButton text={result.text} /></div>
 
         {result.suggestions.length > 0 ? (
           <ul className="mt-4 flex list-none flex-wrap gap-2 p-0">

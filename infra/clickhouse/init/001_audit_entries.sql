@@ -1,4 +1,5 @@
 CREATE DATABASE IF NOT EXISTS zentra_audit;
+CREATE DATABASE IF NOT EXISTS zentra_uploads;
 
 CREATE TABLE IF NOT EXISTS zentra_audit.audit_entries
 (
@@ -35,3 +36,6 @@ CREATE USER IF NOT EXISTS zentra_audit_app
 IDENTIFIED WITH plaintext_password BY 'zentra_audit_app';
 
 GRANT SELECT, INSERT ON zentra_audit.audit_entries TO zentra_audit_app;
+GRANT CREATE TABLE, DROP TABLE, INSERT, SELECT ON zentra_uploads.* TO zentra_audit_app;
+GRANT SELECT ON system.tables TO zentra_audit_app;
+GRANT SELECT ON system.columns TO zentra_audit_app;

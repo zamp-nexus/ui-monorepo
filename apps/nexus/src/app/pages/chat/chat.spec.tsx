@@ -100,7 +100,10 @@ const encoder = new TextEncoder();
  * the terminal `thread` frame (the same Thread shape `getChat` returns,
  * which is what `use-send-message` writes into the React Query cache).
  */
-const sseBody = (frames: readonly { event: string; data: unknown }[]) => {
+const sseBody = (
+  frames: readonly { event: string; data: unknown }[],
+  pending = false,
+) => {
   const text = frames
     .map((frame) => `event: ${frame.event}\ndata: ${JSON.stringify(frame.data)}\n\n`)
     .join('');
@@ -109,6 +112,7 @@ const sseBody = (frames: readonly { event: string; data: unknown }[]) => {
   return {
     getReader: () => ({
       read: async () => {
+        if (pending) return new Promise<never>(() => undefined);
         if (sent) return { done: true, value: undefined };
         sent = true;
         return { done: false, value: bytes };
@@ -126,7 +130,12 @@ const isThread = (body: unknown): body is Thread =>
  * Keyed by method as well as path, because `/groups/{id}/chats` lists on
  * GET and creates on POST, and those return different shapes.
  */
-const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
+const route = (handlers: Record<string, {
+  status?: number;
+  body: unknown;
+  pending?: boolean;
+  streamFrames?: readonly { event: string; data: unknown }[];
+}>) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
     const method = (init?.method ?? 'GET').toUpperCase();
@@ -144,12 +153,13 @@ const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
       ok,
       status: handler.status ?? 200,
       body: sseBody(
-        method === 'POST' && ok && isThread(handler.body)
+        handler.streamFrames ?? (method === 'POST' && ok && isThread(handler.body)
           ? [
               { event: 'routing', data: { thread_id: handler.body.thread_id } },
               { event: 'thread', data: handler.body },
             ]
-          : [],
+          : []),
+        handler.pending,
       ),
       json: async () => handler.body,
     } as unknown as Response;
@@ -377,6 +387,33 @@ describe('Chat', () => {
     expect(
       await screen.findByText('I could not map that message to a governed question.'),
     ).toBeTruthy();
+  });
+
+  it('shows progress while the first chat response is still streaming', async () => {
+    route({
+      ...baseRoutes,
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: { body: {}, pending: true },
+    });
+    renderPage();
+
+    await ask('How is the business doing?');
+
+    expect(await screen.findByTestId('chat-thinking-indicator')).toBeTruthy();
+  });
+
+  it('shows a stream failure before the first chat snapshot exists', async () => {
+    route({
+      ...baseRoutes,
+      [`POST /v1/groups/${GROUP.group_id}/chats`]: {
+        body: {},
+        streamFrames: [{ event: 'error', data: { message: 'No catalog has been harvested for this data connection yet.' } }],
+      },
+    });
+    renderPage();
+
+    await ask('How is the business doing?');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No catalog has been harvested for this data connection yet.');
   });
 
   it('offers the supported questions when the router could not resolve one', async () => {
@@ -1138,6 +1175,75 @@ describe('Finding message', () => {
       expect(call).toBeTruthy();
       expect(String((call?.[1] as RequestInit | undefined)?.body)).toContain('"decision":"approve"');
     });
+  });
+
+  it('makes clear that a result is ready when approval is the only remaining step', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-approval-ready',
+        status: 'awaiting_approval',
+        finding: {
+          headline: 'Total row count is 10',
+          summary: 'The table contains 10 rows.',
+          metrics: [],
+          evidence_references: [],
+        },
+        outcome: {
+          kind: 'confidence',
+          score: 0.65,
+          calibration_method: 'capped_sample_size',
+        },
+        approval: {
+          approval_id: 'appr-ready',
+          reason: 'low_confidence',
+          status: 'pending',
+          failed_conditions: ['confident'],
+          requested_at: '2026-08-04T10:00:00Z',
+          decided_at: null,
+          decision_reason: null,
+          can_decide: true,
+        },
+      }),
+    );
+
+    expect(await screen.findByText('Answer ready — approval required')).toBeTruthy();
+    expect(screen.getByText(/The answer is ready, but it needs your decision before it can be published/i)).toBeTruthy();
+  });
+
+  it('does not call a zero-confidence response an answer ready for approval', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-no-answer',
+        status: 'awaiting_approval',
+        finding: {
+          headline: 'The query could not be completed',
+          summary: 'No row count was returned.',
+          metrics: [],
+          evidence_references: [],
+        },
+        outcome: {
+          kind: 'confidence',
+          score: 0,
+          calibration_method: 'evaluator_independent_recheck',
+        },
+      }),
+    );
+
+    expect(await screen.findByText('No verified answer — review required')).toBeTruthy();
+    expect(screen.queryByText('Answer ready — approval required')).toBeNull();
+  });
+
+  it('labels a failed follow-up without invalidating an earlier answer', async () => {
+    renderFinding(
+      baseAnalysisRun({
+        analysis_run_id: 'ar-follow-up-failed',
+        status: 'failed',
+        parent_analysis_run_id: 'ar-earlier-answer',
+      }),
+    );
+
+    expect(await screen.findByText('Follow-up attempt failed')).toBeTruthy();
+    expect(screen.getByText(/Earlier answers in this chat remain available/i)).toBeTruthy();
   });
 
   it('offers no link to the removed standalone analysis-run or investigation page', async () => {

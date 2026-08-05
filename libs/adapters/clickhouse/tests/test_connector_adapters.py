@@ -19,10 +19,11 @@ import pytest
 from zentra_application_connector import (
     CredentialCipher,
     FileLandingZone,
+    SourceFieldDescriptor,
     SourceConnector,
     SourceCredentials,
 )
-from zentra_domain_connector import ConnectionFailure
+from zentra_domain_connector import ConnectionFailure, UploadFormat
 
 from zentra_adapter_clickhouse.cipher import (
     AesGcmCredentialCipher,
@@ -74,6 +75,43 @@ def test_source_connector_conforms_to_its_port() -> None:
 def test_landing_zone_conforms_to_its_port() -> None:
     zone = ClickHouseLandingZone(host="h", port=8443, username="u", password="p")
     _assert_conforms(zone, FileLandingZone)
+
+
+class _LandingClient:
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+        self.inserts: list[tuple[str, bytes, str | None]] = []
+
+    def command(self, query: str) -> None:
+        self.commands.append(query)
+
+    def raw_insert(self, *, table: str, insert_block: bytes, fmt: str | None) -> None:
+        self.inserts.append((table, insert_block, fmt))
+
+    def close(self) -> None:
+        pass
+
+
+def test_csv_landing_uses_the_provisioned_upload_database(monkeypatch) -> None:
+    """The app user can create tables, but infrastructure owns databases."""
+    client = _LandingClient()
+    zone = ClickHouseLandingZone(host="h", port=8443, username="u", password="p")
+    monkeypatch.setattr(zone, "_client", lambda: client)
+
+    zone._create_and_insert(
+        "upload_test",
+        [SourceFieldDescriptor("id", "Nullable(Int64)", True, 0)],
+        b"id\n1\n",
+        UploadFormat.CSV,
+    )
+
+    assert client.commands == [
+        "CREATE TABLE IF NOT EXISTS `zentra_uploads`.`upload_test` "
+        "(`id` Nullable(Int64)) ENGINE = MergeTree ORDER BY tuple()"
+    ]
+    assert client.inserts == [
+        ("`zentra_uploads`.`upload_test`", b"id\n1\n", "CSVWithNames")
+    ]
 
 
 def test_cipher_conforms_to_its_port() -> None:

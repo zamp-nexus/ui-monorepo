@@ -82,6 +82,27 @@ approves is what lands.
 Every inferred column is `Nullable`: a file is not a schema contract, and one
 blank cell in row 40,000 must not fail a load the user already approved.
 
+A deployment provisions the `zentra_uploads` database and grants the runtime
+account table-level access. The application creates and removes only its own
+per-upload tables; it never creates a database at request time.
+
+A preview remains available until its table is landed and the resulting Data
+Source is recorded. A transient landing failure can therefore be retried without
+uploading the file again.
+
+Landing an upload does not create its Catalog Version. The user must harvest
+the source before it can be analyzed; the Data screen presents **Harvest
+tables** until that work completes and keeps Analyze unavailable in the
+meantime.
+
+When an uploaded source is queried after harvest, Nexus resolves the
+landing-zone credentials at runtime. Uploads deliberately have no stored
+warehouse credential, unlike connected warehouse sources.
+
+In local Compose development, Cube maps a host-run API's `localhost`
+landing-zone address to the `clickhouse` service; deployed connector hosts are
+left unchanged.
+
 Landed tables use `ENGINE = MergeTree ORDER BY tuple()`. Inventing a sort key
 from the first column would impose an ordering the data does not have.
 

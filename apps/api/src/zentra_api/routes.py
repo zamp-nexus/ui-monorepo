@@ -23,6 +23,7 @@ from zentra_application_analysis_run import (
     ConflictError,
     PermissionDeniedError,
 )
+from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_analysis_run import Tombstone
 
@@ -133,12 +134,18 @@ async def catalog(
     dimensions only: no rows, and no physical schema.
     """
     dependencies = request.app.state.dependencies
-    semantic_layer = await dependencies.semantic_layers.resolve(
-        organization_id=resolved.actor.organization_id,
-        # The Organization's own connection, not the demo warehouse. Serving the demo
-        # catalog here would offer a question the Analysis Run cannot answer.
-        data_connection_id=await _active_connection(dependencies, resolved.actor),
-    )
+    try:
+        semantic_layer = await dependencies.semantic_layers.resolve(
+            organization_id=resolved.actor.organization_id,
+            # The Organization's own connection, not the demo warehouse. Serving the demo
+            # catalog here would offer a question the Analysis Run cannot answer.
+            data_connection_id=await _active_connection(dependencies, resolved.actor),
+        )
+    except CatalogVersionNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No catalog has been harvested for this data connection yet.",
+        ) from error
     governed = await semantic_layer.catalog()
     return CatalogSummaryResponse(
         measures=[

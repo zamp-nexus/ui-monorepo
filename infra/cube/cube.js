@@ -79,9 +79,12 @@ module.exports = {
       throw new Error('connector dataSource requires a Data Connection in securityContext');
     }
     const model = await fetchConnectorModel(securityContext);
+    const host = ['localhost', '127.0.0.1', '::1'].includes(model.clickhouse.host)
+      ? (process.env.CUBEJS_LOCALHOST_HOST || model.clickhouse.host)
+      : model.clickhouse.host;
     return {
       type: 'clickhouse',
-      host: model.clickhouse.host,
+      host,
       port: model.clickhouse.port,
       database: model.clickhouse.database,
       username: model.clickhouse.username,

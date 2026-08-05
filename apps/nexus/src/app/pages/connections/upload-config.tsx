@@ -100,7 +100,7 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
               accept=".csv,.parquet,.xlsx,.xls"
               onChange={handleFileChange}
               disabled={previewMutation.isPending || !canWrite}
-              className="flex h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-4 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm leading-9 text-foreground file:mr-4 file:h-9 file:align-middle file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-0 file:text-sm file:font-medium file:leading-9 file:text-foreground hover:file:bg-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50"
             />
             {previewMutation.error && (
               <Alert intent="error" title="Preview failed">
@@ -111,6 +111,7 @@ export const UploadConfig = ({ getToken, canWrite }: UploadConfigProps) => {
               disabled={!file || !canWrite || previewMutation.isPending}
               loading={previewMutation.isPending}
               onClick={() => previewMutation.mutate()}
+              className="self-start"
             >
               Inspect file
             </Button>
