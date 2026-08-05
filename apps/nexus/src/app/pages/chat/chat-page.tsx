@@ -7,7 +7,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { groupEventsByAnalysisRun } from './agent-activity-block';
-import { getChat, listAgents, renameChat } from './api';
+import { getChat, getLatestWorkflowExecution, listAgents, renameChat } from './api';
 import { ChatComposer } from './chat-composer';
 import { ChatContextProvider } from './chat-context';
 import { ChatEmptyState } from './chat-empty-state';
@@ -15,6 +15,7 @@ import { AssistantMessage, UserMessage } from './chat-messages';
 import { useChatRuntime } from './chat-runtime';
 import { suggestionsFromCatalog } from './chat-suggestions';
 import { useSendMessage } from './use-send-message';
+import { listWorkflows } from '../workflows/api';
 import { useThreadEvents } from './use-thread-events';
 import { useWorkspace } from '../../shell/app-shell';
 import { useMutation } from '@tanstack/react-query';
@@ -61,6 +62,9 @@ export const ChatPage = ({
   });
 
   const [draft, setDraft] = useState('');
+  const [workflowId, setWorkflowId] = useState('default-analytics');
+  const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
+  const hydratedWorkflowThread = useRef<string | null>(null);
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const snapshot = useQuery({
@@ -80,8 +84,27 @@ export const ChatPage = ({
     queryFn: () => requestJson<CatalogSummary>('/v1/catalog', getToken),
     staleTime: 5 * 60 * 1000,
   });
+  const workflows = useQuery({ queryKey: ['workflows'], queryFn: () => listWorkflows(getToken) });
+  const workflowExecution = useQuery({
+    queryKey: ['workflow-execution', activeThreadId],
+    queryFn: () => getLatestWorkflowExecution(getToken, activeThreadId as string),
+    enabled: Boolean(activeThreadId),
+  });
 
   const thread = snapshot.data ?? null;
+
+  useEffect(() => {
+    if (!activeThreadId) {
+      hydratedWorkflowThread.current = null;
+      setWorkflowId('default-analytics');
+      setWorkflowVersion(null);
+      return;
+    }
+    if (workflowExecution.isLoading || hydratedWorkflowThread.current === activeThreadId) return;
+    hydratedWorkflowThread.current = activeThreadId;
+    setWorkflowId(workflowExecution.data?.workflow_id ?? 'default-analytics');
+    setWorkflowVersion(workflowExecution.data?.workflow_version ?? null);
+  }, [activeThreadId, workflowExecution.data, workflowExecution.isLoading]);
 
   // A direct link to a chat has no preceding sidebar click. Its owning Group
   // is still the active project, so subsequent New chat actions stay there.
@@ -126,7 +149,14 @@ export const ChatPage = ({
 
   const submit = (content: string) => {
     setDraft('');
-    void send.send({ threadId: activeThreadId, groupId, content });
+    const selectedWorkflow = workflows.data?.find((workflow) => workflow.workflow_id === workflowId);
+    void send.send({
+      threadId: activeThreadId,
+      groupId,
+      content,
+      workflowId,
+      workflowVersion: workflowVersion ?? selectedWorkflow?.published_version,
+    });
   };
 
   const runtime = useChatRuntime({
@@ -198,6 +228,13 @@ export const ChatPage = ({
         </Modal>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {workflowExecution.data ? (
+            <div className="mx-auto mt-3 flex max-w-3xl items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground-muted">
+              <span className="font-medium text-foreground">Workflow run · v{workflowExecution.data.workflow_version}</span>
+              <span>{workflowExecution.data.status}</span>
+              <span className="truncate">{workflowExecution.data.nodes.join(' → ')}</span>
+            </div>
+          ) : null}
           <ChatContextProvider
             value={{
               getToken,
@@ -236,11 +273,20 @@ export const ChatPage = ({
           </ChatContextProvider>
         </div>
 
-        <ChatComposer
+          <ChatComposer
           draft={draft}
           onDraftChange={setDraft}
           onSend={submit}
           disabled={send.isPending || !canSend}
+          workflowId={workflowId}
+            onWorkflowChange={(nextWorkflowId) => {
+              setWorkflowId(nextWorkflowId);
+              setWorkflowVersion(
+                workflows.data?.find((workflow) => workflow.workflow_id === nextWorkflowId)
+                  ?.published_version ?? null,
+              );
+            }}
+          workflows={workflows.data}
         />
       </section>
     </div>

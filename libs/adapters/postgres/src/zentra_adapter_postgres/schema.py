@@ -360,6 +360,27 @@ workflow_versions = Table(
 )
 Index("ix_workflow_versions_organization_published", workflow_versions.c.organization_id, workflow_versions.c.published_at)
 
+workflow_executions = Table(
+    "workflow_executions",
+    metadata,
+    Column("workflow_execution_id", UUID(as_uuid=True), primary_key=True),
+    Column("organization_id", UUID(as_uuid=True), ForeignKey("organizations.organization_id", ondelete="CASCADE"), nullable=False),
+    Column("workflow_id", UUID(as_uuid=True), nullable=True),
+    Column("workflow_version", Integer, nullable=False),
+    Column("workflow_name", Text, nullable=False),
+    Column("thread_id", UUID(as_uuid=True), nullable=True),
+    Column("status", String(16), nullable=False),
+    Column("nodes", JSON, nullable=False, server_default=text("'[]'::jsonb")),
+    Column("routes", JSON, nullable=False, server_default=text("'[]'::jsonb")),
+    Column("output", Text),
+    Column("error", Text),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")),
+    Column("finished_at", TIMESTAMP(timezone=True)),
+    CheckConstraint("status IN ('running', 'completed', 'failed')", name="ck_workflow_executions_status"),
+)
+Index("ix_workflow_executions_organization_created", workflow_executions.c.organization_id, workflow_executions.c.created_at)
+Index("ix_workflow_executions_thread_created", workflow_executions.c.thread_id, workflow_executions.c.created_at)
+
 # `messages.analysis_run_id` is declared in schema_threads.py, before this
 # table exists — added here with the same deferred, use_alter pattern
 # `chat_sessions.initiating_message_id` already uses against `messages`,

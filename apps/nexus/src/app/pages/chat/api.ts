@@ -58,6 +58,22 @@ export const createChat = (getToken: TokenSource, groupId: string, message: stri
 export const getChat = (getToken: TokenSource, threadId: string) =>
   requestJson<Thread>(`/v1/chats/${threadId}`, getToken);
 
+export interface WorkflowExecutionTrace {
+  execution_id: string;
+  workflow_id: string;
+  workflow_version: number;
+  status: 'running' | 'completed' | 'failed';
+  nodes: string[];
+  routes: string[];
+  error: string | null;
+}
+
+export const getLatestWorkflowExecution = (getToken: TokenSource, threadId: string) =>
+  requestJson<WorkflowExecutionTrace | null>(
+    `/v1/chats/${threadId}/workflow-executions/latest`,
+    getToken,
+  );
+
 export const renameChat = (getToken: TokenSource, threadId: string, title: string) =>
   requestJson<Thread>(`/v1/chats/${threadId}`, getToken, { method: 'PATCH', body: JSON.stringify({ title }) });
 

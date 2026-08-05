@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -9,16 +10,25 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import RowMapping
-from zentra_adapter_postgres.schema import workflow_definitions, workflow_versions
+from zentra_adapter_postgres.schema import (
+    workflow_definitions,
+    workflow_executions,
+    workflow_versions,
+)
 from zentra_application_analysis_run import Role
 
+from .active_connection import AmbiguousDataConnectionError, active_data_connection_id
 from .request_context import RequestContext, authenticated_context
+from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
     DEFAULT_WORKFLOW_DEFINITION,
     DEFAULT_WORKFLOW_ID,
+    WORKFLOW_TOOL_CATALOG,
     CloneDefaultRequest,
     WorkflowDetailResponse,
     WorkflowDocumentRequest,
+    WorkflowExecuteRequest,
+    WorkflowExecutionResponse,
     WorkflowSummaryResponse,
 )
 
@@ -43,6 +53,25 @@ def _require_manager(context: RequestContext) -> None:
     if context.actor.role not in MANAGER_ROLES:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "This membership cannot manage Workflows"
+        )
+
+
+def _uses_raw_query(definition: dict[str, Any]) -> bool:
+    return any(
+        isinstance(node, dict)
+        and isinstance(node.get("data"), dict)
+        and "raw_query" in node["data"].get("tools", [])
+        for node in definition.get("nodes", [])
+    )
+
+
+def _require_raw_query_admin(
+    context: RequestContext, definition: dict[str, Any]
+) -> None:
+    if _uses_raw_query(definition) and context.actor.role is not Role.ADMIN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only an Admin may grant raw_query to a Workflow agent",
         )
 
 
@@ -81,6 +110,15 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     ]
     if len(controllers) != 1:
         return "A Workflow needs exactly one controller"
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("type") != "agent":
+            continue
+        data = node.get("data")
+        tools = data.get("tools", []) if isinstance(data, dict) else []
+        if not isinstance(tools, list) or any(
+            tool not in WORKFLOW_TOOL_CATALOG for tool in tools
+        ):
+            return "Workflow agents may use only registered tools"
     for edge in edges:
         if (
             not isinstance(edge, dict)
@@ -111,27 +149,37 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     by_source: dict[str, list[dict[str, Any]]] = {}
     for edge in edges:
         by_source.setdefault(edge["source"], []).append(edge)
+    for node in nodes:
+        if (
+            node.get("type") == "agent"
+            and len(by_source.get(node["id"], [])) > 1
+            and not node.get("data", {}).get("controller")
+        ):
+            return "Only the controller may choose between Workflow routes"
 
     def has_unbounded_cycle(
-        node_id: str, active: set[str], seen: set[str], loop_seen: bool
+        node_id: str, path_nodes: list[str], path_edges: list[dict[str, Any]]
     ) -> bool:
-        if node_id in seen:
+        if node_id in path_nodes:
             return False
-        seen.add(node_id)
-        active.add(node_id)
+        path_nodes.append(node_id)
         for edge in by_source.get(node_id, []):
             target = edge["target"]
-            data = edge.get("data", {})
-            is_loop = isinstance(data, dict) and bool(data.get("is_loop"))
-            if target in active:
-                if not (loop_seen or is_loop):
+            if target in path_nodes:
+                start = path_nodes.index(target)
+                cycle = path_edges[start:] + [edge]
+                if not any(
+                    isinstance(candidate.get("data"), dict)
+                    and candidate["data"].get("is_loop")
+                    for candidate in cycle
+                ):
                     return True
-            elif has_unbounded_cycle(target, active, seen, loop_seen or is_loop):
+            elif has_unbounded_cycle(target, path_nodes, path_edges + [edge]):
                 return True
-        active.remove(node_id)
+        path_nodes.pop()
         return False
 
-    if any(has_unbounded_cycle(node_id, set(), set(), False) for node_id in node_ids):
+    if any(has_unbounded_cycle(node_id, [], []) for node_id in node_ids):
         return "Every Workflow cycle needs bounded loop metadata"
     return None
 
@@ -237,6 +285,15 @@ async def clone_default(
     body: CloneDefaultRequest, request: Request, context: AuthenticatedRequest
 ) -> WorkflowDetailResponse:
     _require_manager(context)
+    definition = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    if context.actor.role is not Role.ADMIN:
+        for node in definition["nodes"]:
+            if node.get("type") == "agent":
+                node["data"]["tools"] = [
+                    tool
+                    for tool in node["data"].get("tools", [])
+                    if tool != "raw_query"
+                ]
     workflow_id = uuid4()
     now = datetime.now(UTC)
     async with request.app.state.dependencies.database.organization_connection(
@@ -247,7 +304,7 @@ async def clone_default(
                 workflow_id=workflow_id,
                 organization_id=context.actor.organization_id,
                 name=body.name.strip(),
-                draft_definition=DEFAULT_WORKFLOW_DEFINITION,
+                draft_definition=definition,
                 created_at=now,
                 updated_at=now,
             )
@@ -270,6 +327,7 @@ async def save_workflow(
     context: AuthenticatedRequest,
 ) -> WorkflowDetailResponse:
     _require_manager(context)
+    _require_raw_query_admin(context, body.definition)
     async with request.app.state.dependencies.database.organization_connection(
         context.actor.organization_id
     ) as connection:
@@ -317,6 +375,7 @@ async def publish_workflow(
         ).first()
         if row is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
+        _require_raw_query_admin(context, row.draft_definition)
         reason = _document_error(row.draft_definition)
         if reason:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, reason)
@@ -349,3 +408,107 @@ async def publish_workflow(
             .all()
         )
     return _detail(row._mapping, list(versions))
+
+
+@router.post("/{workflow_id}/execute", response_model=WorkflowExecutionResponse)
+async def execute_workflow(
+    workflow_id: UUID,
+    body: WorkflowExecuteRequest,
+    request: Request,
+    context: AuthenticatedRequest,
+) -> WorkflowExecutionResponse:
+    """Run an immutable published custom Workflow and retain a safe trace."""
+    async with request.app.state.dependencies.database.organization_connection(
+        context.actor.organization_id
+    ) as connection:
+        definition_row = (
+            await connection.execute(
+                select(workflow_definitions).where(
+                    workflow_definitions.c.workflow_id == workflow_id
+                )
+            )
+        ).first()
+        version_query = select(workflow_versions).where(
+            workflow_versions.c.workflow_id == workflow_id
+        )
+        if body.workflow_version is not None:
+            version_query = version_query.where(
+                workflow_versions.c.version == body.workflow_version
+            )
+        else:
+            version_query = version_query.order_by(
+                workflow_versions.c.version.desc()
+            ).limit(1)
+        version_row = (await connection.execute(version_query)).first()
+        if definition_row is None or version_row is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Published Workflow not found"
+            )
+        execution_id = uuid4()
+        await connection.execute(
+            insert(workflow_executions).values(
+                workflow_execution_id=execution_id,
+                organization_id=context.actor.organization_id,
+                workflow_id=workflow_id,
+                workflow_version=version_row.version,
+                workflow_name=definition_row.name,
+                status="running",
+            )
+        )
+
+    service = WorkflowExecutionService(
+        models=request.app.state.dependencies.models.as_dict(),
+        semantic_layers=request.app.state.dependencies.semantic_layers,
+    )
+    try:
+        data_connection_id = await active_data_connection_id(
+            request.app.state.dependencies.connector, context.actor
+        )
+        result = await service.run(
+            version_row.definition,
+            organization_id=context.actor.organization_id,
+            data_connection_id=data_connection_id,
+            message=body.message,
+        )
+    except (AmbiguousDataConnectionError, ValueError, RuntimeError) as error:
+        async with request.app.state.dependencies.database.organization_connection(
+            context.actor.organization_id
+        ) as connection:
+            await connection.execute(
+                update(workflow_executions)
+                .where(workflow_executions.c.workflow_execution_id == execution_id)
+                .values(
+                    status="failed", error=str(error), finished_at=datetime.now(UTC)
+                )
+            )
+        return WorkflowExecutionResponse(
+            execution_id=str(execution_id),
+            workflow_id=str(workflow_id),
+            workflow_version=version_row.version,
+            status="failed",
+            error=str(error),
+        )
+
+    async with request.app.state.dependencies.database.organization_connection(
+        context.actor.organization_id
+    ) as connection:
+        await connection.execute(
+            update(workflow_executions)
+            .where(workflow_executions.c.workflow_execution_id == execution_id)
+            .values(
+                status="completed",
+                nodes=list(result.nodes),
+                routes=list(result.routes),
+                output=result.output,
+                finished_at=datetime.now(UTC),
+            )
+        )
+    return WorkflowExecutionResponse(
+        execution_id=str(execution_id),
+        workflow_id=str(workflow_id),
+        workflow_version=version_row.version,
+        status="completed",
+        output=result.output,
+        nodes=list(result.nodes),
+        routes=list(result.routes),
+    )

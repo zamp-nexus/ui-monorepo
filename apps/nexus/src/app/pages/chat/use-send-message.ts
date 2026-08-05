@@ -64,6 +64,8 @@ export interface UseSendMessageResult {
     readonly threadId: string | null;
     readonly groupId: string | null;
     readonly content: string;
+    readonly workflowId?: string;
+    readonly workflowVersion?: number | null;
   }) => Promise<void>;
   readonly isPending: boolean;
   readonly error: Error | null;
@@ -158,10 +160,13 @@ export const useSendMessage = (
       threadId,
       groupId,
       content,
+      workflowId,
+      workflowVersion,
     }: {
       threadId: string | null;
       groupId: string | null;
       content: string;
+      workflowId?: string;
     }) => {
       setIsPending(true);
       setError(null);
@@ -190,7 +195,12 @@ export const useSendMessage = (
             Accept: 'text/event-stream',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ message: content }),
+          body: JSON.stringify({
+            message: content,
+            ...(workflowId === 'default-analytics'
+              ? { use_default_workflow: true }
+              : { workflow_id: workflowId, workflow_version: workflowVersion }),
+          }),
         });
 
         if (!response.ok || !response.body) {
@@ -256,6 +266,7 @@ export const useSendMessage = (
         }
         if (settledThreadId) {
           void queryClient.invalidateQueries({ queryKey: ['threads', groupId] });
+          void queryClient.invalidateQueries({ queryKey: ['workflow-execution', settledThreadId] });
         }
       } catch (caught) {
         setError(
