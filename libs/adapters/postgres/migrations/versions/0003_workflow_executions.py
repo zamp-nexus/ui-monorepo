@@ -11,6 +11,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if sa.inspect(op.get_bind()).has_table("workflow_executions"):
+        return
     op.create_table(
         "workflow_executions",
         sa.Column("workflow_execution_id", postgresql.UUID(as_uuid=True), primary_key=True),
