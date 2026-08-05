@@ -33,16 +33,16 @@ const Profile = ({ field }: { readonly field: CatalogField }) => {
   if (!profile) return <span className="text-foreground-muted">not profiled</span>;
 
   return (
-    <span className="flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+    <span className="flex items-center gap-3 whitespace-nowrap tabular-nums text-foreground-muted">
       <span title="Fraction of sampled rows that were null">
         {formatFraction(profile.null_fraction)} null
       </span>
       {profile.distinct_count != null ? (
-        <span title="Distinct values within the sample">
+        <span className="border-l border-border pl-3" title="Distinct values within the sample">
           {formatRows(profile.distinct_count)} distinct
         </span>
       ) : null}
-      <span className="text-foreground-muted" title="Rows the statistics are based on">
+      <span className="border-l border-border pl-3" title="Rows the statistics are based on">
         of {formatRows(profile.sampled_rows)} sampled
       </span>
     </span>
@@ -104,33 +104,45 @@ export const TableDetailModal = ({
                 upward over the body's `pt-4` — sticky `top-0` pins the row to
                 the scrollport's padding edge, so without it rows show through
                 that 1rem strip above the headings. */}
-            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
+            <table className="w-full min-w-[760px] border-separate border-spacing-0 text-sm">
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-[28%]" />
+                <col className="w-[20%]" />
+                <col />
+                <col className="w-36" />
+              </colgroup>
               <thead>
                 <tr className="text-left">
-                  {['#', 'Column', 'Data type', 'Profile', 'Agent access'].map(
-                    (heading) => (
-                      <th
-                        className="sticky top-0 z-20 border-b border-border bg-[var(--bg-layer-00)] pb-2 pr-4 pt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted shadow-[0_-1.25rem_0_0_var(--bg-layer-00)]"
-                        key={heading}
-                        scope="col"
-                      >
-                        {heading}
-                      </th>
-                    ),
-                  )}
+                  {['#', 'Column', 'Data type', 'Profile', 'Agent access'].map((heading) => (
+                    <th
+                      className="sticky top-0 z-20 border-b border-border bg-[var(--bg-layer-00)] px-2 pb-3 pt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted shadow-[0_-1.25rem_0_0_var(--bg-layer-00)] first:pl-0 last:pr-0"
+                      key={heading}
+                      scope="col"
+                    >
+                      {heading}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {fields.map((field) => (
-                  <tr key={field.field_id}>
-                    <td className="border-b border-border/50 py-2 pr-4 tabular-nums text-foreground-muted">
+                  <tr
+                    key={field.field_id}
+                    className="group transition-colors hover:bg-secondary/30"
+                  >
+                    <td className="border-b border-border/50 py-3.5 pl-0 pr-2 tabular-nums text-foreground-muted">
                       {field.position}
                     </td>
-                    <td className="border-b border-border/50 py-2 pr-4 font-mono">{field.name}</td>
-                    <td className="border-b border-border/50 py-2 pr-4">
-                      <div className="font-mono text-xs">{field.declared_type}</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge intent="default" size="sm">
+                    <td className="border-b border-border/50 px-2 py-3.5 font-mono font-medium first:pl-0">
+                      {field.name}
+                    </td>
+                    <td className="border-b border-border/50 px-2 py-3.5">
+                      <div className="font-mono text-xs text-foreground-muted">
+                        {field.declared_type}
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Badge intent="default" size="sm" className="font-mono">
                           {field.family}
                         </Badge>
                         <span className="text-xs text-foreground-muted">
@@ -138,16 +150,28 @@ export const TableDetailModal = ({
                         </span>
                       </div>
                     </td>
-                    <td className="border-b border-border/50 py-2 pr-4 text-xs text-foreground-muted">
+                    <td className="border-b border-border/50 px-2 py-3.5 text-xs">
                       <Profile field={field} />
                     </td>
-                    <td className="border-b border-border/50 py-2">
-                      <Switch
-                        size="sm"
-                        checked={field.agent_visible}
-                        disabled={!canWrite}
-                        onCheckedChange={(visible) => onToggleField(field.name, visible)}
-                      />
+                    <td className="border-b border-border/50 py-3.5 pl-2 pr-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={
+                            field.agent_visible
+                              ? 'text-xs font-medium'
+                              : 'text-xs text-foreground-muted'
+                          }
+                        >
+                          {field.agent_visible ? 'Available' : 'Hidden'}
+                        </span>
+                        <Switch
+                          size="sm"
+                          checked={field.agent_visible}
+                          disabled={!canWrite}
+                          aria-label={`Allow agents to access ${field.name}`}
+                          onCheckedChange={(visible) => onToggleField(field.name, visible)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
