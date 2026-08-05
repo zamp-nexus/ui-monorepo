@@ -1,7 +1,11 @@
 from copy import deepcopy
 
 from zentra_api.workflow_routes import _document_error, _routing_profile_error
-from zentra_api.workflow_schemas import DEFAULT_WORKFLOW_DEFINITION, NEW_WORKFLOW_DEFINITION, WorkflowRoutingProfile
+from zentra_api.workflow_schemas import (
+    DEFAULT_WORKFLOW_DEFINITION,
+    NEW_WORKFLOW_DEFINITION,
+    WorkflowRoutingProfile,
+)
 
 
 def test_system_workflow_is_structurally_publishable() -> None:
@@ -59,3 +63,39 @@ def test_workflow_rejects_an_unregistered_tool() -> None:
     document["nodes"][2]["data"]["tools"] = ["shell"]
 
     assert _document_error(document) == "Workflow agents may use only registered tools"
+
+
+def test_workflow_rejects_agent_with_missing_object_data() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][2]["data"] = None
+
+    assert _document_error(document) == "Every Workflow agent needs object data"
+
+
+def test_only_analyst_and_evaluator_may_receive_data_tools() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][1]["data"]["tools"] = ["connection_inventory"]
+
+    assert (
+        _document_error(document)
+        == "Only Cube Analyst and Evaluator may use data tools"
+    )
+
+
+def test_evaluator_may_receive_data_tools() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][3]["data"]["tools"] = [
+        "connection_inventory",
+        "schema_inspect",
+        "data_query",
+    ]
+
+    assert _document_error(document) is None
+
+
+def test_legacy_studio_roles_remain_compatible() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][2]["data"]["role"] = "analyst"
+    document["nodes"][3]["data"]["role"] = "reviewer"
+
+    assert _document_error(document) is None

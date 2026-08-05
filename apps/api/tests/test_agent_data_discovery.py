@@ -1,0 +1,171 @@
+from __future__ import annotations
+
+import asyncio
+from types import SimpleNamespace
+from uuid import UUID
+
+import pytest
+
+from zentra_api.agent_data_discovery import ConnectorDataDiscovery
+
+TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
+CONNECTION_ID = UUID("44000000-0000-0000-0000-000000000004")
+
+
+class Connector:
+    def __init__(self) -> None:
+        self.list_calls = 0
+        self.fail_inventory = False
+        self.inventory_started: asyncio.Event | None = None
+        self.inventory_gate: asyncio.Event | None = None
+        profile = SimpleNamespace(
+            sampled_rows=20,
+            null_fraction=0.1,
+            distinct_count=18,
+            min_value="1",
+            max_value="20",
+            sample_values=("secret",),
+        )
+        field = SimpleNamespace(
+            name="customer_id",
+            declared_type="UInt64",
+            family=SimpleNamespace(value="integer"),
+            nullable=False,
+            position=0,
+            profile=profile,
+        )
+        table = SimpleNamespace(
+            name="orders",
+            database="analytics",
+            fields=(field,),
+            estimated_rows=20,
+        )
+        self._catalog = SimpleNamespace(catalog_version_id=UUID(int=8), tables=(table,))
+
+    async def list_sources(self, actor):
+        assert actor.organization_id == TENANT_ID
+        self.list_calls += 1
+        if self.inventory_started is not None:
+            self.inventory_started.set()
+        if self.inventory_gate is not None:
+            await self.inventory_gate.wait()
+        if self.fail_inventory:
+            raise RuntimeError("connector unavailable")
+        return (
+            SimpleNamespace(
+                data_source_id=CONNECTION_ID,
+                name="Warehouse",
+                kind=SimpleNamespace(value="connected"),
+                health=SimpleNamespace(value="reachable"),
+                password="never exposed",
+            ),
+        )
+
+    async def agent_visible_catalog(self, actor, connection_id):
+        assert connection_id == CONNECTION_ID
+        return self._catalog
+
+    async def join_graph(self, actor, catalog_version_id):
+        return SimpleNamespace(
+            relations=(
+                SimpleNamespace(
+                    left="orders.customer_id",
+                    right="customers.id",
+                    cardinality=SimpleNamespace(value="many_to_one"),
+                ),
+            )
+        )
+
+
+@pytest.mark.asyncio
+async def test_inventory_and_schema_are_safe_and_cached_per_run() -> None:
+    discovery = ConnectorDataDiscovery(lambda: Connector())
+
+    inventory = await discovery.connection_inventory(TENANT_ID)
+    schema = await discovery.schema_inspect(TENANT_ID, CONNECTION_ID, "orders")
+
+    assert inventory["connection_count"] == 1
+    assert inventory["connections"][0]["name"] == "Warehouse"
+    assert inventory["connections"][0]["readiness"] == "reachable"
+    assert inventory["connections"][0]["catalog_available"] is True
+    assert "password" not in str(inventory)
+    assert schema["table"]["fields"][0]["query_member"] == (
+        f"{CONNECTION_ID}::orders.customer_id"
+    )
+    assert "sample_values" not in str(schema)
+    assert schema["table"]["confirmed_joins"] == [
+        {
+            "left": "orders.customer_id",
+            "right": "customers.id",
+            "cardinality": "many_to_one",
+        }
+    ]
+    assert discovery.metrics.schema_snapshot_reuses == 1
+
+
+@pytest.mark.asyncio
+async def test_inventory_load_is_shared_by_concurrent_agent_calls() -> None:
+    connector = Connector()
+    discovery = ConnectorDataDiscovery(lambda: connector)
+
+    await asyncio.gather(
+        discovery.connection_inventory(TENANT_ID),
+        discovery.schema_inspect(TENANT_ID, CONNECTION_ID, None),
+    )
+
+    assert connector.list_calls == 1
+    assert discovery.metrics.inventory_cache_hits == 1
+    assert discovery.metrics.schema_snapshot_reuses == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_inventory_load_is_discarded_for_a_later_retry() -> None:
+    connector = Connector()
+    connector.fail_inventory = True
+    discovery = ConnectorDataDiscovery(lambda: connector)
+
+    with pytest.raises(RuntimeError, match="connector unavailable"):
+        await discovery.connection_inventory(TENANT_ID)
+
+    connector.fail_inventory = False
+    inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert inventory["connection_count"] == 1
+    assert connector.list_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_cancelled_inventory_waiter_does_not_retain_a_failed_task() -> None:
+    connector = Connector()
+    connector.inventory_started = asyncio.Event()
+    connector.inventory_gate = asyncio.Event()
+    connector.fail_inventory = True
+    discovery = ConnectorDataDiscovery(lambda: connector)
+    waiting = asyncio.create_task(discovery.connection_inventory(TENANT_ID))
+    await connector.inventory_started.wait()
+
+    waiting.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiting
+    failed_task = discovery._inventory_tasks[TENANT_ID]
+    connector.inventory_gate.set()
+    with pytest.raises(RuntimeError, match="connector unavailable"):
+        await failed_task
+
+    connector.fail_inventory = False
+    inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert inventory["connection_count"] == 1
+    assert connector.list_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_inventory_responses_cannot_mutate_the_shared_snapshot() -> None:
+    discovery = ConnectorDataDiscovery(lambda: Connector())
+
+    inventory = await discovery.connection_inventory(TENANT_ID)
+    inventory["connections"] = []
+    later_inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert later_inventory["connection_count"] == 1
+    assert len(later_inventory["connections"]) == 1

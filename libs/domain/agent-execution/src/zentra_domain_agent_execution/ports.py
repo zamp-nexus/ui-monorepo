@@ -22,9 +22,9 @@ from .tools import ToolCall, ToolDefinition, ToolResult
 # Semantic layer
 #
 # This is the only port in the system that reaches data. `query()` enforces
-# ADR-003's governed-catalog restriction; `query_raw()` deliberately does not,
-# for organizations/agents that have opted out of it (still organization-scoped
-# — never cross-organization).
+# ADR-003's governed-catalog restriction. `query_raw()` is only reached through
+# the structured, selected-source `data_query` tool for Analyst/Evaluator use;
+# it never accepts SQL or cross-source joins.
 # ---------------------------------------------------------------------------
 
 

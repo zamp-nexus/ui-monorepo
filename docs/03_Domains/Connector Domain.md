@@ -123,11 +123,14 @@ decision made once survives re-harvesting the same table. They live in their
 own mutable table (`catalog_agent_access`), the same reasoning that already
 keeps Relations out of the immutable Catalog Version payload.
 
-This governs the Datasets UI today and is the seam any future Connector-
-catalog-reading Agent must call before showing a table or field. The
-currently implemented SQL Analyst does not read this catalog — it reaches
-governed metrics through Cube instead — so this override does not yet
-restrict it.
+This governs both the Datasets UI and the Agent `schema_inspect` tool. Agent
+metadata discovery reads `agent_visible_catalog`, so a hidden table or field is
+absent before it reaches a prompt. `connection_inventory` exposes only safe
+connection summary counts, while `data_query` remains a one-source structured
+Cube query; it is not a SQL endpoint. Inventory reports source readiness and
+catalog availability separately; `schema_inspect` may omit `table_name` to
+return only the selected connection's compact table overview. Concurrent Agent
+calls share one in-flight, immutable inventory snapshot per run.
 
 ## Boundary
 

@@ -15,7 +15,7 @@ import pytest
 from zentra_adapter_langgraph.constants import MAX_EVALUATION_ATTEMPTS
 from zentra_domain_agent_execution import AgentRole, ConfidenceOutcome
 
-from .loop_harness import METRICS, build_loop, keys, run
+from .loop_harness import CONNECTION_ID, METRICS, build_loop, keys, run
 
 
 @pytest.mark.asyncio
@@ -113,16 +113,36 @@ async def test_result_rows_never_leave_the_execution_record() -> None:
 
 
 @pytest.mark.asyncio
-async def test_the_analyst_only_ever_reaches_the_governed_catalog() -> None:
-    """`StubSemanticLayer` rejects an ungoverned member before it runs, so a
-    query reaching it at all is a query the catalog defines."""
-    loop, _, layer = build_loop(recheck_passed=True)
+async def test_analyst_and_evaluator_query_the_selected_source_independently() -> None:
+    loop, recorder, layer = build_loop(recheck_passed=True)
 
     await run(loop)
 
-    assert layer.queries
+    governed_calls = [
+        record
+        for record in recorder.records
+        if record.role in {AgentRole.CUBE_ANALYST, AgentRole.EVALUATOR}
+    ]
+    assert [record.role for record in governed_calls] == [
+        AgentRole.CUBE_ANALYST,
+        AgentRole.EVALUATOR,
+    ]
+    assert all(
+        call.name == "data_query"
+        for record in governed_calls
+        for call in record.tool_calls
+    )
+    assert len(layer.queries) == 2
     for query in layer.queries:
-        assert query.measures == ("Commerce.refundAmount",)
+        assert query.source_id == CONNECTION_ID
+        assert query.measures == (f"{CONNECTION_ID}::Commerce.refundAmount",)
+        members = (
+            *query.measures,
+            *query.dimensions,
+            *(item.dimension for item in query.time_dimensions),
+            *(item.member for item in query.filters),
+        )
+        assert all(member.startswith(f"{CONNECTION_ID}::") for member in members)
 
 
 @pytest.mark.asyncio

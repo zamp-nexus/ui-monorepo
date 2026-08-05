@@ -26,7 +26,9 @@ from zentra_domain_agent_execution import (
 )
 from zentra_domain_analysis_run import WorkItemStatus
 
+from zentra_api.agent_data_discovery import DiscoveryRunMetrics
 from zentra_api.orchestrator_loop import OrchestratorLoop
+from zentra_api.pipeline import CancellationRequested
 
 ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -41,9 +43,7 @@ ANALYST_QUERY = {
             "date_range": ["2026-06-01", "2026-07-31"],
         }
     ],
-    "filters": [
-        {"member": "Commerce.region", "operator": "equals", "values": ["EU"]}
-    ],
+    "filters": [{"member": "Commerce.region", "operator": "equals", "values": ["EU"]}],
 }
 ANALYST_METRIC = {
     "metric": "refund_amount",
@@ -355,3 +355,72 @@ async def test_a_persistently_failing_recheck_settles_at_the_attempt_cap() -> No
     # Insight still drafts a Finding from the last, unconverged evidence —
     # publication policy, not the loop, decides whether it can auto-publish.
     assert result.draft_finding is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("exception", "status"),
+    [
+        (None, "success"),
+        (RuntimeError("failed"), "failure"),
+        (CancellationRequested("cancelled"), "cancelled"),
+    ],
+)
+async def test_run_emits_one_terminal_telemetry_aggregate(
+    monkeypatch, exception: Exception | None, status: str
+) -> None:
+    aggregates: list[dict[str, object]] = []
+    loop, _agents = build_loop(
+        evaluator_outputs=[evaluator_output(passed=True)],
+        unit_of_work_factory=FakeUnitOfWorkFactory(),
+        recorder=FakeRecorder(),
+    )
+
+    async def run_once(**_kwargs: object):
+        if exception is not None:
+            raise exception
+        from zentra_api.orchestrator_loop import _RUN_TELEMETRY
+
+        telemetry = _RUN_TELEMETRY.get()
+        assert telemetry is not None
+        telemetry.discovery = SimpleNamespace(
+            metrics=DiscoveryRunMetrics(
+                inventory_cache_hits=2, schema_snapshot_reuses=3
+            )
+        )
+        telemetry.tool_call_count = 4
+        return object()
+
+    monkeypatch.setattr(loop, "_run", run_once)
+    monkeypatch.setattr(
+        "zentra_api.orchestrator_loop.record_analysis_run",
+        lambda **aggregate: aggregates.append(aggregate),
+    )
+
+    if exception is None:
+        await loop.run(
+            analysis_run_id=ANALYSIS_RUN_ID,
+            organization_id=TENANT_ID,
+            question="test",
+        )
+    else:
+        with pytest.raises(type(exception)):
+            await loop.run(
+                analysis_run_id=ANALYSIS_RUN_ID,
+                organization_id=TENANT_ID,
+                question="test",
+            )
+
+    assert len(aggregates) == 1
+    aggregate = aggregates[0]
+    assert aggregate["status"] == status
+    assert isinstance(aggregate["duration_ms"], int)
+    assert aggregate["duration_ms"] >= 0
+    if status == "success":
+        assert aggregate["tool_call_count"] == 4
+        assert aggregate["inventory_cache_hits"] == 2
+        assert aggregate["schema_snapshot_reuses"] == 3
+    else:
+        assert aggregate["tool_call_count"] == 0
+        assert aggregate["inventory_cache_hits"] == 0
+        assert aggregate["schema_snapshot_reuses"] == 0

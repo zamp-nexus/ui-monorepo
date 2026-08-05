@@ -80,11 +80,19 @@ SAFE_ATTRIBUTES: frozenset[str] = frozenset(
         "zentra.tool.name",
         "zentra.tool.status",
         "zentra.tool.latency_ms",
+        # Analysis-run aggregates
+        "zentra.analysis_run.status",
+        "zentra.analysis_run.duration_ms",
+        "zentra.analysis_run.tool_call_count",
+        "zentra.analysis_run.inventory_cache_hits",
+        "zentra.analysis_run.schema_snapshot_reuses",
         # Skill activations
         "zentra.skill.role",
         "zentra.skill.names",
     }
 )
+
+_ANALYSIS_RUN_STATUSES = frozenset({"success", "failure", "cancelled"})
 
 
 def _record(attributes: dict[str, object]) -> None:
@@ -291,6 +299,35 @@ def record_tool_call(
     )
     instruments().tool_calls.add(
         1, dimensions(role=role, tool_name=tool_name, status=status)
+    )
+
+
+def record_analysis_run(
+    *,
+    status: str,
+    duration_ms: int,
+    tool_call_count: int,
+    inventory_cache_hits: int,
+    schema_snapshot_reuses: int,
+) -> None:
+    """Record safe, bounded aggregates for one completed analysis run."""
+    if status not in _ANALYSIS_RUN_STATUSES:
+        raise ValueError("analysis-run status must be success, failure, or cancelled")
+    _record(
+        {
+            "zentra.analysis_run.status": status,
+            "zentra.analysis_run.duration_ms": duration_ms,
+            "zentra.analysis_run.tool_call_count": tool_call_count,
+            "zentra.analysis_run.inventory_cache_hits": inventory_cache_hits,
+            "zentra.analysis_run.schema_snapshot_reuses": schema_snapshot_reuses,
+        }
+    )
+    dims = dimensions(status=status)
+    meters = instruments()
+    meters.analysis_run_duration.record(duration_ms, dims)
+    meters.analysis_run_tool_calls.record(tool_call_count, dims)
+    meters.analysis_run_snapshot_reuses.record(
+        inventory_cache_hits + schema_snapshot_reuses, dims
     )
 
 

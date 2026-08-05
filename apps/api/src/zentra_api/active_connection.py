@@ -38,7 +38,7 @@ async def active_data_connection_id(
     that tries to mix member vocabularies.
     """
     if requested is not None:
-        return requested
+        return (requested,)
     if connector is None:
         return None
 
@@ -51,5 +51,7 @@ async def active_data_connection_id(
     )
     if not sources:
         return None
-    source_ids = tuple(source.data_source_id for source in sources)
-    return source_ids[0] if len(source_ids) == 1 else source_ids
+    # Always retain the source-set wrapper, even for one connection. That gives
+    # agent tools one stable, explicitly-qualified member format and prevents a
+    # newly added second source from changing query semantics mid-conversation.
+    return tuple(source.data_source_id for source in sources)

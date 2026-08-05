@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
 from zentra_adapter_langgraph import (
     AgentRuntime,
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
+    DataDiscoveryPort,
+    DataQueryTool,
     SkillRegistry,
     ToolRegistry,
+    data_discovery_tools,
 )
-from zentra_adapter_langgraph.tools import RawQueryTool
 from zentra_adapter_model_providers import (
     ModelTier,
     ProviderCircuitBreaker,
@@ -20,13 +21,13 @@ from zentra_adapter_model_providers import (
 )
 from zentra_domain_agent_execution import (
     AgentDescriptor,
-    AgentRole,
     ModelMessage,
     ToolAccess,
     ToolScope,
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
+from .workflow_policy import workflow_agent_role
 from .workflow_runtime import WorkflowEngine, WorkflowResult, WorkflowStep
 
 _OUTPUT_SCHEMA = {
@@ -42,10 +43,15 @@ _OUTPUT_SCHEMA = {
 
 class WorkflowExecutionService:
     def __init__(
-        self, *, models: dict[Any, Any], semantic_layers: ScopedCubeSemanticLayers
+        self,
+        *,
+        models: dict[Any, Any],
+        semantic_layers: ScopedCubeSemanticLayers,
+        discovery_factory: Callable[[], DataDiscoveryPort] | None = None,
     ) -> None:
         self._models = models
         self._semantic_layers = semantic_layers
+        self._discovery_factory = discovery_factory
 
     async def run(
         self,
@@ -63,17 +69,14 @@ class WorkflowExecutionService:
             clients=self._models,
             breaker=ProviderCircuitBreaker(),
         )
+        discovery = self._discovery_factory() if self._discovery_factory else None
 
         async def invoke(node: dict[str, Any], handoff: str) -> WorkflowStep:
             data = node["data"]
             tools = tuple(data.get("tools", ()))
-            role = (
-                AgentRole.CUBE_ANALYST
-                if tools
-                else AgentRole.ORCHESTRATOR
-                if data.get("controller")
-                else AgentRole.CONVERSATIONAL
-            )
+            role = workflow_agent_role(data)
+            if role is None:
+                raise ValueError("Workflow agent has an unsupported role")
             descriptor = AgentDescriptor(
                 agent_id=f"workflow-{node['id']}",
                 role=role,
@@ -86,13 +89,15 @@ class WorkflowExecutionService:
                 output_fields=frozenset({"handoff", "route"}),
                 eval_suite_ref="workflow-v1",
             )
+            query_tool = DataQueryTool(semantic_layer)
             runtime = AgentRuntime(
                 model=model,
                 tools=ToolRegistry(
-                    (
-                        SemanticCatalogSearchTool(semantic_layer),
-                        SemanticQueryTool(semantic_layer),
-                        RawQueryTool(semantic_layer),
+                    data_discovery_tools(
+                        semantic_layer=semantic_layer,
+                        discovery=discovery,
+                        organization_id=organization_id,
+                        query_tool=query_tool,
                     )
                 ),
                 skills=SkillRegistry(),

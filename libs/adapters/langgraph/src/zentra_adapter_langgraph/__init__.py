@@ -21,15 +21,21 @@ from .runtime import AgentRuntime, RuntimeResult, StepBudgetExhaustedError
 from .schemas import MalformedAgentResponseError
 from .skills import Skill, SkillRegistry
 from .tools import (
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
+    ConnectionInventoryTool,
+    DataDiscoveryPort,
+    DataQueryTool,
+    SchemaInspectTool,
     ToolRegistry,
+    data_discovery_tools,
 )
 
 __all__ = [
     "ToolRegistry",
-    "SemanticQueryTool",
-    "SemanticCatalogSearchTool",
+    "DataQueryTool",
+    "ConnectionInventoryTool",
+    "SchemaInspectTool",
+    "DataDiscoveryPort",
+    "data_discovery_tools",
     "SkillRegistry",
     "Skill",
     "StepBudgetExhaustedError",

@@ -34,8 +34,20 @@ Agents, and this is what happens inside one Agent Execution.
 tool outside an Agent's permissions is never offered, *and* is refused if named
 anyway, because a model can invent a tool name it was never shown.
 
-Every registered tool reaches data through `SemanticLayerPort` and nothing
-else. The Cube Analyst holds `semantic_catalog_search` and `semantic_query`.
+The Cube Analyst and Evaluator hold three read-only tools: `connection_inventory`
+lists tenant connections, `schema_inspect` reads the selected connection's
+agent-visible harvested catalog and confirmed joins, and `data_query` executes
+a structured Cube query against one explicitly selected source. Metadata is
+read through the Connector service; query rows remain on `SemanticLayerPort`.
+`data_query` uses Cube's raw compiled-member path, but never accepts SQL,
+cross-tenant access, or cross-source joins.
+
+Workflow Studio follows the same policy at save, publish, and execution time:
+only canonical `cube_analyst` and `evaluator` nodes may receive these tools.
+`orchestrator`, `insight`, and `conversational` nodes are data-free. Earlier
+Studio aliases remain read-compatible, but resolve to those canonical roles.
+`schema_inspect` accepts an omitted `table_name` for a compact connection
+overview. Inventory reports readiness separately from catalog availability.
 
 `ModelChoice.supports_tools` marks each routing rung, default False. When tools
 are requested, a rung that cannot serve them is skipped and the skip recorded
@@ -46,11 +58,10 @@ Insight make.
 
 ## Consequences
 
-The Cube Analyst gains iteration, not reach. There is no raw-table port
-anywhere in the tree for a tool to wrap, so the semantic-layer-only guarantee of
-[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]] holds unchanged: the loop lets an Agent look at a tenant's catalog, narrow, and
-query again, which is the difference between one demo cube and a harvested
-warehouse it has never seen.
+The agents gain iteration over a compact, single-flight per-run metadata
+snapshot. Concurrent Analyst/Evaluator follow-up work awaits one inventory
+load; the Evaluator still executes its own `data_query`, so metadata is shared
+while evidence remains independent.
 
 Nothing inside the loop raises. A refused member, an unauthorized tool, a
 broken tool — all three return as `is_error` results the model reads and
@@ -65,6 +76,11 @@ the same discipline `MAX_EVALUATION_ATTEMPTS` applies to the Evaluator loop.
 and each becomes an `agent.capability_used` Work Feed event. Arguments and
 results are absent by construction: they carry rows, and [[adr/0006-metadata-only-audit-ledger]] keeps the
 ledger metadata-only.
+
+Tool telemetry records call count and latency. One aggregate is emitted for
+every completed, failed, or cancelled analysis run with duration, tool-call
+total, and metadata-snapshot reuse counts. None includes arguments, rows,
+connection ids, or tenant identifiers.
 
 Usage accumulates across every turn, not only the one that answered. The model
 recorded is the answering turn's, since that is the call

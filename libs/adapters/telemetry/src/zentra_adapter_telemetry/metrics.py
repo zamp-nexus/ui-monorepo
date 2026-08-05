@@ -148,6 +148,21 @@ class _Instruments:
             unit="{call}",
             description="Tool calls an Agent made, by tool and outcome",
         )
+        self.analysis_run_duration = meter.create_histogram(
+            "zentra.analysis_run.duration",
+            unit="ms",
+            description="Wall time of one governed analysis run",
+        )
+        self.analysis_run_tool_calls = meter.create_histogram(
+            "zentra.analysis_run.tool_calls",
+            unit="{call}",
+            description="Total governed tool calls in one analysis run",
+        )
+        self.analysis_run_snapshot_reuses = meter.create_histogram(
+            "zentra.analysis_run.snapshot_reuses",
+            unit="{reuse}",
+            description="Total metadata snapshot reuses in one analysis run",
+        )
         self.skill_activations = meter.create_counter(
             "zentra.skill.activations",
             unit="{activation}",

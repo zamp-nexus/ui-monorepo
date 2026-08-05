@@ -55,26 +55,30 @@ from zentra_api.orchestrator_loop import OrchestratorLoop, StepAgents
 ANALYSIS_RUN_ID = UUID("11000000-0000-0000-0000-000000000001")
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
 QUESTION = "Why did EU refunds increase from June to July 2026?"
+CONNECTION_ID = UUID("44000000-0000-0000-0000-000000000004")
 
 CATALOG = SemanticCatalog(
     measures=(
-        SemanticMeasure(name="Commerce.refundAmount", type="sum"),
-        SemanticMeasure(name="Commerce.orderCount", type="countDistinct"),
+        SemanticMeasure(name=f"{CONNECTION_ID}::Commerce.refundAmount", type="sum"),
+        SemanticMeasure(
+            name=f"{CONNECTION_ID}::Commerce.orderCount", type="countDistinct"
+        ),
     ),
     dimensions=(
-        SemanticDimension(name="Commerce.orderedAt", type="time"),
-        SemanticDimension(name="Commerce.region", type="string"),
+        SemanticDimension(name=f"{CONNECTION_ID}::Commerce.orderedAt", type="time"),
+        SemanticDimension(name=f"{CONNECTION_ID}::Commerce.region", type="string"),
     ),
 )
 
 QUERY_PLAN = {
     "reasoning": "Compare governed EU refund amount month over month.",
     "query": {
-        "measures": ["Commerce.refundAmount"],
+        "source_id": str(CONNECTION_ID),
+        "measures": [f"{CONNECTION_ID}::Commerce.refundAmount"],
         "dimensions": [],
         "time_dimensions": [
             {
-                "dimension": "Commerce.orderedAt",
+                "dimension": f"{CONNECTION_ID}::Commerce.orderedAt",
                 "granularity": "month",
                 "date_range": ["2026-06-01", "2026-07-31"],
             }
@@ -113,6 +117,13 @@ class StubSemanticLayer:
 
     async def query(self, request: SemanticQuery) -> SemanticResult:
         CATALOG.reject_ungoverned(request)
+        self.queries.append(request)
+        return SemanticResult(
+            query=request,
+            rows=({"Commerce.refundAmount": "260.00"},),
+        )
+
+    async def query_raw(self, request: SemanticQuery) -> SemanticResult:
         self.queries.append(request)
         return SemanticResult(
             query=request,
@@ -159,7 +170,7 @@ class ScriptedModel:
         self.calls += 1
 
         # The Cube Analyst and Evaluator reach data through a tool now, not a
-        # structured planning call. One round: call `semantic_query`, then
+        # structured planning call. One round: call `data_query`, then
         # answer. Detected from the conversation rather than a counter, since
         # the Evaluator loop invokes the Analyst afresh on every attempt, each
         # with its own tool instance — a retry has to query again exactly as a
@@ -170,7 +181,7 @@ class ScriptedModel:
                 tool_calls=(
                     ToolCall(
                         call_id=f"call_{self.calls}",
-                        name="semantic_query",
+                        name="data_query",
                         arguments=QUERY_PLAN["query"],
                     ),
                 ),

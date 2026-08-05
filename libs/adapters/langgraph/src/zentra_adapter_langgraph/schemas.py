@@ -60,6 +60,15 @@ SEMANTIC_QUERY_SCHEMA = _obj(
     }
 )
 
+# Discovery always chooses a connection before it can query. The query remains
+# structured rather than becoming a SQL escape hatch.
+DATA_QUERY_SCHEMA = _obj(
+    {
+        **SEMANTIC_QUERY_SCHEMA["properties"],
+        "source_id": {"type": "string", "format": "uuid"},
+    }
+)
+
 # The labels are nullable rather than absent: _obj requires every property, which
 # strict structured output demands, so nullability is how the schema says "you
 # must answer, and 'this is not a period comparison' is an answer".
@@ -222,6 +231,73 @@ def semantic_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
         raise MalformedAgentResponseError(
             f"Agent proposed an unusable semantic query: {error}"
         ) from error
+
+
+def data_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
+    """Parse the public data-query contract without silently dropping fields."""
+    _validate_data_query_payload(payload)
+    return semantic_query_from_json(payload)
+
+
+def _validate_data_query_payload(payload: dict[str, Any]) -> None:
+    _validate_exact_object(payload, DATA_QUERY_SCHEMA["properties"], "data_query")
+    if payload["source_id"] is not None and not isinstance(payload["source_id"], str):
+        raise MalformedAgentResponseError("data_query.source_id must be a string")
+    for field in ("measures", "dimensions"):
+        _validate_strings(payload[field], f"data_query.{field}")
+    for index, item in enumerate(payload["time_dimensions"]):
+        _validate_exact_object(
+            item,
+            SEMANTIC_QUERY_SCHEMA["properties"]["time_dimensions"]["items"][
+                "properties"
+            ],
+            f"data_query.time_dimensions[{index}]",
+        )
+        if not isinstance(item["dimension"], str):
+            raise MalformedAgentResponseError("time dimension must name a dimension")
+        if item["granularity"] is not None and not isinstance(item["granularity"], str):
+            raise MalformedAgentResponseError(
+                "time dimension granularity must be a string"
+            )
+        if item["date_range"] is not None:
+            _validate_strings(item["date_range"], "time dimension date_range")
+            if len(item["date_range"]) != 2:
+                raise MalformedAgentResponseError(
+                    "time dimension date_range must contain two values"
+                )
+    for index, item in enumerate(payload["filters"]):
+        _validate_exact_object(
+            item,
+            SEMANTIC_QUERY_SCHEMA["properties"]["filters"]["items"]["properties"],
+            f"data_query.filters[{index}]",
+        )
+        if not isinstance(item["member"], str) or not isinstance(item["operator"], str):
+            raise MalformedAgentResponseError(
+                "filter member and operator must be strings"
+            )
+        _validate_strings(item["values"], "filter values")
+
+
+def _validate_exact_object(
+    value: object, properties: dict[str, Any], label: str
+) -> None:
+    if not isinstance(value, dict):
+        raise MalformedAgentResponseError(f"{label} must be an object")
+    expected = set(properties)
+    actual = set(value)
+    if actual != expected:
+        missing = expected - actual
+        unknown = actual - expected
+        detail = "missing " + ", ".join(sorted(missing)) if missing else ""
+        if unknown:
+            detail = f"{detail}; " if detail else ""
+            detail += "unsupported " + ", ".join(sorted(unknown))
+        raise MalformedAgentResponseError(f"{label} has {detail} fields")
+
+
+def _validate_strings(value: object, label: str) -> None:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise MalformedAgentResponseError(f"{label} must be an array of strings")
 
 
 def render_measure(measure: SemanticMeasure) -> str:

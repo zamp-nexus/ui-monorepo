@@ -232,9 +232,13 @@ async def test_a_run_refuses_when_a_required_role_is_not_promoted() -> None:
     with pytest.raises(NoEnabledAgentError, match="insight"):
         await run(loop)
 
-    # And it refused before spending: no measurement was taken.
-    assert [r.role for r in recorder.records] == [AgentRole.ORCHESTRATOR]
-    assert recorder.records[0].status.value == "failure"
+    # Planning runs only after the primary Analyst/Evaluator accuracy loop.
+    assert [r.role for r in recorder.records] == [
+        AgentRole.CUBE_ANALYST,
+        AgentRole.EVALUATOR,
+        AgentRole.ORCHESTRATOR,
+    ]
+    assert recorder.records[-1].status.value == "failure"
 
 
 # -- conflicts ------------------------------------------------------------

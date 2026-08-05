@@ -37,6 +37,7 @@ from zentra_adapter_telemetry import (
     SAFE_ATTRIBUTES,
     SAFE_DIMENSIONS,
     record_agent_execution,
+    record_analysis_run,
     record_citation_resolution,
     record_evidence_deletion,
     record_insight_execution,
@@ -169,6 +170,13 @@ def _emit_everything() -> None:
     record_skill_activation(
         role="cube_analyst", skill_names=("sample-size-discipline",)
     )
+    record_analysis_run(
+        status="success",
+        duration_ms=3200,
+        tool_call_count=3,
+        inventory_cache_hits=1,
+        schema_snapshot_reuses=2,
+    )
 
 
 def test_no_recorder_writes_an_attribute_nobody_reviewed(telemetry) -> None:
@@ -191,6 +199,39 @@ def test_no_metric_carries_an_unbounded_dimension(telemetry) -> None:
     # Specifically: the erasure identity is a fine span attribute and a series
     # per deletion if it becomes a dimension.
     assert not any("erasure_id" in attributes for attributes in points)
+
+
+def test_analysis_run_metrics_cover_all_terminal_statuses(telemetry) -> None:
+    with telemetry.tracer.start_as_current_span("analysis_run"):
+        for status in ("success", "failure", "cancelled"):
+            record_analysis_run(
+                status=status,
+                duration_ms=1,
+                tool_call_count=2,
+                inventory_cache_hits=3,
+                schema_snapshot_reuses=4,
+            )
+
+    statuses = {
+        attributes["status"]
+        for attributes in telemetry.dimensions()
+        if "status" in attributes
+    }
+    assert {"success", "failure", "cancelled"} <= statuses
+
+
+def test_analysis_run_metrics_reject_an_unbounded_status(telemetry) -> None:
+    with (
+        telemetry.tracer.start_as_current_span("analysis_run"),
+        pytest.raises(ValueError, match="analysis-run status"),
+    ):
+        record_analysis_run(
+            status="customer-specific-status",
+            duration_ms=1,
+            tool_call_count=0,
+            inventory_cache_hits=0,
+            schema_snapshot_reuses=0,
+        )
 
 
 @pytest.mark.parametrize("category,value", sorted(POISON.items()))
@@ -232,7 +273,12 @@ def test_the_allowlists_hold_only_categories_counts_and_identifiers(
     assert frozenset(
         {
             "zentra.organization_id",
-            "zentra.analysis_run_id",
+                "zentra.analysis_run_id",
+                "zentra.analysis_run.status",
+                "zentra.analysis_run.duration_ms",
+                "zentra.analysis_run.tool_call_count",
+                "zentra.analysis_run.inventory_cache_hits",
+                "zentra.analysis_run.schema_snapshot_reuses",
             "zentra.thread_id",
             "zentra.insight.agent_id",
             "zentra.insight.model",
