@@ -40,6 +40,7 @@ from .active_connection import (
     AmbiguousDataConnectionError,
     active_data_connection_id,
 )
+from .analytics_workflow_executor import AnalyticsWorkflowExecutor
 from .request_context import RequestContext, authenticated_context
 from .thread_schemas import (
     ChatMessageRequest,
@@ -347,10 +348,11 @@ async def create_chat(
             )
         return detail
     data_connection_id = await _active_connection(dependencies, resolved.actor)
+    analytics = AnalyticsWorkflowExecutor(dependencies.threads)
     if _wants_event_stream(request):
         return StreamingResponse(
             _thread_stream(
-                dependencies.threads.create_streaming(
+                analytics.create_streaming(
                     resolved.actor,
                     project_id=group_id,
                     content=body.message,
@@ -361,7 +363,7 @@ async def create_chat(
             headers=_SSE_HEADERS,
         )
     try:
-        detail = await dependencies.threads.create(
+        detail = await analytics.create(
             resolved.actor,
             project_id=group_id,
             content=body.message,
@@ -577,10 +579,11 @@ async def append_chat_message(
                 )
             return response
     data_connection_id = await _active_connection(dependencies, resolved.actor)
+    analytics = AnalyticsWorkflowExecutor(dependencies.threads)
     if _wants_event_stream(request):
         return StreamingResponse(
             _thread_stream(
-                dependencies.threads.append_streaming(
+                analytics.append_streaming(
                     resolved.actor,
                     thread_id=chat_id,
                     content=body.message,
@@ -591,7 +594,7 @@ async def append_chat_message(
             headers=_SSE_HEADERS,
         )
     try:
-        detail = await dependencies.threads.append(
+        detail = await analytics.append(
             resolved.actor,
             thread_id=chat_id,
             content=body.message,

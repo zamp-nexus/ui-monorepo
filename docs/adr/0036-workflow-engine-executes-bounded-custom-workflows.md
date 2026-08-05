@@ -35,6 +35,10 @@ and tenant-scoped raw query. The system Analytics Workflow remains the only
 Workflow permitted to create a Governed Finding; custom Workflows return an
 ordinary response.
 
+The trusted Analytics implementation is registered through a system-workflow
+adapter, preserving its established Analysis Run lifecycle while giving Chat a
+single Workflow selection seam for system and custom Workflows.
+
 ## Consequences
 
 This supersedes ADR-0035's simulation-only boundary. Parallel fan-out, joins,
