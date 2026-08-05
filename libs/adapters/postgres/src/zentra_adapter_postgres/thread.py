@@ -55,6 +55,7 @@ def _thread_from_row(row: Any) -> AnalysisRunThread:
         latest_activity_at=value["latest_activity_at"],
         archived_at=value["archived_at"],
         created_by=value["created_by"],
+        source_scope_id=value["source_scope_id"],
     )
 
 
@@ -90,6 +91,7 @@ class PostgresThreadRepository:
                 latest_activity_at=thread.latest_activity_at,
                 archived_at=thread.archived_at,
                 created_by=thread.created_by,
+                source_scope_id=thread.source_scope_id,
             )
         )
 
