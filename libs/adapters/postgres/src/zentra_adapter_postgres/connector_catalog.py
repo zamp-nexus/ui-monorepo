@@ -511,6 +511,12 @@ class PostgresHarvestRunRepository:
         return None if row is None else _run_from_row(row)
 
     async def save(self, run: HarvestRun) -> None:
+        values = _run_values(run)
+        # Cancellation is a one-way request issued by another HTTP request.
+        # A worker may hold an older copy of the run, so it must not erase that
+        # request when persisting normal progress.
+        if not run.cancellation_requested:
+            values.pop("cancellation_requested")
         async with self._database.organization_connection(
             run.organization_id
         ) as connection:
@@ -520,7 +526,7 @@ class PostgresHarvestRunRepository:
                     harvest_runs.c.harvest_run_id == run.harvest_run_id,
                     harvest_runs.c.organization_id == run.organization_id,
                 )
-                .values(**_run_values(run))
+                .values(**values)
             )
 
     async def list_for_source(

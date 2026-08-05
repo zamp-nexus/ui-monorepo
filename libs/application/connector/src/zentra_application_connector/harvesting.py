@@ -81,15 +81,15 @@ async def execute_harvest(
     try:
         run.advance(HarvestPhase.CONNECTING, at=now())
         await deps.runs.save(run)
-        _checkpoint(run)
+        await _checkpoint(deps, run)
 
         tables, unreadable = await _describe_tables(deps, run, credentials)
-        _checkpoint(run)
+        await _checkpoint(deps, run)
 
         tables = await _profile_fields(
             deps, run, credentials, tables, source.store_sample_values
         )
-        _checkpoint(run)
+        await _checkpoint(deps, run)
 
         version = CatalogVersion(
             catalog_version_id=uuid4(),
@@ -112,6 +112,7 @@ async def execute_harvest(
             peer_catalogs=peer_catalogs,
             suppressed=outcome,
         )
+        await _checkpoint(deps, run)
 
         run.complete(catalog_version_id=version.catalog_version_id, at=now())
         await deps.runs.save(run)
@@ -129,13 +130,16 @@ async def execute_harvest(
         return None
 
 
-def _checkpoint(run: HarvestRun) -> None:
+async def _checkpoint(deps: HarvestDependencies, run: HarvestRun) -> None:
     """Stop here if cancellation was requested.
 
     Between phases rather than mid-query: a run may be waiting on someone else's
     warehouse, and abandoning that connection is not ours to do abruptly.
     """
-    if run.cancellation_requested:
+    persisted = await deps.runs.get(
+        run.harvest_run_id, organization_id=run.organization_id
+    )
+    if persisted is not None and persisted.cancellation_requested:
         raise _Cancelled
 
 
@@ -163,7 +167,7 @@ async def _describe_tables(
     unreadable: list[UnreadableTable] = []
 
     for descriptor in in_scope:
-        _checkpoint(run)
+        await _checkpoint(deps, run)
         if run.budget.exhausted:
             break
         try:
@@ -225,7 +229,7 @@ async def _profile_fields(
     profiled: list[SourceTable] = []
 
     for table in tables:
-        _checkpoint(run)
+        await _checkpoint(deps, run)
         fields: list[SourceField] = []
         for source_field in table.fields:
             if run.budget.exhausted:
@@ -350,7 +354,7 @@ async def _infer_relations(
 
     proposals: list[Relation] = []
     for candidate in candidates:
-        _checkpoint(run)
+        await _checkpoint(deps, run)
         if run.budget.exhausted:
             break
 

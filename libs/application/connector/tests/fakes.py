@@ -9,6 +9,7 @@ ports are implementable without importing anything the application forbids.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -350,22 +351,26 @@ class FakeHarvestRunRepository:
         self.items: dict[UUID, HarvestRun] = {}
 
     async def add(self, run: HarvestRun) -> None:
-        self.items[run.harvest_run_id] = run
+        self.items[run.harvest_run_id] = deepcopy(run)
 
     async def get(self, harvest_run_id: UUID, *, organization_id: UUID) -> HarvestRun | None:
         run = self.items.get(harvest_run_id)
         if run is None or run.organization_id != organization_id:
             return None
-        return run
+        return deepcopy(run)
 
     async def save(self, run: HarvestRun) -> None:
-        self.items[run.harvest_run_id] = run
+        saved = deepcopy(run)
+        existing = self.items.get(run.harvest_run_id)
+        if existing is not None and existing.cancellation_requested:
+            saved.cancellation_requested = True
+        self.items[run.harvest_run_id] = saved
 
     async def list_for_source(
         self, data_source_id: UUID, *, organization_id: UUID
     ) -> Sequence[HarvestRun]:
         return [
-            r
+            deepcopy(r)
             for r in self.items.values()
             if r.data_source_id == data_source_id and r.organization_id == organization_id
         ]
@@ -379,5 +384,5 @@ class FakeHarvestRunRepository:
                 and run.organization_id == organization_id
                 and not run.is_terminal
             ):
-                return run
+                return deepcopy(run)
         return None

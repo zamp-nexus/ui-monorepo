@@ -273,6 +273,64 @@ async def test_cancellation_stops_the_run_at_its_next_checkpoint(
     assert harness.connector.describe_calls == 0
 
 
+async def test_a_cancellation_requested_while_running_reaches_the_next_checkpoint(
+    harness: Harness, admin
+) -> None:
+    load_tpch_subset(harness.connector)
+    source = await _register(harness, admin)
+    started = await harness.service.start_harvest(admin, source.data_source_id)
+    profile = harness.connector.profile_field
+    profile_started = asyncio.Event()
+    release_profile = asyncio.Event()
+
+    async def pause_profile(*args, **kwargs):
+        profile_started.set()
+        await release_profile.wait()
+        return await profile(*args, **kwargs)
+
+    harness.connector.profile_field = pause_profile  # type: ignore[method-assign]
+    harvest = asyncio.create_task(
+        harness.service.run_harvest(admin, started.harvest_run_id)
+    )
+    await asyncio.wait_for(profile_started.wait(), timeout=1)
+
+    await harness.service.cancel_harvest(admin, started.harvest_run_id)
+    release_profile.set()
+
+    status = await asyncio.wait_for(harvest, timeout=1)
+
+    assert status.phase is HarvestPhase.CANCELLED
+
+
+async def test_a_cancellation_during_the_final_relation_query_prevents_completion(
+    harness: Harness, admin
+) -> None:
+    load_tpch_subset(harness.connector)
+    source = await _register(harness, admin)
+    started = await harness.service.start_harvest(admin, source.data_source_id)
+    measure_overlap = harness.connector.measure_overlap
+    overlap_started = asyncio.Event()
+    release_overlap = asyncio.Event()
+
+    async def pause_overlap(*args, **kwargs):
+        overlap_started.set()
+        await release_overlap.wait()
+        return await measure_overlap(*args, **kwargs)
+
+    harness.connector.measure_overlap = pause_overlap  # type: ignore[method-assign]
+    harvest = asyncio.create_task(
+        harness.service.run_harvest(admin, started.harvest_run_id)
+    )
+    await asyncio.wait_for(overlap_started.wait(), timeout=1)
+
+    await harness.service.cancel_harvest(admin, started.harvest_run_id)
+    release_overlap.set()
+
+    status = await asyncio.wait_for(harvest, timeout=1)
+
+    assert status.phase is HarvestPhase.CANCELLED
+
+
 async def test_cancelling_a_finished_run_is_a_conflict(
     harness: Harness, admin
 ) -> None:

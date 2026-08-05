@@ -97,6 +97,10 @@ source work starts, so a poll never reports the previous phase while a long
 warehouse query is running. Progress is counts — tables found, fields described,
 fields profiled, relations proposed — plus budget consumption.
 
+Cancellation is durable: the request is persisted and the worker re-reads it at
+each safe checkpoint. A query already in flight is allowed to finish before the
+run becomes `cancelled`, so stopping a harvest never abandons a warehouse query.
+
 A second concurrent run on one source is refused with `409`: two runs interleaving
 would produce a Catalog Version that never existed at any moment in the source.
 
