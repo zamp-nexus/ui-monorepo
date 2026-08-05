@@ -16,6 +16,7 @@ from zentra_adapter_postgres.schema import (
 )
 from zentra_application_analysis_run import Role
 
+from .active_connection import AmbiguousDataConnectionError, active_data_connection_id
 from .request_context import RequestContext, authenticated_context
 from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
@@ -147,27 +148,37 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     by_source: dict[str, list[dict[str, Any]]] = {}
     for edge in edges:
         by_source.setdefault(edge["source"], []).append(edge)
+    for node in nodes:
+        if (
+            node.get("type") == "agent"
+            and len(by_source.get(node["id"], [])) > 1
+            and not node.get("data", {}).get("controller")
+        ):
+            return "Only the controller may choose between Workflow routes"
 
     def has_unbounded_cycle(
-        node_id: str, active: set[str], seen: set[str], loop_seen: bool
+        node_id: str, path_nodes: list[str], path_edges: list[dict[str, Any]]
     ) -> bool:
-        if node_id in seen:
+        if node_id in path_nodes:
             return False
-        seen.add(node_id)
-        active.add(node_id)
+        path_nodes.append(node_id)
         for edge in by_source.get(node_id, []):
             target = edge["target"]
-            data = edge.get("data", {})
-            is_loop = isinstance(data, dict) and bool(data.get("is_loop"))
-            if target in active:
-                if not (loop_seen or is_loop):
+            if target in path_nodes:
+                start = path_nodes.index(target)
+                cycle = path_edges[start:] + [edge]
+                if not any(
+                    isinstance(candidate.get("data"), dict)
+                    and candidate["data"].get("is_loop")
+                    for candidate in cycle
+                ):
                     return True
-            elif has_unbounded_cycle(target, active, seen, loop_seen or is_loop):
+            elif has_unbounded_cycle(target, path_nodes, path_edges + [edge]):
                 return True
-        active.remove(node_id)
+        path_nodes.pop()
         return False
 
-    if any(has_unbounded_cycle(node_id, set(), set(), False) for node_id in node_ids):
+    if any(has_unbounded_cycle(node_id, [], []) for node_id in node_ids):
         return "Every Workflow cycle needs bounded loop metadata"
     return None
 
@@ -408,14 +419,18 @@ async def execute_workflow(
                 )
             )
         ).first()
-        version_row = (
-            await connection.execute(
-                select(workflow_versions)
-                .where(workflow_versions.c.workflow_id == workflow_id)
-                .order_by(workflow_versions.c.version.desc())
-                .limit(1)
+        version_query = select(workflow_versions).where(
+            workflow_versions.c.workflow_id == workflow_id
+        )
+        if body.workflow_version is not None:
+            version_query = version_query.where(
+                workflow_versions.c.version == body.workflow_version
             )
-        ).first()
+        else:
+            version_query = version_query.order_by(
+                workflow_versions.c.version.desc()
+            ).limit(1)
+        version_row = (await connection.execute(version_query)).first()
         if definition_row is None or version_row is None:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, "Published Workflow not found"
@@ -437,13 +452,16 @@ async def execute_workflow(
         semantic_layers=request.app.state.dependencies.semantic_layers,
     )
     try:
+        data_connection_id = await active_data_connection_id(
+            request.app.state.dependencies.connector, context.actor
+        )
         result = await service.run(
             version_row.definition,
             organization_id=context.actor.organization_id,
-            data_connection_id=None,
+            data_connection_id=data_connection_id,
             message=body.message,
         )
-    except (ValueError, RuntimeError) as error:
+    except (AmbiguousDataConnectionError, ValueError, RuntimeError) as error:
         async with request.app.state.dependencies.database.organization_connection(
             context.actor.organization_id
         ) as connection:

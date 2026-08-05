@@ -25,6 +25,11 @@ Controller proposes only named edges declared by the immutable Workflow
 Version; the engine enforces every route and bounded loop limit. Each Agent
 receives an explicit handoff and only the registered Tools granted on its node.
 
+Chat records the selected published version with each custom Workflow
+execution. Follow-up turns keep that pinned version unless the composer selects
+a different Workflow, and the Chat can retrieve its latest node-and-route trace.
+The active tenant Data Connection is passed into each execution.
+
 The available V1 Tools are governed catalog search, governed semantic query,
 and tenant-scoped raw query. The system Analytics Workflow remains the only
 Workflow permitted to create a Governed Finding; custom Workflows return an

@@ -46,6 +46,10 @@ class WorkflowEngine:
             nodes.append(node_id)
             step = await invoke(current, handoff)
             outgoing = [edge for edge in self._edges if edge["source"] == node_id]
+            if len(outgoing) > 1 and not current.get("data", {}).get("controller"):
+                raise ValueError(
+                    "only the controller may choose between Workflow routes"
+                )
             route = step.route
             if len(outgoing) == 1:
                 route = outgoing[0].get("data", {}).get("route", "success")

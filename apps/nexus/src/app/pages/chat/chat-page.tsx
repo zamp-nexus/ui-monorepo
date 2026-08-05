@@ -7,7 +7,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { requestJson, type TokenSource } from '../../api';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { groupEventsByAnalysisRun } from './agent-activity-block';
-import { getChat, listAgents, renameChat } from './api';
+import { getChat, getLatestWorkflowExecution, listAgents, renameChat } from './api';
 import { ChatComposer } from './chat-composer';
 import { ChatContextProvider } from './chat-context';
 import { ChatEmptyState } from './chat-empty-state';
@@ -83,6 +83,11 @@ export const ChatPage = ({
     staleTime: 5 * 60 * 1000,
   });
   const workflows = useQuery({ queryKey: ['workflows'], queryFn: () => listWorkflows(getToken) });
+  const workflowExecution = useQuery({
+    queryKey: ['workflow-execution', activeThreadId],
+    queryFn: () => getLatestWorkflowExecution(getToken, activeThreadId as string),
+    enabled: Boolean(activeThreadId),
+  });
 
   const thread = snapshot.data ?? null;
 
@@ -129,7 +134,14 @@ export const ChatPage = ({
 
   const submit = (content: string) => {
     setDraft('');
-    void send.send({ threadId: activeThreadId, groupId, content, workflowId });
+    const selectedWorkflow = workflows.data?.find((workflow) => workflow.workflow_id === workflowId);
+    void send.send({
+      threadId: activeThreadId,
+      groupId,
+      content,
+      workflowId,
+      workflowVersion: selectedWorkflow?.published_version,
+    });
   };
 
   const runtime = useChatRuntime({
@@ -201,6 +213,13 @@ export const ChatPage = ({
         </Modal>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {workflowExecution.data ? (
+            <div className="mx-auto mt-3 flex max-w-3xl items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground-muted">
+              <span className="font-medium text-foreground">Workflow run · v{workflowExecution.data.workflow_version}</span>
+              <span>{workflowExecution.data.status}</span>
+              <span className="truncate">{workflowExecution.data.nodes.join(' → ')}</span>
+            </div>
+          ) : null}
           <ChatContextProvider
             value={{
               getToken,

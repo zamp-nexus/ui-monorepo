@@ -243,6 +243,62 @@ class ThreadService:
             thread, (user_message, assistant_message), None, None, actor
         )
 
+    async def append_workflow_reply(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        thread_id: UUID,
+        content: str,
+        reply: str,
+    ) -> ThreadDetail:
+        """Append a custom Workflow turn without creating an Analysis Run."""
+        self._require_mutator(actor)
+        now = self._now()
+        async with self._uow(actor) as unit_of_work:
+            thread = self._require_thread(
+                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+            )
+            await self._require_visible(unit_of_work, actor, thread_id)
+            await self._require_writable_project(unit_of_work, thread.project_id)
+            if thread.status is ThreadStatus.ARCHIVED:
+                raise ThreadConflictError("Archived Threads cannot accept messages")
+            user_message = ThreadMessage.create(
+                message_id=self._new_id(),
+                thread_id=thread_id,
+                organization_id=actor.organization_id,
+                author_id=actor.user_id,
+                kind=ThreadMessageKind.USER_QUESTION,
+                content=content,
+                now=now,
+            )
+            assistant_message = ThreadMessage.create(
+                message_id=self._new_id(),
+                thread_id=thread_id,
+                organization_id=actor.organization_id,
+                author_id=None,
+                kind=ThreadMessageKind.ASSISTANT_REPLY,
+                content=reply,
+                now=now,
+            )
+            thread.record_message(now)
+            for message in (user_message, assistant_message):
+                await unit_of_work.threads.add_message(message)
+                await unit_of_work.work_feed.append(
+                    organization_id=actor.organization_id,
+                    thread_id=thread_id,
+                    kind=WorkFeedEventKind.MESSAGE_ADDED,
+                    payload=MessageEventPayload(
+                        message_id=message.message_id,
+                        message_kind=message.kind.value,
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
+            await unit_of_work.threads.save_thread(thread)
+            await unit_of_work.commit()
+            messages = await unit_of_work.threads.messages_for_thread(thread_id)
+        return build_thread_detail(thread, messages, None, None, actor)
+
     async def create_streaming(
         self,
         actor: AuthenticatedActor,

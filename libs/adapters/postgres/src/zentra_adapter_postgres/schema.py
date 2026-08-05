@@ -368,6 +368,7 @@ workflow_executions = Table(
     Column("workflow_id", UUID(as_uuid=True), nullable=True),
     Column("workflow_version", Integer, nullable=False),
     Column("workflow_name", Text, nullable=False),
+    Column("thread_id", UUID(as_uuid=True), nullable=True),
     Column("status", String(16), nullable=False),
     Column("nodes", JSON, nullable=False, server_default=text("'[]'::jsonb")),
     Column("routes", JSON, nullable=False, server_default=text("'[]'::jsonb")),
@@ -378,6 +379,7 @@ workflow_executions = Table(
     CheckConstraint("status IN ('running', 'completed', 'failed')", name="ck_workflow_executions_status"),
 )
 Index("ix_workflow_executions_organization_created", workflow_executions.c.organization_id, workflow_executions.c.created_at)
+Index("ix_workflow_executions_thread_created", workflow_executions.c.thread_id, workflow_executions.c.created_at)
 
 # `messages.analysis_run_id` is declared in schema_threads.py, before this
 # table exists — added here with the same deferred, use_alter pattern

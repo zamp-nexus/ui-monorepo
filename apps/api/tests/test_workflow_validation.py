@@ -17,7 +17,7 @@ def test_workflow_requires_one_controller() -> None:
 
 def test_loop_requires_a_positive_bound() -> None:
     document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
-    document["edges"][4]["data"]["max_iterations"] = 0
+    document["edges"][3]["data"]["max_iterations"] = 0
 
     assert (
         _document_error(document) == "A loop edge needs a positive max_iterations value"
@@ -35,7 +35,7 @@ def test_workflow_requires_a_path_from_its_trigger_to_a_result() -> None:
 
 def test_cycle_cannot_hide_its_loop_metadata() -> None:
     document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
-    document["edges"][4]["data"].pop("is_loop")
+    document["edges"][3]["data"].pop("is_loop")
 
     assert (
         _document_error(document) == "Every Workflow cycle needs bounded loop metadata"

@@ -18,6 +18,7 @@ def upgrade() -> None:
         sa.Column("workflow_id", postgresql.UUID(as_uuid=True)),
         sa.Column("workflow_version", sa.Integer(), nullable=False),
         sa.Column("workflow_name", sa.Text(), nullable=False),
+        sa.Column("thread_id", postgresql.UUID(as_uuid=True)),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("nodes", postgresql.JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("routes", postgresql.JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
@@ -28,8 +29,10 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('running', 'completed', 'failed')", name="ck_workflow_executions_status"),
     )
     op.create_index("ix_workflow_executions_organization_created", "workflow_executions", ["organization_id", "created_at"])
+    op.create_index("ix_workflow_executions_thread_created", "workflow_executions", ["thread_id", "created_at"])
 
 
 def downgrade() -> None:
+    op.drop_index("ix_workflow_executions_thread_created", table_name="workflow_executions")
     op.drop_index("ix_workflow_executions_organization_created", table_name="workflow_executions")
     op.drop_table("workflow_executions")

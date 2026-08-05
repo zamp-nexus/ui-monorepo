@@ -31,6 +31,7 @@ class WorkflowExecuteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=1, max_length=4_000)
+    workflow_version: int | None = Field(default=None, ge=1)
 
 
 class WorkflowExecutionResponse(BaseModel):
@@ -41,8 +42,8 @@ class WorkflowExecutionResponse(BaseModel):
     workflow_version: int
     status: str
     output: str | None = None
-    nodes: list[str] = []
-    routes: list[str] = []
+    nodes: list[str] = Field(default_factory=list)
+    routes: list[str] = Field(default_factory=list)
     error: str | None = None
 
 
@@ -58,7 +59,7 @@ class WorkflowSummaryResponse(BaseModel):
 
 class WorkflowDetailResponse(WorkflowSummaryResponse):
     definition: dict[str, Any]
-    versions: list[int] = []
+    versions: list[int] = Field(default_factory=list)
 
 
 DEFAULT_WORKFLOW_ID = "default-analytics"
@@ -143,7 +144,7 @@ DEFAULT_WORKFLOW_DEFINITION: dict[str, Any] = {
             "id": "orchestrator-analyst",
             "source": "orchestrator",
             "target": "analyst",
-            "data": {"route": "delegate"},
+            "data": {"route": "analyze"},
         },
         {
             "id": "analyst-evaluator",
@@ -152,16 +153,16 @@ DEFAULT_WORKFLOW_DEFINITION: dict[str, Any] = {
             "data": {"route": "evidence"},
         },
         {
-            "id": "evaluator-insight",
+            "id": "evaluator-orchestrator",
             "source": "evaluator",
-            "target": "insight",
-            "data": {"route": "validated"},
+            "target": "orchestrator",
+            "data": {"route": "retry", "is_loop": True, "max_iterations": 3},
         },
         {
-            "id": "evaluator-analyst",
-            "source": "evaluator",
-            "target": "analyst",
-            "data": {"route": "recheck", "is_loop": True, "max_iterations": 3},
+            "id": "orchestrator-insight",
+            "source": "orchestrator",
+            "target": "insight",
+            "data": {"route": "synthesize"},
         },
         {
             "id": "insight-result",
