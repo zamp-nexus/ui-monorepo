@@ -1,4 +1,4 @@
-"""Which Data Connection an Analysis Run queries.
+"""Which Data Connections an Analysis Run may query.
 
 `AnalysisRun.data_connection_id` has existed since ADR-0012, and nothing ever
 set it: every caller passed `None`, which means the demo warehouse. That was
@@ -25,26 +25,17 @@ from zentra_application_connector import ConnectorService
 from zentra_application_connector import Role as ConnectorRole
 
 
-class AmbiguousDataConnectionError(ValueError):
-    """Several Data Connections exist and the caller named none.
-
-    Refused rather than guessed. Picking one silently would answer a question
-    against data the asker did not choose, which is the failure this module
-    exists to fix — not one to reintroduce under a different name.
-    """
-
-
 async def active_data_connection_id(
     connector: ConnectorService | None,
     actor: AuthenticatedActor,
     *,
     requested: UUID | None = None,
-) -> UUID | None:
-    """The Data Connection this tenant's questions are asked against.
+) -> UUID | tuple[UUID, ...] | None:
+    """The immutable source set for a new Analysis Run.
 
-    `None` means the demo warehouse, which is correct only when the tenant has
-    connected nothing. A tenant with exactly one connection gets it without
-    having to say so; more than one has to be chosen between.
+    A tuple is a source scope, not an instruction to join the sources.  The
+    semantic layer routes every query to one tuple member and refuses a query
+    that tries to mix member vocabularies.
     """
     if requested is not None:
         return requested
@@ -60,9 +51,5 @@ async def active_data_connection_id(
     )
     if not sources:
         return None
-    if len(sources) > 1:
-        raise AmbiguousDataConnectionError(
-            "This tenant has more than one Data Connection. "
-            "Name the one to query."
-        )
-    return sources[0].data_source_id
+    source_ids = tuple(source.data_source_id for source in sources)
+    return source_ids[0] if len(source_ids) == 1 else source_ids

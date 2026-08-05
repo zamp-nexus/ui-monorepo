@@ -39,6 +39,10 @@ def upgrade() -> None:
         sa.CheckConstraint("position >= 0", name="ck_analysis_source_scope_members_position"),
     )
     op.add_column("chat_sessions", sa.Column("source_scope_id", postgresql.UUID(as_uuid=True)))
+    op.add_column(
+        "chat_sessions",
+        sa.Column("source_ids", postgresql.JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+    )
     op.create_foreign_key("fk_chat_sessions_source_scope", "chat_sessions", "analysis_source_scopes", ["source_scope_id"], ["source_scope_id"], ondelete="RESTRICT")
     op.drop_column("chat_sessions", "default_data_connection_id")
     op.add_column("analysis_runs", sa.Column("source_scope_id", postgresql.UUID(as_uuid=True)))
@@ -49,6 +53,7 @@ def downgrade() -> None:
     op.drop_constraint("fk_analysis_runs_source_scope", "analysis_runs", type_="foreignkey")
     op.drop_column("analysis_runs", "source_scope_id")
     op.add_column("chat_sessions", sa.Column("default_data_connection_id", postgresql.UUID(as_uuid=True)))
+    op.drop_column("chat_sessions", "source_ids")
     op.drop_constraint("fk_chat_sessions_source_scope", "chat_sessions", type_="foreignkey")
     op.drop_column("chat_sessions", "source_scope_id")
     op.drop_table("analysis_source_scope_members")

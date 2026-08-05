@@ -54,7 +54,7 @@ class IntakeService:
         question: str,
         *,
         organization_id: UUID,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> RoutingResult:
         semantic_layer = await self._resolve_semantic_layer(
             organization_id, data_connection_id

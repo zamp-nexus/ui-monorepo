@@ -56,6 +56,7 @@ def _thread_from_row(row: Any) -> AnalysisRunThread:
         archived_at=value["archived_at"],
         created_by=value["created_by"],
         source_scope_id=value["source_scope_id"],
+        source_ids=tuple(UUID(source_id) for source_id in value["source_ids"]),
     )
 
 
@@ -92,6 +93,7 @@ class PostgresThreadRepository:
                 archived_at=thread.archived_at,
                 created_by=thread.created_by,
                 source_scope_id=thread.source_scope_id,
+                source_ids=[str(source_id) for source_id in thread.source_ids],
             )
         )
 

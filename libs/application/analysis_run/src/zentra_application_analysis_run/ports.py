@@ -47,7 +47,7 @@ class AnalysisRunPipeline(Protocol):
         organization_id: UUID,
         question: str,
         model_tier: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> PipelineResult: ...
 
 

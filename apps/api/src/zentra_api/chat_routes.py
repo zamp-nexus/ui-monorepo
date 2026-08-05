@@ -37,10 +37,7 @@ from zentra_application_analysis_run import (
 from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_analysis_run import ThreadMessageError, ThreadTransitionError
 
-from .active_connection import (
-    AmbiguousDataConnectionError,
-    active_data_connection_id,
-)
+from .active_connection import active_data_connection_id
 from .analytics_workflow_executor import AnalyticsWorkflowExecutor
 from .request_context import RequestContext, authenticated_context
 from .thread_schemas import (
@@ -75,15 +72,12 @@ _SSE_HEADERS = {"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": 
 
 async def _active_connection(
     dependencies: object, actor: AuthenticatedActor
-) -> UUID | None:
+) -> UUID | tuple[UUID, ...] | None:
     """The Data Connection this Thread's Analysis Runs query."""
-    try:
-        return await active_data_connection_id(
-            dependencies.connector,  # type: ignore[attr-defined]
-            actor,
-        )
-    except AmbiguousDataConnectionError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+    return await active_data_connection_id(
+        dependencies.connector,  # type: ignore[attr-defined]
+        actor,
+    )
 
 
 async def _auto_workflow_selection(

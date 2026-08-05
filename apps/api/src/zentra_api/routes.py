@@ -31,10 +31,7 @@ from zentra_application_connector import (
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_analysis_run import Tombstone
 
-from .active_connection import (
-    AmbiguousDataConnectionError,
-    active_data_connection_id,
-)
+from .active_connection import active_data_connection_id
 from .request_context import RequestContext, authenticated_context
 from .schemas import (
     AnalysisRunDetailResponse,
@@ -62,16 +59,13 @@ async def _active_connection(
     actor: object,
     *,
     requested: UUID | None = None,
-) -> UUID | None:
-    """The Data Connection a question is asked against, or a 409 to choose."""
-    try:
-        return await active_data_connection_id(
-            dependencies.connector,  # type: ignore[attr-defined]
-            actor,  # type: ignore[arg-type]
-            requested=requested,
-        )
-    except AmbiguousDataConnectionError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+) -> UUID | tuple[UUID, ...] | None:
+    """The source scope a question may query; it is never guessed down to one."""
+    return await active_data_connection_id(
+        dependencies.connector,  # type: ignore[attr-defined]
+        actor,  # type: ignore[arg-type]
+        requested=requested,
+    )
 
 
 @router.get("/health/live")
@@ -197,7 +191,10 @@ async def catalog(
         except CatalogVersionNotFoundError:
             sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status="not_harvested"))
             continue
-        status_name = "ready" if source.kind.value == "connected" else "execution_not_supported"
+        # Uploads are landed in Nexus-managed ClickHouse and use the same
+        # source-local Cube path as a customer ClickHouse.  They are a second
+        # source, not a display-only attachment.
+        status_name = "ready"
         sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status=status_name, measures=source_measures, dimensions=source_dimensions))
         if status_name == "ready":
             measures.extend(source_measures)

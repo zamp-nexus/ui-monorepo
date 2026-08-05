@@ -115,6 +115,10 @@ class SemanticQuery(BaseModel):
     time_dimensions: tuple[SemanticTimeDimension, ...] = ()
     filters: tuple[SemanticFilter, ...] = ()
     limit: int | None = Field(default=None, gt=0)
+    # A query is deliberately bound to one source. A Chat may issue several
+    # of these and compare their aggregate results, but it must never turn
+    # them into an implicit cross-source SQL join.
+    source_id: UUID | None = None
 
 
 class SemanticResult(BaseModel):

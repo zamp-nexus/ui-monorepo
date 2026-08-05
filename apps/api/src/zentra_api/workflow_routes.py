@@ -17,7 +17,7 @@ from zentra_adapter_postgres.schema import (
 )
 from zentra_application_analysis_run import Role
 
-from .active_connection import AmbiguousDataConnectionError, active_data_connection_id
+from .active_connection import active_data_connection_id
 from .request_context import RequestContext, authenticated_context
 from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
@@ -529,7 +529,7 @@ async def execute_workflow(
             data_connection_id=data_connection_id,
             message=body.message,
         )
-    except (AmbiguousDataConnectionError, ValueError, RuntimeError) as error:
+    except (ValueError, RuntimeError) as error:
         async with request.app.state.dependencies.database.organization_connection(
             context.actor.organization_id
         ) as connection:

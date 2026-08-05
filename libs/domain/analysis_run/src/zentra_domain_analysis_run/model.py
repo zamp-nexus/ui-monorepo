@@ -264,7 +264,7 @@ class AnalysisRun:
     # None means the demo warehouse (today's only reachable source). Set once
     # at creation and never reassigned — ADR-0012: "No source... may switch
     # mid-run."
-    data_connection_id: UUID | None = None
+    data_connection_id: UUID | tuple[UUID, ...] | None = None
     source_scope_id: UUID | None = None
     events: list[DomainEvent] = field(default_factory=list)
 
@@ -276,7 +276,7 @@ class AnalysisRun:
         organization_id: UUID,
         question: str,
         now: datetime,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
         source_scope_id: UUID | None = None,
         thread_id: UUID | None = None,
         thread_sequence: int | None = None,

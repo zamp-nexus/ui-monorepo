@@ -16,10 +16,13 @@ every Analysis Run records the exact scope it used.
 has more than one. Sources that are unreachable, unharvested, or unsupported by
 the active executor remain visible with an explicit status.
 
-Cube remains source-local. Cross-source analysis is permitted only through a
-federated execution adapter after every join edge is a confirmed Relation. The
-adapter receives only governed projections from source-local executors and
-never exposes source credentials to the client.
+Cube remains source-local. A Chat can run independent governed queries over
+several scoped sources and synthesize a labelled comparison of their aggregate
+results. It cannot perform a cross-source SQL join, row-level match, or infer
+a relationship between sources. Confirmed Relations authorize joins only among
+tables in the same Data Source. Uploads are sources backed by Nexus-managed
+ClickHouse credentials and follow this same source-local path; customer
+ClickHouse credentials remain confined to their own source adapter.
 
 ## Consequences
 

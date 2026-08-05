@@ -202,7 +202,10 @@ class SemanticQueryTool:
             name=self.name,
             description=(
                 "Run a governed query against the semantic layer and return "
-                "the rows. Every member must appear verbatim in the catalog."
+                "the rows. Every member must appear verbatim in the catalog. "
+                "When the catalog lists multiple sources, choose exactly one "
+                "source_id: joins and row-level matching across sources are "
+                "not supported."
             ),
             input_schema=SEMANTIC_QUERY_SCHEMA,
         )

@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    JSON,
     TIMESTAMP,
     CheckConstraint,
     Column,
@@ -49,6 +50,11 @@ chat_sessions = Table(
         UUID(as_uuid=True),
         ForeignKey("analysis_source_scopes.source_scope_id", ondelete="RESTRICT"),
     ),
+    # The executable member IDs of the immutable Chat scope. The normalized
+    # scope tables retain catalog provenance; this compact copy is what the
+    # Thread service needs to enqueue a later turn without re-resolving the
+    # Organization's current Connections.
+    Column("source_ids", JSON, nullable=False, server_default=text("'[]'::jsonb")),
     Column("initiating_message_id", UUID(as_uuid=True), nullable=False),
     Column("title", Text, nullable=False),
     Column("status", String(16), nullable=False, server_default="draft"),
