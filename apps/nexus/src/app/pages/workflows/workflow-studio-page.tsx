@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import {
   addEdge,
@@ -38,6 +38,7 @@ import {
   type WorkflowRoutingProfile,
 } from './api';
 import { normalizeWorkflowTools, WORKFLOW_TOOL_CATALOG } from './workflow-tools';
+import { normalizedWorkflowName, workflowNameError } from './workflow-name';
 
 type FlowNode = Node<WorkflowNodeData, 'trigger' | 'agent' | 'result'>;
 type FlowEdge = Edge<{ route?: string; is_loop?: boolean; max_iterations?: number }>;
@@ -71,6 +72,8 @@ export const WorkflowStudioPage = ({ getToken, identity }: { readonly getToken: 
   const queryClient = useQueryClient();
   const [workflowId, setWorkflowId] = useState(DEFAULT_ID);
   const [name, setName] = useState('Analytics trust loop');
+  const [savedName, setSavedName] = useState('Analytics trust loop');
+  const [editingName, setEditingName] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const [nodeId, setNodeId] = useState<string | null>(null);
@@ -81,10 +84,14 @@ export const WorkflowStudioPage = ({ getToken, identity }: { readonly getToken: 
   const detail = useQuery({ queryKey: ['workflow', workflowId], queryFn: () => getWorkflow(getToken, workflowId) });
   const workflow = detail.data;
   const editable = Boolean(workflow && !workflow.is_system && manage);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const nameError = workflowNameError(name);
 
   useEffect(() => {
     if (!workflow) return;
     setName(workflow.name);
+    setSavedName(workflow.name);
+    setEditingName(false);
     setNodes(toNodes(workflow));
     setEdges(toEdges(workflow));
     setRoutingProfile(workflow.routing_profile ?? { auto_select_enabled: false, purpose: '', tags: [], example_requests: [], priority: 0 });
@@ -92,21 +99,35 @@ export const WorkflowStudioPage = ({ getToken, identity }: { readonly getToken: 
     setEdgeId(null);
   }, [workflow, setEdges, setNodes]);
 
+  useEffect(() => {
+    if (editingName) nameInput.current?.focus();
+  }, [editingName]);
+
   const clone = useMutation({ mutationFn: () => cloneDefaultWorkflow(getToken, 'Analytics workflow'), onSuccess: (created) => { queryClient.setQueryData(['workflow', created.workflow_id], created); void queryClient.invalidateQueries({ queryKey: ['workflows'] }); setWorkflowId(created.workflow_id); } });
   const create = useMutation({ mutationFn: () => createWorkflow(getToken, 'Untitled workflow'), onSuccess: (created) => { queryClient.setQueryData(['workflow', created.workflow_id], created); void queryClient.invalidateQueries({ queryKey: ['workflows'] }); setWorkflowId(created.workflow_id); } });
-  const save = useMutation({ mutationFn: () => saveWorkflow(getToken, workflowId, name, toDocument(nodes, edges), routingProfile), onSuccess: (saved) => { queryClient.setQueryData(['workflow', saved.workflow_id], saved); void queryClient.invalidateQueries({ queryKey: ['workflows'] }); } });
+  const save = useMutation({ mutationFn: () => saveWorkflow(getToken, workflowId, normalizedWorkflowName(name), toDocument(nodes, edges), routingProfile), onSuccess: (saved) => { setName(saved.name); setSavedName(saved.name); queryClient.setQueryData(['workflow', saved.workflow_id], saved); void queryClient.invalidateQueries({ queryKey: ['workflows'] }); } });
   const publish = useMutation({ mutationFn: () => publishWorkflow(getToken, workflowId), onSuccess: (published) => queryClient.setQueryData(['workflow', published.workflow_id], published) });
   const selectedNode = useMemo(() => nodes.find((node) => node.id === nodeId) ?? null, [nodeId, nodes]);
   const selectedEdge = useMemo(() => edges.find((edge) => edge.id === edgeId) ?? null, [edgeId, edges]);
   const changeNode = (patch: Partial<WorkflowNodeData>) => selectedNode && setNodes((current) => current.map((node) => node.id === selectedNode.id ? { ...node, data: { ...node.data, ...patch } } : node));
   const connect = (connection: Connection) => editable && setEdges((current) => addEdge({ ...connection, id: `${connection.source}-${connection.target}-${Date.now()}`, type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, data: { route: 'success' } }, current));
   const addAgent = (template = AGENT_TEMPLATES[4]) => { const id = `agent-${nodes.length + 1}`; setNodes((current) => [...current, { id, type: 'agent', position: { x: 560, y: 500 }, data: { label: template.label, role: template.role, responsibility: template.responsibility, controller: template.controller, skills: [], tools: [] } }]); setNodeId(id); };
+  const commitNameEdit = () => setEditingName(false);
+  const handleNameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur();
+    }
+    if (event.key === 'Escape') {
+      setName(savedName);
+      event.currentTarget.blur();
+    }
+  };
 
   if (detail.isPending || workflows.isPending) return <div className="flex h-full items-center justify-center"><Skeleton className="h-[620px] w-[92%]" /></div>;
   if (detail.error || !workflow) return <div className="p-8"><Alert intent="error" title="Workflow Studio could not be loaded">{detail.error?.message ?? 'No workflow was returned.'}</Alert></div>;
 
   return <div className="flex h-full min-h-0 flex-col bg-background">
-    <header className="flex flex-wrap items-center gap-4 border-b border-border px-6 py-4"><div className="min-w-48 flex-1"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground-muted">Workflow Studio</p><h1 className="mt-1 text-xl font-semibold tracking-[-0.035em]">{name}</h1></div><Badge intent={workflow.is_system ? 'secondary' : workflow.published_version ? 'primary' : 'default'}>{workflow.is_system ? 'System default' : workflow.published_version ? `Published v${workflow.published_version}` : 'Draft'}</Badge>{manage ? <Button size="sm" intent="secondary" loading={create.isPending} onClick={() => create.mutate()} start={<Icon name="plus" size="sm" />}>New workflow</Button> : null}{workflow.is_system && manage ? <Button size="sm" intent="secondary" loading={clone.isPending} onClick={() => clone.mutate()} start={<Icon name="copy" size="sm" />}>Clone to edit</Button> : null}{editable ? <><Button size="sm" intent="secondary" loading={save.isPending} onClick={() => save.mutate()} start={<Icon name="save" size="sm" />}>Save draft</Button><Button size="sm" loading={publish.isPending} onClick={() => publish.mutate()} start={<Icon name="upload" size="sm" />}>Publish</Button></> : null}</header>
+    <header className="flex flex-wrap items-center gap-4 border-b border-border px-6 py-4"><div className="min-w-48 flex-1"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground-muted">Workflow Studio</p>{editable && editingName ? <input ref={nameInput} aria-label="Workflow name" className="mt-1 w-full max-w-md border-0 border-b border-primary bg-transparent text-xl font-semibold tracking-[-0.035em] outline-none" value={name} maxLength={121} onChange={(event) => setName(event.target.value)} onBlur={commitNameEdit} onKeyDown={handleNameKeyDown} /> : editable ? <button type="button" className="mt-1 text-left text-xl font-semibold tracking-[-0.035em] underline-offset-4 hover:underline" onClick={() => setEditingName(true)} aria-label="Rename workflow">{name}</button> : <h1 className="mt-1 text-xl font-semibold tracking-[-0.035em]">{name}</h1>}{editable && nameError ? <p className="mt-1 text-xs text-destructive">{nameError}</p> : null}</div><Badge intent={workflow.is_system ? 'secondary' : workflow.published_version ? 'primary' : 'default'}>{workflow.is_system ? 'System default' : workflow.published_version ? `Published v${workflow.published_version}` : 'Draft'}</Badge>{manage ? <Button size="sm" intent="secondary" loading={create.isPending} onClick={() => create.mutate()} start={<Icon name="plus" size="sm" />}>New workflow</Button> : null}{workflow.is_system && manage ? <Button size="sm" intent="secondary" loading={clone.isPending} onClick={() => clone.mutate()} start={<Icon name="copy" size="sm" />}>Clone to edit</Button> : null}{editable ? <><Button size="sm" intent="secondary" loading={save.isPending} disabled={Boolean(nameError)} onClick={() => save.mutate()} start={<Icon name="save" size="sm" />}>Save draft</Button><Button size="sm" loading={publish.isPending} onClick={() => publish.mutate()} start={<Icon name="upload" size="sm" />}>Publish</Button></> : null}</header>
     {(create.error || save.error || publish.error || clone.error) ? <Alert className="mx-6 mt-4" intent="error" title="Workflow could not be saved">{(create.error ?? save.error ?? publish.error ?? clone.error)?.message}</Alert> : null}
     {editable ? <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-3 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={routingProfile.auto_select_enabled} onChange={(event) => setRoutingProfile((profile) => ({ ...profile, auto_select_enabled: event.target.checked }))} /> Eligible for Auto</label>{routingProfile.auto_select_enabled ? <><Input className="w-56" value={routingProfile.purpose} placeholder="When should Intake use this?" onChange={(event) => setRoutingProfile((profile) => ({ ...profile, purpose: event.target.value }))} /><Input className="w-48" value={routingProfile.tags.join(', ')} placeholder="Routing tags" onChange={(event) => setRoutingProfile((profile) => ({ ...profile, tags: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) }))} /><Input className="w-56" value={routingProfile.example_requests.join(' | ')} placeholder="Example requests" onChange={(event) => setRoutingProfile((profile) => ({ ...profile, example_requests: event.target.value.split('|').map((value) => value.trim()).filter(Boolean) }))} /><Input className="w-24" type="number" min="0" max="100" value={routingProfile.priority} aria-label="Routing priority" onChange={(event) => setRoutingProfile((profile) => ({ ...profile, priority: Number(event.target.value) || 0 }))} /></> : null}</div> : null}
     <div className="flex min-h-0 flex-1"><aside className="hidden w-60 shrink-0 border-r border-border p-4 lg:block"><p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground-muted">Your workflows</p><div className="space-y-1">{workflows.data?.map((item) => <button key={item.workflow_id} type="button" onClick={() => setWorkflowId(item.workflow_id)} className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${item.workflow_id === workflowId ? 'bg-primary/10 text-primary' : 'text-foreground-muted hover:bg-secondary hover:text-foreground'}`}><span className="block truncate font-medium">{item.name}</span><span className="mt-0.5 block text-xs opacity-70">{item.is_system ? 'System default' : item.published_version ? `Version ${item.published_version}` : 'Draft'}</span></button>)}</div></aside>

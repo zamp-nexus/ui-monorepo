@@ -33,6 +33,10 @@ Tenant-owned Workflows persist drafts and immutable published versions, and
 publishing validates only canvas structure. Owners and Admins manage them;
 all organization members may read them.
 
+Owners and Admins rename custom Workflows through the same explicit **Save
+draft** action as canvas edits. The system-owned Default Workflow remains
+read-only and cloneable; title edits never autosave.
+
 Custom Workflows have a client-side guided simulation only. They never enter
 `OrchestratorLoop`, alter chat dispatch, or claim execution authority in V1.
 
