@@ -364,7 +364,7 @@ importers:
         specifier: ^0.0.1
         version: link:../../libs/foundation/authz
       '@open-zentra/foundation-design-system':
-        specifier: ^0.0.1
+        specifier: workspace:^
         version: link:../../libs/foundation/design-system
       '@open-zentra/foundation-icons':
         specifier: ^0.0.1
@@ -456,7 +456,11 @@ importers:
 
   libs/foundation/database: {}
 
-  libs/foundation/design-system: {}
+  libs/foundation/design-system:
+    dependencies:
+      '@open-zentra/foundation-icons':
+        specifier: workspace:*
+        version: link:../icons
 
   libs/foundation/hooks: {}
 

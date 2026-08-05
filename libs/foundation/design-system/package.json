@@ -39,5 +39,8 @@
         ]
       }
     }
+  },
+  "dependencies": {
+    "@open-zentra/foundation-icons": "workspace:*"
   }
 }
