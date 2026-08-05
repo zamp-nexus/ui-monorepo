@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import count
@@ -39,7 +40,7 @@ from zentra_adapter_model_providers import (
     RoutedModelClient,
 )
 from zentra_adapter_postgres import PostgresAnalysisRunUnitOfWorkFactory
-from zentra_adapter_telemetry import record_analysis_run_duration
+from zentra_adapter_telemetry import record_analysis_run
 from zentra_application_analysis_run import PipelineResult, bounded_outcome
 from zentra_domain_agent_execution import (
     OUTCOME_ADAPTER,
@@ -69,9 +70,15 @@ from zentra_domain_analysis_run import (
     assess_completion,
 )
 
+from .agent_data_discovery import DiscoveryRunMetrics
 from .cube_scope import ScopedCubeSemanticLayers
 from .outcomes import InsightOutcome, PipelineOutcome, ValidatedEvidence
-from .pipeline import SYSTEM_SPAN_ID, SYSTEM_TRACE_ID, _pipeline_result
+from .pipeline import (
+    SYSTEM_SPAN_ID,
+    SYSTEM_TRACE_ID,
+    CancellationRequested,
+    _pipeline_result,
+)
 
 
 async def _no_cancellation(_: UUID, __: UUID) -> None:
@@ -250,6 +257,24 @@ MAX_FANOUT_WORK_ITEMS = 3
 
 
 @dataclass(slots=True)
+class _RunTelemetry:
+    tool_call_count: int = 0
+    discovery: DataDiscoveryPort | None = None
+
+
+_RUN_TELEMETRY: ContextVar[_RunTelemetry | None] = ContextVar(
+    "analysis_run_telemetry", default=None
+)
+
+
+def _discovery_metrics(discovery: DataDiscoveryPort | None) -> DiscoveryRunMetrics:
+    metrics = getattr(discovery, "metrics", None)
+    if isinstance(metrics, DiscoveryRunMetrics):
+        return metrics
+    return DiscoveryRunMetrics(inventory_cache_hits=0, schema_snapshot_reuses=0)
+
+
+@dataclass(slots=True)
 class StepAgents:
     """The Agents one run drives.
 
@@ -263,6 +288,7 @@ class StepAgents:
     evaluator: EvaluatorAgent
     insight: InsightAgent
     planner: OrchestratorAgent | None = None
+    discovery: DataDiscoveryPort | None = None
 
 
 AgentsFactory = Callable[[CubeSemanticLayer], "StepAgents"]
@@ -347,6 +373,7 @@ def build_agents_factory(
                     ),
                 )
             ),
+            discovery=discovery,
         )
 
     return build
@@ -401,10 +428,49 @@ class OrchestratorLoop:
         data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> PipelineResult:
         started = perf_counter()
+        telemetry = _RunTelemetry()
+        token = _RUN_TELEMETRY.set(telemetry)
+        status = "failure"
+        try:
+            result = await self._run(
+                analysis_run_id=analysis_run_id,
+                organization_id=organization_id,
+                question=question,
+                model_tier=model_tier,
+                data_connection_id=data_connection_id,
+            )
+            status = "success"
+            return result
+        except (asyncio.CancelledError, CancellationRequested):
+            status = "cancelled"
+            raise
+        finally:
+            snapshot = _discovery_metrics(telemetry.discovery)
+            record_analysis_run(
+                status=status,
+                duration_ms=int((perf_counter() - started) * 1000),
+                tool_call_count=telemetry.tool_call_count,
+                inventory_cache_hits=snapshot.inventory_cache_hits,
+                schema_snapshot_reuses=snapshot.schema_snapshot_reuses,
+            )
+            _RUN_TELEMETRY.reset(token)
+
+    async def _run(
+        self,
+        *,
+        analysis_run_id: UUID,
+        organization_id: UUID,
+        question: str,
+        model_tier: str = ModelTier.FREE.value,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
+    ) -> PipelineResult:
         semantic_layer = await self._semantic_layers.resolve(
             organization_id=organization_id, data_connection_id=data_connection_id
         )
         agents = self._agent_factories[ModelTier(model_tier)](semantic_layer)
+        telemetry = _RUN_TELEMETRY.get()
+        if telemetry is not None:
+            telemetry.discovery = getattr(agents, "discovery", None)
         # Held in memory for the length of the run and written through on every
         # change. The rows are what a later run (or an operator) reads; this
         # object is what the loop reasons over, so a decision can never be made
@@ -532,9 +598,6 @@ class OrchestratorLoop:
                 primary.attempts >= MAX_EVALUATION_ATTEMPTS
                 or len(children) >= self._max_fanout
             ),
-        )
-        record_analysis_run_duration(
-            status="success", duration_ms=int((perf_counter() - started) * 1000)
         )
         return result
 
@@ -1026,6 +1089,9 @@ class OrchestratorLoop:
             raise
 
         completed_at = self._now()
+        telemetry = _RUN_TELEMETRY.get()
+        if telemetry is not None:
+            telemetry.tool_call_count += len(output.tool_calls)
         await self._recorder.record(
             _execution_record(
                 execution_id=execution_id,

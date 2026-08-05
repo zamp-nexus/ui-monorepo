@@ -129,7 +129,8 @@ absent before it reaches a prompt. `connection_inventory` exposes only safe
 connection summary counts, while `data_query` remains a one-source structured
 Cube query; it is not a SQL endpoint. Inventory reports source readiness and
 catalog availability separately; `schema_inspect` may omit `table_name` to
-return only the selected connection's compact table overview.
+return only the selected connection's compact table overview. Concurrent Agent
+calls share one in-flight, immutable inventory snapshot per run.
 
 ## Boundary
 

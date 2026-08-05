@@ -20,11 +20,10 @@ from ..runtime import AgentRuntime
 from ..schemas import ANALYSIS_SCHEMA
 from ..skills import SkillRegistry
 from ..tools import (
-    ConnectionInventoryTool,
     DataDiscoveryPort,
     DataQueryTool,
-    SchemaInspectTool,
     ToolRegistry,
+    data_discovery_tools,
 )
 
 AGENT_ID = "cube_analyst_v1"
@@ -50,12 +49,12 @@ DESCRIPTOR = AgentDescriptor(
 
 
 class CubeAnalystAgent:
-    """Explores the governed catalog, queries it, and reports what it shows.
+    """Inspects connection metadata, queries data, and reports what it shows.
 
     It made exactly two model calls before — plan a query, interpret its rows —
     which is enough when the catalog is one small cube known in advance. Against
     a tenant's own harvested warehouse the right query is not knowable up front,
-    so this now runs a tool loop: search the catalog, query, look, narrow, query
+    so this now runs a tool loop: inventory, inspect schema, query, narrow, query
     again, then answer.
     """
 
@@ -89,14 +88,14 @@ class CubeAnalystAgent:
         # two would cite attempt one's query if the retry never got as far as
         # querying.
         query_tool = DataQueryTool(self._semantic_layer)
-        tools = [query_tool]
-        if self._discovery is not None:
-            tools = [
-                ConnectionInventoryTool(self._discovery, agent_input.organization_id),
-                SchemaInspectTool(self._discovery, agent_input.organization_id),
-                query_tool,
-            ]
-        registry = ToolRegistry(tuple(tools))
+        registry = ToolRegistry(
+            data_discovery_tools(
+                semantic_layer=self._semantic_layer,
+                discovery=self._discovery,
+                organization_id=agent_input.organization_id,
+                query_tool=query_tool,
+            )
+        )
         runtime = AgentRuntime(
             model=self._model,
             tools=registry,

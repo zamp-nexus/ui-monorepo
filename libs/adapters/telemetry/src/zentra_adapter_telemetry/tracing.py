@@ -80,6 +80,12 @@ SAFE_ATTRIBUTES: frozenset[str] = frozenset(
         "zentra.tool.name",
         "zentra.tool.status",
         "zentra.tool.latency_ms",
+        # Analysis-run aggregates
+        "zentra.analysis_run.status",
+        "zentra.analysis_run.duration_ms",
+        "zentra.analysis_run.tool_call_count",
+        "zentra.analysis_run.inventory_cache_hits",
+        "zentra.analysis_run.schema_snapshot_reuses",
         # Skill activations
         "zentra.skill.role",
         "zentra.skill.names",
@@ -294,14 +300,31 @@ def record_tool_call(
     )
 
 
-def record_discovery_snapshot_reuse(*, state: str) -> None:
-    """Record a safe aggregate cache reuse without metadata contents."""
-    instruments().discovery_snapshot_reuses.add(1, dimensions(state=state))
-
-
-def record_analysis_run_duration(*, status: str, duration_ms: int) -> None:
-    """Record total orchestration wall time without analysis contents."""
-    instruments().analysis_run_duration.record(duration_ms, dimensions(status=status))
+def record_analysis_run(
+    *,
+    status: str,
+    duration_ms: int,
+    tool_call_count: int,
+    inventory_cache_hits: int,
+    schema_snapshot_reuses: int,
+) -> None:
+    """Record safe, bounded aggregates for one completed analysis run."""
+    _record(
+        {
+            "zentra.analysis_run.status": status,
+            "zentra.analysis_run.duration_ms": duration_ms,
+            "zentra.analysis_run.tool_call_count": tool_call_count,
+            "zentra.analysis_run.inventory_cache_hits": inventory_cache_hits,
+            "zentra.analysis_run.schema_snapshot_reuses": schema_snapshot_reuses,
+        }
+    )
+    dims = dimensions(status=status)
+    meters = instruments()
+    meters.analysis_run_duration.record(duration_ms, dims)
+    meters.analysis_run_tool_calls.record(tool_call_count, dims)
+    meters.analysis_run_snapshot_reuses.record(
+        inventory_cache_hits + schema_snapshot_reuses, dims
+    )
 
 
 def record_skill_activation(*, role: str, skill_names: tuple[str, ...]) -> None:

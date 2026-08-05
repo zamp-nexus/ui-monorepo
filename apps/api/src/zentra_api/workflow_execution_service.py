@@ -8,12 +8,11 @@ from uuid import UUID
 
 from zentra_adapter_langgraph import (
     AgentRuntime,
-    ConnectionInventoryTool,
     DataDiscoveryPort,
     DataQueryTool,
-    SchemaInspectTool,
     SkillRegistry,
     ToolRegistry,
+    data_discovery_tools,
 )
 from zentra_adapter_model_providers import (
     ModelTier,
@@ -91,16 +90,16 @@ class WorkflowExecutionService:
                 eval_suite_ref="workflow-v1",
             )
             query_tool = DataQueryTool(semantic_layer)
-            registered_tools = [query_tool]
-            if discovery is not None:
-                registered_tools = [
-                    ConnectionInventoryTool(discovery, organization_id),
-                    SchemaInspectTool(discovery, organization_id),
-                    query_tool,
-                ]
             runtime = AgentRuntime(
                 model=model,
-                tools=ToolRegistry(tuple(registered_tools)),
+                tools=ToolRegistry(
+                    data_discovery_tools(
+                        semantic_layer=semantic_layer,
+                        discovery=discovery,
+                        organization_id=organization_id,
+                        query_tool=query_tool,
+                    )
+                ),
                 skills=SkillRegistry(),
             )
             system = (

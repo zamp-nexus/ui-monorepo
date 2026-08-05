@@ -181,6 +181,24 @@ class DataQueryTool:
         return _render_query_result(result.rows)
 
 
+def data_discovery_tools(
+    *,
+    semantic_layer: SemanticLayerPort,
+    discovery: DataDiscoveryPort | None,
+    organization_id: UUID,
+    query_tool: DataQueryTool | None = None,
+) -> tuple[ToolPort, ...]:
+    """Build the one governed data-tool surface for an agent invocation."""
+    query_tool = query_tool or DataQueryTool(semantic_layer)
+    if discovery is None:
+        return (query_tool,)
+    return (
+        ConnectionInventoryTool(discovery, organization_id),
+        SchemaInspectTool(discovery, organization_id),
+        query_tool,
+    )
+
+
 class ToolRegistry:
     """The tools this deployment has, filtered per Agent by its descriptor."""
 

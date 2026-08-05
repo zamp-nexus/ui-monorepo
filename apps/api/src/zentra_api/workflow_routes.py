@@ -20,11 +20,12 @@ from zentra_application_analysis_run import Role
 from .active_connection import active_data_connection_id
 from .agent_data_discovery import ConnectorDataDiscovery
 from .request_context import RequestContext, authenticated_context
-from .workflow_policy import workflow_role_error
 from .workflow_execution_service import WorkflowExecutionService
+from .workflow_policy import workflow_role_error
 from .workflow_schemas import (
     DEFAULT_WORKFLOW_DEFINITION,
     DEFAULT_WORKFLOW_ID,
+    NEW_WORKFLOW_DEFINITION,
     WORKFLOW_TOOL_CATALOG,
     CloneDefaultRequest,
     CreateWorkflowRequest,
@@ -32,9 +33,8 @@ from .workflow_schemas import (
     WorkflowDocumentRequest,
     WorkflowExecuteRequest,
     WorkflowExecutionResponse,
-    WorkflowSummaryResponse,
-    NEW_WORKFLOW_DEFINITION,
     WorkflowRoutingProfile,
+    WorkflowSummaryResponse,
 )
 
 router = APIRouter(prefix="/v1/workflows", tags=["workflow"])
@@ -101,7 +101,9 @@ def _document_error(definition: dict[str, Any]) -> str | None:
         if not isinstance(node, dict) or node.get("type") != "agent":
             continue
         data = node.get("data")
-        tools = data.get("tools", []) if isinstance(data, dict) else []
+        if not isinstance(data, dict):
+            return "Every Workflow agent needs object data"
+        tools = data.get("tools", [])
         if not isinstance(tools, list) or any(
             tool not in WORKFLOW_TOOL_CATALOG for tool in tools
         ):

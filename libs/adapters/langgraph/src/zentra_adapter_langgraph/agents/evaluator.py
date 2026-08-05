@@ -22,11 +22,10 @@ from ..runtime import AgentRuntime
 from ..schemas import RECHECK_SCHEMA
 from ..skills import SkillRegistry
 from ..tools import (
-    ConnectionInventoryTool,
     DataDiscoveryPort,
     DataQueryTool,
-    SchemaInspectTool,
     ToolRegistry,
+    data_discovery_tools,
 )
 
 AGENT_ID = "evaluator_v1"
@@ -92,14 +91,14 @@ class EvaluatorAgent:
         # Per invocation, so a retry's recheck cites its own query. Same
         # reasoning as the Analyst's.
         query_tool = DataQueryTool(self._semantic_layer)
-        tools = [query_tool]
-        if self._discovery is not None:
-            tools = [
-                ConnectionInventoryTool(self._discovery, agent_input.organization_id),
-                SchemaInspectTool(self._discovery, agent_input.organization_id),
-                query_tool,
-            ]
-        registry = ToolRegistry(tuple(tools))
+        registry = ToolRegistry(
+            data_discovery_tools(
+                semantic_layer=self._semantic_layer,
+                discovery=self._discovery,
+                organization_id=agent_input.organization_id,
+                query_tool=query_tool,
+            )
+        )
         runtime = AgentRuntime(
             model=self._model,
             tools=registry,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -13,6 +14,8 @@ CONNECTION_ID = UUID("44000000-0000-0000-0000-000000000004")
 
 class Connector:
     def __init__(self) -> None:
+        self.list_calls = 0
+        self.fail_inventory = False
         profile = SimpleNamespace(
             sampled_rows=20,
             null_fraction=0.1,
@@ -39,6 +42,9 @@ class Connector:
 
     async def list_sources(self, actor):
         assert actor.organization_id == TENANT_ID
+        self.list_calls += 1
+        if self.fail_inventory:
+            raise RuntimeError("connector unavailable")
         return (
             SimpleNamespace(
                 data_source_id=CONNECTION_ID,
@@ -89,3 +95,34 @@ async def test_inventory_and_schema_are_safe_and_cached_per_run() -> None:
         }
     ]
     assert discovery.metrics.schema_snapshot_reuses == 1
+
+
+@pytest.mark.asyncio
+async def test_inventory_load_is_shared_by_concurrent_agent_calls() -> None:
+    connector = Connector()
+    discovery = ConnectorDataDiscovery(lambda: connector)
+
+    await asyncio.gather(
+        discovery.connection_inventory(TENANT_ID),
+        discovery.schema_inspect(TENANT_ID, CONNECTION_ID, None),
+    )
+
+    assert connector.list_calls == 1
+    assert discovery.metrics.inventory_cache_hits == 1
+    assert discovery.metrics.schema_snapshot_reuses == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_inventory_load_is_discarded_for_a_later_retry() -> None:
+    connector = Connector()
+    connector.fail_inventory = True
+    discovery = ConnectorDataDiscovery(lambda: connector)
+
+    with pytest.raises(RuntimeError, match="connector unavailable"):
+        await discovery.connection_inventory(TENANT_ID)
+
+    connector.fail_inventory = False
+    inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert inventory["connection_count"] == 1
+    assert connector.list_calls == 2

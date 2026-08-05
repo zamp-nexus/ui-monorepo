@@ -58,9 +58,10 @@ Insight make.
 
 ## Consequences
 
-The agents gain iteration over a compact, cached per-run metadata snapshot.
-The Evaluator reuses that immutable snapshot but executes its own `data_query`,
-so discovery is not repeated while evidence remains independent.
+The agents gain iteration over a compact, single-flight per-run metadata
+snapshot. Concurrent Analyst/Evaluator follow-up work awaits one inventory
+load; the Evaluator still executes its own `data_query`, so metadata is shared
+while evidence remains independent.
 
 Nothing inside the loop raises. A refused member, an unauthorized tool, a
 broken tool — all three return as `is_error` results the model reads and
@@ -76,9 +77,10 @@ and each becomes an `agent.capability_used` Work Feed event. Arguments and
 results are absent by construction: they carry rows, and [[adr/0006-metadata-only-audit-ledger]] keeps the
 ledger metadata-only.
 
-Tool telemetry records call count and latency, while discovery records immutable
-metadata-snapshot reuse. None includes arguments, rows, connection ids, or
-tenant identifiers.
+Tool telemetry records call count and latency. One aggregate is emitted for
+every completed, failed, or cancelled analysis run with duration, tool-call
+total, and metadata-snapshot reuse counts. None includes arguments, rows,
+connection ids, or tenant identifiers.
 
 Usage accumulates across every turn, not only the one that answered. The model
 recorded is the answering turn's, since that is the call

@@ -7,12 +7,12 @@ values, or unconfirmed relations.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic.types import JsonValue
-from zentra_adapter_telemetry import record_discovery_snapshot_reuse
 from zentra_application_connector import (
     AuthenticatedActor,
     CatalogVersionNotFoundError,
@@ -37,6 +37,7 @@ class ConnectorDataDiscovery:
     def __init__(self, connector: Callable[[], ConnectorService | None]) -> None:
         self._connector = connector
         self._inventory: dict[UUID, dict[str, JsonValue]] = {}
+        self._inventory_tasks: dict[UUID, asyncio.Task[dict[str, JsonValue]]] = {}
         self._catalogs: dict[tuple[UUID, UUID], CatalogVersion] = {}
         self._graphs: dict[tuple[UUID, UUID], JoinGraphView] = {}
         self._inventory_cache_hits = 0
@@ -46,8 +47,20 @@ class ConnectorDataDiscovery:
         cached = self._inventory.get(organization_id)
         if cached is not None:
             self._inventory_cache_hits += 1
-            record_discovery_snapshot_reuse(state="inventory")
             return cached
+        task = self._inventory_tasks.get(organization_id)
+        if task is not None:
+            self._inventory_cache_hits += 1
+            return await asyncio.shield(task)
+        task = asyncio.create_task(self._load_inventory(organization_id))
+        self._inventory_tasks[organization_id] = task
+        try:
+            return await asyncio.shield(task)
+        finally:
+            if task.done():
+                self._inventory_tasks.pop(organization_id, None)
+
+    async def _load_inventory(self, organization_id: UUID) -> dict[str, JsonValue]:
         connector = self._require_connector()
         actor = _agent_actor(organization_id)
         connections: list[dict[str, JsonValue]] = []
@@ -97,7 +110,6 @@ class ConnectorDataDiscovery:
         if catalog is None or graph is None:
             raise LookupError("Connection is not ready or has no harvested catalog")
         self._schema_snapshot_reuses += 1
-        record_discovery_snapshot_reuse(state="schema")
         tables = catalog.tables
         if table_name is None:
             return {
