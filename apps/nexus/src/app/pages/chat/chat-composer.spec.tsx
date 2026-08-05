@@ -8,7 +8,12 @@ import { ChatComposer } from './chat-composer';
 const ComposerHarness = ({ onSend }: { readonly onSend: (message: string) => void }) => {
   const [draft, setDraft] = useState('');
 
-  return <ChatComposer draft={draft} onDraftChange={setDraft} onSend={onSend} disabled={false} />;
+  return (
+    <>
+      <ChatComposer draft={draft} onDraftChange={setDraft} onSend={onSend} disabled={false} />
+      <output data-testid="draft">{draft}</output>
+    </>
+  );
 };
 
 describe('ChatComposer', () => {
@@ -25,5 +30,6 @@ describe('ChatComposer', () => {
     fireEvent.keyDown(composer, { key: 'Enter' });
 
     await waitFor(() => expect(onSend).toHaveBeenCalledWith('Compare refunds'));
+    await waitFor(() => expect(screen.getByTestId('draft')).not.toHaveTextContent('Compare refunds'));
   });
 });

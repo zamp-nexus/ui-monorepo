@@ -172,6 +172,7 @@ class FakeLandingZone:
     landed: list[LandedTable] = field(default_factory=list)
     dropped: list[str] = field(default_factory=list)
     parse_error: Exception | None = None
+    land_error: Exception | None = None
 
     async def inspect(
         self,
@@ -197,6 +198,8 @@ class FakeLandingZone:
     ) -> LandedTable:
         async for _ in stream:
             pass
+        if self.land_error is not None:
+            raise self.land_error
         table = LandedTable(
             database="zentra_uploads",
             table=f"t_{organization_id.hex[:8]}_{upload_id.hex[:8]}",

@@ -315,9 +315,6 @@ class ClickHouseLandingZone:
         )
         client = self._client()
         try:
-            client.command(
-                f"CREATE DATABASE IF NOT EXISTS {quote_identifier(self._database)}"
-            )
             # ORDER BY tuple() because an uploaded file has no key we know of.
             # Inventing one from the first column would impose an ordering the
             # data does not have and would change query behaviour silently.

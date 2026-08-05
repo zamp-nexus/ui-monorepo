@@ -236,8 +236,8 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
 
         <div className="-mx-3 mt-4 flex min-h-0 flex-1 flex-col border-t border-border pt-5">
           <div className="flex items-center justify-between px-3 pb-2">
-            <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-              Groups
+            <h2 className="text-sm font-medium text-foreground-muted">
+              Projects
             </h2>
             <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
               <Modal.Trigger
@@ -279,8 +279,8 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
               </Modal.Content>
             </Modal>
           </div>
-          <div className="min-h-0 overflow-y-auto px-3 pb-3">
-            <div className="flex flex-col gap-1">
+          <div className="min-h-0 overflow-y-auto px-3 pb-4">
+            <div className="flex flex-col gap-1.5">
               {groupsQuery.data?.items.map((g) => (
                 <GroupFolder
                   key={g.group_id}

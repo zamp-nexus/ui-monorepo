@@ -76,10 +76,10 @@ export const alertDefaultTheme: ComponentThemeConfigStructure = {
     base: 'relative flex gap-3 rounded-lg border p-4',
     variants: {
       intent: {
-        info: 'bg-info/10 border-info/20 text-info-foreground [&_svg]:text-info',
-        success: 'bg-success/10 border-success/20 text-success-foreground [&_svg]:text-success',
-        warning: 'bg-warning/10 border-warning/20 text-warning-foreground [&_svg]:text-warning',
-        error: 'bg-danger/10 border-danger/20 text-danger-foreground [&_svg]:text-danger',
+        info: 'bg-info/10 border-info/20 text-foreground [&_svg]:text-info',
+        success: 'bg-success/10 border-success/20 text-foreground [&_svg]:text-success',
+        warning: 'bg-warning/10 border-warning/20 text-foreground [&_svg]:text-warning',
+        error: 'bg-danger/10 border-danger/20 text-foreground [&_svg]:text-danger',
       },
     },
     modifiers: {

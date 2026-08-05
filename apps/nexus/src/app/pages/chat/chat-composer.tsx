@@ -58,6 +58,7 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowI
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     if (!parsed.text || disabled) return;
+    onDraftChange('');
     onSend(parsed.text);
   };
 
@@ -80,7 +81,14 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowI
           ? (_view.dom.textContent ?? '')
           : _view.state.doc.textBetween(0, _view.state.doc.content.size, '\n');
         const message = parseComposerCommands(text).text;
-        if (message && !disabledRef.current) onSendRef.current(message);
+        if (message && !disabledRef.current) {
+          onDraftChange('');
+          onSendRef.current(message);
+          // ProseMirror may finish its own key update after this handler.
+          // Reassert the empty draft after that update so a sent message
+          // cannot briefly reappear in the composer.
+          queueMicrotask(() => onDraftChange(''));
+        }
         return true;
       },
       // ProseMirror's selection-scroll routine requires browser layout APIs

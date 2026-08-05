@@ -9,6 +9,7 @@ import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
 import { groupEventsByAnalysisRun } from './agent-activity-block';
 import { getChat, getLatestWorkflowExecution, listAgents, renameChat } from './api';
 import { ChatComposer } from './chat-composer';
+import { ChatThinkingIndicator } from './chat-thinking-indicator';
 import { ChatContextProvider } from './chat-context';
 import { ChatEmptyState } from './chat-empty-state';
 import { AssistantMessage, UserMessage } from './chat-messages';
@@ -262,17 +263,21 @@ export const ChatPage = ({
                   <ThreadPrimitive.Viewport className="mx-auto flex max-w-3xl flex-col gap-8 px-5 py-8 sm:px-6">
                     <ThreadPrimitive.Messages components={{ UserMessage, AssistantMessage }} />
 
-                    {send.error ? (
-                      <p className="text-sm text-danger" role="alert">
-                        {send.error.message}
-                      </p>
-                    ) : null}
-
                     <div ref={endOfThread} />
                   </ThreadPrimitive.Viewport>
                 </ThreadPrimitive.If>
               </ThreadPrimitive.Root>
             </AssistantRuntimeProvider>
+            {send.isPending && !send.streaming ? (
+              <div className="mx-auto w-full max-w-3xl px-5 py-4 sm:px-6">
+                <ChatThinkingIndicator />
+              </div>
+            ) : null}
+            {send.error ? (
+              <p className="mx-auto w-full max-w-3xl px-5 pb-4 text-sm text-danger sm:px-6" role="alert">
+                {send.error.message}
+              </p>
+            ) : null}
           </ChatContextProvider>
         </div>
 

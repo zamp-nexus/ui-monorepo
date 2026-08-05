@@ -163,9 +163,7 @@ class ConnectorService(AgentAccessOperations, CatalogOperations, UploadOperation
         control. Callers must not log or persist what this returns.
         """
         source = await self._load_source(actor, data_source_id)
-        if source.sealed_credentials is None:
-            raise ConnectionFailedError("This source has no stored credentials")
-        return self._cipher.open(source.sealed_credentials)
+        return self._open(source)
 
     async def update_credentials(
         self,

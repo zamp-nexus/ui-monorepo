@@ -38,7 +38,8 @@ The primary path is **Upload → Context → Ask → Insight**.
   custom Workflow drafts and published versions. Intake can select an eligible
   published custom Workflow for a message; the system Analytics Workflow is
   the governed fallback and the only path that can publish a Finding.
-- **Data** owns uploads, datasets, and data connections.
+- **Data** owns uploads and datasets; **Connections** is the separate place to
+  add, inspect, and maintain workspace data connections.
 - **Sequences** are advanced workflows reached from the relevant data context;
   direct links remain valid for existing work.
 - **Groups** organize Chat Sessions in the fixed desktop navigation. A Group

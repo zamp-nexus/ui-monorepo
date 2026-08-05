@@ -23,6 +23,7 @@ code_refs:
   - apps/nexus/src/app/pages/chat/use-active-group.ts
   - apps/nexus/src/app/pages/chat/composer-commands.ts
   - apps/nexus/src/app/pages/chat/chat-composer.tsx
+  - apps/nexus/src/app/pages/chat/chat-messages.tsx
   - apps/nexus/src/app/components/markdown.tsx
   - apps/nexus/src/app/pages/chat/visualization-answer.tsx
   - apps/nexus/src/app/pages/chat/brief-answer.tsx
@@ -55,6 +56,10 @@ Agent activity is grouped inline with the live turn. A pending Human Approval
 also stays inline in the conversation (`investigation-controls.tsx`), so the
 reader never has to leave the chat to understand the work in progress.
 
+The answer state is explicit: a Finding awaiting approval is shown as an
+answer ready for review, not a failed run. A failed follow-up is labelled as a
+separate attempt and does not invalidate an earlier answer in the same chat.
+
 ## Workspace resolution
 
 Chat Sessions belong directly to a Group now — there is no Project layer
@@ -80,6 +85,10 @@ caret movement, selection, IME support, Enter-to-send and Shift+Enter for a new
 line, but exposes no formatting controls or Markdown shortcuts. The submitted
 value remains the same clean text body the Chat Session API has always accepted;
 Tiptap changes editing quality, not the API or persisted message format.
+On send, the local draft is cleared both immediately and after Tiptap finishes
+its key update, so a submitted message cannot reappear in the composer. The
+persisted user message is then shown as a compact right-aligned transcript
+entry rather than a full-width second input surface.
 
 Assistant replies use a read-only Tiptap Markdown renderer. It supports headings,
 lists, tables, links, quotes and code, while escaping raw HTML before it is

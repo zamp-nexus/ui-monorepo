@@ -10,6 +10,7 @@ from zentra_application_analysis_run import (
     AuditDelivery,
     PermissionDeniedError,
 )
+from zentra_application_connector import CatalogVersionNotFoundError
 from zentra_domain_agent_execution import (
     ConfidenceOutcome,
     SemanticCatalog,
@@ -383,6 +384,36 @@ def test_catalog_requires_authentication() -> None:
         response = test_client.get("/v1/catalog")
 
     assert response.status_code == 401
+
+
+def test_catalog_reports_an_unharvested_source_without_a_server_error(
+    monkeypatch,
+) -> None:
+    class UnharvestedSemanticLayers:
+        async def resolve(self, **_: object) -> SemanticLayer:
+            raise CatalogVersionNotFoundError("source_123")
+
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="owner@example.com",
+            organization_name="Acme Europe",
+            role="owner",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+
+    with client(semantic_layers=UnharvestedSemanticLayers()) as test_client:
+        response = test_client.get(
+            "/v1/catalog",
+            headers={"Authorization": "Bearer valid"},
+        )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "No catalog has been harvested for this data connection yet."
+    }
 
 
 def test_the_catalog_served_is_the_asking_tenants_own(

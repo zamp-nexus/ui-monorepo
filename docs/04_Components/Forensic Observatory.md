@@ -56,10 +56,12 @@ rename controls. The group-specific New chat action selects and opens that
 Group before opening the empty composer; a Chat Session is still created only
 by its first Message.
 
-Destinations are listed in `shell/nav-items.ts`. Investigations is the launcher
-at `/`; Connections and Datasets are built; Chat is a working surface over a
-fixture that says so; Dashboard and Settings still answer with an explicit
-placeholder rather than a dead link or a mock that looks finished.
+Destinations are listed in `shell/nav-items.ts`. Connections and Data are
+separate rail destinations: Connections at `/connections` owns source setup
+and maintenance, while Data at `/datasets` owns uploads and datasets.
+Investigations is the launcher at `/`; Chat is a working surface over a fixture
+that says so; Dashboard and Settings still answer with an explicit placeholder
+rather than a dead link or a mock that looks finished.
 
 The launcher renders whatever `GET /v1/scenarios` returns — currently the
 eight-order EU refund spike and the three-hundred-order NA channel growth — so

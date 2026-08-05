@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,10 +9,12 @@ import { Icon } from '@open-zentra/foundation-icons';
 import type { TokenSource } from '../../api';
 import type { IdentityContext } from '../../types';
 import { listSources } from '../connections/api';
-import { setFieldAgentAccess } from './api';
+import type { SourceResponse } from '../connections/types';
+import { getHarvest, latestCatalog, setFieldAgentAccess, startHarvest } from './api';
 import { SourceCatalog } from './source-catalog';
 import { TableDetailModal } from './table-detail-modal';
 import type { CatalogResponse, CatalogTable } from './types';
+import { isTerminal } from './types';
 
 interface DatasetsPageProps {
   readonly getToken: TokenSource;
@@ -24,20 +26,73 @@ interface OpenTable {
   readonly dataSourceId: string;
 }
 
-const UploadedSource = ({ source }: { readonly source: { readonly data_source_id: string; readonly name: string } }) => (
-  <article className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-depth-01)]">
-    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
-      <Icon name="upload" size="sm" />
-    </span>
-    <div className="min-w-0 flex-1">
-      <p className="font-medium">{source.name}</p>
-      <p className="mt-1 text-sm text-foreground-muted">Uploaded data · private to you until shared</p>
-    </div>
-    <Button component={Link} to={`/chats?source=${encodeURIComponent(source.data_source_id)}&sourceName=${encodeURIComponent(source.name)}`} size="sm">
-      Analyze
-    </Button>
-  </article>
-);
+interface UploadedSourceProps {
+  readonly source: SourceResponse;
+  readonly getToken: TokenSource;
+  readonly canWrite: boolean;
+}
+
+const UploadedSource = ({ source, getToken, canWrite }: UploadedSourceProps) => {
+  const queryClient = useQueryClient();
+  const [harvestRunId, setHarvestRunId] = useState<string | null>(null);
+  const catalog = useQuery({
+    queryKey: ['catalog', source.data_source_id],
+    queryFn: () => latestCatalog(getToken, source.data_source_id),
+    retry: false,
+  });
+  const harvest = useMutation({
+    mutationFn: () => startHarvest(getToken, source.data_source_id),
+    onSuccess: (started) => setHarvestRunId(started.harvest_run_id),
+  });
+  const run = useQuery({
+    queryKey: ['harvest', harvestRunId],
+    queryFn: () => getHarvest(getToken, harvestRunId as string),
+    enabled: harvestRunId !== null,
+    refetchInterval: (query) => {
+      const phase = query.state.data?.phase;
+      return phase && isTerminal(phase) ? false : 1200;
+    },
+  });
+  const finished = run.data && isTerminal(run.data.phase) ? run.data : null;
+
+  useEffect(() => {
+    if (!finished) return;
+    void queryClient.invalidateQueries({ queryKey: ['catalog', source.data_source_id] });
+  }, [finished, queryClient, source.data_source_id]);
+
+  const isHarvesting = harvest.isPending || (run.data != null && !isTerminal(run.data.phase));
+  const isReady = catalog.data !== undefined;
+
+  return (
+    <article className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-depth-01)]">
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
+        <Icon name="upload" size="sm" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{source.name}</p>
+        <p className="mt-1 text-sm text-foreground-muted">Uploaded data · private to you until shared</p>
+      </div>
+      {!isReady ? (
+        <Button
+          size="sm"
+          loading={isHarvesting}
+          disabled={!canWrite || isHarvesting}
+          onClick={() => harvest.mutate()}
+        >
+          <Icon name="refresh_cw" size="sm" /> {isHarvesting ? 'Harvesting tables' : 'Harvest tables'}
+        </Button>
+      ) : null}
+      <Button
+        component={Link}
+        to={`/chats?source=${encodeURIComponent(source.data_source_id)}&sourceName=${encodeURIComponent(source.name)}`}
+        size="sm"
+        disabled={!isReady}
+      >
+        Analyze
+      </Button>
+    </article>
+  );
+};
 
 /**
  * What Nexus can actually read, per connected source.
@@ -186,7 +241,14 @@ export const DatasetsPage = ({ getToken, identity }: DatasetsPageProps) => {
         <section className="mt-9">
           <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-foreground-muted">Uploads</h2>
           <div className="mt-3 flex flex-col gap-3">
-            {uploaded.map((source) => <UploadedSource key={source.data_source_id} source={source} />)}
+            {uploaded.map((source) => (
+              <UploadedSource
+                key={source.data_source_id}
+                source={source}
+                getToken={getToken}
+                canWrite={canWrite}
+              />
+            ))}
           </div>
         </section>
       ) : null}
