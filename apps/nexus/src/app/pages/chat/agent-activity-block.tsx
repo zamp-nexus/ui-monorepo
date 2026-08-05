@@ -104,6 +104,17 @@ export const AgentActivityBlock = ({ events, agents, finalized }: AgentActivityB
         className="flex w-full items-center gap-2 px-4 py-2 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-foreground-muted transition-colors hover:text-foreground"
       >
         <Icon name={expanded ? 'chevron_down' : 'chevron_right'} size="sm" />
+        {!finalized ? (
+          <span
+            className="relative flex h-2 w-2 shrink-0"
+            data-testid="analysis-running-indicator"
+            role="status"
+            aria-label="Analysis is in progress"
+          >
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 motion-reduce:animate-none" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          </span>
+        ) : null}
         <span data-testid="agent-activity-summary">{summary}</span>
       </button>
 

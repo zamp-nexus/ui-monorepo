@@ -34,7 +34,7 @@ class IntakePort(Protocol):
         question: str,
         *,
         organization_id: UUID,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> RoutingResult: ...
 
 

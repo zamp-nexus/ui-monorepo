@@ -34,6 +34,7 @@ _STRINGS = {"type": "array", "items": {"type": "string"}}
 
 SEMANTIC_QUERY_SCHEMA = _obj(
     {
+        "source_id": _nullable({"type": "string", "format": "uuid"}),
         "measures": _STRINGS,
         "dimensions": _STRINGS,
         "time_dimensions": {
@@ -193,6 +194,7 @@ def parse_json_object(text: str) -> dict[str, Any]:
 def semantic_query_from_json(payload: dict[str, Any]) -> SemanticQuery:
     try:
         return SemanticQuery(
+            source_id=payload.get("source_id"),
             measures=tuple(payload.get("measures", ())),
             dimensions=tuple(payload.get("dimensions", ())),
             time_dimensions=tuple(

@@ -75,6 +75,25 @@ class CatalogSummaryResponse(BaseModel):
     dimensions: list[CatalogMemberResponse]
 
 
+class CatalogSourceResponse(BaseModel):
+    """One source's governed catalog inside an Organization-wide response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    data_source_id: UUID | None = None
+    name: str
+    kind: str
+    status: str
+    measures: list[CatalogMemberResponse] = Field(default_factory=list)
+    dimensions: list[CatalogMemberResponse] = Field(default_factory=list)
+
+
+class OrganizationCatalogResponse(CatalogSummaryResponse):
+    """The catalog visible to a Chat before it narrows a question to sources."""
+
+    sources: list[CatalogSourceResponse] = Field(default_factory=list)
+
+
 class VisualizationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

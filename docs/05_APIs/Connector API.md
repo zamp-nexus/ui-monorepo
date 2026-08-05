@@ -92,8 +92,10 @@ built this".
 | GET | `/v1/connector/sources/{id}/harvests` | Run history | all roles |
 
 `202` and a run to poll, because relation inference issues a query per candidate
-pair and will not complete inside a request. Progress is counts — tables found,
-fields described, fields profiled, relations proposed — plus budget consumption.
+pair and will not complete inside a request. Each phase is persisted before its
+source work starts, so a poll never reports the previous phase while a long
+warehouse query is running. Progress is counts — tables found, fields described,
+fields profiled, relations proposed — plus budget consumption.
 
 A second concurrent run on one source is refused with `409`: two runs interleaving
 would produce a Catalog Version that never existed at any moment in the source.

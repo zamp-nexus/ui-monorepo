@@ -74,7 +74,11 @@ const CATALOG = {
 const route = (handlers: Record<string, { status?: number; body: unknown }>) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
-    const key = Object.keys(handlers).find((fragment) => url.includes(fragment));
+    const key =
+      Object.keys(handlers)
+        .filter((fragment) => url.endsWith(fragment))
+        .sort((left, right) => right.length - left.length)[0] ??
+      Object.keys(handlers).find((fragment) => url.includes(fragment));
     const handler = key ? handlers[key] : undefined;
     if (!handler) throw new Error(`unhandled request: ${url}`);
     return {
@@ -187,6 +191,7 @@ describe('Datasets', () => {
   it('offers a harvest when the source has never been harvested', async () => {
     route({
       '/catalog': { status: 404, body: { detail: 'Not Found' } },
+      [`/sources/${SOURCE.data_source_id}/harvests`]: { body: [] },
       '/v1/connector/sources': { body: [SOURCE] },
     });
 
@@ -194,6 +199,68 @@ describe('Datasets', () => {
 
     expect(await screen.findByText(/has not been harvested/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /harvest tables/i })).toBeTruthy();
+  });
+
+  it('watches an existing harvest instead of offering a conflicting second start', async () => {
+    const activeHarvest = {
+      harvest_run_id: '60000000-0000-0000-0000-000000000006',
+      data_source_id: SOURCE.data_source_id,
+      phase: 'listing_tables',
+      tables_found: 3,
+      fields_described: 0,
+      fields_profiled: 0,
+      relations_proposed: 0,
+      unreadable_count: 0,
+      queries_used: 1,
+      queries_budget: 500,
+      seconds_used: 0,
+    };
+    const fetchMock = route({
+      '/catalog': { status: 404, body: { detail: 'Not Found' } },
+      [`/sources/${SOURCE.data_source_id}/harvests`]: { body: [activeHarvest] },
+      '/harvests/': { body: activeHarvest },
+      '/v1/connector/sources': { body: [SOURCE] },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/listing tables/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /harvest tables/i })).toBeFalsy();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url).endsWith('/harvests') && (init as RequestInit | undefined)?.method === 'POST',
+      ),
+    ).toBe(false);
+  });
+
+  it('shows field profiling progress as a determinate bar', async () => {
+    const activeHarvest = {
+      harvest_run_id: '60000000-0000-0000-0000-000000000006',
+      data_source_id: SOURCE.data_source_id,
+      phase: 'profiling',
+      tables_found: 3,
+      fields_described: 100,
+      fields_profiled: 25,
+      relations_proposed: 0,
+      unreadable_count: 0,
+      queries_used: 26,
+      queries_budget: 500,
+      seconds_used: 0,
+    };
+    route({
+      '/catalog': { body: CATALOG },
+      [`/sources/${SOURCE.data_source_id}/harvests`]: { body: [activeHarvest] },
+      '/harvests/': { body: activeHarvest },
+      '/v1/connector/sources': { body: [SOURCE] },
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
+    });
+    expect(screen.getByText(/25 profiled/i)).toBeTruthy();
   });
 
   it('starts a harvest and follows it', async () => {
@@ -214,6 +281,7 @@ describe('Datasets', () => {
           seconds_used: 0,
         },
       },
+      [`/sources/${SOURCE.data_source_id}/harvests`]: { body: [] },
       '/v1/connector/sources': { body: [SOURCE] },
     });
 

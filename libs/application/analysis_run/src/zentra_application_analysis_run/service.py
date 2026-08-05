@@ -93,7 +93,7 @@ class AnalysisRunService:
         actor: AuthenticatedActor,
         *,
         question: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> AnalysisRunDetail:
         """Register the analysis_run and return. The agents run afterwards, so
         the caller is not held open for the length of the pipeline."""

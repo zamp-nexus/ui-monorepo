@@ -35,7 +35,7 @@ class AnalyticsWorkflowExecutor:
         *,
         project_id: UUID,
         content: str,
-        data_connection_id: UUID | None,
+        data_connection_id: UUID | tuple[UUID, ...] | None,
         routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         return await self._threads.create(
@@ -52,7 +52,7 @@ class AnalyticsWorkflowExecutor:
         *,
         project_id: UUID,
         content: str,
-        data_connection_id: UUID | None,
+        data_connection_id: UUID | tuple[UUID, ...] | None,
         routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         return self._threads.create_streaming(
@@ -69,7 +69,7 @@ class AnalyticsWorkflowExecutor:
         *,
         thread_id: UUID,
         content: str,
-        data_connection_id: UUID | None,
+        data_connection_id: UUID | tuple[UUID, ...] | None,
         routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         return await self._threads.append(
@@ -86,7 +86,7 @@ class AnalyticsWorkflowExecutor:
         *,
         thread_id: UUID,
         content: str,
-        data_connection_id: UUID | None,
+        data_connection_id: UUID | tuple[UUID, ...] | None,
         routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         return self._threads.append_streaming(

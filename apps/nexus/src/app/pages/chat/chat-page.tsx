@@ -189,6 +189,14 @@ export const ChatPage = ({
             <h1 className="mt-1 max-w-lg truncate text-base font-semibold tracking-[-0.025em]">
               {thread?.title ?? 'New analysis'}
             </h1>
+            {catalog.data ? (
+              <p className="mt-1 truncate text-xs text-foreground-muted">
+                {(catalog.data.sources ?? [])
+                  .filter((source) => source.status === 'ready')
+                  .map((source) => source.name)
+                  .join(' · ') || 'No queryable data sources'}
+              </p>
+            ) : null}
           </div>
           {thread && (
             <IconButton

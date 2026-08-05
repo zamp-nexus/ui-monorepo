@@ -122,8 +122,16 @@ def _state_to_json(analysis_run: AnalysisRun) -> dict[str, Any]:
         ),
         "data_connection_id": (
             str(analysis_run.data_connection_id)
-            if analysis_run.data_connection_id
+            if isinstance(analysis_run.data_connection_id, UUID)
             else None
+        ),
+        "data_connection_ids": (
+            [str(source_id) for source_id in analysis_run.data_connection_id]
+            if isinstance(analysis_run.data_connection_id, tuple)
+            else None
+        ),
+        "source_scope_id": (
+            str(analysis_run.source_scope_id) if analysis_run.source_scope_id else None
         ),
     }
 
@@ -153,6 +161,8 @@ def _analysis_run_from_row(row: Any) -> AnalysisRun:
         else None
     )
     data_connection_value = state.get("data_connection_id")
+    data_connection_values = state.get("data_connection_ids")
+    source_scope_value = state.get("source_scope_id")
     return AnalysisRun(
         analysis_run_id=row.analysis_run_id,
         organization_id=row.organization_id,
@@ -174,8 +184,13 @@ def _analysis_run_from_row(row: Any) -> AnalysisRun:
         completion=completion,
         failure=failure,
         data_connection_id=(
-            UUID(data_connection_value) if data_connection_value else None
+            tuple(UUID(value) for value in data_connection_values)
+            if data_connection_values
+            else UUID(data_connection_value)
+            if data_connection_value
+            else None
         ),
+        source_scope_id=UUID(source_scope_value) if source_scope_value else None,
         events=[],
     )
 
@@ -193,6 +208,7 @@ class PostgresAnalysisRunRepository:
                 status=analysis_run.status.value,
                 state=_state_to_json(analysis_run),
                 scenario_key=analysis_run.scenario_key,
+                source_scope_id=analysis_run.source_scope_id,
                 chat_session_id=analysis_run.thread_id,
                 chat_sequence=analysis_run.thread_sequence,
                 initiating_message_id=analysis_run.initiating_message_id,

@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    JSON,
     TIMESTAMP,
     CheckConstraint,
     Column,
@@ -41,15 +42,19 @@ chat_sessions = Table(
         ForeignKey("users.user_id"),
     ),
     Column("visibility", String(16), nullable=False, server_default="shared"),
-    # Nullable: a Chat Session has no default until a User sets one via the
-    # `#dataset` composer command (ADR-0032) or the create-chat request. A
-    # message with no explicit override falls back to this, then to
-    # `active_data_connection_id`'s existing single-connection inference.
+    # The immutable Organization scope chosen when this Chat Session begins.
+    # It prevents a source added or re-harvested later from changing the
+    # governed surface of an existing conversation.
     Column(
-        "default_data_connection_id",
+        "source_scope_id",
         UUID(as_uuid=True),
-        ForeignKey("data_sources.data_source_id", ondelete="SET NULL"),
+        ForeignKey("analysis_source_scopes.source_scope_id", ondelete="RESTRICT"),
     ),
+    # The executable member IDs of the immutable Chat scope. The normalized
+    # scope tables retain catalog provenance; this compact copy is what the
+    # Thread service needs to enqueue a later turn without re-resolving the
+    # Organization's current Connections.
+    Column("source_ids", JSON, nullable=False, server_default=text("'[]'::jsonb")),
     Column("initiating_message_id", UUID(as_uuid=True), nullable=False),
     Column("title", Text, nullable=False),
     Column("status", String(16), nullable=False, server_default="draft"),

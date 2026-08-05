@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from zentra_domain_connector import (
     FieldProfile,
@@ -61,6 +63,82 @@ async def test_counts_advance_per_phase(harness: Harness, admin) -> None:
     assert status.fields_profiled == 6
     assert status.queries_used > 0
     assert status.queries_budget == HarvestBudget().max_queries
+
+
+async def test_profiling_phase_is_persisted_before_a_field_profile_finishes(
+    harness: Harness, admin
+) -> None:
+    """Polling must observe a phase before its potentially slow work starts."""
+    load_tpch_subset(harness.connector)
+    source = await _register(harness, admin)
+    started = await harness.service.start_harvest(admin, source.data_source_id)
+    saved_phases: list[HarvestPhase] = []
+    save = harness.runs.save
+    profile = harness.connector.profile_field
+    profile_started = asyncio.Event()
+    release_profile = asyncio.Event()
+
+    async def record_save(run) -> None:
+        saved_phases.append(run.phase)
+        await save(run)
+
+    async def pause_profile(*args, **kwargs):
+        profile_started.set()
+        await release_profile.wait()
+        return await profile(*args, **kwargs)
+
+    harness.runs.save = record_save  # type: ignore[method-assign]
+    harness.connector.profile_field = pause_profile  # type: ignore[method-assign]
+
+    harvest = asyncio.create_task(
+        harness.service.run_harvest(admin, started.harvest_run_id)
+    )
+    await asyncio.wait_for(profile_started.wait(), timeout=1)
+
+    assert HarvestPhase.PROFILING in saved_phases
+
+    release_profile.set()
+    await harvest
+
+
+async def test_profiled_field_count_is_persisted_between_slow_queries(
+    harness: Harness, admin
+) -> None:
+    """A long profile run must expose its count before the next query returns."""
+    load_tpch_subset(harness.connector)
+    source = await _register(harness, admin)
+    started = await harness.service.start_harvest(admin, source.data_source_id)
+    saved_progress: list[tuple[HarvestPhase, int]] = []
+    save = harness.runs.save
+    profile = harness.connector.profile_field
+    second_profile_started = asyncio.Event()
+    release_second_profile = asyncio.Event()
+    calls = 0
+
+    async def record_save(run) -> None:
+        saved_progress.append((run.phase, run.fields_profiled))
+        await save(run)
+
+    async def pause_second_profile(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            second_profile_started.set()
+            await release_second_profile.wait()
+        return await profile(*args, **kwargs)
+
+    harness.runs.save = record_save  # type: ignore[method-assign]
+    harness.connector.profile_field = pause_second_profile  # type: ignore[method-assign]
+
+    harvest = asyncio.create_task(
+        harness.service.run_harvest(admin, started.harvest_run_id)
+    )
+    await asyncio.wait_for(second_profile_started.wait(), timeout=1)
+
+    assert (HarvestPhase.PROFILING, 1) in saved_progress
+
+    release_second_profile.set()
+    await harvest
 
 
 async def test_catalog_is_readable_after_the_run(harness: Harness, admin) -> None:

@@ -785,6 +785,7 @@ describe('Agent Activity', () => {
     const block = await screen.findByTestId('agent-activity-block');
     // In flight: expanded, and the two agents read as two distinct lines.
     expect(within(block).getByRole('button', { expanded: true })).toBeTruthy();
+    expect(within(block).getByTestId('analysis-running-indicator')).toBeTruthy();
 
     const analystLine = within(block).getByText('Cube Analyst').closest('[data-agent-key]');
     const insightLine = within(block).getByText('Insight Agent').closest('[data-agent-key]');
@@ -828,6 +829,7 @@ describe('Agent Activity', () => {
     // The turn finalizes -- the block collapses on its own.
     rerender(<AgentActivityBlock events={events} agents={[AGENT_A]} finalized={true} />);
     expect(screen.getByRole('button', { expanded: false })).toBeTruthy();
+    expect(screen.queryByTestId('analysis-running-indicator')).toBeNull();
 
     // From here it is freely toggleable by hand, in either direction.
     await userEvent.click(screen.getByRole('button'));

@@ -189,6 +189,72 @@ organization_memberships = Table(
     ),
 )
 
+# An immutable, Organization-owned set of source catalogs used to answer a
+# Chat Session or Analysis Run.  Source membership lives in its own table so
+# the exact governed surface can be audited after a source is re-harvested.
+analysis_source_scopes = Table(
+    "analysis_source_scopes",
+    metadata,
+    Column("source_scope_id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "organization_id",
+        UUID(as_uuid=True),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("fingerprint", String(64), nullable=False),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    UniqueConstraint(
+        "source_scope_id",
+        "organization_id",
+        name="uq_analysis_source_scopes_organization_identity",
+    ),
+)
+Index("ix_analysis_source_scopes_organization", analysis_source_scopes.c.organization_id)
+
+analysis_source_scope_members = Table(
+    "analysis_source_scope_members",
+    metadata,
+    Column(
+        "source_scope_id",
+        UUID(as_uuid=True),
+        ForeignKey("analysis_source_scopes.source_scope_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "data_source_id",
+        UUID(as_uuid=True),
+        ForeignKey("data_sources.data_source_id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "catalog_version_id",
+        UUID(as_uuid=True),
+        ForeignKey("catalog_versions.catalog_version_id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("source_kind", String(16), nullable=False),
+    Column("execution_capability", String(32), nullable=False),
+    Column("relation_fingerprint", String(64), nullable=False),
+    Column("position", Integer, nullable=False),
+    UniqueConstraint(
+        "source_scope_id",
+        "data_source_id",
+        name="uq_analysis_source_scope_members_source",
+    ),
+    UniqueConstraint(
+        "source_scope_id",
+        "position",
+        name="uq_analysis_source_scope_members_position",
+    ),
+    CheckConstraint("position >= 0", name="ck_analysis_source_scope_members_position"),
+)
+
 analysis_runs = Table(
     "analysis_runs",
     metadata,
@@ -208,6 +274,11 @@ analysis_runs = Table(
     Column("status", String(32), nullable=False, server_default="pending"),
     Column("state", JSON, nullable=False, server_default=text("'{}'::jsonb")),
     Column("scenario_key", String(64)),
+    Column(
+        "source_scope_id",
+        UUID(as_uuid=True),
+        ForeignKey("analysis_source_scopes.source_scope_id", ondelete="RESTRICT"),
+    ),
     Column("chat_session_id", UUID(as_uuid=True)),
     Column("chat_sequence", Integer),
     Column("initiating_message_id", UUID(as_uuid=True)),

@@ -21,9 +21,11 @@ from time import monotonic
 from uuid import UUID
 
 from zentra_adapter_cube import CubeClient, CubeSemanticLayer
+from zentra_domain_agent_execution import SemanticLayerPort
 
 from .connector_model import ConnectorNotConfiguredError
 from .cube_auth import mint_cube_token
+from .source_scoped_semantic import SourceScopedSemanticLayer
 
 #: Matches the JWT's own expiry (cube_auth.TOKEN_TTL) — a cached layer must
 #: not outlive the token it was built with.
@@ -58,8 +60,18 @@ class ScopedCubeSemanticLayers:
         self,
         *,
         organization_id: UUID,
-        data_connection_id: UUID | None,
-    ) -> CubeSemanticLayer:
+        data_connection_id: UUID | tuple[UUID, ...] | None,
+    ) -> SemanticLayerPort:
+        if isinstance(data_connection_id, tuple):
+            return SourceScopedSemanticLayer(
+                {
+                    source_id: await self.resolve(
+                        organization_id=organization_id,
+                        data_connection_id=source_id,
+                    )
+                    for source_id in data_connection_id
+                }
+            )
         fingerprint = (
             await self._resolve_relation_fingerprint(
                 organization_id, data_connection_id

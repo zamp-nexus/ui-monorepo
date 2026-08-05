@@ -161,15 +161,20 @@ Query is told not to retry it, since "not harvested yet" will not become true by
 asking again.
 
 Harvest progress is polled, because the work is scheduled *after* the 202 and
-cannot be awaited. The progress bar is deliberately indeterminate: the total is
-unknown until listing finishes, and a percentage of an unknown total is a
-fiction — so counts are shown instead.
+cannot be awaited. On load, the page first asks for existing Harvest Runs and
+resumes watching a non-terminal run instead of offering a conflicting second
+start. The progress bar is deliberately indeterminate: the total is unknown
+until listing finishes, and a percentage of an unknown total is a fiction — so
+counts are shown instead.
 
-Clicking a table opens a modal listing every column with its position, declared
-type, family and nullability. Statistics carry the sample size they came from,
-and a field that was never profiled says *not profiled* rather than showing
-`0%` — the latter would claim the column was measured and had no nulls, which is
-a different statement from never having looked.
+Clicking a table opens a modal with a labelled summary of its rows, size,
+column count and engine, followed by a compact field model. Each field keeps
+its position, declared type, family, nullability, profile and Agent access in
+one scannable row. Statistics carry the sample size they came from, and a field
+that was never profiled says *not profiled* rather than showing `0%` — the
+latter would claim the column was measured and had no nulls, which is a
+different statement from never having looked. Disabled Agent-access switches
+retain their boundary and state contrast so read-only status remains legible.
 
 ## Styling
 

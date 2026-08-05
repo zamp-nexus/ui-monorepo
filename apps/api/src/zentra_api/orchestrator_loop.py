@@ -387,7 +387,7 @@ class OrchestratorLoop:
         organization_id: UUID,
         question: str,
         model_tier: str = ModelTier.FREE.value,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> PipelineResult:
         semantic_layer = await self._semantic_layers.resolve(
             organization_id=organization_id, data_connection_id=data_connection_id

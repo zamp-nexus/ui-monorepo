@@ -8,6 +8,8 @@ def test_phase_zero_tables_are_present_and_registry_is_schema_only() -> None:
         "identity_subjects",
         "organization_identity_bindings",
         "organization_memberships",
+        "analysis_source_scopes",
+        "analysis_source_scope_members",
         "analysis_runs",
         "agent_executions",
         "human_approvals",

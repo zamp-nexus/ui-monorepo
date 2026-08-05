@@ -52,7 +52,7 @@ class WorkflowExecutionService:
         definition: dict[str, Any],
         *,
         organization_id: UUID,
-        data_connection_id: UUID | None,
+        data_connection_id: UUID | tuple[UUID, ...] | None,
         message: str,
     ) -> WorkflowResult:
         semantic_layer = await self._semantic_layers.resolve(

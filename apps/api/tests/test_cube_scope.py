@@ -67,6 +67,20 @@ async def test_same_scope_within_ttl_reuses_the_cached_instance() -> None:
 
 
 @pytest.mark.asyncio
+async def test_multiple_sources_are_presented_as_one_source_local_scope() -> None:
+    cache = _cache(
+        fingerprints={str(CONNECTION_A): "fp-a", str(CONNECTION_B): "fp-b"}
+    )
+
+    scoped = await cache.resolve(
+        organization_id=TENANT_A,
+        data_connection_id=(CONNECTION_A, CONNECTION_B),
+    )
+
+    assert type(scoped).__name__ == "SourceScopedSemanticLayer"
+
+
+@pytest.mark.asyncio
 async def test_a_confirmed_relation_invalidates_the_cache_even_within_ttl() -> None:
     """The gap a naive version-only cache key would have missed: confirming
     a Relation changes the fingerprint under the same TTL window, and that

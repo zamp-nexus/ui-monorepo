@@ -82,6 +82,7 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowI
           : _view.state.doc.textBetween(0, _view.state.doc.content.size, '\n');
         const message = parseComposerCommands(text).text;
         if (message && !disabledRef.current) {
+          _view.dispatch(_view.state.tr.delete(0, _view.state.doc.content.size));
           onDraftChange('');
           onSendRef.current(message);
           // ProseMirror may finish its own key update after this handler.

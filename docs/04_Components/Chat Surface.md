@@ -55,6 +55,8 @@ reconnect legitimately replays it.
 Agent activity is grouped inline with the live turn. A pending Human Approval
 also stays inline in the conversation (`investigation-controls.tsx`), so the
 reader never has to leave the chat to understand the work in progress.
+While a run is active, its activity header carries a small pulsing live point;
+it is removed on a terminal state and respects reduced-motion preferences.
 
 The answer state is explicit: a Finding awaiting approval is shown as an
 answer ready for review, not a failed run. A failed follow-up is labelled as a
@@ -86,7 +88,8 @@ line, but exposes no formatting controls or Markdown shortcuts. The submitted
 value remains the same clean text body the Chat Session API has always accepted;
 Tiptap changes editing quality, not the API or persisted message format.
 On send, the local draft is cleared both immediately and after Tiptap finishes
-its key update, so a submitted message cannot reappear in the composer. The
+its key update; Enter-to-send also clears Tiptap's own document in the same
+event, so a submitted message cannot remain or reappear in the composer. The
 persisted user message is then shown as a compact right-aligned transcript
 entry rather than a full-width second input surface.
 

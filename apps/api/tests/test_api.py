@@ -144,6 +144,7 @@ def client(
     organizations: object | None = None,
     threads: object | None = None,
     semantic_layers: object | None = None,
+    connector: object | None = None,
     clerk_webhook_secret: str | None = None,
 ) -> TestClient:
     dependencies = Dependencies(
@@ -156,6 +157,7 @@ def client(
         organizations=organizations,
         threads=threads,
         semantic_layers=semantic_layers or SemanticLayers(),
+        connector=connector,
     )
     app = create_app(
         Settings(
@@ -457,6 +459,47 @@ def test_the_catalog_served_is_the_asking_tenants_own(
     # needs to know the region is spelled "EU" rather than "Europe".
     assert dimension["values"] == ["EU", "NA"]
     assert layers.resolved == [(UUID("20000000-0000-0000-0000-000000000002"), None)]
+
+
+def test_catalog_aggregates_multiple_organization_sources(monkeypatch) -> None:
+    """Several sources are catalogued, never treated as an ambiguous error."""
+
+    class Source:
+        def __init__(self, source_id: UUID, name: str) -> None:
+            self.data_source_id = source_id
+            self.name = name
+            self.kind = type("Kind", (), {"value": "connected"})()
+            self.health = type("Health", (), {"value": "reachable"})()
+
+    class Connector:
+        async def list_sources(self, actor: object) -> tuple[Source, ...]:
+            del actor
+            return (
+                Source(UUID("30000000-0000-0000-0000-000000000001"), "Orders"),
+                Source(UUID("30000000-0000-0000-0000-000000000002"), "Returns"),
+            )
+
+    async def resolve(*args: object, **kwargs: object) -> IdentityContext:
+        return IdentityContext(
+            user_id=UUID("10000000-0000-0000-0000-000000000001"),
+            organization_id=UUID("20000000-0000-0000-0000-000000000002"),
+            email="owner@example.com",
+            organization_name="Acme Europe",
+            role="owner",
+        )
+
+    monkeypatch.setattr("zentra_api.request_context.resolve_identity_context", resolve)
+    layers = SemanticLayers()
+    with client(semantic_layers=layers, connector=Connector()) as test_client:
+        response = test_client.get("/v1/catalog", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert [source["name"] for source in response.json()["sources"]] == ["Orders", "Returns"]
+    assert all(source["status"] == "ready" for source in response.json()["sources"])
+    assert layers.resolved == [
+        (UUID("20000000-0000-0000-0000-000000000002"), UUID("30000000-0000-0000-0000-000000000001")),
+        (UUID("20000000-0000-0000-0000-000000000002"), UUID("30000000-0000-0000-0000-000000000002")),
+    ]
 
 
 def test_every_blank_setting_means_unconfigured_not_configured_as_empty() -> None:

@@ -99,6 +99,8 @@ class AnalysisRunThread:
     archived_at: datetime | None = None
     archived_from_status: ThreadStatus | None = None
     created_by: UUID | None = None
+    source_scope_id: UUID | None = None
+    source_ids: tuple[UUID, ...] = ()
 
     @classmethod
     def create(
@@ -111,6 +113,8 @@ class AnalysisRunThread:
         title: str,
         now: datetime,
         created_by: UUID | None = None,
+        source_scope_id: UUID | None = None,
+        source_ids: tuple[UUID, ...] = (),
     ) -> AnalysisRunThread:
         normalized_title = " ".join(title.split()).strip()
         if not normalized_title or len(normalized_title) > MAX_THREAD_TITLE_LENGTH:
@@ -126,6 +130,8 @@ class AnalysisRunThread:
             updated_at=now,
             latest_activity_at=now,
             created_by=created_by,
+            source_scope_id=source_scope_id,
+            source_ids=source_ids,
         )
 
     def activate(self, now: datetime) -> None:

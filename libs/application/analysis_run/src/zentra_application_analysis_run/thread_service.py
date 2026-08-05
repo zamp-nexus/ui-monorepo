@@ -75,6 +75,18 @@ def _combined_question_text(messages: tuple[ThreadMessage, ...]) -> str:
     )
 
 
+def _source_ids(value: UUID | tuple[UUID, ...] | None) -> tuple[UUID, ...]:
+    if value is None:
+        return ()
+    return value if isinstance(value, tuple) else (value,)
+
+
+def _source_scope(ids: tuple[UUID, ...]) -> UUID | tuple[UUID, ...] | None:
+    if not ids:
+        return None
+    return ids[0] if len(ids) == 1 else ids
+
+
 class ThreadService:
     def __init__(
         self,
@@ -112,7 +124,7 @@ class ThreadService:
         *,
         project_id: UUID,
         content: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
         routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
@@ -140,6 +152,7 @@ class ThreadService:
             title=deterministic_thread_title(title_source),
             now=now,
             created_by=actor.user_id,
+            source_ids=_source_ids(data_connection_id),
         )
         async with self._uow(actor) as unit_of_work:
             await self._require_writable_project(unit_of_work, project_id)
@@ -304,7 +317,7 @@ class ThreadService:
         *,
         project_id: UUID,
         content: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
         routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Same as `create`, except a NOT_ANALYTICAL reply streams live.
@@ -340,6 +353,7 @@ class ThreadService:
             title=deterministic_thread_title(title_source),
             now=now,
             created_by=actor.user_id,
+            source_ids=_source_ids(data_connection_id),
         )
         async with self._uow(actor) as unit_of_work:
             await self._require_writable_project(unit_of_work, project_id)
@@ -399,7 +413,7 @@ class ThreadService:
         *,
         thread_id: UUID,
         content: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
         routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
@@ -428,8 +442,9 @@ class ThreadService:
             existing_messages = await unit_of_work.threads.messages_for_thread(
                 thread_id
             )
+            source_scope = _source_scope(thread.source_ids)
             routing = routing or await self._intake.resolve(
-                _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=data_connection_id
+                _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=source_scope
             )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
@@ -451,7 +466,7 @@ class ThreadService:
                 message,
                 routing,
                 now,
-                data_connection_id=data_connection_id,
+                data_connection_id=source_scope,
             )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
@@ -468,7 +483,7 @@ class ThreadService:
         *,
         thread_id: UUID,
         content: str,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
         routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Streaming counterpart to `append` -- see `create_streaming`.
@@ -503,8 +518,9 @@ class ThreadService:
                 existing_messages = await unit_of_work.threads.messages_for_thread(
                     thread_id
                 )
+                source_scope = _source_scope(thread.source_ids)
                 routing = routing or await self._intake.resolve(
-                    _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=data_connection_id
+                    _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=source_scope
                 )
                 thread.record_message(now)
                 await unit_of_work.threads.add_message(message)
@@ -527,7 +543,7 @@ class ThreadService:
                         message,
                         routing,
                         now,
-                        data_connection_id=data_connection_id,
+                        data_connection_id=source_scope,
                     )
                 )
                 await unit_of_work.threads.save_thread(thread)
@@ -1035,7 +1051,7 @@ class ThreadService:
         message: ThreadMessage,
         routing: RoutingResult,
         now: datetime,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> tuple[UUID | None, tuple[ThreadMessage, ...]]:
         if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
             # Activated, not left in Draft: unlike Ambiguous/Unsupported, a
@@ -1122,7 +1138,7 @@ class ThreadService:
         message: ThreadMessage,
         routing: RoutingResult,
         now: datetime,
-        data_connection_id: UUID | None = None,
+        data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> tuple[UUID | None, tuple[ThreadMessage, ...], str | None]:
         """Streaming counterpart to `_apply_routing`.
 

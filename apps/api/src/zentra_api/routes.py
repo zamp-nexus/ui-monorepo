@@ -23,20 +23,22 @@ from zentra_application_analysis_run import (
     ConflictError,
     PermissionDeniedError,
 )
-from zentra_application_connector import CatalogVersionNotFoundError
+from zentra_application_connector import (
+    AuthenticatedActor as ConnectorActor,
+    CatalogVersionNotFoundError,
+    Role as ConnectorRole,
+)
 from zentra_domain_agent_execution import PublicAgent
 from zentra_domain_analysis_run import Tombstone
 
-from .active_connection import (
-    AmbiguousDataConnectionError,
-    active_data_connection_id,
-)
+from .active_connection import active_data_connection_id
 from .request_context import RequestContext, authenticated_context
 from .schemas import (
     AnalysisRunDetailResponse,
     ApprovalDecisionRequest,
     CatalogMemberResponse,
-    CatalogSummaryResponse,
+    CatalogSourceResponse,
+    OrganizationCatalogResponse,
     ContextResponse,
     DependencyStatus,
     EvidenceCitationResponse,
@@ -57,16 +59,13 @@ async def _active_connection(
     actor: object,
     *,
     requested: UUID | None = None,
-) -> UUID | None:
-    """The Data Connection a question is asked against, or a 409 to choose."""
-    try:
-        return await active_data_connection_id(
-            dependencies.connector,  # type: ignore[attr-defined]
-            actor,  # type: ignore[arg-type]
-            requested=requested,
-        )
-    except AmbiguousDataConnectionError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+) -> UUID | tuple[UUID, ...] | None:
+    """The source scope a question may query; it is never guessed down to one."""
+    return await active_data_connection_id(
+        dependencies.connector,  # type: ignore[attr-defined]
+        actor,  # type: ignore[arg-type]
+        requested=requested,
+    )
 
 
 @router.get("/health/live")
@@ -121,11 +120,11 @@ async def context(
     )
 
 
-@router.get("/v1/catalog", response_model=CatalogSummaryResponse)
+@router.get("/v1/catalog", response_model=OrganizationCatalogResponse)
 async def catalog(
     request: Request,
     resolved: AuthenticatedRequest,
-) -> CatalogSummaryResponse:
+) -> OrganizationCatalogResponse:
     """The governed vocabulary this Organization may ask questions about.
 
     Resolved per Organization, so it is the Organization's own catalog and never
@@ -134,38 +133,73 @@ async def catalog(
     dimensions only: no rows, and no physical schema.
     """
     dependencies = request.app.state.dependencies
-    try:
-        semantic_layer = await dependencies.semantic_layers.resolve(
-            organization_id=resolved.actor.organization_id,
-            # The Organization's own connection, not the demo warehouse. Serving the demo
-            # catalog here would offer a question the Analysis Run cannot answer.
-            data_connection_id=await _active_connection(dependencies, resolved.actor),
-        )
-    except CatalogVersionNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No catalog has been harvested for this data connection yet.",
-        ) from error
-    governed = await semantic_layer.catalog()
-    return CatalogSummaryResponse(
-        measures=[
+
+    def members(governed: object) -> tuple[list[CatalogMemberResponse], list[CatalogMemberResponse]]:
+        return [
             CatalogMemberResponse(
                 name=measure.name,
                 type=measure.type,
                 description=measure.description,
             )
-            for measure in governed.measures
-        ],
-        dimensions=[
+            for measure in governed.measures  # type: ignore[attr-defined]
+        ], [
             CatalogMemberResponse(
                 name=dimension.name,
                 type=dimension.type,
                 description=dimension.description,
                 values=list(dimension.values),
             )
-            for dimension in governed.dimensions
-        ],
+            for dimension in governed.dimensions  # type: ignore[attr-defined]
+        ]
+
+    connector = dependencies.connector
+    if connector is None:
+        try:
+            governed = await dependencies.semantic_layers.resolve(
+                organization_id=resolved.actor.organization_id, data_connection_id=None
+            )
+        except CatalogVersionNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No catalog has been harvested for this data connection yet.",
+            ) from error
+        measures, dimensions = members(await governed.catalog())
+        return OrganizationCatalogResponse(
+            measures=measures,
+            dimensions=dimensions,
+            sources=[CatalogSourceResponse(name="Demo warehouse", kind="demo", status="ready", measures=measures, dimensions=dimensions)],
+        )
+
+    actor = ConnectorActor(
+        user_id=resolved.actor.user_id,
+        organization_id=resolved.actor.organization_id,
+        role=ConnectorRole(resolved.actor.role.value),
     )
+    sources: list[CatalogSourceResponse] = []
+    measures: list[CatalogMemberResponse] = []
+    dimensions: list[CatalogMemberResponse] = []
+    for source in await connector.list_sources(actor):
+        if source.health.value != "reachable":
+            sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status="unreachable"))
+            continue
+        try:
+            layer = await dependencies.semantic_layers.resolve(
+                organization_id=resolved.actor.organization_id,
+                data_connection_id=source.data_source_id,
+            )
+            source_measures, source_dimensions = members(await layer.catalog())
+        except CatalogVersionNotFoundError:
+            sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status="not_harvested"))
+            continue
+        # Uploads are landed in Nexus-managed ClickHouse and use the same
+        # source-local Cube path as a customer ClickHouse.  They are a second
+        # source, not a display-only attachment.
+        status_name = "ready"
+        sources.append(CatalogSourceResponse(data_source_id=source.data_source_id, name=source.name, kind=source.kind.value, status=status_name, measures=source_measures, dimensions=source_dimensions))
+        if status_name == "ready":
+            measures.extend(source_measures)
+            dimensions.extend(source_dimensions)
+    return OrganizationCatalogResponse(measures=measures, dimensions=dimensions, sources=sources)
 
 
 @router.get("/v1/agents", response_model=list[PublicAgent])

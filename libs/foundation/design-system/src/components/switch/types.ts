@@ -68,7 +68,7 @@ export type SwitchComponent = React.ForwardRefExoticComponent<
  */
 export const switchDefaultTheme: ComponentThemeConfigStructure = {
   root: {
-    base: 'peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50 data-[state=unchecked]:bg-background-muted data-[state=checked]:bg-primary',
+    base: 'peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border-focus data-[unchecked]:bg-background-muted data-[checked]:border-primary data-[checked]:bg-primary',
     variants: {
       size: {
         sm: 'h-5 w-9',
@@ -78,7 +78,7 @@ export const switchDefaultTheme: ComponentThemeConfigStructure = {
     },
     modifiers: {
       disabled: {
-        true: 'opacity-50 cursor-not-allowed',
+        true: 'cursor-not-allowed border-border opacity-100 data-[unchecked]:bg-background-muted data-[checked]:border-primary/60 data-[checked]:bg-primary/60',
         false: '',
       },
       checked: {
@@ -89,12 +89,12 @@ export const switchDefaultTheme: ComponentThemeConfigStructure = {
   },
   slots: {
     thumb: {
-      base: 'pointer-events-none block rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=unchecked]:translate-x-0',
+      base: 'pointer-events-none block rounded-full bg-background shadow-lg ring-0 transition-transform data-[unchecked]:translate-x-0',
       variants: {
         size: {
-          sm: 'h-4 w-4 data-[state=checked]:translate-x-4',
-          md: 'h-5 w-5 data-[state=checked]:translate-x-5',
-          lg: 'h-6 w-6 data-[state=checked]:translate-x-7',
+          sm: 'h-4 w-4 data-[checked]:translate-x-4',
+          md: 'h-5 w-5 data-[checked]:translate-x-5',
+          lg: 'h-6 w-6 data-[checked]:translate-x-7',
         },
       },
       modifiers: {},

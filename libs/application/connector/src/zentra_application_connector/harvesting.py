@@ -145,6 +145,7 @@ async def _describe_tables(
     credentials: SourceCredentials,
 ) -> tuple[tuple[SourceTable, ...], tuple[UnreadableTable, ...]]:
     run.advance(HarvestPhase.LISTING_TABLES, at=deps.clock.now())
+    await deps.runs.save(run)
     descriptors = await deps.connector.list_tables(
         credentials, databases=run.scope.databases
     )
@@ -157,6 +158,7 @@ async def _describe_tables(
     await deps.runs.save(run)
 
     run.advance(HarvestPhase.DESCRIBING_FIELDS, at=deps.clock.now())
+    await deps.runs.save(run)
     tables: list[SourceTable] = []
     unreadable: list[UnreadableTable] = []
 
@@ -219,6 +221,7 @@ async def _profile_fields(
     store_sample_values: bool,
 ) -> tuple[SourceTable, ...]:
     run.advance(HarvestPhase.PROFILING, at=deps.clock.now())
+    await deps.runs.save(run)
     profiled: list[SourceTable] = []
 
     for table in tables:
@@ -242,6 +245,7 @@ async def _profile_fields(
                 continue
             run.budget.spend(queries=1)
             run.fields_profiled += 1
+            await deps.runs.save(run)
             fields.append(
                 SourceField(
                     field_id=source_field.field_id,
@@ -266,7 +270,6 @@ async def _profile_fields(
                 fields=tuple(fields),
             )
         )
-        await deps.runs.save(run)
 
     return tuple(profiled)
 
@@ -324,6 +327,7 @@ async def _infer_relations(
     implementations that could disagree about confidence.
     """
     run.advance(HarvestPhase.INFERRING_RELATIONS, at=deps.clock.now())
+    await deps.runs.save(run)
 
     catalogs: list[tuple[UUID, CatalogVersion]] = [(source.data_source_id, version)]
     creds: dict[UUID, SourceCredentials] = {source.data_source_id: credentials}

@@ -55,6 +55,8 @@ def _thread_from_row(row: Any) -> AnalysisRunThread:
         latest_activity_at=value["latest_activity_at"],
         archived_at=value["archived_at"],
         created_by=value["created_by"],
+        source_scope_id=value["source_scope_id"],
+        source_ids=tuple(UUID(source_id) for source_id in value["source_ids"]),
     )
 
 
@@ -90,6 +92,8 @@ class PostgresThreadRepository:
                 latest_activity_at=thread.latest_activity_at,
                 archived_at=thread.archived_at,
                 created_by=thread.created_by,
+                source_scope_id=thread.source_scope_id,
+                source_ids=[str(source_id) for source_id in thread.source_ids],
             )
         )
 
@@ -252,19 +256,19 @@ class PostgresThreadRepository:
         row = (await self._connection.execute(statement)).one_or_none()
         return (row.visibility, row.created_by) if row else None
 
-    async def default_data_connection_id(self, thread_id: UUID) -> UUID | None:
-        statement = select(chat_sessions.c.default_data_connection_id).where(
+    async def source_scope_id(self, thread_id: UUID) -> UUID | None:
+        statement = select(chat_sessions.c.source_scope_id).where(
             chat_sessions.c.chat_session_id == thread_id
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
 
-    async def set_default_data_connection_id(
-        self, thread_id: UUID, data_connection_id: UUID | None
+    async def set_source_scope_id(
+        self, thread_id: UUID, source_scope_id: UUID | None
     ) -> None:
         await self._connection.execute(
             update(chat_sessions)
             .where(chat_sessions.c.chat_session_id == thread_id)
-            .values(default_data_connection_id=data_connection_id)
+            .values(source_scope_id=source_scope_id)
         )
 
 
