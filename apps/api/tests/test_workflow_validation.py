@@ -40,3 +40,10 @@ def test_cycle_cannot_hide_its_loop_metadata() -> None:
     assert (
         _document_error(document) == "Every Workflow cycle needs bounded loop metadata"
     )
+
+
+def test_workflow_rejects_an_unregistered_tool() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][2]["data"]["tools"] = ["shell"]
+
+    assert _document_error(document) == "Workflow agents may use only registered tools"

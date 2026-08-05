@@ -7,6 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+WORKFLOW_TOOL_CATALOG = (
+    "semantic_catalog_search",
+    "semantic_query",
+    "raw_query",
+)
+
 
 class WorkflowDocumentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -70,7 +76,7 @@ DEFAULT_WORKFLOW_DEFINITION: dict[str, Any] = {
                 "role": "cube_analyst",
                 "responsibility": "Measures governed metrics.",
                 "skills": ["semantic analysis"],
-                "tools": ["semantic layer"],
+                "tools": ["semantic_catalog_search", "semantic_query", "raw_query"],
             },
         },
         {

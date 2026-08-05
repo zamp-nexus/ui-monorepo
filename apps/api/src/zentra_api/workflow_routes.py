@@ -20,6 +20,7 @@ from .workflow_schemas import (
     WorkflowDetailResponse,
     WorkflowDocumentRequest,
     WorkflowSummaryResponse,
+    WORKFLOW_TOOL_CATALOG,
 )
 
 router = APIRouter(prefix="/v1/workflows", tags=["workflow"])
@@ -81,6 +82,15 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     ]
     if len(controllers) != 1:
         return "A Workflow needs exactly one controller"
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("type") != "agent":
+            continue
+        data = node.get("data")
+        tools = data.get("tools", []) if isinstance(data, dict) else []
+        if not isinstance(tools, list) or any(
+            tool not in WORKFLOW_TOOL_CATALOG for tool in tools
+        ):
+            return "Workflow agents may use only registered tools"
     for edge in edges:
         if (
             not isinstance(edge, dict)
