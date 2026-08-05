@@ -55,6 +55,12 @@ async def test_discovery_tools_return_inventory_and_selected_schema() -> None:
     assert "orders" in schema.content
 
 
+def test_schema_inspect_allows_a_connection_overview_without_table_name() -> None:
+    definition = SchemaInspectTool(Discovery(), TENANT_ID).definition
+
+    assert definition.input_schema["required"] == ["connection_id"]
+
+
 @pytest.mark.asyncio
 async def test_data_query_requires_a_selected_source_and_uses_raw_path() -> None:
     tool = DataQueryTool(SemanticLayer())

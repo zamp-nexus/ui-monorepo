@@ -25,8 +25,6 @@ from .tools import (
     DataDiscoveryPort,
     DataQueryTool,
     SchemaInspectTool,
-    SemanticCatalogSearchTool,
-    SemanticQueryTool,
     ToolRegistry,
 )
 
@@ -36,8 +34,6 @@ __all__ = [
     "ConnectionInventoryTool",
     "SchemaInspectTool",
     "DataDiscoveryPort",
-    "SemanticQueryTool",
-    "SemanticCatalogSearchTool",
     "SkillRegistry",
     "Skill",
     "StepBudgetExhaustedError",

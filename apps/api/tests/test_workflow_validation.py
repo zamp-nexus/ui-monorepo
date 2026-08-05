@@ -59,3 +59,32 @@ def test_workflow_rejects_an_unregistered_tool() -> None:
     document["nodes"][2]["data"]["tools"] = ["shell"]
 
     assert _document_error(document) == "Workflow agents may use only registered tools"
+
+
+def test_only_analyst_and_evaluator_may_receive_data_tools() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][1]["data"]["tools"] = ["connection_inventory"]
+
+    assert (
+        _document_error(document)
+        == "Only Cube Analyst and Evaluator may use data tools"
+    )
+
+
+def test_evaluator_may_receive_data_tools() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][3]["data"]["tools"] = [
+        "connection_inventory",
+        "schema_inspect",
+        "data_query",
+    ]
+
+    assert _document_error(document) is None
+
+
+def test_legacy_studio_roles_remain_compatible() -> None:
+    document = deepcopy(DEFAULT_WORKFLOW_DEFINITION)
+    document["nodes"][2]["data"]["role"] = "analyst"
+    document["nodes"][3]["data"]["role"] = "reviewer"
+
+    assert _document_error(document) is None

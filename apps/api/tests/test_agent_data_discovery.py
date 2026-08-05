@@ -74,6 +74,8 @@ async def test_inventory_and_schema_are_safe_and_cached_per_run() -> None:
 
     assert inventory["connection_count"] == 1
     assert inventory["connections"][0]["name"] == "Warehouse"
+    assert inventory["connections"][0]["readiness"] == "reachable"
+    assert inventory["connections"][0]["catalog_available"] is True
     assert "password" not in str(inventory)
     assert schema["table"]["fields"][0]["query_member"] == (
         f"{CONNECTION_ID}::orders.customer_id"
@@ -86,3 +88,4 @@ async def test_inventory_and_schema_are_safe_and_cached_per_run() -> None:
             "cardinality": "many_to_one",
         }
     ]
+    assert discovery.metrics.schema_snapshot_reuses == 1

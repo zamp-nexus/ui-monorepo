@@ -22,13 +22,13 @@ from zentra_adapter_model_providers import (
 )
 from zentra_domain_agent_execution import (
     AgentDescriptor,
-    AgentRole,
     ModelMessage,
     ToolAccess,
     ToolScope,
 )
 
 from .cube_scope import ScopedCubeSemanticLayers
+from .workflow_policy import workflow_agent_role
 from .workflow_runtime import WorkflowEngine, WorkflowResult, WorkflowStep
 
 _OUTPUT_SCHEMA = {
@@ -75,13 +75,9 @@ class WorkflowExecutionService:
         async def invoke(node: dict[str, Any], handoff: str) -> WorkflowStep:
             data = node["data"]
             tools = tuple(data.get("tools", ()))
-            role = (
-                AgentRole.CUBE_ANALYST
-                if tools
-                else AgentRole.ORCHESTRATOR
-                if data.get("controller")
-                else AgentRole.CONVERSATIONAL
-            )
+            role = workflow_agent_role(data)
+            if role is None:
+                raise ValueError("Workflow agent has an unsupported role")
             descriptor = AgentDescriptor(
                 agent_id=f"workflow-{node['id']}",
                 role=role,

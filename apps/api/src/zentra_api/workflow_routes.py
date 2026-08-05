@@ -20,6 +20,7 @@ from zentra_application_analysis_run import Role
 from .active_connection import active_data_connection_id
 from .agent_data_discovery import ConnectorDataDiscovery
 from .request_context import RequestContext, authenticated_context
+from .workflow_policy import workflow_role_error
 from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
     DEFAULT_WORKFLOW_DEFINITION,
@@ -58,25 +59,6 @@ def _require_manager(context: RequestContext) -> None:
     if context.actor.role not in MANAGER_ROLES:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "This membership cannot manage Workflows"
-        )
-
-
-def _uses_raw_query(definition: dict[str, Any]) -> bool:
-    return any(
-        isinstance(node, dict)
-        and isinstance(node.get("data"), dict)
-        and "raw_query" in node["data"].get("tools", [])
-        for node in definition.get("nodes", [])
-    )
-
-
-def _require_raw_query_admin(
-    context: RequestContext, definition: dict[str, Any]
-) -> None:
-    if _uses_raw_query(definition) and context.actor.role is not Role.ADMIN:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "Only an Admin may grant raw_query to a Workflow agent",
         )
 
 
@@ -124,6 +106,9 @@ def _document_error(definition: dict[str, Any]) -> str | None:
             tool not in WORKFLOW_TOOL_CATALOG for tool in tools
         ):
             return "Workflow agents may use only registered tools"
+        role_error = workflow_role_error(data, tools)
+        if role_error is not None:
+            return role_error
     for edge in edges:
         if (
             not isinstance(edge, dict)
@@ -376,7 +361,9 @@ async def save_workflow(
     context: AuthenticatedRequest,
 ) -> WorkflowDetailResponse:
     _require_manager(context)
-    _require_raw_query_admin(context, body.definition)
+    reason = _document_error(body.definition)
+    if reason:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, reason)
     async with request.app.state.dependencies.database.organization_connection(
         context.actor.organization_id
     ) as connection:
@@ -425,7 +412,6 @@ async def publish_workflow(
         ).first()
         if row is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
-        _require_raw_query_admin(context, row.draft_definition)
         reason = _document_error(row.draft_definition)
         reason = reason or _routing_profile_error(_profile(row.routing_profile))
         if reason:

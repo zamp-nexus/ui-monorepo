@@ -8,15 +8,27 @@ values, or unconfirmed relations.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic.types import JsonValue
+from zentra_adapter_telemetry import record_discovery_snapshot_reuse
 from zentra_application_connector import (
     AuthenticatedActor,
     CatalogVersionNotFoundError,
     ConnectorService,
+    JoinGraphView,
     Role,
 )
+from zentra_domain_connector import CatalogVersion, FieldProfile
+
+
+@dataclass(frozen=True, slots=True)
+class DiscoveryRunMetrics:
+    """Safe, aggregate counts for one immutable discovery snapshot."""
+
+    inventory_cache_hits: int
+    schema_snapshot_reuses: int
 
 
 class ConnectorDataDiscovery:
@@ -25,23 +37,25 @@ class ConnectorDataDiscovery:
     def __init__(self, connector: Callable[[], ConnectorService | None]) -> None:
         self._connector = connector
         self._inventory: dict[UUID, dict[str, JsonValue]] = {}
-        self._catalogs: dict[tuple[UUID, UUID], object] = {}
-        self._graphs: dict[tuple[UUID, UUID], object] = {}
+        self._catalogs: dict[tuple[UUID, UUID], CatalogVersion] = {}
+        self._graphs: dict[tuple[UUID, UUID], JoinGraphView] = {}
+        self._inventory_cache_hits = 0
+        self._schema_snapshot_reuses = 0
 
     async def connection_inventory(self, organization_id: UUID) -> dict[str, JsonValue]:
         cached = self._inventory.get(organization_id)
         if cached is not None:
+            self._inventory_cache_hits += 1
+            record_discovery_snapshot_reuse(state="inventory")
             return cached
         connector = self._require_connector()
         actor = _agent_actor(organization_id)
         connections: list[dict[str, JsonValue]] = []
         for source in await connector.list_sources(actor):
-            status = (
-                "unreachable" if source.health.value != "reachable" else "not_harvested"
-            )
+            catalog_available = False
             table_count = 0
             join_count = 0
-            if status != "unreachable":
+            if source.health.value == "reachable":
                 try:
                     catalog = await connector.agent_visible_catalog(
                         actor, source.data_source_id
@@ -51,7 +65,7 @@ class ConnectorDataDiscovery:
                     )
                     self._catalogs[(organization_id, source.data_source_id)] = catalog
                     self._graphs[(organization_id, source.data_source_id)] = graph
-                    status = "ready"
+                    catalog_available = True
                     table_count = len(catalog.tables)
                     join_count = len(graph.relations)
                 except CatalogVersionNotFoundError:
@@ -61,7 +75,8 @@ class ConnectorDataDiscovery:
                     "connection_id": str(source.data_source_id),
                     "name": source.name,
                     "kind": source.kind.value,
-                    "status": status,
+                    "readiness": source.health.value,
+                    "catalog_available": catalog_available,
                     "table_count": table_count,
                     "confirmed_join_count": join_count,
                 }
@@ -81,9 +96,9 @@ class ConnectorDataDiscovery:
         graph = self._graphs.get((organization_id, connection_id))
         if catalog is None or graph is None:
             raise LookupError("Connection is not ready or has no harvested catalog")
-        # `agent_visible_catalog` and `join_graph` have concrete connector
-        # types; they are intentionally kept local to this API adapter.
-        tables = catalog.tables  # type: ignore[attr-defined]
+        self._schema_snapshot_reuses += 1
+        record_discovery_snapshot_reuse(state="schema")
+        tables = catalog.tables
         if table_name is None:
             return {
                 "connection_id": str(connection_id),
@@ -109,7 +124,7 @@ class ConnectorDataDiscovery:
                 "right": relation.right,
                 "cardinality": relation.cardinality.value,
             }
-            for relation in graph.relations  # type: ignore[attr-defined]
+            for relation in graph.relations
             if relation.left.startswith(f"{table.name}.")
             or relation.right.startswith(f"{table.name}.")
         ]
@@ -142,6 +157,13 @@ class ConnectorDataDiscovery:
             )
         return connector
 
+    @property
+    def metrics(self) -> DiscoveryRunMetrics:
+        return DiscoveryRunMetrics(
+            inventory_cache_hits=self._inventory_cache_hits,
+            schema_snapshot_reuses=self._schema_snapshot_reuses,
+        )
+
 
 def _agent_actor(organization_id: UUID) -> AuthenticatedActor:
     return AuthenticatedActor(
@@ -149,13 +171,13 @@ def _agent_actor(organization_id: UUID) -> AuthenticatedActor:
     )
 
 
-def _profile(profile: object) -> dict[str, JsonValue] | None:
+def _profile(profile: FieldProfile | None) -> dict[str, JsonValue] | None:
     if profile is None:
         return None
     return {
-        "sampled_rows": profile.sampled_rows,  # type: ignore[attr-defined]
-        "null_fraction": profile.null_fraction,  # type: ignore[attr-defined]
-        "distinct_count": profile.distinct_count,  # type: ignore[attr-defined]
-        "min_value": profile.min_value,  # type: ignore[attr-defined]
-        "max_value": profile.max_value,  # type: ignore[attr-defined]
+        "sampled_rows": profile.sampled_rows,
+        "null_fraction": profile.null_fraction,
+        "distinct_count": profile.distinct_count,
+        "min_value": profile.min_value,
+        "max_value": profile.max_value,
     }

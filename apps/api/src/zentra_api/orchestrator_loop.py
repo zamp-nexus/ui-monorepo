@@ -18,6 +18,7 @@ from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import count
+from time import perf_counter
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -38,6 +39,7 @@ from zentra_adapter_model_providers import (
     RoutedModelClient,
 )
 from zentra_adapter_postgres import PostgresAnalysisRunUnitOfWorkFactory
+from zentra_adapter_telemetry import record_analysis_run_duration
 from zentra_application_analysis_run import PipelineResult, bounded_outcome
 from zentra_domain_agent_execution import (
     OUTCOME_ADAPTER,
@@ -398,6 +400,7 @@ class OrchestratorLoop:
         model_tier: str = ModelTier.FREE.value,
         data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> PipelineResult:
+        started = perf_counter()
         semantic_layer = await self._semantic_layers.resolve(
             organization_id=organization_id, data_connection_id=data_connection_id
         )
@@ -529,6 +532,9 @@ class OrchestratorLoop:
                 primary.attempts >= MAX_EVALUATION_ATTEMPTS
                 or len(children) >= self._max_fanout
             ),
+        )
+        record_analysis_run_duration(
+            status="success", duration_ms=int((perf_counter() - started) * 1000)
         )
         return result
 
@@ -1082,6 +1088,7 @@ def _execution_record(
         usage=output.usage if output is not None else ExecutionUsage(),
         evidence_refs=output.evidence_refs if output else (),
         fallbacks=output.fallbacks if output else (),
+        tool_calls=output.tool_calls if output else (),
         reasoning=output.reasoning if output else None,
         errors=errors,
         started_at=started_at,

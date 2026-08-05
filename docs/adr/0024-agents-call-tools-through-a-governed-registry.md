@@ -42,6 +42,13 @@ read through the Connector service; query rows remain on `SemanticLayerPort`.
 `data_query` uses Cube's raw compiled-member path, but never accepts SQL,
 cross-tenant access, or cross-source joins.
 
+Workflow Studio follows the same policy at save, publish, and execution time:
+only canonical `cube_analyst` and `evaluator` nodes may receive these tools.
+`orchestrator`, `insight`, and `conversational` nodes are data-free. Earlier
+Studio aliases remain read-compatible, but resolve to those canonical roles.
+`schema_inspect` accepts an omitted `table_name` for a compact connection
+overview. Inventory reports readiness separately from catalog availability.
+
 `ModelChoice.supports_tools` marks each routing rung, default False. When tools
 are requested, a rung that cannot serve them is skipped and the skip recorded
 in `fallbacks` like any other. Cerebras and `openrouter/free` are unmarked —
@@ -68,6 +75,10 @@ the same discipline `MAX_EVALUATION_ATTEMPTS` applies to the Evaluator loop.
 and each becomes an `agent.capability_used` Work Feed event. Arguments and
 results are absent by construction: they carry rows, and [[adr/0006-metadata-only-audit-ledger]] keeps the
 ledger metadata-only.
+
+Tool telemetry records call count and latency, while discovery records immutable
+metadata-snapshot reuse. None includes arguments, rows, connection ids, or
+tenant identifiers.
 
 Usage accumulates across every turn, not only the one that answered. The model
 recorded is the answering turn's, since that is the call

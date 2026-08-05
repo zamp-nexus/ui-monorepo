@@ -294,6 +294,16 @@ def record_tool_call(
     )
 
 
+def record_discovery_snapshot_reuse(*, state: str) -> None:
+    """Record a safe aggregate cache reuse without metadata contents."""
+    instruments().discovery_snapshot_reuses.add(1, dimensions(state=state))
+
+
+def record_analysis_run_duration(*, status: str, duration_ms: int) -> None:
+    """Record total orchestration wall time without analysis contents."""
+    instruments().analysis_run_duration.record(duration_ms, dimensions(status=status))
+
+
 def record_skill_activation(*, role: str, skill_names: tuple[str, ...]) -> None:
     """Which Skills were appended to a role's system prompt for this execution.
 

@@ -127,7 +127,9 @@ This governs both the Datasets UI and the Agent `schema_inspect` tool. Agent
 metadata discovery reads `agent_visible_catalog`, so a hidden table or field is
 absent before it reaches a prompt. `connection_inventory` exposes only safe
 connection summary counts, while `data_query` remains a one-source structured
-Cube query; it is not a SQL endpoint.
+Cube query; it is not a SQL endpoint. Inventory reports source readiness and
+catalog availability separately; `schema_inspect` may omit `table_name` to
+return only the selected connection's compact table overview.
 
 ## Boundary
 

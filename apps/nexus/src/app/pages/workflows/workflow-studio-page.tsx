@@ -42,17 +42,17 @@ type FlowNode = Node<WorkflowNodeData, 'trigger' | 'agent' | 'result'>;
 type FlowEdge = Edge<{ route?: string; is_loop?: boolean; max_iterations?: number }>;
 const DEFAULT_ID = 'default-analytics';
 const AGENT_TEMPLATES = [
-  { label: 'Controller', role: 'controller', responsibility: 'Chooses the next declared route.', controller: true },
-  { label: 'Analyst', role: 'analyst', responsibility: 'Investigates the request with permitted data tools.' },
-  { label: 'Reviewer', role: 'reviewer', responsibility: 'Checks the handoff and requests a bounded retry when needed.' },
-  { label: 'Writer', role: 'writer', responsibility: 'Turns the final handoff into a clear response.' },
-  { label: 'Custom agent', role: 'custom', responsibility: 'Define this agent’s work.' },
+  { label: 'Controller', role: 'orchestrator', responsibility: 'Chooses the next declared route.', controller: true },
+  { label: 'Analyst', role: 'cube_analyst', responsibility: 'Investigates the request with permitted data tools.' },
+  { label: 'Reviewer', role: 'evaluator', responsibility: 'Checks the handoff and requests a bounded retry when needed.' },
+  { label: 'Writer', role: 'insight', responsibility: 'Turns the final handoff into a clear response.' },
+  { label: 'Custom agent', role: 'conversational', responsibility: 'Define this agent’s work.' },
 ];
-const TOOL_CATALOG = [
-  ['semantic_catalog_search', 'Catalog search'],
-  ['semantic_query', 'Governed query'],
-  ['raw_query', 'Raw query — unrestricted catalog access'],
-] as const;
+const TOOL_CATALOG: ReadonlyArray<readonly [string, string]> = [
+  ['connection_inventory', '1. Connection inventory'],
+  ['schema_inspect', '2. Inspect schema'],
+  ['data_query', '3. Query data'],
+];
 
 const WorkflowNode = ({ data, type, selected }: NodeProps<FlowNode>) => (
   <div className={`min-w-52 rounded-lg border px-4 py-3 shadow-sm transition ${type === 'trigger' ? 'border-primary/50 bg-primary/5' : type === 'result' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-card'} ${selected ? 'ring-2 ring-primary/30' : ''}`}>
