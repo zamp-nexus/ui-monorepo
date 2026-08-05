@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-08-01
-reviewed: 2026-08-01
+updated: 2026-08-05
+reviewed: 2026-08-05
 confidence: verified
 implementation: current
 priority: critical
@@ -46,12 +46,15 @@ control. A header bar was built across every route first and removed: repeated
 chrome earns its space only if it does something, and its tabs pointed at
 sections that do not exist yet.
 
-The rail collapses to a column of 44px tiles. Collapsed, each label is only
-hidden visually — never `display: none` — so the link keeps its accessible
-name, and a tooltip carries the label for sighted users. The state that drives
-it reaches the items twice over: as a `data-collapsed` attribute the CSS reads
-through the root's `group`, and as React context the item reads to decide
-whether to wrap itself in a tooltip.
+The desktop rail is fixed at its readable width; it does not collapse. Primary
+destinations and the footer stay pinned while the Groups region scrolls its own
+history. A Group row toggles its lazily loaded Chat Session list; multiple rows
+can stay open and the browser remembers that state per organization. Opening
+and closing uses a short height-and-fade transition, skipped for reduced-motion
+users. Each row carries selected state and hover/focus-revealed New chat and
+rename controls. The group-specific New chat action selects and opens that
+Group before opening the empty composer; a Chat Session is still created only
+by its first Message.
 
 Destinations are listed in `shell/nav-items.ts`. Investigations is the launcher
 at `/`; Connections and Datasets are built; Chat is a working surface over a

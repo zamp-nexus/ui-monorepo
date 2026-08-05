@@ -69,6 +69,8 @@ async def test_not_analytical_disposition_fails_validation_with_its_own_issue() 
                 "normalized_question": None,
                 "clarification": None,
                 "reasoning": "This is a greeting, not a business question.",
+                "workflow_id": None,
+                "workflow_reason": None,
             }
         ),
         semantic_layer=FakeSemanticLayer(),

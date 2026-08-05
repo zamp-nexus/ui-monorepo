@@ -13,7 +13,7 @@ One bounded invocation of an Agent for one Analysis Run and Tenant.
 _Avoid_: Agent run, task process
 
 **Workflow**:
-A user-authored orchestration definition that specifies its participating Agents and how work moves between them. V1 persists and simulates custom Workflows but does not execute them.
+A user-authored orchestration definition that specifies its participating Agents and how work moves between them. Published custom Workflows execute through the Workflow Engine; Intake may select an eligible published version for one Chat message under application policy.
 _Avoid_: Agentic skill, orchestration loop, pipeline, graph
 
 **Default Workflow**:
@@ -21,7 +21,7 @@ The system-owned Workflow selected for analytical runs in V1. It is inspectable 
 _Avoid_: Editable template, hard-coded pipeline
 
 **Workflow Version**:
-One immutable published snapshot of a Workflow; its editable draft is separate. Custom Workflow Versions are not executable in V1.
+One immutable published snapshot of a Workflow; its editable draft is separate. Intake may select only a published Version explicitly offered by policy.
 _Avoid_: Live workflow, mutable deployment
 
 **Orchestrator Loop**:

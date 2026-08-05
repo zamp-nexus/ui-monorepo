@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Annotated, NoReturn
 from uuid import UUID, uuid4
@@ -51,7 +51,8 @@ from .thread_schemas import (
     ThreadTitleRequest,
 )
 from .workflow_execution_service import WorkflowExecutionService
-from .workflow_schemas import WorkflowExecutionResponse
+from .workflow_selection_service import WorkflowCandidate, WorkflowSelection, WorkflowSelectionService
+from .workflow_schemas import DEFAULT_WORKFLOW_ID, WorkflowExecutionResponse
 
 _THREAD_ERRORS = (
     PermissionDeniedError,
@@ -82,6 +83,54 @@ async def _active_connection(
         )
     except AmbiguousDataConnectionError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+async def _auto_workflow_selection(
+    request: Request, actor: AuthenticatedActor, message: str
+) -> WorkflowSelection:
+    """Offer Intake only published, organization-scoped, Auto-enabled versions."""
+    async with request.app.state.dependencies.database.organization_connection(
+        actor.organization_id
+    ) as connection:
+        definitions = (await connection.execute(select(workflow_definitions))).all()
+        candidates: list[WorkflowCandidate] = []
+        for definition in definitions:
+            version = (
+                await connection.execute(
+                    select(workflow_versions)
+                    .where(workflow_versions.c.workflow_id == definition.workflow_id)
+                    .order_by(workflow_versions.c.version.desc())
+                    .limit(1)
+                )
+            ).first()
+            if version is None:
+                continue
+            # Only the immutable published snapshot is eligible. A later
+            # draft edit cannot alter the behavior of an already-published
+            # Workflow version.
+            profile = version.routing_profile or {}
+            if not profile.get("auto_select_enabled"):
+                continue
+            candidates.append(
+                WorkflowCandidate(
+                    workflow_id=definition.workflow_id,
+                    workflow_version=version.version,
+                    name=definition.name,
+                    purpose=str(profile.get("purpose", "")),
+                    tags=tuple(str(item) for item in profile.get("tags", ())),
+                    example_requests=tuple(str(item) for item in profile.get("example_requests", ())),
+                    priority=int(profile.get("priority", 0)),
+                )
+            )
+    if not candidates:
+        return WorkflowSelection(candidate=None, reason="No eligible custom Workflow.", fallback=True)
+    data_connection_id = await _active_connection(request.app.state.dependencies, actor)
+    semantic_layer = await request.app.state.dependencies.semantic_layers.resolve(
+        organization_id=actor.organization_id, data_connection_id=data_connection_id
+    )
+    return await WorkflowSelectionService(
+        models=request.app.state.dependencies.models.as_dict(), semantic_layer=semantic_layer
+    ).select(organization_id=actor.organization_id, message=message, candidates=tuple(candidates))
 
 
 def _error_code(error: Exception) -> tuple[str, int]:
@@ -158,6 +207,7 @@ def _stream_event_frame(event: ThreadStreamEvent) -> str:
 
 async def _thread_stream(
     events: AsyncIterator[ThreadStreamEvent],
+    on_snapshot: Callable[[ThreadStreamSnapshot], Awaitable[None]] | None = None,
 ) -> AsyncIterator[str]:
     """Frames a Thread stream as SSE, catching domain errors mid-stream.
 
@@ -167,6 +217,8 @@ async def _thread_stream(
     """
     try:
         async for event in events:
+            if isinstance(event, ThreadStreamSnapshot) and on_snapshot is not None:
+                await on_snapshot(event)
             yield _stream_event_frame(event)
     except _THREAD_ERRORS as error:
         code, _ = _error_code(error)
@@ -207,6 +259,37 @@ async def _published_workflow(
     return definition, version
 
 
+async def _record_system_workflow_execution(
+    request: Request,
+    actor: AuthenticatedActor,
+    thread_id: UUID,
+    selection: WorkflowSelection | None,
+) -> None:
+    """Make the Auto fallback visible without treating it as a custom run."""
+    async with request.app.state.dependencies.database.organization_connection(
+        actor.organization_id
+    ) as connection:
+        await connection.execute(
+            insert(workflow_executions).values(
+                workflow_execution_id=uuid4(),
+                organization_id=actor.organization_id,
+                workflow_id=None,
+                workflow_version=1,
+                workflow_name="Analytics trust loop",
+                thread_id=thread_id,
+                status="completed",
+                nodes=[],
+                routes=[],
+                selection_mode="auto",
+                selection_reason=(
+                    selection.reason if selection and selection.reason else "No eligible custom Workflow matched this message."
+                ),
+                selection_fallback=True,
+                finished_at=datetime.now(UTC),
+            )
+        )
+
+
 async def _run_custom_workflow(
     *,
     request: Request,
@@ -215,6 +298,9 @@ async def _run_custom_workflow(
     workflow_version: int | None,
     message: str,
     thread_id: UUID | None = None,
+    selection_mode: str = "manual",
+    selection_reason: str | None = None,
+    selection_fallback: bool = False,
 ) -> tuple[str, UUID]:
     definition, version = await _published_workflow(
         request,
@@ -235,6 +321,9 @@ async def _run_custom_workflow(
                 workflow_name=definition.name,
                 thread_id=thread_id,
                 status="running",
+                selection_mode=selection_mode,
+                selection_reason=selection_reason,
+                selection_fallback=selection_fallback,
             )
         )
     service = WorkflowExecutionService(
@@ -285,6 +374,8 @@ async def _custom_workflow_thread(
     actor: AuthenticatedActor,
     group_id: UUID,
     body: ChatMessageRequest,
+    selection_mode: str,
+    selection_reason: str | None,
 ) -> ChatResponse:
     if body.workflow_id is None:
         raise ValueError("A custom Workflow id is required")
@@ -294,6 +385,8 @@ async def _custom_workflow_thread(
         workflow_id=body.workflow_id,
         workflow_version=body.workflow_version,
         message=body.message,
+        selection_mode=selection_mode,
+        selection_reason=selection_reason,
     )
     try:
         detail = await request.app.state.dependencies.threads.create_workflow_reply(
@@ -366,9 +459,21 @@ async def create_chat(
     resolved: AuthenticatedRequest,
 ) -> ChatResponse | StreamingResponse:
     dependencies = request.app.state.dependencies
+    selection_mode = "manual" if body.workflow_id is not None else body.workflow_selection_mode
+    selection_reason: str | None = None
+    selection: WorkflowSelection | None = None
+    if selection_mode == "manual" and body.workflow_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A manual Workflow selection requires a workflow_id")
+    if selection_mode == "auto":
+        selection = await _auto_workflow_selection(request, resolved.actor, body.message)
+        if selection.candidate is not None:
+            body.workflow_id = selection.candidate.workflow_id
+            body.workflow_version = selection.candidate.workflow_version
+            selection_reason = selection.reason
     if body.workflow_id is not None:
         detail = await _custom_workflow_thread(
-            request=request, actor=resolved.actor, group_id=group_id, body=body
+            request=request, actor=resolved.actor, group_id=group_id, body=body,
+            selection_mode=selection_mode, selection_reason=selection_reason,
         )
         if _wants_event_stream(request):
             async def custom_stream() -> AsyncIterator[str]:
@@ -387,7 +492,11 @@ async def create_chat(
                     project_id=group_id,
                     content=body.message,
                     data_connection_id=data_connection_id,
-                )
+                    routing=selection.routing,
+                ),
+                on_snapshot=lambda event: _record_system_workflow_execution(
+                    request, resolved.actor, event.detail.thread_id, selection
+                ),
             ),
             media_type="text/event-stream",
             headers=_SSE_HEADERS,
@@ -398,9 +507,14 @@ async def create_chat(
             project_id=group_id,
             content=body.message,
             data_connection_id=data_connection_id,
+            routing=selection.routing,
         )
     except _THREAD_ERRORS as error:
         _thread_error(error)
+    if detail.analysis_run_id is not None:
+        await _record_system_workflow_execution(
+            request, resolved.actor, detail.thread_id, selection
+        )
     return ChatResponse.from_detail(detail)
 
 
@@ -467,13 +581,17 @@ async def latest_chat_workflow_execution(
     row = execution._mapping
     return WorkflowExecutionResponse(
         execution_id=str(row["workflow_execution_id"]),
-        workflow_id=str(row["workflow_id"]),
+        workflow_id=str(row["workflow_id"] or DEFAULT_WORKFLOW_ID),
+        workflow_name=row["workflow_name"],
         workflow_version=row["workflow_version"],
         status=row["status"],
         output=row["output"],
         nodes=list(row["nodes"]),
         routes=list(row["routes"]),
         error=row["error"],
+        selection_mode=row["selection_mode"],
+        selection_reason=row["selection_reason"],
+        selection_fallback=row["selection_fallback"],
     )
 
 
@@ -548,6 +666,17 @@ async def append_chat_message(
     resolved: AuthenticatedRequest,
 ) -> ChatResponse | StreamingResponse:
     dependencies = request.app.state.dependencies
+    selection_mode = "manual" if body.workflow_id is not None else body.workflow_selection_mode
+    selection_reason: str | None = None
+    selection: WorkflowSelection | None = None
+    if selection_mode == "manual" and body.workflow_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A manual Workflow selection requires a workflow_id")
+    if selection_mode == "auto":
+        selection = await _auto_workflow_selection(request, resolved.actor, body.message)
+        if selection.candidate is not None:
+            body.workflow_id = selection.candidate.workflow_id
+            body.workflow_version = selection.candidate.workflow_version
+            selection_reason = selection.reason
     if body.workflow_id is not None:
         output, execution_id = await _run_custom_workflow(
             request=request,
@@ -556,6 +685,8 @@ async def append_chat_message(
             workflow_version=body.workflow_version,
             message=body.message,
             thread_id=chat_id,
+            selection_mode=selection_mode,
+            selection_reason=selection_reason,
         )
         response = await _append_custom_workflow_reply(
             request=request,
@@ -626,7 +757,11 @@ async def append_chat_message(
                     thread_id=chat_id,
                     content=body.message,
                     data_connection_id=data_connection_id,
-                )
+                    routing=selection.routing,
+                ),
+                on_snapshot=lambda event: _record_system_workflow_execution(
+                    request, resolved.actor, event.detail.thread_id, selection
+                ),
             ),
             media_type="text/event-stream",
             headers=_SSE_HEADERS,
@@ -637,9 +772,14 @@ async def append_chat_message(
             thread_id=chat_id,
             content=body.message,
             data_connection_id=data_connection_id,
+            routing=selection.routing,
         )
     except _THREAD_ERRORS as error:
         _thread_error(error)
+    if detail.analysis_run_id is not None:
+        await _record_system_workflow_execution(
+            request, resolved.actor, detail.thread_id, selection
+        )
     return ChatResponse.from_detail(detail)
 
 

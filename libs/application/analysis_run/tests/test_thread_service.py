@@ -258,6 +258,9 @@ class FakeIntake:
     Intake Agent must support.
     """
 
+    def __init__(self) -> None:
+        self.calls = 0
+
     async def resolve(
         self,
         question: str,
@@ -266,6 +269,7 @@ class FakeIntake:
         data_connection_id: UUID | None = None,
     ) -> RoutingResult:
         del organization_id, data_connection_id
+        self.calls += 1
         normalized = question.casefold()
         if "hello" in normalized or "thanks" in normalized:
             return RoutingResult(
@@ -395,6 +399,34 @@ async def test_a_resolved_first_message_activates_the_thread_and_queues_work() -
     )
     assert len(value.jobs) == 1
     assert value.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_pre_resolved_routing_reuses_intake_result_without_a_second_call() -> None:
+    value = repository()
+    intake = FakeIntake()
+    threads = ThreadService(
+        unit_of_work_factory=UnitOfWorkFactory(value),
+        intake=intake,
+        conversational=FakeConversational(),
+        audit_writer=FakeAuditWriter(),
+        now=lambda: NOW,
+        new_id=uuid4,
+    )
+    routing = RoutingResult(
+        disposition=RoutingDisposition.RESOLVED,
+        scenario_key="reused_intake_result",
+        canonical_question="Why did EU refunds increase?",
+        clarification=None,
+        suggestions=(),
+    )
+
+    detail = await threads.create(
+        actor(), project_id=GROUP_ID, content="Why did EU refunds increase?", routing=routing
+    )
+
+    assert intake.calls == 0
+    assert detail.analysis_run_id is not None
 
 
 @pytest.mark.asyncio

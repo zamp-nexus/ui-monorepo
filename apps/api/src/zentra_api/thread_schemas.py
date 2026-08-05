@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -47,6 +48,7 @@ class ChatMessageRequest(BaseModel):
     workflow_id: UUID | None = None
     workflow_version: int | None = Field(default=None, ge=1)
     use_default_workflow: bool = True
+    workflow_selection_mode: Literal["auto", "manual"] = "auto"
 
 
 class RoutingResponse(BaseModel):

@@ -10,6 +10,7 @@ from zentra_application_analysis_run import (
     ThreadDetail,
     ThreadService,
     ThreadStreamEvent,
+    RoutingResult,
 )
 
 from .workflow_schemas import DEFAULT_WORKFLOW_ID
@@ -35,12 +36,14 @@ class AnalyticsWorkflowExecutor:
         project_id: UUID,
         content: str,
         data_connection_id: UUID | None,
+        routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         return await self._threads.create(
             actor,
             project_id=project_id,
             content=content,
             data_connection_id=data_connection_id,
+            routing=routing,
         )
 
     def create_streaming(
@@ -50,12 +53,14 @@ class AnalyticsWorkflowExecutor:
         project_id: UUID,
         content: str,
         data_connection_id: UUID | None,
+        routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         return self._threads.create_streaming(
             actor,
             project_id=project_id,
             content=content,
             data_connection_id=data_connection_id,
+            routing=routing,
         )
 
     async def append(
@@ -65,12 +70,14 @@ class AnalyticsWorkflowExecutor:
         thread_id: UUID,
         content: str,
         data_connection_id: UUID | None,
+        routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         return await self._threads.append(
             actor,
             thread_id=thread_id,
             content=content,
             data_connection_id=data_connection_id,
+            routing=routing,
         )
 
     def append_streaming(
@@ -80,10 +87,12 @@ class AnalyticsWorkflowExecutor:
         thread_id: UUID,
         content: str,
         data_connection_id: UUID | None,
+        routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         return self._threads.append_streaming(
             actor,
             thread_id=thread_id,
             content=content,
             data_connection_id=data_connection_id,
+            routing=routing,
         )

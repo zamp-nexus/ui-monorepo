@@ -167,6 +167,7 @@ export const useSendMessage = (
       groupId: string | null;
       content: string;
       workflowId?: string;
+      workflowVersion?: number | null;
     }) => {
       setIsPending(true);
       setError(null);
@@ -197,9 +198,9 @@ export const useSendMessage = (
           },
           body: JSON.stringify({
             message: content,
-            ...(workflowId === 'default-analytics'
-              ? { use_default_workflow: true }
-              : { workflow_id: workflowId, workflow_version: workflowVersion }),
+            ...(workflowId === 'auto' || !workflowId
+              ? { workflow_selection_mode: 'auto', use_default_workflow: true }
+              : { workflow_selection_mode: 'manual', workflow_id: workflowId, workflow_version: workflowVersion }),
           }),
         });
 

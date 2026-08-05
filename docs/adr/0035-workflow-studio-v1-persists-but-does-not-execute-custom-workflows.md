@@ -12,7 +12,7 @@ confidence: verified
 implementation: current
 priority: high
 tags: [adr, workflow, agent-execution, product]
-related: ["[[Agent Execution Domain]]", "[[Nexus Product Experience]]", "[[adr/0026-investigation-engine-owns-orchestration]]"]
+related: ["[[Agent Execution Domain]]", "[[Nexus Product Experience]]", "[[adr/0026-investigation-engine-owns-orchestration]]", "[[adr/0036-workflow-engine-executes-bounded-custom-workflows]]"]
 repo_path: apps/nexus
 ---
 

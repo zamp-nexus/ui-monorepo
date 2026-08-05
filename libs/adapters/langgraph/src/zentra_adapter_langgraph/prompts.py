@@ -32,6 +32,13 @@ Always give a one-sentence `reasoning` for your decision. Leave
 `normalized_question` null unless resolved, and `clarification` null unless
 ambiguous or unsupported."""
 
+INTAKE_WORKFLOW_SELECTION = """
+When `workflow_candidates` are supplied, choose a custom Workflow only when it
+is materially more suitable than the system Analytics Workflow. Set
+`workflow_id` to exactly one supplied id and give a short, user-safe
+`workflow_reason`; otherwise leave both null. Never invent an id, use a draft,
+or choose a Workflow merely because a tag has one overlapping word."""
+
 CONVERSATIONAL_REPLY = """You are the conversational voice of an analytics
 product. A user sent a message Intake decided is not a business question --
 a greeting, thanks, small talk, or a question about what this product does.

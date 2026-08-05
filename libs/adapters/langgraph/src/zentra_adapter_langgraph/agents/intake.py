@@ -15,7 +15,7 @@ from zentra_domain_agent_execution import (
 )
 
 from ..constants import INTAKE_MODEL, MAX_TOKENS
-from ..prompts import INTAKE_ROUTE
+from ..prompts import INTAKE_ROUTE, INTAKE_WORKFLOW_SELECTION
 from ..schemas import INTAKE_SCHEMA, parse_json_object, render_catalog
 
 AGENT_ID = "intake_v1"
@@ -31,7 +31,7 @@ DESCRIPTOR = AgentDescriptor(
     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
     output_schema=INTAKE_SCHEMA,
     output_fields=frozenset(
-        {"disposition", "normalized_question", "clarification", "reasoning"}
+        {"disposition", "normalized_question", "clarification", "reasoning", "workflow_id", "workflow_reason"}
     ),
     eval_suite_ref="evals/intake",
 )
@@ -58,15 +58,19 @@ class IntakeAgent:
         question = str(agent_input.state["question"])
         catalog = await self._semantic_layer.catalog()
 
+        candidates = agent_input.state.get("workflow_candidates", ())
+        candidate_context = ""
+        if candidates:
+            candidate_context = f"\n\nEligible published workflow candidates:\n{candidates}"
         response = await self._model.complete(
             model=INTAKE_MODEL,
-            system=INTAKE_ROUTE,
+            system=INTAKE_ROUTE + (INTAKE_WORKFLOW_SELECTION if candidates else ""),
             messages=[
                 ModelMessage(
                     role="user",
                     content=(
                         f"Message: {question}\n\n"
-                        f"Governed catalog in scope:\n{render_catalog(catalog)}"
+                        f"Governed catalog in scope:\n{render_catalog(catalog)}{candidate_context}"
                     ),
                 )
             ],
@@ -87,6 +91,8 @@ class IntakeAgent:
                     "normalized_question": decision.get("normalized_question"),
                     "clarification": decision.get("clarification"),
                     "reasoning": reasoning,
+                    "workflow_id": decision.get("workflow_id"),
+                    "workflow_reason": decision.get("workflow_reason"),
                 },
                 reasoning=reasoning or None,
                 outcome=ValidationOutcome(

@@ -310,6 +310,7 @@ workflow_definitions = Table(
     ),
     Column("name", Text, nullable=False),
     Column("draft_definition", JSON, nullable=False),
+    Column("routing_profile", JSON, nullable=False, server_default=text("'{}'::jsonb")),
     Column(
         "created_at",
         TIMESTAMP(timezone=True),
@@ -349,6 +350,7 @@ workflow_versions = Table(
     ),
     Column("version", Integer, nullable=False),
     Column("definition", JSON, nullable=False),
+    Column("routing_profile", JSON, nullable=False, server_default=text("'{}'::jsonb")),
     Column("published_by_user_id", UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False),
     Column(
         "published_at",
@@ -368,6 +370,9 @@ workflow_executions = Table(
     Column("workflow_id", UUID(as_uuid=True), nullable=True),
     Column("workflow_version", Integer, nullable=False),
     Column("workflow_name", Text, nullable=False),
+    Column("selection_mode", String(16), nullable=False, server_default=text("'manual'")),
+    Column("selection_reason", Text),
+    Column("selection_fallback", Boolean, nullable=False, server_default=text("false")),
     Column("thread_id", UUID(as_uuid=True), nullable=True),
     Column("status", String(16), nullable=False),
     Column("nodes", JSON, nullable=False, server_default=text("'[]'::jsonb")),

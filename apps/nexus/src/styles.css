@@ -49,3 +49,11 @@
     outline-offset: 3px;
   }
 }
+
+.workflow-canvas-controls {
+  --xy-controls-box-shadow: var(--shadow-depth-01);
+  --xy-controls-button-background-color: var(--interactive-secondary);
+  --xy-controls-button-background-color-hover: var(--interactive-secondary-hover);
+  --xy-controls-button-border-color: var(--border-default);
+  --xy-controls-button-color: var(--text-primary);
+}

@@ -1,11 +1,23 @@
 from copy import deepcopy
 
-from zentra_api.workflow_routes import _document_error
-from zentra_api.workflow_schemas import DEFAULT_WORKFLOW_DEFINITION
+from zentra_api.workflow_routes import _document_error, _routing_profile_error
+from zentra_api.workflow_schemas import DEFAULT_WORKFLOW_DEFINITION, NEW_WORKFLOW_DEFINITION, WorkflowRoutingProfile
 
 
 def test_system_workflow_is_structurally_publishable() -> None:
     assert _document_error(DEFAULT_WORKFLOW_DEFINITION) is None
+
+
+def test_new_workflow_template_is_structurally_publishable() -> None:
+    assert _document_error(NEW_WORKFLOW_DEFINITION) is None
+
+
+def test_auto_enabled_workflow_requires_a_routing_profile() -> None:
+    assert _routing_profile_error(WorkflowRoutingProfile(auto_select_enabled=True)) == "An Auto-enabled Workflow needs a routing purpose"
+
+
+def test_complete_routing_profile_is_publishable() -> None:
+    assert _routing_profile_error(WorkflowRoutingProfile(auto_select_enabled=True, purpose="Investigates revenue questions", tags=["revenue"], example_requests=["Why did revenue change?"])) is None
 
 
 def test_workflow_requires_one_controller() -> None:

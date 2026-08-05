@@ -35,13 +35,18 @@ The primary path is **Upload → Context → Ask → Insight**.
 
 - **Analyze** is the primary workspace and route destination.
 - **Workflows** exposes the system-owned analytical trust loop and a tenant's
-  persisted custom Workflow drafts. Custom Workflows are simulated in this
-  release; only the system Default Workflow executes.
+  custom Workflow drafts and published versions. Intake can select an eligible
+  published custom Workflow for a message; the system Analytics Workflow is
+  the governed fallback and the only path that can publish a Finding.
 - **Data** owns uploads, datasets, and data connections.
 - **Sequences** are advanced workflows reached from the relevant data context;
   direct links remain valid for existing work.
-- **Groups** organize chats. The selected Group is visibly highlighted;
-  opening it or one of its chats makes it the destination for New chat.
+- **Groups** organize Chat Sessions in the fixed desktop navigation. A Group
+  row toggles its history, several histories may stay open, and that local
+  browser preference is remembered per organization. Histories load only when
+  opened, respect reduced-motion preferences, and retain a keyboard-accessible
+  New chat action on hover or focus. Opening a Group or one of its chats makes
+  it the destination for New chat.
 
 ## Experience standards
 

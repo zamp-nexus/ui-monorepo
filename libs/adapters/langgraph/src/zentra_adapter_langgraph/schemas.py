@@ -128,6 +128,8 @@ INTAKE_SCHEMA = _obj(
         "normalized_question": _nullable({"type": "string"}),
         "clarification": _nullable({"type": "string"}),
         "reasoning": {"type": "string"},
+        "workflow_id": _nullable({"type": "string"}),
+        "workflow_reason": _nullable({"type": "string"}),
     }
 )
 

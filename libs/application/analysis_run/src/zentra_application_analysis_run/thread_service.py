@@ -113,6 +113,7 @@ class ThreadService:
         project_id: UUID,
         content: str,
         data_connection_id: UUID | None = None,
+        routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -127,10 +128,8 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = await self._intake.resolve(
-            message.content,
-            organization_id=actor.organization_id,
-            data_connection_id=data_connection_id,
+        routing = routing or await self._intake.resolve(
+            message.content, organization_id=actor.organization_id, data_connection_id=data_connection_id
         )
         title_source = routing.canonical_question or message.content
         thread = AnalysisRunThread.create(
@@ -306,6 +305,7 @@ class ThreadService:
         project_id: UUID,
         content: str,
         data_connection_id: UUID | None = None,
+        routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Same as `create`, except a NOT_ANALYTICAL reply streams live.
 
@@ -328,10 +328,8 @@ class ThreadService:
             content=content,
             now=now,
         )
-        routing = await self._intake.resolve(
-            message.content,
-            organization_id=actor.organization_id,
-            data_connection_id=data_connection_id,
+        routing = routing or await self._intake.resolve(
+            message.content, organization_id=actor.organization_id, data_connection_id=data_connection_id
         )
         title_source = routing.canonical_question or message.content
         thread = AnalysisRunThread.create(
@@ -402,6 +400,7 @@ class ThreadService:
         thread_id: UUID,
         content: str,
         data_connection_id: UUID | None = None,
+        routing: RoutingResult | None = None,
     ) -> ThreadDetail:
         self._require_mutator(actor)
         now = self._now()
@@ -429,10 +428,8 @@ class ThreadService:
             existing_messages = await unit_of_work.threads.messages_for_thread(
                 thread_id
             )
-            routing = await self._intake.resolve(
-                _combined_question_text(existing_messages + (message,)),
-                organization_id=actor.organization_id,
-                data_connection_id=data_connection_id,
+            routing = routing or await self._intake.resolve(
+                _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=data_connection_id
             )
             thread.record_message(now)
             await unit_of_work.threads.add_message(message)
@@ -472,6 +469,7 @@ class ThreadService:
         thread_id: UUID,
         content: str,
         data_connection_id: UUID | None = None,
+        routing: RoutingResult | None = None,
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Streaming counterpart to `append` -- see `create_streaming`.
 
@@ -505,10 +503,8 @@ class ThreadService:
                 existing_messages = await unit_of_work.threads.messages_for_thread(
                     thread_id
                 )
-                routing = await self._intake.resolve(
-                    _combined_question_text(existing_messages + (message,)),
-                    organization_id=actor.organization_id,
-                    data_connection_id=data_connection_id,
+                routing = routing or await self._intake.resolve(
+                    _combined_question_text(existing_messages + (message,)), organization_id=actor.organization_id, data_connection_id=data_connection_id
                 )
                 thread.record_message(now)
                 await unit_of_work.threads.add_message(message)

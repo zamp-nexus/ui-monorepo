@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-07-29
-reviewed: 2026-07-29
+updated: 2026-08-05
+reviewed: 2026-08-05
 confidence: verified
 implementation: current
 priority: high
@@ -42,6 +42,10 @@ Never record values or tokens in this vault.
 
 `DATABASE_OWNER_URL` is consumed by migration tooling, not ordinary request
 handling.
+
+Apply Alembic migrations with the owner connection before starting a local API
+against an existing database. This keeps persisted Workflow Studio tables and
+their Organization isolation policies aligned with the running API.
 
 A provider with no key is skipped in its chain rather than failing, so the
 system runs on `ANTHROPIC_API_KEY` alone. Only the premium chains are guaranteed

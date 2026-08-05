@@ -61,11 +61,15 @@ export const getChat = (getToken: TokenSource, threadId: string) =>
 export interface WorkflowExecutionTrace {
   execution_id: string;
   workflow_id: string;
+  workflow_name: string;
   workflow_version: number;
   status: 'running' | 'completed' | 'failed';
   nodes: string[];
   routes: string[];
   error: string | null;
+  selection_mode: 'auto' | 'manual';
+  selection_reason: string | null;
+  selection_fallback: boolean;
 }
 
 export const getLatestWorkflowExecution = (getToken: TokenSource, threadId: string) =>

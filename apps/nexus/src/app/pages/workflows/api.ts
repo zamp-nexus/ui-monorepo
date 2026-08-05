@@ -14,12 +14,21 @@ export interface WorkflowDocument {
   edges: Array<{ id: string; source: string; target: string; data?: { route?: string; is_loop?: boolean; max_iterations?: number } }>;
 }
 
+export interface WorkflowRoutingProfile {
+  auto_select_enabled: boolean;
+  purpose: string;
+  tags: string[];
+  example_requests: string[];
+  priority: number;
+}
+
 export interface WorkflowSummary {
   workflow_id: string;
   name: string;
   is_system: boolean;
   published_version: number | null;
   updated_at: string | null;
+  routing_profile: WorkflowRoutingProfile;
 }
 
 export interface WorkflowDetail extends WorkflowSummary {
@@ -30,5 +39,6 @@ export interface WorkflowDetail extends WorkflowSummary {
 export const listWorkflows = (getToken: TokenSource) => requestJson<WorkflowSummary[]>('/v1/workflows', getToken);
 export const getWorkflow = (getToken: TokenSource, id: string) => requestJson<WorkflowDetail>(`/v1/workflows/${id}`, getToken);
 export const cloneDefaultWorkflow = (getToken: TokenSource, name: string) => requestJson<WorkflowDetail>('/v1/workflows/clone-default', getToken, { method: 'POST', body: JSON.stringify({ name }) });
-export const saveWorkflow = (getToken: TokenSource, id: string, name: string, definition: WorkflowDocument) => requestJson<WorkflowDetail>(`/v1/workflows/${id}`, getToken, { method: 'PUT', body: JSON.stringify({ name, definition }) });
+export const createWorkflow = (getToken: TokenSource, name: string) => requestJson<WorkflowDetail>('/v1/workflows', getToken, { method: 'POST', body: JSON.stringify({ name }) });
+export const saveWorkflow = (getToken: TokenSource, id: string, name: string, definition: WorkflowDocument, routingProfile: WorkflowRoutingProfile) => requestJson<WorkflowDetail>(`/v1/workflows/${id}`, getToken, { method: 'PUT', body: JSON.stringify({ name, definition, routing_profile: routingProfile }) });
 export const publishWorkflow = (getToken: TokenSource, id: string) => requestJson<WorkflowDetail>(`/v1/workflows/${id}/publish`, getToken, { method: 'POST' });

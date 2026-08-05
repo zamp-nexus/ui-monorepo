@@ -7,17 +7,16 @@ import { useAuth } from '@open-zentra/foundation-auth';
 import {
   Avatar,
   Button,
-  IconButton,
   Input,
   Modal,
   SideNav,
   Tooltip,
-  Accordion,
 } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { listGroups, createGroup } from '../pages/chat/api';
 import { useActiveGroup } from '../pages/chat/use-active-group';
+import { loadExpandedGroupIds, saveExpandedGroupIds } from './group-expansion-storage';
 import { GroupFolder } from './project-folder';
 
 import type { TokenSource } from '../api';
@@ -37,6 +36,11 @@ interface WorkspaceContextValue {
   selectGroup: (groupId: string) => void;
 }
 
+interface ExpandedGroupsState {
+  readonly organizationId: string;
+  readonly groupIds: string[];
+}
+
 export const WorkspaceContext = createContext<WorkspaceContextValue>({
   groupId: null,
   selectGroup: () => undefined,
@@ -54,15 +58,47 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [collapsed, setCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
 
   const initialGroup = useActiveGroup(getToken);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [expandedGroupsState, setExpandedGroupsState] = useState<ExpandedGroupsState>(() => ({
+    organizationId: identity.organization_id,
+    groupIds: loadExpandedGroupIds(identity.organization_id),
+  }));
+  const expandedGroupIds =
+    expandedGroupsState.organizationId === identity.organization_id
+      ? expandedGroupsState.groupIds
+      : [];
 
-  // Track expanded accordion items
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const updateExpandedGroupIds = useCallback(
+    (update: (current: string[]) => string[]) => {
+      setExpandedGroupsState((current) => {
+        const groupIds =
+          current.organizationId === identity.organization_id
+            ? current.groupIds
+            : loadExpandedGroupIds(identity.organization_id);
+        return { organizationId: identity.organization_id, groupIds: update(groupIds) };
+      });
+    },
+    [identity.organization_id],
+  );
+
+  useEffect(() => {
+    if (expandedGroupsState.organizationId === identity.organization_id) return;
+
+    setExpandedGroupsState({
+      organizationId: identity.organization_id,
+      groupIds: loadExpandedGroupIds(identity.organization_id),
+    });
+  }, [expandedGroupsState.organizationId, identity.organization_id]);
+
+  useEffect(() => {
+    if (expandedGroupsState.organizationId !== identity.organization_id) return;
+
+    saveExpandedGroupIds(identity.organization_id, expandedGroupIds);
+  }, [expandedGroupIds, expandedGroupsState.organizationId, identity.organization_id]);
 
   // The first available Group is a sensible initial destination, but every
   // later selection is intentional: opening a Group or one of its chats
@@ -70,22 +106,45 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   useEffect(() => {
     if (!groupId && initialGroup.data) {
       setGroupId(initialGroup.data);
-      setExpandedGroups((current) => (current.length === 0 ? [initialGroup.data] : current));
+      updateExpandedGroupIds((current) =>
+        current.includes(initialGroup.data) ? current : [...current, initialGroup.data],
+      );
     }
-  }, [groupId, initialGroup.data]);
+  }, [groupId, initialGroup.data, updateExpandedGroupIds]);
 
   const selectGroup = useCallback((nextGroupId: string) => {
     setGroupId(nextGroupId);
-    setExpandedGroups((current) =>
+    updateExpandedGroupIds((current) =>
       current.includes(nextGroupId) ? current : [...current, nextGroupId],
     );
-  }, []);
+  }, [updateExpandedGroupIds]);
+
+  const toggleGroup = useCallback((nextGroupId: string) => {
+    updateExpandedGroupIds((current) => {
+      if (current.includes(nextGroupId)) {
+        return current.filter((group) => group !== nextGroupId);
+      }
+
+      setGroupId(nextGroupId);
+      return [...current, nextGroupId];
+    });
+  }, [updateExpandedGroupIds]);
 
   const groupsQuery = useQuery({
     queryKey: ['groups'],
     queryFn: () => listGroups(getToken),
     enabled: Boolean(initialGroup.data),
   });
+
+  useEffect(() => {
+    if (!groupsQuery.data) return;
+
+    const availableGroupIds = new Set(groupsQuery.data.items.map((group) => group.group_id));
+    updateExpandedGroupIds((current) => {
+      const available = current.filter((group) => availableGroupIds.has(group));
+      return available.length === current.length ? current : available;
+    });
+  }, [groupsQuery.data, updateExpandedGroupIds]);
 
   const createGroupMutation = useMutation({
     mutationFn: (name: string) => createGroup(getToken, name),
@@ -98,81 +157,53 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
     },
   });
 
+  const startNewChat = useCallback(
+    (nextGroupId: string) => {
+      selectGroup(nextGroupId);
+      navigate('/chats');
+    },
+    [navigate, selectGroup],
+  );
+
   const railFooter = (
     <>
-      {/* Collapsed, the primary action is a tile the same size as a nav item,
-          so the rail stays one column of squares. */}
-      {collapsed ? (
-        <Tooltip content="New chat" side="right" sideOffset={10}>
-          <Button component={Link} to="/" aria-label="New chat" className="h-11 w-11 p-0">
-            <Icon name="plus" size="sm" />
-          </Button>
-        </Tooltip>
-      ) : (
-        <Button component={Link} to="/" fullWidth start={<Icon name="plus" size="sm" />}>
-          New chat
-        </Button>
-      )}
-
-      {collapsed ? null : (
-        <>
-          <Link
-            className="flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline transition-colors hover:text-foreground"
-            to="/settings"
-          >
-            <Icon name="settings" size="sm" />
-            Settings
-          </Link>
-          <a
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
-            href="https://github.com/openzentra/nexus"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="file_text" size="sm" />
-            Docs
-          </a>
-          <a
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
-            href="https://github.com/openzentra/nexus/issues"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="help_circle" size="sm" />
-            Help
-          </a>
-        </>
-      )}
-
-      <div
-        className={`mt-1 min-w-0 border-t border-border pt-3 ${
-          collapsed ? 'w-full' : '-mx-3 w-auto'
-        }`}
+      <Link
+        className="flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline transition-colors hover:text-foreground"
+        to="/settings"
       >
-        <div
-          className={
-            collapsed ? 'flex justify-center' : 'px-3 [&>span]:w-full [&>span]:min-w-0'
-          }
-        >
-          <Tooltip
-            content={`Sign out of ${user?.email ?? 'this account'}`}
-            side="right"
-            sideOffset={10}
-          >
+        <Icon name="settings" size="sm" />
+        Settings
+      </Link>
+      <a
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
+        href="https://github.com/openzentra/nexus"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Icon name="file_text" size="sm" />
+        Docs
+      </a>
+      <a
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted no-underline hover:text-foreground"
+        href="https://github.com/openzentra/nexus/issues"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Icon name="help_circle" size="sm" />
+        Help
+      </a>
+
+      <div className="-mx-3 mt-1 min-w-0 border-t border-border pt-3">
+        <div className="px-3 [&>span]:min-w-0 [&>span]:w-full">
+          <Tooltip content={`Sign out of ${user?.email ?? 'this account'}`} side="right" sideOffset={10}>
             <button
               type="button"
               onClick={() => void logout()}
-              className={`flex min-w-0 items-center gap-2 rounded-md text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
-                collapsed ? 'h-11 w-11 justify-center p-0' : 'w-full px-3 py-2'
-              }`}
+              className="flex min-w-0 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
             >
               <Avatar size="xs" name={user?.email ?? 'Account'} />
-              {collapsed ? null : (
-                <>
-                  <span className="min-w-0 flex-1 truncate">{user?.email ?? 'Account'}</span>
-                  <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
-                </>
-              )}
+              <span className="min-w-0 flex-1 truncate">{user?.email ?? 'Account'}</span>
+              <Icon name="log_out" size="sm" className="ml-auto shrink-0" />
               <span className="sr-only">Sign out</span>
             </button>
           </Tooltip>
@@ -185,26 +216,9 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
     <div className="flex h-screen bg-background text-foreground selection:bg-primary/15 selection:text-primary-foreground">
       <SideNav
         aria-label="Primary"
-        width={collapsed ? 'compact' : 'default'}
-        className="hidden md:flex"
+        className="hidden w-72 md:flex"
         brand={
-          <div className="flex w-full items-start justify-between gap-1">
-            <ProductMark showRelease compact={collapsed} />
-            <Tooltip
-              content={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-              side="right"
-              sideOffset={10}
-            >
-              <IconButton
-                aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-                intent="ghost"
-                size="sm"
-                onClick={() => setCollapsed((open) => !open)}
-              >
-                <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="sm" />
-              </IconButton>
-            </Tooltip>
-          </div>
+          <ProductMark showRelease />
         }
         footer={railFooter}
       >
@@ -220,72 +234,66 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
           </SideNav.Item>
         ))}
 
-        <div className={`mt-4 ${collapsed ? '' : '-mx-3 border-t border-border pt-5 px-3'}`}>
-          {collapsed ? null : (
-            <div className="flex items-center justify-between px-3 pb-2">
-              <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-                Groups
-              </h2>
-              <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <Modal.Trigger
-                  aria-label="New Group"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                >
-                  <Icon name="plus" size="sm" />
-                </Modal.Trigger>
-                <Modal.Content>
-                  <Modal.Header>
-                    <Modal.Title>Create New Group</Modal.Title>
-                    <Modal.Description>Enter a name for your new group.</Modal.Description>
-                    <Modal.Close />
-                  </Modal.Header>
-                  <Modal.Body>
-                    <Input
-                      autoFocus
-                      placeholder="e.g. Acme Corp"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newGroupName.trim().length > 0) {
-                          createGroupMutation.mutate(newGroupName.trim());
-                        }
-                      }}
-                    />
-                  </Modal.Body>
-                  <Modal.Footer>
-                    <Button intent="ghost" onClick={() => setIsModalOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      disabled={newGroupName.trim().length === 0 || createGroupMutation.isPending}
-                      onClick={() => createGroupMutation.mutate(newGroupName.trim())}
-                    >
-                      {createGroupMutation.isPending ? 'Creating...' : 'Create'}
-                    </Button>
-                  </Modal.Footer>
-                </Modal.Content>
-              </Modal>
-            </div>
-          )}
-          
-          <div className="flex flex-col gap-1">
-            <Accordion
-              multiple={true}
-              value={expandedGroups}
-              onValueChange={setExpandedGroups}
-              className="flex flex-col gap-1"
-            >
+        <div className="-mx-3 mt-4 flex min-h-0 flex-1 flex-col border-t border-border pt-5">
+          <div className="flex items-center justify-between px-3 pb-2">
+            <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+              Groups
+            </h2>
+            <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <Modal.Trigger
+                aria-label="New Group"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+              >
+                <Icon name="plus" size="sm" />
+              </Modal.Trigger>
+              <Modal.Content>
+                <Modal.Header>
+                  <Modal.Title>Create New Group</Modal.Title>
+                  <Modal.Description>Enter a name for your new group.</Modal.Description>
+                  <Modal.Close />
+                </Modal.Header>
+                <Modal.Body>
+                  <Input
+                    autoFocus
+                    placeholder="e.g. Acme Corp"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newGroupName.trim().length > 0) {
+                        createGroupMutation.mutate(newGroupName.trim());
+                      }
+                    }}
+                  />
+                </Modal.Body>
+                <Modal.Footer>
+                  <Button intent="ghost" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={newGroupName.trim().length === 0 || createGroupMutation.isPending}
+                    onClick={() => createGroupMutation.mutate(newGroupName.trim())}
+                  >
+                    {createGroupMutation.isPending ? 'Creating...' : 'Create'}
+                  </Button>
+                </Modal.Footer>
+              </Modal.Content>
+            </Modal>
+          </div>
+          <div className="min-h-0 overflow-y-auto px-3 pb-3">
+            <div className="flex flex-col gap-1">
               {groupsQuery.data?.items.map((g) => (
                 <GroupFolder
                   key={g.group_id}
                   group={g}
                   getToken={getToken}
-                  collapsed={collapsed}
                   active={g.group_id === groupId}
+                  expanded={expandedGroupIds.includes(g.group_id)}
                   onSelect={selectGroup}
+                  onToggle={toggleGroup}
+                  onNewChat={startNewChat}
                 />
               ))}
-            </Accordion>
+            </div>
           </div>
         </div>
       </SideNav>

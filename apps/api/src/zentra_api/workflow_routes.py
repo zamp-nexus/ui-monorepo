@@ -1,4 +1,4 @@
-"""Minimal persisted Workflow Studio API; custom definitions never execute here."""
+"""Persisted Workflow Studio API and guarded published Workflow execution."""
 
 from __future__ import annotations
 
@@ -25,11 +25,14 @@ from .workflow_schemas import (
     DEFAULT_WORKFLOW_ID,
     WORKFLOW_TOOL_CATALOG,
     CloneDefaultRequest,
+    CreateWorkflowRequest,
     WorkflowDetailResponse,
     WorkflowDocumentRequest,
     WorkflowExecuteRequest,
     WorkflowExecutionResponse,
     WorkflowSummaryResponse,
+    NEW_WORKFLOW_DEFINITION,
+    WorkflowRoutingProfile,
 )
 
 router = APIRouter(prefix="/v1/workflows", tags=["workflow"])
@@ -46,6 +49,7 @@ def _default_detail() -> WorkflowDetailResponse:
         updated_at=None,
         definition=DEFAULT_WORKFLOW_DEFINITION,
         versions=[1],
+        routing_profile=WorkflowRoutingProfile(),
     )
 
 
@@ -184,6 +188,22 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     return None
 
 
+def _routing_profile_error(profile: WorkflowRoutingProfile) -> str | None:
+    if not profile.auto_select_enabled:
+        return None
+    if not profile.purpose.strip():
+        return "An Auto-enabled Workflow needs a routing purpose"
+    if not profile.tags:
+        return "An Auto-enabled Workflow needs at least one routing tag"
+    if not profile.example_requests:
+        return "An Auto-enabled Workflow needs an example request"
+    return None
+
+
+def _profile(value: object) -> WorkflowRoutingProfile:
+    return WorkflowRoutingProfile.model_validate(value or {})
+
+
 def _detail(value: RowMapping, versions: list[int]) -> WorkflowDetailResponse:
     return WorkflowDetailResponse(
         workflow_id=str(value["workflow_id"]),
@@ -193,6 +213,7 @@ def _detail(value: RowMapping, versions: list[int]) -> WorkflowDetailResponse:
         updated_at=value["updated_at"],
         definition=value["draft_definition"],
         versions=versions,
+        routing_profile=_profile(value.get("routing_profile")),
     )
 
 
@@ -226,6 +247,7 @@ async def list_workflows(
             is_system=True,
             published_version=1,
             updated_at=None,
+            routing_profile=WorkflowRoutingProfile(),
         ),
         *[
             WorkflowSummaryResponse(
@@ -234,6 +256,7 @@ async def list_workflows(
                 is_system=False,
                 published_version=versions.get(row.workflow_id),
                 updated_at=row.updated_at,
+                routing_profile=_profile(row.routing_profile),
             )
             for row in rows
         ],
@@ -305,6 +328,39 @@ async def clone_default(
                 organization_id=context.actor.organization_id,
                 name=body.name.strip(),
                 draft_definition=definition,
+                routing_profile=WorkflowRoutingProfile().model_dump(),
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        row = (
+            await connection.execute(
+                select(workflow_definitions).where(
+                    workflow_definitions.c.workflow_id == workflow_id
+                )
+            )
+        ).one()
+    return _detail(row._mapping, [])
+
+
+@router.post("", response_model=WorkflowDetailResponse, status_code=status.HTTP_201_CREATED)
+async def create_workflow(
+    body: CreateWorkflowRequest, request: Request, context: AuthenticatedRequest
+) -> WorkflowDetailResponse:
+    """Create a valid minimal draft; Workflow authors never start from an executable void."""
+    _require_manager(context)
+    workflow_id = uuid4()
+    now = datetime.now(UTC)
+    async with request.app.state.dependencies.database.organization_connection(
+        context.actor.organization_id
+    ) as connection:
+        await connection.execute(
+            insert(workflow_definitions).values(
+                workflow_id=workflow_id,
+                organization_id=context.actor.organization_id,
+                name=body.name.strip(),
+                draft_definition=deepcopy(NEW_WORKFLOW_DEFINITION),
+                routing_profile=WorkflowRoutingProfile().model_dump(),
                 created_at=now,
                 updated_at=now,
             )
@@ -337,6 +393,7 @@ async def save_workflow(
             .values(
                 name=body.name.strip(),
                 draft_definition=body.definition,
+                routing_profile=body.routing_profile.model_dump(),
                 updated_at=datetime.now(UTC),
             )
             .returning(workflow_definitions)
@@ -377,6 +434,7 @@ async def publish_workflow(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
         _require_raw_query_admin(context, row.draft_definition)
         reason = _document_error(row.draft_definition)
+        reason = reason or _routing_profile_error(_profile(row.routing_profile))
         if reason:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, reason)
         version = (
@@ -393,6 +451,7 @@ async def publish_workflow(
                 organization_id=context.actor.organization_id,
                 version=version,
                 definition=row.draft_definition,
+                routing_profile=row.routing_profile,
                 published_by_user_id=context.actor.user_id,
             )
         )
@@ -484,6 +543,7 @@ async def execute_workflow(
         return WorkflowExecutionResponse(
             execution_id=str(execution_id),
             workflow_id=str(workflow_id),
+            workflow_name=definition_row.name,
             workflow_version=version_row.version,
             status="failed",
             error=str(error),
@@ -506,9 +566,11 @@ async def execute_workflow(
     return WorkflowExecutionResponse(
         execution_id=str(execution_id),
         workflow_id=str(workflow_id),
+        workflow_name=definition_row.name,
         workflow_version=version_row.version,
         status="completed",
         output=result.output,
         nodes=list(result.nodes),
         routes=list(result.routes),
+        selection_mode="manual",
     )

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
-import { Badge, Button } from '@open-zentra/foundation-design-system';
+import { Badge, Button, Select } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import { parseComposerCommands } from './composer-commands';
@@ -51,6 +51,7 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowI
   const onSendRef = useRef(onSend);
   const parsed = useMemo(() => parseComposerCommands(draft), [draft]);
   const hasCommands = Boolean(parsed.datasetHint || parsed.mentions.length > 0 || parsed.skillHint);
+  const selectedWorkflow = workflows.find((workflow) => workflow.workflow_id === workflowId);
   disabledRef.current = disabled;
   onSendRef.current = onSend;
 
@@ -152,7 +153,30 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowI
         </div>
 
         <div className="flex items-center gap-2">
-          {onWorkflowChange ? <label className="min-w-0 text-xs text-foreground-muted">Workflow<select aria-label="Workflow" className="ml-2 max-w-48 rounded border border-border bg-background px-2 py-1 text-foreground" disabled={disabled} value={workflowId ?? 'default-analytics'} onChange={(event) => onWorkflowChange(event.target.value)}>{workflows.filter((workflow) => workflow.is_system || workflow.published_version).map((workflow) => <option key={workflow.workflow_id} value={workflow.workflow_id}>{workflow.name}{workflow.published_version ? ` · v${workflow.published_version}` : ''}</option>)}</select></label> : null}
+          {onWorkflowChange ? (
+            <div className="flex min-w-0 items-center gap-2 text-xs text-foreground-muted">
+              <span id="workflow-label">Workflow</span>
+              <Select
+                size="sm"
+                disabled={disabled}
+                value={workflowId ?? 'auto'}
+                onValueChange={onWorkflowChange}
+              >
+                <Select.Trigger aria-labelledby="workflow-label" className="max-w-48">{workflowId === 'auto' || !workflowId ? 'Auto' : `${selectedWorkflow?.name ?? 'Workflow'}${selectedWorkflow?.published_version ? ` · v${selectedWorkflow.published_version}` : ''}`}</Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="auto">Auto</Select.Item>
+                  {workflows
+                    .filter((workflow) => workflow.is_system || workflow.published_version)
+                    .map((workflow) => (
+                      <Select.Item key={workflow.workflow_id} value={workflow.workflow_id}>
+                        {workflow.name}
+                        {workflow.published_version ? ` · v${workflow.published_version}` : ''}
+                      </Select.Item>
+                    ))}
+                </Select.Content>
+              </Select>
+            </div>
+          ) : null}
           <Button
             className="ml-auto transition-transform duration-150 ease-out active:scale-95 motion-reduce:transition-none"
             type="submit"

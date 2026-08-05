@@ -62,7 +62,7 @@ export const ChatPage = ({
   });
 
   const [draft, setDraft] = useState('');
-  const [workflowId, setWorkflowId] = useState('default-analytics');
+  const [workflowId, setWorkflowId] = useState('auto');
   const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
   const hydratedWorkflowThread = useRef<string | null>(null);
   const endOfThread = useRef<HTMLDivElement>(null);
@@ -96,14 +96,14 @@ export const ChatPage = ({
   useEffect(() => {
     if (!activeThreadId) {
       hydratedWorkflowThread.current = null;
-      setWorkflowId('default-analytics');
+      setWorkflowId('auto');
       setWorkflowVersion(null);
       return;
     }
     if (workflowExecution.isLoading || hydratedWorkflowThread.current === activeThreadId) return;
     hydratedWorkflowThread.current = activeThreadId;
-    setWorkflowId(workflowExecution.data?.workflow_id ?? 'default-analytics');
-    setWorkflowVersion(workflowExecution.data?.workflow_version ?? null);
+    setWorkflowId('auto');
+    setWorkflowVersion(null);
   }, [activeThreadId, workflowExecution.data, workflowExecution.isLoading]);
 
   // A direct link to a chat has no preceding sidebar click. Its owning Group
@@ -157,6 +157,8 @@ export const ChatPage = ({
       workflowId,
       workflowVersion: workflowVersion ?? selectedWorkflow?.published_version,
     });
+    setWorkflowId('auto');
+    setWorkflowVersion(null);
   };
 
   const runtime = useChatRuntime({
@@ -230,9 +232,10 @@ export const ChatPage = ({
         <div className="min-h-0 flex-1 overflow-y-auto">
           {workflowExecution.data ? (
             <div className="mx-auto mt-3 flex max-w-3xl items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground-muted">
-              <span className="font-medium text-foreground">Workflow run · v{workflowExecution.data.workflow_version}</span>
+              <span className="font-medium text-foreground">{workflowExecution.data.selection_mode === 'auto' ? 'Auto chose' : 'Workflow run'} {workflowExecution.data.workflow_name} · v{workflowExecution.data.workflow_version}</span>
               <span>{workflowExecution.data.status}</span>
-              <span className="truncate">{workflowExecution.data.nodes.join(' → ')}</span>
+              <span className="truncate">{(workflowExecution.data.nodes ?? []).join(' → ')}</span>
+              {workflowExecution.data.selection_reason ? <span className="truncate">{workflowExecution.data.selection_reason}</span> : null}
             </div>
           ) : null}
           <ChatContextProvider
