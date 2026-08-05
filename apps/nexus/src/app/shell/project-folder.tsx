@@ -10,9 +10,7 @@ import { Icon } from '@open-zentra/foundation-icons';
 import type { TokenSource } from '../api';
 import type { Group } from '../types';
 import { listChats, renameGroup } from '../pages/chat/api';
-import { useWorkspace } from './app-shell';
-
-interface ProjectFolderProps {
+interface GroupFolderProps {
   readonly group: Group;
   readonly getToken: TokenSource;
   readonly collapsed: boolean;
@@ -20,9 +18,8 @@ interface ProjectFolderProps {
   readonly onSelect: (groupId: string) => void;
 }
 
-export const ProjectFolder = ({ group, getToken, collapsed, active, onSelect }: ProjectFolderProps) => {
+export const GroupFolder = ({ group, getToken, collapsed, active, onSelect }: GroupFolderProps) => {
   const queryClient = useQueryClient();
-  useWorkspace(); // Ensure we're in a workspace context if needed, otherwise this can be removed too.
   const match = useMatch('/chats/:chatId');
   const activeThreadId = match?.params.chatId ?? null;
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -35,11 +32,6 @@ export const ProjectFolder = ({ group, getToken, collapsed, active, onSelect }: 
     },
   });
 
-  // We can determine if this accordion is open by checking if it matches the group id?
-  // No, the Accordion controls its own state, but we don't have access to the context here directly without a hook.
-  // Actually, we can just fetch if enabled: true always. The design system's Accordion handles visibility.
-  // BUT to avoid fetching all groups, we can assume it's true for now, or just let it fetch (they are paginated small lists).
-  // Or better, let's just fetch them. It's a sidebar, we want the data.
   const history = useInfiniteQuery({
     queryKey: ['threads', group.group_id],
     queryFn: ({ pageParam }) => listChats(getToken, group.group_id, pageParam),

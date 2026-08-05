@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, insert, select, update
+from sqlalchemy.engine import RowMapping
 from zentra_adapter_postgres.schema import workflow_definitions, workflow_versions
 from zentra_application_analysis_run import Role
 
@@ -135,8 +136,7 @@ def _document_error(definition: dict[str, Any]) -> str | None:
     return None
 
 
-def _detail(row: Any, versions: list[int]) -> WorkflowDetailResponse:
-    value = row._mapping
+def _detail(value: RowMapping, versions: list[int]) -> WorkflowDetailResponse:
     return WorkflowDetailResponse(
         workflow_id=str(value["workflow_id"]),
         name=value["name"],
@@ -225,7 +225,7 @@ async def get_workflow(
         )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
-    return _detail(row, list(versions))
+    return _detail(row._mapping, list(versions))
 
 
 @router.post(
@@ -259,7 +259,7 @@ async def clone_default(
                 )
             )
         ).one()
-    return _detail(row, [])
+    return _detail(row._mapping, [])
 
 
 @router.put("/{workflow_id}", response_model=WorkflowDetailResponse)
@@ -297,7 +297,7 @@ async def save_workflow(
         )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
-    return _detail(row, list(versions))
+    return _detail(row._mapping, list(versions))
 
 
 @router.post("/{workflow_id}/publish", response_model=WorkflowDetailResponse)
@@ -348,4 +348,4 @@ async def publish_workflow(
             .scalars()
             .all()
         )
-    return _detail(row, list(versions))
+    return _detail(row._mapping, list(versions))

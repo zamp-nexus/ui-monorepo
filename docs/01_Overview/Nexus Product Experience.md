@@ -40,7 +40,7 @@ The primary path is **Upload → Context → Ask → Insight**.
 - **Data** owns uploads, datasets, and data connections.
 - **Sequences** are advanced workflows reached from the relevant data context;
   direct links remain valid for existing work.
-- **Projects** organize chats. The selected project is visibly highlighted;
+- **Groups** organize chats. The selected Group is visibly highlighted;
   opening it or one of its chats makes it the destination for New chat.
 
 ## Experience standards

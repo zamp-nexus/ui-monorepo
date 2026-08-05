@@ -18,7 +18,7 @@ import { Icon } from '@open-zentra/foundation-icons';
 
 import { listGroups, createGroup } from '../pages/chat/api';
 import { useActiveGroup } from '../pages/chat/use-active-group';
-import { ProjectFolder } from './project-folder';
+import { GroupFolder } from './project-folder';
 
 import type { TokenSource } from '../api';
 import type { IdentityContext, ReadinessResponse } from '../types';
@@ -56,7 +56,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
 
   const initialGroup = useActiveGroup(getToken);
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   // The first available Group is a sensible initial destination, but every
-  // later selection is intentional: opening a project or one of its chats
+  // later selection is intentional: opening a Group or one of its chats
   // makes it the destination for the next new chat.
   useEffect(() => {
     if (!groupId && initialGroup.data) {
@@ -92,7 +92,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
     onSuccess: (newGroup) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       selectGroup(newGroup.group_id);
-      setNewProjectName('');
+      setNewGroupName('');
       setIsModalOpen(false);
       navigate('/chats'); // Automatically jump to chats list on workspace switch
     },
@@ -224,7 +224,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
           {collapsed ? null : (
             <div className="flex items-center justify-between px-3 pb-2">
               <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-                Projects
+                Groups
               </h2>
               <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <Modal.Trigger
@@ -243,11 +243,11 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
                     <Input
                       autoFocus
                       placeholder="e.g. Acme Corp"
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newProjectName.trim().length > 0) {
-                          createGroupMutation.mutate(newProjectName.trim());
+                        if (e.key === 'Enter' && newGroupName.trim().length > 0) {
+                          createGroupMutation.mutate(newGroupName.trim());
                         }
                       }}
                     />
@@ -257,8 +257,8 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
                       Cancel
                     </Button>
                     <Button
-                      disabled={newProjectName.trim().length === 0 || createGroupMutation.isPending}
-                      onClick={() => createGroupMutation.mutate(newProjectName.trim())}
+                      disabled={newGroupName.trim().length === 0 || createGroupMutation.isPending}
+                      onClick={() => createGroupMutation.mutate(newGroupName.trim())}
                     >
                       {createGroupMutation.isPending ? 'Creating...' : 'Create'}
                     </Button>
@@ -276,7 +276,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
               className="flex flex-col gap-1"
             >
               {groupsQuery.data?.items.map((g) => (
-                <ProjectFolder
+                <GroupFolder
                   key={g.group_id}
                   group={g}
                   getToken={getToken}

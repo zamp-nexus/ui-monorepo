@@ -216,6 +216,11 @@ export const AgentProgress = ({
                 </strong>
               ) : null}
               {line.text}
+              {line.reasoning ? (
+                <span className="mt-0.5 block text-xs italic text-foreground-muted">
+                  {line.reasoning}
+                </span>
+              ) : null}
             </span>
           </li>
         ))}
