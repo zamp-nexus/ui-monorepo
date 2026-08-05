@@ -191,7 +191,10 @@ export const ChatPage = ({
             </h1>
             {catalog.data ? (
               <p className="mt-1 truncate text-xs text-foreground-muted">
-                {catalog.data.sources.filter((source) => source.status === 'ready').map((source) => source.name).join(' · ') || 'No queryable data sources'}
+                {(catalog.data.sources ?? [])
+                  .filter((source) => source.status === 'ready')
+                  .map((source) => source.name)
+                  .join(' · ') || 'No queryable data sources'}
               </p>
             ) : null}
           </div>

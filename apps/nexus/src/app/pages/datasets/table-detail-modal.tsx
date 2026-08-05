@@ -1,5 +1,4 @@
 import { Badge, Modal, Switch } from '@open-zentra/foundation-design-system';
-import { Icon } from '@open-zentra/foundation-icons';
 
 import { formatBytes, formatFraction, formatRows } from './format';
 import type { CatalogField, CatalogTable } from './types';
@@ -12,11 +11,13 @@ interface TableDetailModalProps {
 }
 
 const Stat = ({ label, value }: { readonly label: string; readonly value: string }) => (
-  <div>
-    <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted">
+  <div className="min-w-0 border-l border-border-subtle pl-3 first:border-l-0 first:pl-0">
+    <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-foreground-muted">
       {label}
     </dt>
-    <dd className="mt-1 text-sm tabular-nums">{value}</dd>
+    <dd className="mt-1 truncate text-base font-medium tabular-nums" title={value}>
+      {value}
+    </dd>
   </div>
 );
 
@@ -81,10 +82,9 @@ export const TableDetailModal = ({
           </Modal.Description>
           <Modal.Close />
           {/* The summary lives in the header, not the body. `Modal.Header` is
-              `shrink-0` and sits outside the scroll container, so these four
-              numbers stay put while the columns scroll — which is the point of
-              them: they are the context you read the column list against. */}
-          <dl className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-4">
+              `shrink-0` and sits outside the scroll container, so this table
+              context stays visible while fields scroll beneath it. */}
+          <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 rounded-lg border border-border-subtle bg-background/40 px-4 py-3 sm:grid-cols-4">
             <Stat label="Rows" value={formatRows(table?.estimated_rows)} />
             <Stat label="Size" value={formatBytes(table?.size_bytes)} />
             <Stat label="Columns" value={String(fields.length)} />
@@ -104,10 +104,10 @@ export const TableDetailModal = ({
                 upward over the body's `pt-4` — sticky `top-0` pins the row to
                 the scrollport's padding edge, so without it rows show through
                 that 1rem strip above the headings. */}
-            <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm">
+            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left">
-                  {['#', 'Column', 'Type', 'Family', 'Null', 'Profile', 'Agent Access'].map(
+                  {['#', 'Column', 'Data type', 'Profile', 'Agent access'].map(
                     (heading) => (
                       <th
                         className="sticky top-0 z-20 border-b border-border bg-[var(--bg-layer-00)] pb-2 pr-4 pt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-foreground-muted shadow-[0_-1.25rem_0_0_var(--bg-layer-00)]"
@@ -127,25 +127,16 @@ export const TableDetailModal = ({
                       {field.position}
                     </td>
                     <td className="border-b border-border/50 py-2 pr-4 font-mono">{field.name}</td>
-                    <td className="border-b border-border/50 py-2 pr-4 font-mono text-xs">
-                      {field.declared_type}
-                    </td>
                     <td className="border-b border-border/50 py-2 pr-4">
-                      <Badge intent="default" size="sm">
-                        {field.family}
-                      </Badge>
-                    </td>
-                    <td className="border-b border-border/50 py-2 pr-4">
-                      {field.nullable ? (
-                        <Icon
-                          name="check"
-                          size="sm"
-                          aria-label="Nullable"
-                          className="text-foreground-muted"
-                        />
-                      ) : (
-                        <span className="sr-only">Not nullable</span>
-                      )}
+                      <div className="font-mono text-xs">{field.declared_type}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge intent="default" size="sm">
+                          {field.family}
+                        </Badge>
+                        <span className="text-xs text-foreground-muted">
+                          {field.nullable ? 'Nullable' : 'Required'}
+                        </span>
+                      </div>
                     </td>
                     <td className="border-b border-border/50 py-2 pr-4 text-xs text-foreground-muted">
                       <Profile field={field} />

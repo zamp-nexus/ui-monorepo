@@ -16,7 +16,7 @@ import { Icon } from '@open-zentra/foundation-icons';
 import { ApiError, type TokenSource } from '../../api';
 import { ConnectorLogo } from '../connections/connector-logos';
 import type { SourceResponse } from '../connections/types';
-import { getHarvest, latestCatalog, setTableAgentAccess, startHarvest } from './api';
+import { getHarvest, latestCatalog, listHarvests, setTableAgentAccess, startHarvest } from './api';
 import { formatBytes, formatRows, HARVEST_FAILURE_HELP, PHASE_LABEL } from './format';
 import type { CatalogResponse, CatalogTable, HarvestResponse } from './types';
 import { isTerminal } from './types';
@@ -86,19 +86,29 @@ const TableCard = ({
   </div>
 );
 
-const HarvestProgress = ({ run }: { readonly run: HarvestResponse }) => (
-  <div className="mt-4">
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span>{PHASE_LABEL[run.phase]}…</span>
-      <span className="font-mono text-[10px] uppercase tracking-[0.14em] tabular-nums text-foreground-muted">
-        {run.tables_found} tables · {run.fields_described} fields
-      </span>
+const HarvestProgress = ({ run }: { readonly run: HarvestResponse }) => {
+  const profilingProgress =
+    run.phase === 'profiling' && run.fields_described > 0
+      ? (run.fields_profiled / run.fields_described) * 100
+      : undefined;
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between gap-4 text-sm">
+        <span>{PHASE_LABEL[run.phase]}…</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] tabular-nums text-foreground-muted">
+          {run.tables_found} tables · {run.fields_described} fields · {run.fields_profiled} profiled
+        </span>
+      </div>
+      <Progress
+        className="mt-3"
+        value={profilingProgress}
+        indeterminate={profilingProgress === undefined}
+        aria-label="Harvest progress"
+      />
     </div>
-    {/* Indeterminate: the total is not known until listing finishes, and a
-        percentage of an unknown total would be a fiction. */}
-    <Progress className="mt-3" value={undefined} />
-  </div>
-);
+  );
+};
 
 /**
  * One source and whatever discovery has learned about it.
@@ -124,10 +134,20 @@ export const SourceCatalog = ({
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
   });
 
+  // A harvest can have started in another tab or before this page loaded. Find
+  // it before offering another start, because the API correctly allows only
+  // one harvest per source at a time.
+  const harvests = useQuery({
+    queryKey: ['harvests', source.data_source_id],
+    queryFn: () => listHarvests(getToken, source.data_source_id),
+  });
+  const activeHarvest = harvests.data?.find((harvest) => !isTerminal(harvest.phase));
+  const watchedHarvestRunId = watching ?? activeHarvest?.harvest_run_id ?? null;
+
   const run = useQuery({
-    queryKey: ['harvest', watching],
-    queryFn: () => getHarvest(getToken, watching as string),
-    enabled: watching !== null,
+    queryKey: ['harvest', watchedHarvestRunId],
+    queryFn: () => getHarvest(getToken, watchedHarvestRunId as string),
+    enabled: watchedHarvestRunId !== null,
     // Polling is the only way to follow work scheduled after the response.
     refetchInterval: (query) => {
       const phase = query.state.data?.phase;
@@ -178,9 +198,13 @@ export const SourceCatalog = ({
   useEffect(() => {
     if (!finished) return;
     void queryClient.invalidateQueries({ queryKey: ['catalog', source.data_source_id] });
+    void queryClient.invalidateQueries({ queryKey: ['harvests', source.data_source_id] });
   }, [finished, queryClient, source.data_source_id]);
 
-  const isHarvesting = begin.isPending || (run.data != null && !isTerminal(run.data.phase));
+  const isHarvesting =
+    begin.isPending ||
+    activeHarvest !== undefined ||
+    (run.data != null && !isTerminal(run.data.phase));
   const notHarvested = catalog.error instanceof ApiError && catalog.error.status === 404;
   const tables = [...(catalog.data?.tables ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   const failure = finished?.failure_code;
