@@ -54,6 +54,17 @@ class DataDiscoveryPort(Protocol):
     ) -> dict[str, JsonValue]: ...
 
 
+class _UnavailableDataDiscovery:
+    async def connection_inventory(
+        self, organization_id: UUID
+    ) -> dict[str, JsonValue]:
+        raise LookupError("Connection discovery is unavailable for this run")
+
+    async def schema_inspect(
+        self, organization_id: UUID, connection_id: UUID, table_name: str | None
+    ) -> dict[str, JsonValue]:
+        raise LookupError("Connection discovery is unavailable for this run")
+
 class ConnectionInventoryTool:
     name = "connection_inventory"
 
@@ -217,8 +228,7 @@ def data_discovery_tools(
 ) -> tuple[ToolPort, ...]:
     """Build the one governed data-tool surface for an agent invocation."""
     query_tool = query_tool or DataQueryTool(semantic_layer)
-    if discovery is None:
-        return (query_tool,)
+    discovery = discovery or _UnavailableDataDiscovery()
     return (
         ConnectionInventoryTool(discovery, organization_id),
         SchemaInspectTool(discovery, organization_id),

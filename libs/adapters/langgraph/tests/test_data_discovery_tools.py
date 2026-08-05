@@ -14,6 +14,7 @@ from zentra_adapter_langgraph.tools import (
     ConnectionInventoryTool,
     DataQueryTool,
     SchemaInspectTool,
+    data_discovery_tools,
 )
 
 TENANT_ID = UUID("22000000-0000-0000-0000-000000000002")
@@ -71,6 +72,18 @@ def test_schema_inspect_allows_a_connection_overview_without_table_name() -> Non
     definition = SchemaInspectTool(Discovery(), TENANT_ID).definition
 
     assert definition.input_schema["required"] == ["connection_id"]
+
+
+def test_discovery_tool_builder_keeps_all_three_tools_when_unavailable() -> None:
+    tools = data_discovery_tools(
+        semantic_layer=SemanticLayer(), discovery=None, organization_id=TENANT_ID
+    )
+
+    assert tuple(tool.name for tool in tools) == (
+        "connection_inventory",
+        "schema_inspect",
+        "data_query",
+    )
 
 
 @pytest.mark.asyncio
