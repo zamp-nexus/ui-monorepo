@@ -54,6 +54,25 @@ def _require_manager(context: RequestContext) -> None:
         )
 
 
+def _uses_raw_query(definition: dict[str, Any]) -> bool:
+    return any(
+        isinstance(node, dict)
+        and isinstance(node.get("data"), dict)
+        and "raw_query" in node["data"].get("tools", [])
+        for node in definition.get("nodes", [])
+    )
+
+
+def _require_raw_query_admin(
+    context: RequestContext, definition: dict[str, Any]
+) -> None:
+    if _uses_raw_query(definition) and context.actor.role is not Role.ADMIN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only an Admin may grant raw_query to a Workflow agent",
+        )
+
+
 def _document_error(definition: dict[str, Any]) -> str | None:
     nodes = definition.get("nodes")
     edges = definition.get("edges")
@@ -254,6 +273,7 @@ async def clone_default(
     body: CloneDefaultRequest, request: Request, context: AuthenticatedRequest
 ) -> WorkflowDetailResponse:
     _require_manager(context)
+    _require_raw_query_admin(context, DEFAULT_WORKFLOW_DEFINITION)
     workflow_id = uuid4()
     now = datetime.now(UTC)
     async with request.app.state.dependencies.database.organization_connection(
@@ -287,6 +307,7 @@ async def save_workflow(
     context: AuthenticatedRequest,
 ) -> WorkflowDetailResponse:
     _require_manager(context)
+    _require_raw_query_admin(context, body.definition)
     async with request.app.state.dependencies.database.organization_connection(
         context.actor.organization_id
     ) as connection:
@@ -334,6 +355,7 @@ async def publish_workflow(
         ).first()
         if row is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Workflow not found")
+        _require_raw_query_admin(context, row.draft_definition)
         reason = _document_error(row.draft_definition)
         if reason:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, reason)
