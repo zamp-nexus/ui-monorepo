@@ -9,18 +9,25 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import RowMapping
-from zentra_adapter_postgres.schema import workflow_definitions, workflow_versions
+from zentra_adapter_postgres.schema import (
+    workflow_definitions,
+    workflow_executions,
+    workflow_versions,
+)
 from zentra_application_analysis_run import Role
 
 from .request_context import RequestContext, authenticated_context
+from .workflow_execution_service import WorkflowExecutionService
 from .workflow_schemas import (
     DEFAULT_WORKFLOW_DEFINITION,
     DEFAULT_WORKFLOW_ID,
+    WORKFLOW_TOOL_CATALOG,
     CloneDefaultRequest,
     WorkflowDetailResponse,
     WorkflowDocumentRequest,
+    WorkflowExecuteRequest,
+    WorkflowExecutionResponse,
     WorkflowSummaryResponse,
-    WORKFLOW_TOOL_CATALOG,
 )
 
 router = APIRouter(prefix="/v1/workflows", tags=["workflow"])
@@ -359,3 +366,100 @@ async def publish_workflow(
             .all()
         )
     return _detail(row._mapping, list(versions))
+
+
+@router.post("/{workflow_id}/execute", response_model=WorkflowExecutionResponse)
+async def execute_workflow(
+    workflow_id: UUID,
+    body: WorkflowExecuteRequest,
+    request: Request,
+    context: AuthenticatedRequest,
+) -> WorkflowExecutionResponse:
+    """Run an immutable published custom Workflow and retain a safe trace."""
+    async with request.app.state.dependencies.database.organization_connection(
+        context.actor.organization_id
+    ) as connection:
+        definition_row = (
+            await connection.execute(
+                select(workflow_definitions).where(
+                    workflow_definitions.c.workflow_id == workflow_id
+                )
+            )
+        ).first()
+        version_row = (
+            await connection.execute(
+                select(workflow_versions)
+                .where(workflow_versions.c.workflow_id == workflow_id)
+                .order_by(workflow_versions.c.version.desc())
+                .limit(1)
+            )
+        ).first()
+        if definition_row is None or version_row is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Published Workflow not found"
+            )
+        execution_id = uuid4()
+        await connection.execute(
+            insert(workflow_executions).values(
+                workflow_execution_id=execution_id,
+                organization_id=context.actor.organization_id,
+                workflow_id=workflow_id,
+                workflow_version=version_row.version,
+                workflow_name=definition_row.name,
+                status="running",
+            )
+        )
+
+    service = WorkflowExecutionService(
+        models=request.app.state.dependencies.models.as_dict(),
+        semantic_layers=request.app.state.dependencies.semantic_layers,
+    )
+    try:
+        result = await service.run(
+            version_row.definition,
+            organization_id=context.actor.organization_id,
+            data_connection_id=None,
+            message=body.message,
+        )
+    except (ValueError, RuntimeError) as error:
+        async with request.app.state.dependencies.database.organization_connection(
+            context.actor.organization_id
+        ) as connection:
+            await connection.execute(
+                update(workflow_executions)
+                .where(workflow_executions.c.workflow_execution_id == execution_id)
+                .values(
+                    status="failed", error=str(error), finished_at=datetime.now(UTC)
+                )
+            )
+        return WorkflowExecutionResponse(
+            execution_id=str(execution_id),
+            workflow_id=str(workflow_id),
+            workflow_version=version_row.version,
+            status="failed",
+            error=str(error),
+        )
+
+    async with request.app.state.dependencies.database.organization_connection(
+        context.actor.organization_id
+    ) as connection:
+        await connection.execute(
+            update(workflow_executions)
+            .where(workflow_executions.c.workflow_execution_id == execution_id)
+            .values(
+                status="completed",
+                nodes=list(result.nodes),
+                routes=list(result.routes),
+                output=result.output,
+                finished_at=datetime.now(UTC),
+            )
+        )
+    return WorkflowExecutionResponse(
+        execution_id=str(execution_id),
+        workflow_id=str(workflow_id),
+        workflow_version=version_row.version,
+        status="completed",
+        output=result.output,
+        nodes=list(result.nodes),
+        routes=list(result.routes),
+    )

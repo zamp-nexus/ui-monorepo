@@ -27,6 +27,25 @@ class CloneDefaultRequest(BaseModel):
     name: str = Field(default="Analytics workflow", min_length=1, max_length=120)
 
 
+class WorkflowExecuteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=4_000)
+
+
+class WorkflowExecutionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    execution_id: str
+    workflow_id: str
+    workflow_version: int
+    status: str
+    output: str | None = None
+    nodes: list[str] = []
+    routes: list[str] = []
+    error: str | None = None
+
+
 class WorkflowSummaryResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
