@@ -35,8 +35,8 @@ privileges.
 ## Current production edge
 
 The Nexus Vite single-page app is served from Vercel. Its deployment
-configuration lives beside the app at `apps/nexus/vercel.json` and rewrites
-deep links to `index.html`, allowing the browser router to resolve application
+configuration lives at the repository root in `vercel.json` and rewrites deep
+links to `index.html`, allowing the browser router to resolve application
 routes such as `/chats`. The API is a separate Render service; it is not on the
 request path when Vercel resolves a frontend route.
 
