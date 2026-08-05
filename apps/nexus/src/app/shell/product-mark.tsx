@@ -1,30 +1,41 @@
+import { useId } from 'react';
+
 import { Link } from 'react-router-dom';
 
-import { PRODUCT_NAME, PRODUCT_RELEASE_LABEL } from '../constants/product';
-
-interface ProductMarkProps {
-  /** Show the release line under the wordmark, as the navigation rail does. */
-  readonly showRelease?: boolean;
-  /** Render the initial alone, for a collapsed rail. */
-  readonly compact?: boolean;
-}
+import { PRODUCT_NAME } from '../constants/product';
 
 /**
- * The wordmark, and the only link back to the launcher.
+ * The standalone product mark. Its fill follows the active product theme.
  */
-export const ProductMark = ({ showRelease = false, compact = false }: ProductMarkProps) => (
+export const ProductLogo = ({ className = 'h-9 w-9' }: { readonly className?: string }) => {
+  const filterId = useId();
+
+  return (
+    <svg className={className} viewBox="0 0 368 368" aria-hidden="true">
+      <defs>
+        <filter id={filterId} colorInterpolationFilters="sRGB">
+          <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="luminance" />
+          <feComponentTransfer in="luminance" result="mark">
+            <feFuncA type="table" tableValues="1 0" />
+          </feComponentTransfer>
+          <feFlood floodColor="currentColor" result="brandColor" />
+          <feComposite in="brandColor" in2="mark" operator="in" />
+        </filter>
+      </defs>
+      <image href="/nexus-mark-source.png" width="368" height="368" filter={`url(#${filterId})`} />
+    </svg>
+  );
+};
+
+/**
+ * The standalone product mark, and the only link back to the launcher.
+ */
+export const ProductMark = () => (
   <Link
-    className="inline-flex flex-col gap-0.5 no-underline"
+    className="inline-flex h-10 w-10 items-center justify-center text-primary no-underline"
     to="/"
     aria-label={`${PRODUCT_NAME} home`}
   >
-    <span className="text-lg font-semibold leading-none tracking-[-0.035em] text-foreground">
-      {compact ? PRODUCT_NAME.charAt(0) : PRODUCT_NAME}
-    </span>
-    {showRelease && !compact ? (
-      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-foreground-muted">
-        {PRODUCT_RELEASE_LABEL}
-      </span>
-    ) : null}
+    <ProductLogo />
   </Link>
 );

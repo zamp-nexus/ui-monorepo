@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 368 368" color="hsl(238 63% 44%)">
+  <defs>
+    <filter id="mark" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="luminance"/>
+      <feComponentTransfer in="luminance" result="shape"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+      <feFlood flood-color="currentColor" result="brandColor"/>
+      <feComposite in="brandColor" in2="shape" operator="in"/>
+    </filter>
+  </defs>
+  <image href="/nexus-mark-source.png" width="368" height="368" filter="url(#mark)"/>
+</svg>

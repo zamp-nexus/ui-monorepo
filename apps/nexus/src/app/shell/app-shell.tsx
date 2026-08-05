@@ -218,7 +218,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
         aria-label="Primary"
         className="hidden w-72 md:flex"
         brand={
-          <ProductMark showRelease />
+          <ProductMark />
         }
         footer={railFooter}
       >
@@ -300,7 +300,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
 
       <main className="min-w-0 flex-1 overflow-y-auto">
         <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
-          <ProductMark compact />
+          <ProductMark />
           <nav className="flex items-center gap-1" aria-label="Mobile primary">
             {navItems.map((item) => (
               <Link

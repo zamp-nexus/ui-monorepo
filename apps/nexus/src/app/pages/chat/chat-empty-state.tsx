@@ -1,5 +1,7 @@
 import { Icon } from '@open-zentra/foundation-icons';
 
+import { ProductLogo } from '../../shell/product-mark';
+
 import type { ChatSuggestion } from '../../types';
 
 interface ChatEmptyStateProps {
@@ -19,7 +21,7 @@ export const ChatEmptyState = ({ greetingName, sourceName, suggestions, onChoose
       className="mb-7 flex h-11 w-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary"
       aria-hidden="true"
     >
-      <Icon name="sparkles" size="lg" />
+      <ProductLogo className="h-6 w-6" />
     </span>
 
     <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary">
