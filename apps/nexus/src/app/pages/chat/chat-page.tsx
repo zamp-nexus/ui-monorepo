@@ -15,6 +15,7 @@ import { AssistantMessage, UserMessage } from './chat-messages';
 import { useChatRuntime } from './chat-runtime';
 import { suggestionsFromCatalog } from './chat-suggestions';
 import { useSendMessage } from './use-send-message';
+import { listWorkflows } from '../workflows/api';
 import { useThreadEvents } from './use-thread-events';
 import { useWorkspace } from '../../shell/app-shell';
 import { useMutation } from '@tanstack/react-query';
@@ -61,6 +62,7 @@ export const ChatPage = ({
   });
 
   const [draft, setDraft] = useState('');
+  const [workflowId, setWorkflowId] = useState('default-analytics');
   const endOfThread = useRef<HTMLDivElement>(null);
 
   const snapshot = useQuery({
@@ -80,6 +82,7 @@ export const ChatPage = ({
     queryFn: () => requestJson<CatalogSummary>('/v1/catalog', getToken),
     staleTime: 5 * 60 * 1000,
   });
+  const workflows = useQuery({ queryKey: ['workflows'], queryFn: () => listWorkflows(getToken) });
 
   const thread = snapshot.data ?? null;
 
@@ -126,7 +129,7 @@ export const ChatPage = ({
 
   const submit = (content: string) => {
     setDraft('');
-    void send.send({ threadId: activeThreadId, groupId, content });
+    void send.send({ threadId: activeThreadId, groupId, content, workflowId });
   };
 
   const runtime = useChatRuntime({
@@ -241,6 +244,9 @@ export const ChatPage = ({
           onDraftChange={setDraft}
           onSend={submit}
           disabled={send.isPending || !canSend}
+          workflowId={workflowId}
+          onWorkflowChange={setWorkflowId}
+          workflows={workflows.data}
         />
       </section>
     </div>

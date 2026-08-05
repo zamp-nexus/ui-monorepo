@@ -14,6 +14,9 @@ interface ChatComposerProps {
   /** Prefilled from a suggestion card. */
   readonly draft: string;
   readonly onDraftChange: (draft: string) => void;
+  readonly workflowId?: string;
+  readonly onWorkflowChange?: (workflowId: string) => void;
+  readonly workflows?: ReadonlyArray<{ workflow_id: string; name: string; published_version: number | null; is_system: boolean }>;
 }
 
 const plainTextExtensions = [
@@ -42,7 +45,7 @@ const isJsdom = typeof navigator !== 'undefined' && navigator.userAgent.includes
  * A deliberately plain-text Tiptap editor. Tiptap provides the native caret,
  * selection and IME support; the Chat Session API continues to receive text.
  */
-export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatComposerProps) => {
+export const ChatComposer = ({ onSend, disabled, draft, onDraftChange, workflowId, onWorkflowChange, workflows = [] }: ChatComposerProps) => {
   const [focused, setFocused] = useState(false);
   const disabledRef = useRef(disabled);
   const onSendRef = useRef(onSend);
@@ -148,7 +151,8 @@ export const ChatComposer = ({ onSend, disabled, draft, onDraftChange }: ChatCom
           <EditorContent editor={editor} />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {onWorkflowChange ? <label className="min-w-0 text-xs text-foreground-muted">Workflow<select aria-label="Workflow" className="ml-2 max-w-48 rounded border border-border bg-background px-2 py-1 text-foreground" disabled={disabled} value={workflowId ?? 'default-analytics'} onChange={(event) => onWorkflowChange(event.target.value)}>{workflows.filter((workflow) => workflow.is_system || workflow.published_version).map((workflow) => <option key={workflow.workflow_id} value={workflow.workflow_id}>{workflow.name}{workflow.published_version ? ` · v${workflow.published_version}` : ''}</option>)}</select></label> : null}
           <Button
             className="ml-auto transition-transform duration-150 ease-out active:scale-95 motion-reduce:transition-none"
             type="submit"

@@ -64,6 +64,7 @@ export interface UseSendMessageResult {
     readonly threadId: string | null;
     readonly groupId: string | null;
     readonly content: string;
+    readonly workflowId?: string;
   }) => Promise<void>;
   readonly isPending: boolean;
   readonly error: Error | null;
@@ -158,10 +159,12 @@ export const useSendMessage = (
       threadId,
       groupId,
       content,
+      workflowId,
     }: {
       threadId: string | null;
       groupId: string | null;
       content: string;
+      workflowId?: string;
     }) => {
       setIsPending(true);
       setError(null);
@@ -190,7 +193,7 @@ export const useSendMessage = (
             Accept: 'text/event-stream',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ message: content }),
+          body: JSON.stringify({ message: content, ...(workflowId && workflowId !== 'default-analytics' ? { workflow_id: workflowId } : {}) }),
         });
 
         if (!response.ok || !response.body) {
