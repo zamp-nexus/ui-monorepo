@@ -3,7 +3,12 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
-from zentra_domain_agent_execution import SemanticCatalog, SemanticQuery, SemanticResult
+from zentra_domain_agent_execution import (
+    SemanticCatalog,
+    SemanticMeasure,
+    SemanticQuery,
+    SemanticResult,
+)
 
 from zentra_adapter_langgraph.tools import (
     ConnectionInventoryTool,
@@ -33,7 +38,14 @@ class Discovery:
 
 class SemanticLayer:
     async def catalog(self) -> SemanticCatalog:
-        return SemanticCatalog(measures=(), dimensions=())
+        return SemanticCatalog(
+            measures=(
+                SemanticMeasure(
+                    name=f"{CONNECTION_ID}::Orders.count", type="number"
+                ),
+            ),
+            dimensions=(),
+        )
 
     async def query(self, request: SemanticQuery) -> SemanticResult:
         raise AssertionError("data_query must use the raw structured path")
@@ -86,3 +98,33 @@ async def test_data_query_requires_a_selected_source_and_uses_raw_path() -> None
     assert rejected.is_error
     assert "source_id is required" in rejected.content
     assert result.content == "{'count': 1}"
+
+
+@pytest.mark.asyncio
+async def test_data_query_rejects_foreign_and_cross_source_members() -> None:
+    tool = DataQueryTool(SemanticLayer())
+    foreign_source = UUID("55000000-0000-0000-0000-000000000005")
+
+    foreign = await tool.invoke(
+        {
+            "source_id": str(foreign_source),
+            "measures": [f"{foreign_source}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [],
+        }
+    )
+    mixed = await tool.invoke(
+        {
+            "source_id": str(CONNECTION_ID),
+            "measures": [f"{foreign_source}::Orders.count"],
+            "dimensions": [],
+            "time_dimensions": [],
+            "filters": [],
+        }
+    )
+
+    assert foreign.is_error
+    assert "not available" in foreign.content
+    assert mixed.is_error
+    assert "cross-source" in mixed.content

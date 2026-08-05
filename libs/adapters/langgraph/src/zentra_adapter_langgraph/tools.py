@@ -170,7 +170,8 @@ class DataQueryTool:
             query = semantic_query_from_json(dict(arguments))
             if query.source_id is None:
                 raise MalformedAgentResponseError("source_id is required")
-        except MalformedAgentResponseError as error:
+            await self._validate_source_scope(query)
+        except (InvalidSemanticQueryError, MalformedAgentResponseError) as error:
             return _refusal(str(error))
         try:
             result = await self._semantic_layer.query_raw(query)
@@ -179,6 +180,32 @@ class DataQueryTool:
         self.last_query = query
         self.last_rows = result.rows
         return _render_query_result(result.rows)
+
+    async def _validate_source_scope(self, query: SemanticQuery) -> None:
+        source_id = query.source_id
+        assert source_id is not None
+        prefix = f"{source_id}::"
+        members = (
+            *query.measures,
+            *query.dimensions,
+            *(item.dimension for item in query.time_dimensions),
+            *(item.member for item in query.filters),
+        )
+        if any(not member.startswith(prefix) for member in members):
+            raise InvalidSemanticQueryError(
+                "All query members must belong to the selected source_id; "
+                "cross-source joins are not supported."
+            )
+        catalog = await self._semantic_layer.catalog()
+        known_sources = {
+            member.name.split("::", maxsplit=1)[0]
+            for member in (*catalog.measures, *catalog.dimensions)
+            if "::" in member.name
+        }
+        if str(source_id) not in known_sources:
+            raise InvalidSemanticQueryError(
+                "The requested source is not available to this agent."
+            )
 
 
 def data_discovery_tools(

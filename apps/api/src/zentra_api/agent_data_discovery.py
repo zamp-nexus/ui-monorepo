@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -47,18 +48,23 @@ class ConnectorDataDiscovery:
         cached = self._inventory.get(organization_id)
         if cached is not None:
             self._inventory_cache_hits += 1
-            return cached
+            return deepcopy(cached)
         task = self._inventory_tasks.get(organization_id)
         if task is not None:
             self._inventory_cache_hits += 1
-            return await asyncio.shield(task)
+            return deepcopy(await asyncio.shield(task))
         task = asyncio.create_task(self._load_inventory(organization_id))
         self._inventory_tasks[organization_id] = task
-        try:
-            return await asyncio.shield(task)
-        finally:
-            if task.done():
-                self._inventory_tasks.pop(organization_id, None)
+        task.add_done_callback(
+            lambda finished: self._discard_inventory_task(organization_id, finished)
+        )
+        return deepcopy(await asyncio.shield(task))
+
+    def _discard_inventory_task(
+        self, organization_id: UUID, task: asyncio.Task[dict[str, JsonValue]]
+    ) -> None:
+        if self._inventory_tasks.get(organization_id) is task:
+            self._inventory_tasks.pop(organization_id, None)
 
     async def _load_inventory(self, organization_id: UUID) -> dict[str, JsonValue]:
         connector = self._require_connector()
@@ -98,7 +104,7 @@ class ConnectorDataDiscovery:
             "connection_count": len(connections),
             "connections": connections,
         }
-        self._inventory[organization_id] = result
+        self._inventory[organization_id] = deepcopy(result)
         return result
 
     async def schema_inspect(

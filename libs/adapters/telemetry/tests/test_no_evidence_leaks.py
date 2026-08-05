@@ -220,6 +220,20 @@ def test_analysis_run_metrics_cover_all_terminal_statuses(telemetry) -> None:
     assert {"success", "failure", "cancelled"} <= statuses
 
 
+def test_analysis_run_metrics_reject_an_unbounded_status(telemetry) -> None:
+    with (
+        telemetry.tracer.start_as_current_span("analysis_run"),
+        pytest.raises(ValueError, match="analysis-run status"),
+    ):
+        record_analysis_run(
+            status="customer-specific-status",
+            duration_ms=1,
+            tool_call_count=0,
+            inventory_cache_hits=0,
+            schema_snapshot_reuses=0,
+        )
+
+
 @pytest.mark.parametrize("category,value", sorted(POISON.items()))
 def test_poison_cannot_reach_a_span_through_an_unlisted_key(
     telemetry, category: str, value: str

@@ -92,6 +92,8 @@ SAFE_ATTRIBUTES: frozenset[str] = frozenset(
     }
 )
 
+_ANALYSIS_RUN_STATUSES = frozenset({"success", "failure", "cancelled"})
+
 
 def _record(attributes: dict[str, object]) -> None:
     """Set span attributes, refusing anything not on the allowlist.
@@ -309,6 +311,8 @@ def record_analysis_run(
     schema_snapshot_reuses: int,
 ) -> None:
     """Record safe, bounded aggregates for one completed analysis run."""
+    if status not in _ANALYSIS_RUN_STATUSES:
+        raise ValueError("analysis-run status must be success, failure, or cancelled")
     _record(
         {
             "zentra.analysis_run.status": status,

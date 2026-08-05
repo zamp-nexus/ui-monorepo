@@ -16,6 +16,8 @@ class Connector:
     def __init__(self) -> None:
         self.list_calls = 0
         self.fail_inventory = False
+        self.inventory_started: asyncio.Event | None = None
+        self.inventory_gate: asyncio.Event | None = None
         profile = SimpleNamespace(
             sampled_rows=20,
             null_fraction=0.1,
@@ -43,6 +45,10 @@ class Connector:
     async def list_sources(self, actor):
         assert actor.organization_id == TENANT_ID
         self.list_calls += 1
+        if self.inventory_started is not None:
+            self.inventory_started.set()
+        if self.inventory_gate is not None:
+            await self.inventory_gate.wait()
         if self.fail_inventory:
             raise RuntimeError("connector unavailable")
         return (
@@ -126,3 +132,40 @@ async def test_failed_inventory_load_is_discarded_for_a_later_retry() -> None:
 
     assert inventory["connection_count"] == 1
     assert connector.list_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_cancelled_inventory_waiter_does_not_retain_a_failed_task() -> None:
+    connector = Connector()
+    connector.inventory_started = asyncio.Event()
+    connector.inventory_gate = asyncio.Event()
+    connector.fail_inventory = True
+    discovery = ConnectorDataDiscovery(lambda: connector)
+    waiting = asyncio.create_task(discovery.connection_inventory(TENANT_ID))
+    await connector.inventory_started.wait()
+
+    waiting.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiting
+    failed_task = discovery._inventory_tasks[TENANT_ID]
+    connector.inventory_gate.set()
+    with pytest.raises(RuntimeError, match="connector unavailable"):
+        await failed_task
+
+    connector.fail_inventory = False
+    inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert inventory["connection_count"] == 1
+    assert connector.list_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_inventory_responses_cannot_mutate_the_shared_snapshot() -> None:
+    discovery = ConnectorDataDiscovery(lambda: Connector())
+
+    inventory = await discovery.connection_inventory(TENANT_ID)
+    inventory["connections"] = []
+    later_inventory = await discovery.connection_inventory(TENANT_ID)
+
+    assert later_inventory["connection_count"] == 1
+    assert len(later_inventory["connections"]) == 1

@@ -38,7 +38,7 @@ async def active_data_connection_id(
     that tries to mix member vocabularies.
     """
     if requested is not None:
-        return requested
+        return (requested,)
     if connector is None:
         return None
 
