@@ -6,9 +6,9 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-08-01
-reviewed: 2026-08-01
-confidence: mixed
+updated: 2026-08-05
+reviewed: 2026-08-05
+confidence: verified
 implementation: current
 priority: high
 tags: [deployment, infrastructure, architecture]
@@ -32,12 +32,16 @@ in AWS US East. Managed credentials, state, and plans stay outside the
 repository. Owner/migration and restricted runtime identities have different
 privileges.
 
-## Unknown production layer
+## Current production edge
 
-No production application hosting resource, delivery pipeline, domain/routing
-configuration, secret-manager integration, rollback strategy, or release
-promotion workflow exists in the repository. This is an explicit unknown, not
-an implied deployment design.
+The Nexus Vite single-page app is served from Vercel. Its deployment
+configuration lives beside the app at `apps/nexus/vercel.json` and rewrites
+deep links to `index.html`, allowing the browser router to resolve application
+routes such as `/chats`. The API is a separate Render service; it is not on the
+request path when Vercel resolves a frontend route.
+
+Delivery-pipeline, secret-manager, rollback, and release-promotion details are
+still not defined in the repository.
 
 ## Accepted Phase 3 target
 
