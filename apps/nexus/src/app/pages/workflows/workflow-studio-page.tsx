@@ -37,6 +37,7 @@ import {
   type WorkflowNodeData,
   type WorkflowRoutingProfile,
 } from './api';
+import { normalizeWorkflowTools } from './workflow-tools';
 
 type FlowNode = Node<WorkflowNodeData, 'trigger' | 'agent' | 'result'>;
 type FlowEdge = Edge<{ route?: string; is_loop?: boolean; max_iterations?: number }>;
@@ -66,7 +67,7 @@ const WorkflowNode = ({ data, type, selected }: NodeProps<FlowNode>) => (
 );
 
 const NODE_TYPES: NodeTypes = { trigger: WorkflowNode, agent: WorkflowNode, result: WorkflowNode };
-const toNodes = (workflow: WorkflowDetail): FlowNode[] => workflow.definition.nodes as FlowNode[];
+const toNodes = (workflow: WorkflowDetail): FlowNode[] => workflow.definition.nodes.map((node) => ({ ...node, data: { ...node.data, tools: normalizeWorkflowTools(node.data.tools) } })) as FlowNode[];
 const toEdges = (workflow: WorkflowDetail): FlowEdge[] => workflow.definition.edges.map((edge) => ({ ...edge, type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, label: edge.data?.route, labelStyle: { fill: '#64748b', fontSize: 10 }, animated: Boolean(edge.data?.is_loop) }));
 const toDocument = (nodes: FlowNode[], edges: FlowEdge[]): WorkflowDocument => ({ nodes: nodes.map(({ id, type, position, data }) => ({ id, type, position, data })), edges: edges.map(({ id, source, target, data }) => ({ id, source, target, data })) });
 const canManage = (role: string) => role === 'owner' || role === 'admin';

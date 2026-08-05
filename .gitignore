@@ -85,3 +85,4 @@ CLAUDE.md
 .e2e/
 apps/nexus/dist-e2e/
 .scratch/
+.vercel/
