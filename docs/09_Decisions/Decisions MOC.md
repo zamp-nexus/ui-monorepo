@@ -56,6 +56,7 @@ Canonical ADRs remain in `docs/adr/`:
 - [[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]
 - [[adr/0036-workflow-engine-executes-bounded-custom-workflows]] (supersedes 0035)
 - [[adr/0039-intake-selects-published-workflows]]
+- [[adr/0034-organization-wide-analysis-source-scopes]]
 
 ## Governance
 

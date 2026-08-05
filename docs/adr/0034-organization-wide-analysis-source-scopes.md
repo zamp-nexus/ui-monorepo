@@ -1,8 +1,21 @@
-# ADR-0034: Organization-wide Analysis Source Scopes
+---
+id: adr-0040
+title: Organization-wide Analysis Source Scopes
+type: adr
+status: proposed
+owner: unassigned
+source: decision
+created: 2026-08-05
+updated: 2026-08-05
+reviewed: 2026-08-05
+confidence: verified
+implementation: current
+tags: [adr, chat, analysis-run, data-source, cube]
+related: ["[[adr/0016-cube-is-the-single-tenant-scoped-analytical-gateway]]", "[[Analysis Run Domain]]", "[[Data Source Domain]]"]
+repo_path: apps/api/src/zentra_api/source_scoped_semantic.py
+---
 
-## Status
-
-Accepted
+# Organization-wide Analysis Source Scopes
 
 ## Decision
 
