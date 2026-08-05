@@ -44,6 +44,7 @@ class ChatMessageRequest(BaseModel):
     )
 
     message: str = Field(min_length=1, max_length=4_000)
+    workflow_id: UUID | None = None
 
 
 class RoutingResponse(BaseModel):

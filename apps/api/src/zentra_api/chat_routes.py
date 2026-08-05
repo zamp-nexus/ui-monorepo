@@ -14,6 +14,8 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
+from zentra_adapter_postgres.schema import workflow_definitions, workflow_versions
 from zentra_application_analysis_run import (
     PermissionDeniedError,
     ThreadConflictError,
@@ -41,6 +43,7 @@ from .thread_schemas import (
     ThreadMessageResponse,
     ThreadTitleRequest,
 )
+from .workflow_execution_service import WorkflowExecutionService
 
 _THREAD_ERRORS = (
     PermissionDeniedError,
@@ -160,6 +163,48 @@ async def _thread_stream(
         yield _sse_frame("error", {"code": code, "message": str(error)})
 
 
+async def _custom_workflow_thread(
+    *, request: Request, actor: object, group_id: UUID, body: ChatMessageRequest
+) -> ChatResponse:
+    if body.workflow_id is None:
+        raise ValueError("A custom Workflow id is required")
+    organization_id = actor.organization_id  # type: ignore[attr-defined]
+    async with request.app.state.dependencies.database.organization_connection(
+        organization_id
+    ) as connection:
+        definition = (
+            await connection.execute(
+                select(workflow_definitions).where(
+                    workflow_definitions.c.workflow_id == body.workflow_id
+                )
+            )
+        ).first()
+        version = (
+            await connection.execute(
+                select(workflow_versions)
+                .where(workflow_versions.c.workflow_id == body.workflow_id)
+                .order_by(workflow_versions.c.version.desc())
+                .limit(1)
+            )
+        ).first()
+    if definition is None or version is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Published Workflow not found")
+    service = WorkflowExecutionService(
+        models=request.app.state.dependencies.models.as_dict(),
+        semantic_layers=request.app.state.dependencies.semantic_layers,
+    )
+    result = await service.run(
+        version.definition,
+        organization_id=organization_id,
+        data_connection_id=None,
+        message=body.message,
+    )
+    detail = await request.app.state.dependencies.threads.create_workflow_reply(
+        actor, project_id=group_id, content=body.message, reply=result.output
+    )
+    return ChatResponse.from_detail(detail)
+
+
 @router.post(
     "/groups/{group_id}/chats",
     response_model=None,
@@ -172,6 +217,17 @@ async def create_chat(
     resolved: AuthenticatedRequest,
 ) -> ChatResponse | StreamingResponse:
     dependencies = request.app.state.dependencies
+    if body.workflow_id is not None:
+        detail = await _custom_workflow_thread(
+            request=request, actor=resolved.actor, group_id=group_id, body=body
+        )
+        if _wants_event_stream(request):
+            async def custom_stream() -> AsyncIterator[str]:
+                yield _sse_frame("thread", detail.model_dump(mode="json"))
+            return StreamingResponse(
+                custom_stream(), media_type="text/event-stream", headers=_SSE_HEADERS
+            )
+        return detail
     data_connection_id = await _active_connection(dependencies, resolved.actor)
     if _wants_event_stream(request):
         return StreamingResponse(

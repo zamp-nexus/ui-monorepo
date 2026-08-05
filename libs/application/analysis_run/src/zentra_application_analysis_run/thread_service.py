@@ -176,6 +176,73 @@ class ThreadService:
             actor,
         )
 
+    async def create_workflow_reply(
+        self,
+        actor: AuthenticatedActor,
+        *,
+        project_id: UUID,
+        content: str,
+        reply: str,
+    ) -> ThreadDetail:
+        """Create a Chat whose reply was produced by a custom Workflow.
+
+        A custom Workflow is not an Analysis Run and therefore cannot create a
+        governed Finding. It is still a normal Chat turn: both messages and
+        their feed events use the same transaction as every other turn.
+        """
+        self._require_mutator(actor)
+        now = self._now()
+        thread_id = self._new_id()
+        user_message = ThreadMessage.create(
+            message_id=self._new_id(),
+            thread_id=thread_id,
+            organization_id=actor.organization_id,
+            author_id=actor.user_id,
+            kind=ThreadMessageKind.USER_QUESTION,
+            content=content,
+            now=now,
+        )
+        assistant_message = ThreadMessage.create(
+            message_id=self._new_id(),
+            thread_id=thread_id,
+            organization_id=actor.organization_id,
+            author_id=None,
+            kind=ThreadMessageKind.ASSISTANT_REPLY,
+            content=reply,
+            now=now,
+        )
+        thread = AnalysisRunThread.create(
+            thread_id=thread_id,
+            organization_id=actor.organization_id,
+            project_id=project_id,
+            initiating_message_id=user_message.message_id,
+            title=deterministic_thread_title(content),
+            now=now,
+            created_by=actor.user_id,
+        )
+        thread.activate(now)
+        async with self._uow(actor) as unit_of_work:
+            await self._require_writable_project(unit_of_work, project_id)
+            await unit_of_work.threads.add_thread(thread)
+            for message in (user_message, assistant_message):
+                await unit_of_work.threads.add_message(message)
+                await unit_of_work.work_feed.append(
+                    organization_id=actor.organization_id,
+                    thread_id=thread_id,
+                    kind=WorkFeedEventKind.MESSAGE_ADDED,
+                    payload=MessageEventPayload(
+                        message_id=message.message_id,
+                        message_kind=message.kind.value,
+                    ),
+                    occurred_at=now,
+                    event_id=self._new_id(),
+                )
+            await unit_of_work.threads.save_thread(thread)
+            await unit_of_work.commit()
+        return build_thread_detail(
+            thread, (user_message, assistant_message), None, None, actor
+        )
+
     async def create_streaming(
         self,
         actor: AuthenticatedActor,
