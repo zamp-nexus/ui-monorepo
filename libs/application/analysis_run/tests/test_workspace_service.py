@@ -34,7 +34,9 @@ class Repository:
             return None
         return group
 
-    async def save_group(self, group: Group) -> None:
+    async def save_group(
+        self, group: Group, *, organization_id: UUID
+    ) -> None:
         self.groups[group.group_id] = group
 
     async def list_groups(

@@ -23,10 +23,13 @@ class FakeSequenceRepository:
         self.sequences[sequence.sequence_id] = sequence
 
     async def get_sequence(
-        self, sequence_id: UUID, *, for_update: bool = False
+        self, sequence_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> Sequence | None:
         del for_update
-        return self.sequences.get(sequence_id)
+        sequence = self.sequences.get(sequence_id)
+        if sequence is None or sequence.organization_id != organization_id:
+            return None
+        return sequence
 
     async def list_sequences(
         self, *, organization_id: UUID, dataset_workspace_id: UUID

@@ -67,7 +67,7 @@ class Repository:
         self.created_by[thread.thread_id] = thread.created_by
 
     async def visibility_and_creator(
-        self, thread_id: UUID
+        self, thread_id: UUID, *, organization_id: UUID
     ) -> tuple[str, UUID | None] | None:
         if thread_id not in self.threads:
             return None
@@ -81,10 +81,12 @@ class Repository:
             return None
         return thread
 
-    async def save_thread(self, thread: AnalysisRunThread) -> None:
+    async def save_thread(
+        self, thread: AnalysisRunThread, *, organization_id: UUID
+    ) -> None:
         self.threads[thread.thread_id] = thread
 
-    async def delete_thread(self, thread_id: UUID) -> None:
+    async def delete_thread(self, thread_id: UUID, *, organization_id: UUID) -> None:
         del self.threads[thread_id]
         del self.messages[thread_id]
 
@@ -102,6 +104,7 @@ class Repository:
     async def list_threads(
         self,
         *,
+        organization_id: UUID,
         project_id: UUID,
         viewer_id: UUID,
         include_archived: bool,
@@ -147,7 +150,9 @@ class Repository:
         )
         return ThreadSlice(summaries, None)
 
-    async def analysis_run_id_for_thread(self, thread_id: UUID) -> UUID | None:
+    async def analysis_run_id_for_thread(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None:
         return next(
             (
                 analysis_run.analysis_run_id
@@ -157,16 +162,31 @@ class Repository:
             None,
         )
 
+    async def source_scope_id(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None:
+        thread = self.threads.get(thread_id)
+        if thread is None or thread.organization_id != organization_id:
+            return None
+        return thread.source_scope_id
+
+    async def set_source_scope_id(
+        self, thread_id: UUID, source_scope_id: UUID | None, *, organization_id: UUID
+    ) -> None:
+        thread = self.threads.get(thread_id)
+        if thread is not None and thread.organization_id == organization_id:
+            thread.source_scope_id = source_scope_id
+
     async def add(self, analysis_run: AnalysisRun) -> None:
         self.analysis_runs[analysis_run.analysis_run_id] = analysis_run
 
     async def get(
-        self, analysis_run_id: UUID, *, for_update: bool = False
+        self, analysis_run_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> AnalysisRun | None:
         return self.analysis_runs.get(analysis_run_id)
 
     async def latest_for_thread(
-        self, thread_id: UUID, *, for_update: bool = False
+        self, thread_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> AnalysisRun | None:
         values = sorted(
             (
@@ -179,7 +199,9 @@ class Repository:
         )
         return values[0] if values else None
 
-    async def all_for_thread(self, thread_id: UUID) -> tuple[AnalysisRun, ...]:
+    async def all_for_thread(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> tuple[AnalysisRun, ...]:
         return tuple(
             sorted(
                 (
@@ -213,11 +235,11 @@ class Repository:
         await self.append(thread_id=analysis_run.thread_id, **values)
 
     async def events_after(
-        self, thread_id: UUID, *, after: int, limit: int
+        self, thread_id: UUID, *, organization_id: UUID, after: int, limit: int
     ) -> tuple[object, ...]:
         return tuple(self.feed_events[thread_id][after : after + limit])
 
-    async def latest_sequence(self, thread_id: UUID) -> int:
+    async def latest_sequence(self, thread_id: UUID, *, organization_id: UUID) -> int:
         return len(self.feed_events[thread_id])
 
     async def get_group(

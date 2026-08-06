@@ -75,13 +75,19 @@ class _Visualizations:
         self.saved: list[VisualizationArtifact] = []
 
     async def get(
-        self, visualization_id: UUID, *, for_update: bool = False
+        self,
+        visualization_id: UUID,
+        *,
+        organization_id: UUID,
+        for_update: bool = False,
     ) -> VisualizationArtifact | None:
         if visualization_id != self.artifact.visualization_id:
             return None
         return self.artifact
 
-    async def brief(self, brief_id: UUID) -> VisualizationBriefV1 | None:
+    async def brief(
+        self, brief_id: UUID, *, organization_id: UUID
+    ) -> VisualizationBriefV1 | None:
         return brief()
 
     async def save(self, artifact: VisualizationArtifact) -> None:

@@ -118,7 +118,7 @@ class AnalysisRuns:
         self.rows[analysis_run.analysis_run_id] = analysis_run
 
     async def get(
-        self, analysis_run_id: UUID, *, for_update: bool = False
+        self, analysis_run_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> AnalysisRun | None:
         return self.rows.get(analysis_run_id)
 
@@ -143,6 +143,7 @@ class Approvals:
         self,
         analysis_run_id: UUID,
         *,
+        organization_id: UUID,
         approval_id: UUID | None = None,
         for_update: bool = False,
     ) -> HumanApproval | None:
@@ -191,8 +192,20 @@ class Citations:
             existing = self.rows.setdefault(citation.analysis_run_id, ())
             self.rows[citation.analysis_run_id] = (*existing, citation)
 
-    async def for_analysis_run(self, analysis_run_id: UUID) -> tuple[object, ...]:
+    async def for_analysis_run(
+        self, analysis_run_id: UUID, *, organization_id: UUID
+    ) -> tuple[object, ...]:
         return self.rows.get(analysis_run_id, ())
+
+    async def resolve(
+        self,
+        analysis_run_id: UUID,
+        citation_id: UUID,
+        *,
+        organization_id: UUID,
+    ) -> object | None:
+        # Fake implementation - not actually used in the tests
+        return None
 
 
 class DraftFindings:
@@ -202,7 +215,9 @@ class DraftFindings:
     async def add(self, draft: object) -> None:
         self.rows[draft.analysis_run_id] = draft
 
-    async def latest_for_analysis_run(self, analysis_run_id: UUID) -> object | None:
+    async def latest_for_analysis_run(
+        self, analysis_run_id: UUID, *, organization_id: UUID
+    ) -> object | None:
         return self.rows.get(analysis_run_id)
 
 
@@ -736,7 +751,9 @@ class Visualizations:
     ) -> None:
         self.rows[artifact.analysis_run_id] = artifact
 
-    async def latest_for_analysis_run(self, analysis_run_id: UUID) -> object | None:
+    async def latest_for_analysis_run(
+        self, analysis_run_id: UUID, *, organization_id: UUID
+    ) -> object | None:
         return self.rows.get(analysis_run_id)
 
 
@@ -1086,13 +1103,13 @@ class Erasures:
             requested_at=now,
         )
 
-    async def erase(self, *, analysis_run_id, category, now):
+    async def erase(self, *, analysis_run_id, category, organization_id, now):
         from zentra_domain_analysis_run import ErasureOperation, ErasureProgress
 
         self.erase_calls += 1
         done = ErasureOperation(
             erasure_id=UUID("93000000-0000-0000-0000-000000000001"),
-            organization_id=TENANT_ID,
+            organization_id=organization_id,
             analysis_run_id=analysis_run_id,
             category=category,
             progress=ErasureProgress.COMPLETED,

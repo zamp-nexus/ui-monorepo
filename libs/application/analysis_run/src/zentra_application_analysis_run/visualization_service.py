@@ -90,15 +90,19 @@ class VisualizationService:
         async with self._uow(
             actor.organization_id, actor.trace_id, actor.span_id
         ) as uow:
-            analysis_run = await uow.analysis_runs.get(analysis_run_id)
+            analysis_run = await uow.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("Visualization was not found")
             artifact = await uow.visualizations.latest_for_analysis_run(
-                analysis_run_id
+                analysis_run_id, organization_id=actor.organization_id
             )
             if artifact is None:
                 raise AnalysisRunNotFoundError("Visualization was not found")
-            brief = await uow.visualizations.brief(artifact.brief_id)
+            brief = await uow.visualizations.brief(
+                artifact.brief_id, organization_id=actor.organization_id
+            )
         return VisualizationDetail(artifact=artifact, fallback_brief=brief)
 
     async def get(
@@ -107,10 +111,14 @@ class VisualizationService:
         async with self._uow(
             actor.organization_id, actor.trace_id, actor.span_id
         ) as uow:
-            artifact = await uow.visualizations.get(visualization_id)
+            artifact = await uow.visualizations.get(
+                visualization_id, organization_id=actor.organization_id
+            )
             if artifact is None:
                 raise AnalysisRunNotFoundError("Visualization was not found")
-            brief = await uow.visualizations.brief(artifact.brief_id)
+            brief = await uow.visualizations.brief(
+                artifact.brief_id, organization_id=actor.organization_id
+            )
         return VisualizationDetail(artifact=artifact, fallback_brief=brief)
 
     async def execute_visualization_job(
@@ -120,13 +128,18 @@ class VisualizationService:
             raise _RendererUnavailable()
         now = self._now()
         async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
-            artifact = await uow.visualizations.get(visualization_id, for_update=True)
+            artifact = await uow.visualizations.get(
+                visualization_id, organization_id=organization_id, for_update=True
+            )
             if artifact is None or artifact.status in {
                 VisualizationArtifactStatus.READY,
                 VisualizationArtifactStatus.TOMBSTONED,
             }:
                 return
-            brief = await uow.visualizations.brief(artifact.brief_id)
+            assert artifact.organization_id == organization_id
+            brief = await uow.visualizations.brief(
+                artifact.brief_id, organization_id=organization_id
+            )
             if brief is None:
                 raise _BriefUnavailable()
             artifact = artifact.model_copy(
@@ -144,12 +157,15 @@ class VisualizationService:
         result = await self._renderer.render(brief)
         now = self._now()
         async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
-            current = await uow.visualizations.get(visualization_id, for_update=True)
+            current = await uow.visualizations.get(
+                visualization_id, organization_id=organization_id, for_update=True
+            )
             if (
                 current is None
                 or current.status is VisualizationArtifactStatus.TOMBSTONED
             ):
                 return
+            assert current.organization_id == organization_id
             ready = current.model_copy(
                 update={
                     "status": VisualizationArtifactStatus.READY,
@@ -180,12 +196,15 @@ class VisualizationService:
         failure_category: str,
     ) -> None:
         async with self._uow(organization_id, UUID(int=0), UUID(int=0)) as uow:
-            artifact = await uow.visualizations.get(visualization_id, for_update=True)
+            artifact = await uow.visualizations.get(
+                visualization_id, organization_id=organization_id, for_update=True
+            )
             if (
                 artifact is None
                 or artifact.status is VisualizationArtifactStatus.TOMBSTONED
             ):
                 return
+            assert artifact.organization_id == organization_id
             failed = artifact.model_copy(
                 update={
                     "status": VisualizationArtifactStatus.FAILED,
@@ -209,12 +228,16 @@ class VisualizationService:
         async with self._uow(
             actor.organization_id, actor.trace_id, actor.span_id
         ) as uow:
-            original = await uow.visualizations.get(visualization_id, for_update=True)
+            original = await uow.visualizations.get(
+                visualization_id, organization_id=actor.organization_id, for_update=True
+            )
             if original is None:
                 raise AnalysisRunNotFoundError("Visualization was not found")
             if original.status is not VisualizationArtifactStatus.FAILED:
                 raise ConflictError("Only a failed Visualization can be retried")
-            ordinal = await uow.visualizations.next_retry_ordinal(original.brief_id)
+            ordinal = await uow.visualizations.next_retry_ordinal(
+                original.brief_id, organization_id=actor.organization_id
+            )
             retried = VisualizationArtifact(
                 visualization_id=self._new_id(),
                 organization_id=original.organization_id,
@@ -240,7 +263,9 @@ class VisualizationService:
             await self._event(
                 uow, retried, WorkFeedEventKind.VISUALIZATION_RETRY_REQUESTED
             )
-            brief = await uow.visualizations.brief(retried.brief_id)
+            brief = await uow.visualizations.brief(
+                retried.brief_id, organization_id=actor.organization_id
+            )
             await uow.commit()
         return VisualizationDetail(artifact=retried, fallback_brief=brief)
 
@@ -255,15 +280,22 @@ class VisualizationService:
         async with self._uow(
             actor.organization_id, actor.trace_id, actor.span_id
         ) as uow:
-            artifact = await uow.visualizations.get(visualization_id)
+            artifact = await uow.visualizations.get(
+                visualization_id, organization_id=actor.organization_id
+            )
             action = await uow.visualizations.action(
-                visualization_id, action_id, for_update=True
+                visualization_id,
+                action_id,
+                organization_id=actor.organization_id,
+                for_update=True,
             )
             if artifact is None or action is None:
                 raise AnalysisRunNotFoundError("Visualization action was not found")
             if artifact.status is not VisualizationArtifactStatus.READY:
                 raise ConflictError("Visualization action is not available")
-            analysis_run = await uow.analysis_runs.get(action.analysis_run_id)
+            analysis_run = await uow.analysis_runs.get(
+                action.analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("Visualization action was not found")
             if action.expires_at <= now or action.consumed_at is not None:
@@ -271,7 +303,8 @@ class VisualizationService:
             if action.kind.value == "open_citation":
                 assert action.citation_id is not None
                 citation = await uow.citations.resolve(
-                    action.analysis_run_id, action.citation_id
+                    action.analysis_run_id, action.citation_id,
+                    organization_id=actor.organization_id
                 )
                 if citation is None:
                     raise AnalysisRunNotFoundError("Evidence was not found")

@@ -226,10 +226,12 @@ class PostgresAnalysisRunRepository:
         self,
         analysis_run_id: UUID,
         *,
+        organization_id: UUID,
         for_update: bool = False,
     ) -> AnalysisRun | None:
         query = select(analysis_runs).where(
-            analysis_runs.c.analysis_run_id == analysis_run_id
+            analysis_runs.c.analysis_run_id == analysis_run_id,
+            analysis_runs.c.organization_id == organization_id,
         )
         if for_update:
             query = query.with_for_update()
@@ -240,11 +242,15 @@ class PostgresAnalysisRunRepository:
         self,
         thread_id: UUID,
         *,
+        organization_id: UUID,
         for_update: bool = False,
     ) -> AnalysisRun | None:
         query = (
             select(analysis_runs)
-            .where(analysis_runs.c.chat_session_id == thread_id)
+            .where(
+                analysis_runs.c.chat_session_id == thread_id,
+                analysis_runs.c.organization_id == organization_id,
+            )
             .order_by(analysis_runs.c.chat_sequence.desc())
             .limit(1)
         )
@@ -253,11 +259,16 @@ class PostgresAnalysisRunRepository:
         row = (await self._connection.execute(query)).one_or_none()
         return _analysis_run_from_row(row) if row else None
 
-    async def all_for_thread(self, thread_id: UUID) -> tuple[AnalysisRun, ...]:
+    async def all_for_thread(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> tuple[AnalysisRun, ...]:
         rows = (
             await self._connection.execute(
                 select(analysis_runs)
-                .where(analysis_runs.c.chat_session_id == thread_id)
+                .where(
+                    analysis_runs.c.chat_session_id == thread_id,
+                    analysis_runs.c.organization_id == organization_id,
+                )
                 .order_by(analysis_runs.c.chat_sequence)
             )
         ).all()
@@ -273,6 +284,7 @@ class PostgresAnalysisRunRepository:
             update(analysis_runs)
             .where(
                 analysis_runs.c.analysis_run_id == analysis_run.analysis_run_id,
+                analysis_runs.c.organization_id == analysis_run.organization_id,
                 analysis_runs.c.version == expected_version,
             )
             .values(
@@ -311,11 +323,13 @@ class PostgresHumanApprovalRepository:
         self,
         analysis_run_id: UUID,
         *,
+        organization_id: UUID,
         approval_id: UUID | None = None,
         for_update: bool = False,
     ) -> HumanApproval | None:
         query = select(human_approvals).where(
-            human_approvals.c.analysis_run_id == analysis_run_id
+            human_approvals.c.analysis_run_id == analysis_run_id,
+            human_approvals.c.organization_id == organization_id,
         )
         if approval_id is not None:
             query = query.where(human_approvals.c.approval_id == approval_id)
@@ -348,7 +362,10 @@ class PostgresHumanApprovalRepository:
     async def save(self, approval: HumanApproval) -> None:
         await self._connection.execute(
             update(human_approvals)
-            .where(human_approvals.c.approval_id == approval.approval_id)
+            .where(
+                human_approvals.c.approval_id == approval.approval_id,
+                human_approvals.c.organization_id == approval.organization_id,
+            )
             .values(
                 status=approval.status.value,
                 decided_at=approval.decided_at,
@@ -478,11 +495,16 @@ class PostgresAuditOutboxRepository:
     async def all_for_analysis_run(
         self,
         analysis_run_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> tuple[OutboxRecord, ...]:
         rows = (
             await self._connection.execute(
                 select(audit_outbox)
-                .where(audit_outbox.c.analysis_run_id == analysis_run_id)
+                .where(
+                    audit_outbox.c.analysis_run_id == analysis_run_id,
+                    audit_outbox.c.organization_id == organization_id,
+                )
                 .order_by(audit_outbox.c.created_at, audit_outbox.c.event_id)
             )
         ).all()
@@ -499,17 +521,27 @@ class PostgresAuditOutboxRepository:
             for row in rows
         )
 
-    async def mark_dispatched(self, event_id: UUID, now: datetime) -> None:
+    async def mark_dispatched(
+        self, event_id: UUID, now: datetime, *, organization_id: UUID
+    ) -> None:
         await self._connection.execute(
             update(audit_outbox)
-            .where(audit_outbox.c.event_id == event_id)
+            .where(
+                audit_outbox.c.event_id == event_id,
+                audit_outbox.c.organization_id == organization_id,
+            )
             .values(dispatched_at=now, last_error_code=None)
         )
 
-    async def mark_failed(self, event_id: UUID, error_code: str) -> None:
+    async def mark_failed(
+        self, event_id: UUID, error_code: str, *, organization_id: UUID
+    ) -> None:
         await self._connection.execute(
             update(audit_outbox)
-            .where(audit_outbox.c.event_id == event_id)
+            .where(
+                audit_outbox.c.event_id == event_id,
+                audit_outbox.c.organization_id == organization_id,
+            )
             .values(
                 attempts=audit_outbox.c.attempts + 1,
                 last_error_code=error_code,
@@ -566,7 +598,9 @@ class PostgresAgentExecutionRepository:
             )
         )
 
-    async def usage_for_analysis_run(self, analysis_run_id: UUID) -> UsageSummary:
+    async def usage_for_analysis_run(
+        self, analysis_run_id: UUID, *, organization_id: UUID
+    ) -> UsageSummary:
         row = (
             await self._connection.execute(
                 select(
@@ -574,7 +608,10 @@ class PostgresAgentExecutionRepository:
                     func.coalesce(func.sum(agent_executions.c.output_tokens), 0),
                     func.coalesce(func.sum(agent_executions.c.cost_usd), 0),
                     func.coalesce(func.sum(agent_executions.c.latency_ms), 0),
-                ).where(agent_executions.c.analysis_run_id == analysis_run_id)
+                ).where(
+                    agent_executions.c.analysis_run_id == analysis_run_id,
+                    agent_executions.c.organization_id == organization_id,
+                )
             )
         ).one()
         return UsageSummary(

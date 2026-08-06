@@ -142,21 +142,29 @@ class PostgresVisualizationRepository:
             )
         )
 
-    async def brief(self, brief_id: UUID) -> VisualizationBriefV1 | None:
+    async def brief(
+        self, brief_id: UUID, *, organization_id: UUID
+    ) -> VisualizationBriefV1 | None:
         content = (
             await self._connection.execute(
                 select(visualization_briefs.c.content).where(
-                    visualization_briefs.c.brief_id == brief_id
+                    visualization_briefs.c.brief_id == brief_id,
+                    visualization_briefs.c.organization_id == organization_id,
                 )
             )
         ).scalar_one_or_none()
         return VisualizationBriefV1.model_validate(content) if content else None
 
     async def get(
-        self, visualization_id: UUID, *, for_update: bool = False
+        self,
+        visualization_id: UUID,
+        *,
+        organization_id: UUID,
+        for_update: bool = False,
     ) -> VisualizationArtifact | None:
         statement = select(visualization_artifacts).where(
-            visualization_artifacts.c.visualization_id == visualization_id
+            visualization_artifacts.c.visualization_id == visualization_id,
+            visualization_artifacts.c.organization_id == organization_id,
         )
         if for_update:
             statement = statement.with_for_update()
@@ -164,12 +172,15 @@ class PostgresVisualizationRepository:
         return _artifact(row) if row else None
 
     async def latest_for_analysis_run(
-        self, analysis_run_id: UUID
+        self, analysis_run_id: UUID, *, organization_id: UUID
     ) -> VisualizationArtifact | None:
         row = (
             await self._connection.execute(
                 select(visualization_artifacts)
-                .where(visualization_artifacts.c.analysis_run_id == analysis_run_id)
+                .where(
+                    visualization_artifacts.c.analysis_run_id == analysis_run_id,
+                    visualization_artifacts.c.organization_id == organization_id,
+                )
                 .order_by(
                     visualization_artifacts.c.retry_ordinal.desc(),
                     visualization_artifacts.c.created_at.desc(),
@@ -179,11 +190,14 @@ class PostgresVisualizationRepository:
         ).one_or_none()
         return _artifact(row) if row else None
 
-    async def next_retry_ordinal(self, brief_id: UUID) -> int:
+    async def next_retry_ordinal(
+        self, brief_id: UUID, *, organization_id: UUID
+    ) -> int:
         value = (
             await self._connection.execute(
                 select(func.max(visualization_artifacts.c.retry_ordinal)).where(
-                    visualization_artifacts.c.brief_id == brief_id
+                    visualization_artifacts.c.brief_id == brief_id,
+                    visualization_artifacts.c.organization_id == organization_id,
                 )
             )
         ).scalar_one()
@@ -193,7 +207,8 @@ class PostgresVisualizationRepository:
         await self._connection.execute(
             update(visualization_artifacts)
             .where(
-                visualization_artifacts.c.visualization_id == artifact.visualization_id
+                visualization_artifacts.c.visualization_id == artifact.visualization_id,
+                visualization_artifacts.c.organization_id == artifact.organization_id,
             )
             .values(
                 status=artifact.status.value,
@@ -212,11 +227,17 @@ class PostgresVisualizationRepository:
         )
 
     async def action(
-        self, visualization_id: UUID, action_id: UUID, *, for_update: bool = False
+        self,
+        visualization_id: UUID,
+        action_id: UUID,
+        *,
+        organization_id: UUID,
+        for_update: bool = False,
     ) -> VisualizationActionMapping | None:
         statement = select(visualization_actions).where(
             visualization_actions.c.visualization_id == visualization_id,
             visualization_actions.c.action_id == action_id,
+            visualization_actions.c.organization_id == organization_id,
         )
         if for_update:
             statement = statement.with_for_update()
@@ -226,13 +247,19 @@ class PostgresVisualizationRepository:
     async def save_action(self, action: VisualizationActionMapping) -> None:
         await self._connection.execute(
             update(visualization_actions)
-            .where(visualization_actions.c.action_id == action.action_id)
+            .where(
+                visualization_actions.c.action_id == action.action_id,
+                visualization_actions.c.organization_id == action.organization_id,
+            )
             .values(consumed_at=action.consumed_at)
         )
 
-    async def erase(self, analysis_run_id: UUID, *, category: str, now: Any) -> None:
+    async def erase(
+        self, analysis_run_id: UUID, *, organization_id: UUID, category: str, now: Any
+    ) -> None:
         artifact_ids = select(visualization_artifacts.c.visualization_id).where(
-            visualization_artifacts.c.analysis_run_id == analysis_run_id
+            visualization_artifacts.c.analysis_run_id == analysis_run_id,
+            visualization_artifacts.c.organization_id == organization_id,
         )
         await self._connection.execute(
             delete(visualization_actions).where(
@@ -241,12 +268,18 @@ class PostgresVisualizationRepository:
         )
         await self._connection.execute(
             update(visualization_briefs)
-            .where(visualization_briefs.c.analysis_run_id == analysis_run_id)
+            .where(
+                visualization_briefs.c.analysis_run_id == analysis_run_id,
+                visualization_briefs.c.organization_id == organization_id,
+            )
             .values(content=None)
         )
         await self._connection.execute(
             update(visualization_artifacts)
-            .where(visualization_artifacts.c.analysis_run_id == analysis_run_id)
+            .where(
+                visualization_artifacts.c.analysis_run_id == analysis_run_id,
+                visualization_artifacts.c.organization_id == organization_id,
+            )
             .values(
                 c1_response=None,
                 status=case(

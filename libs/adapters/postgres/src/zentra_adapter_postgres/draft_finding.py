@@ -110,6 +110,8 @@ class PostgresDraftFindingRepository:
     async def latest_for_analysis_run(
         self,
         analysis_run_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> DraftFinding | None:
         """The current draft, which is the highest version.
 
@@ -120,7 +122,10 @@ class PostgresDraftFindingRepository:
         row = (
             await self._connection.execute(
                 select(draft_findings)
-                .where(draft_findings.c.analysis_run_id == analysis_run_id)
+                .where(
+                    draft_findings.c.analysis_run_id == analysis_run_id,
+                    draft_findings.c.organization_id == organization_id,
+                )
                 .order_by(draft_findings.c.version.desc())
                 .limit(1)
             )
@@ -241,6 +246,8 @@ class PostgresEvidenceCitationRepository:
         self,
         analysis_run_id: UUID,
         citation_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> EvidenceCitation | Tombstone | None:
         """One citation, with its state decided against the evidence itself.
 
@@ -258,6 +265,7 @@ class PostgresEvidenceCitationRepository:
                 _resolvable().where(
                     evidence_citations.c.citation_id == citation_id,
                     evidence_citations.c.analysis_run_id == analysis_run_id,
+                    evidence_citations.c.organization_id == organization_id,
                 )
             )
         ).one_or_none()
@@ -268,7 +276,7 @@ class PostgresEvidenceCitationRepository:
             # values emptied would still hand back the metric, the period, the
             # grain and the filters — and a filter can carry customer values as
             # readily as an aggregate can.
-            erasure = await self._erasure_record(analysis_run_id)
+            erasure = await self._erasure_record(analysis_run_id, organization_id)
             return Tombstone(
                 citation_id=row.citation_id,
                 category=(
@@ -281,7 +289,7 @@ class PostgresEvidenceCitationRepository:
         return _citation_from_row(row)
 
     async def _erasure_record(
-        self, analysis_run_id: UUID
+        self, analysis_run_id: UUID, *, organization_id: UUID
     ) -> tuple[str, datetime] | None:
         """The category and instant the Tombstone reports.
 
@@ -297,6 +305,7 @@ class PostgresEvidenceCitationRepository:
                 )
                 .where(
                     erasure_operations.c.analysis_run_id == analysis_run_id,
+                    erasure_operations.c.organization_id == organization_id,
                     erasure_operations.c.completed_at.isnot(None),
                 )
                 .order_by(erasure_operations.c.completed_at.desc())
@@ -308,6 +317,8 @@ class PostgresEvidenceCitationRepository:
     async def for_analysis_run(
         self,
         analysis_run_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> tuple[EvidenceCitation, ...]:
         """The same derivation the single-citation path uses.
 
@@ -318,7 +329,8 @@ class PostgresEvidenceCitationRepository:
         rows = (
             await self._connection.execute(
                 _resolvable().where(
-                    evidence_citations.c.analysis_run_id == analysis_run_id
+                    evidence_citations.c.analysis_run_id == analysis_run_id,
+                    evidence_citations.c.organization_id == organization_id,
                 )
             )
         ).all()

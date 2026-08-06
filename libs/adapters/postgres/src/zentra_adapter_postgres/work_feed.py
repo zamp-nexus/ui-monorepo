@@ -44,7 +44,10 @@ class PostgresWorkFeedRepository:
         sequence = (
             await self._connection.execute(
                 update(chat_sessions)
-                .where(chat_sessions.c.chat_session_id == thread_id)
+                .where(
+                    chat_sessions.c.chat_session_id == thread_id,
+                    chat_sessions.c.organization_id == organization_id,
+                )
                 .values(
                     next_event_sequence=(
                         chat_sessions.c.next_event_sequence + 1
@@ -93,7 +96,8 @@ class PostgresWorkFeedRepository:
         thread_id = (
             await self._connection.execute(
                 select(analysis_runs.c.chat_session_id).where(
-                    analysis_runs.c.analysis_run_id == analysis_run_id
+                    analysis_runs.c.analysis_run_id == analysis_run_id,
+                    analysis_runs.c.organization_id == organization_id,
                 )
             )
         ).scalar_one_or_none()
@@ -109,13 +113,14 @@ class PostgresWorkFeedRepository:
         )
 
     async def events_after(
-        self, thread_id: UUID, *, after: int, limit: int = 500
+        self, thread_id: UUID, *, organization_id: UUID, after: int, limit: int = 500
     ) -> tuple[ThreadEvent, ...]:
         rows = (
             await self._connection.execute(
                 select(activity_events)
                 .where(
                     activity_events.c.chat_session_id == thread_id,
+                    activity_events.c.organization_id == organization_id,
                     activity_events.c.sequence > after,
                 )
                 .order_by(activity_events.c.sequence)
@@ -124,11 +129,12 @@ class PostgresWorkFeedRepository:
         ).all()
         return tuple(_event(row) for row in rows)
 
-    async def latest_sequence(self, thread_id: UUID) -> int:
+    async def latest_sequence(self, thread_id: UUID, *, organization_id: UUID) -> int:
         next_value = (
             await self._connection.execute(
                 select(chat_sessions.c.next_event_sequence).where(
-                    chat_sessions.c.chat_session_id == thread_id
+                    chat_sessions.c.chat_session_id == thread_id,
+                    chat_sessions.c.organization_id == organization_id,
                 )
             )
         ).scalar_one_or_none()

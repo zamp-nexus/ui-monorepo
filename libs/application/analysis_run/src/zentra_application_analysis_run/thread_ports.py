@@ -55,9 +55,11 @@ class ThreadRepository(Protocol):
         self, thread_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> AnalysisRunThread | None: ...
 
-    async def save_thread(self, thread: AnalysisRunThread) -> None: ...
+    async def save_thread(
+        self, thread: AnalysisRunThread, *, organization_id: UUID
+    ) -> None: ...
 
-    async def delete_thread(self, thread_id: UUID) -> None: ...
+    async def delete_thread(self, thread_id: UUID, *, organization_id: UUID) -> None: ...
 
     async def add_message(self, message: ThreadMessage) -> None: ...
 
@@ -68,6 +70,7 @@ class ThreadRepository(Protocol):
     async def list_threads(
         self,
         *,
+        organization_id: UUID,
         project_id: UUID,
         viewer_id: UUID,
         include_archived: bool,
@@ -75,11 +78,21 @@ class ThreadRepository(Protocol):
         after: ThreadCursor | None,
     ) -> ThreadSlice: ...
 
-    async def analysis_run_id_for_thread(self, thread_id: UUID) -> UUID | None: ...
+    async def analysis_run_id_for_thread(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None: ...
 
     async def visibility_and_creator(
-        self, thread_id: UUID
+        self, thread_id: UUID, *, organization_id: UUID
     ) -> tuple[str, UUID | None] | None: ...
+
+    async def source_scope_id(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None: ...
+
+    async def set_source_scope_id(
+        self, thread_id: UUID, source_scope_id: UUID | None, *, organization_id: UUID
+    ) -> None: ...
 
 
 class ThreadUnitOfWork(Protocol):

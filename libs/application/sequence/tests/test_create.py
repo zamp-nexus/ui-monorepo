@@ -56,7 +56,9 @@ async def test_create_persists_a_sequence_scoped_to_the_tenants_workspace() -> N
     assert view.thread_id == thread_id
     assert view.origin is SequenceOrigin.MANUAL
     assert view.dataset_workspace_id == dataset_workspace_id_for(TENANT_ID)
-    stored = await repository.get_sequence(view.sequence_id)
+    stored = await repository.get_sequence(
+        view.sequence_id, organization_id=TENANT_ID
+    )
     assert stored is not None
     assert stored.thread_id == thread_id
 

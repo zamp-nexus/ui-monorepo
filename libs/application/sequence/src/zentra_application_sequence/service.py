@@ -98,7 +98,9 @@ class SequenceService:
 
     async def _load(self, actor: AuthenticatedActor, sequence_id: UUID) -> Sequence:
         async with self._uow(actor) as unit_of_work:
-            sequence = await unit_of_work.sequences.get_sequence(sequence_id)
+            sequence = await unit_of_work.sequences.get_sequence(
+                sequence_id, organization_id=actor.organization_id
+            )
         if sequence is None or sequence.organization_id != actor.organization_id:
             raise SequenceNotFoundError(f"No Sequence {sequence_id} found")
         return sequence

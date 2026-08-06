@@ -272,6 +272,7 @@ async def test_every_surface_is_present_before_and_absent_after() -> None:
             operation = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
 
@@ -307,6 +308,7 @@ async def test_process_survives_what_content_does_not() -> None:
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
 
@@ -380,6 +382,7 @@ async def test_a_cited_claim_still_resolves_to_something() -> None:
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
 
@@ -490,11 +493,13 @@ async def test_erasing_twice_keeps_the_original_completion_time() -> None:
             first = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
             again = await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=later,
             )
 
@@ -524,6 +529,7 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
             await repository.mark_failed(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 failure_code="storage_unavailable",
             )
 
@@ -549,6 +555,7 @@ async def test_a_failed_erasure_is_retryable_and_never_completed() -> None:
             retried = await PostgresErasureRepository(connection).erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
         assert retried.progress is ErasureProgress.COMPLETED
@@ -580,6 +587,7 @@ async def test_a_rolled_back_erasure_leaves_everything_intact() -> None:
                 await repository.erase(
                     analysis_run_id=ANALYSIS_RUN,
                     category=DeletionCategory.ORGANIZATION_REQUEST,
+                    organization_id=TENANT,
                     now=NOW,
                 )
                 raise RuntimeError("interrupted after erasing, before commit")
@@ -658,6 +666,7 @@ async def test_the_audit_outbox_is_outside_the_mutation_boundary() -> None:
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
 
@@ -804,13 +813,14 @@ async def test_an_erased_citation_resolves_to_a_minimal_tombstone() -> None:
             await repository.erase(
                 analysis_run_id=ANALYSIS_RUN,
                 category=DeletionCategory.ORGANIZATION_REQUEST,
+                organization_id=TENANT,
                 now=NOW,
             )
 
         async with runtime.begin() as connection:
             await set_organization_context(connection, TENANT)
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(
-                ANALYSIS_RUN, CITATION
+                ANALYSIS_RUN, CITATION, organization_id=TENANT
             )
             # The row is still there — a claim must resolve to something.
             row_count = await connection.scalar(
@@ -851,7 +861,7 @@ async def test_unexpected_loss_is_still_unavailable_after_a_deletion_elsewhere(
             # This citation names no producing execution, so its evidence is
             # unreachable — a fault, not a deletion.
             resolved = await PostgresEvidenceCitationRepository(connection).resolve(
-                ANALYSIS_RUN, CITATION
+                ANALYSIS_RUN, CITATION, organization_id=TENANT
             )
 
         assert getattr(resolved, "state", None) is CitationState.UNAVAILABLE

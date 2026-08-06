@@ -11,6 +11,7 @@ from zentra_application_analysis_run import ExecutionJobWorker
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
 TENANT_ID = UUID("20000000-0000-0000-0000-000000000002")
+OTHER_TENANT_ID = UUID("20000000-0000-0000-0000-000000000009")
 ANALYSIS_RUN_ID = UUID("30000000-0000-0000-0000-000000000003")
 JOB_ID = UUID("51000000-0000-0000-0000-000000000001")
 
@@ -20,7 +21,12 @@ class Jobs:
         self.job = job
 
     async def claim_next(
-        self, *, worker_id: str, now: datetime, lease_for: timedelta
+        self,
+        *,
+        organization_id: UUID,
+        worker_id: str,
+        now: datetime,
+        lease_for: timedelta,
     ) -> ExecutionJob | None:
         if self.job.status is ExecutionJobStatus.QUEUED:
             self.job.claim(worker_id=worker_id, now=now, lease_for=lease_for)
@@ -28,7 +34,7 @@ class Jobs:
         return None
 
     async def get_job(
-        self, job_id: UUID, *, for_update: bool = False
+        self, job_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> ExecutionJob | None:
         return self.job if self.job.job_id == job_id else None
 
@@ -86,10 +92,10 @@ class Executor:
         self.failures.append(failure_category)
 
 
-def job() -> ExecutionJob:
+def job(*, organization_id: UUID = TENANT_ID) -> ExecutionJob:
     return ExecutionJob.create(
         job_id=JOB_ID,
-        organization_id=TENANT_ID,
+        organization_id=organization_id,
         analysis_run_id=ANALYSIS_RUN_ID,
         now=NOW,
     )
@@ -183,3 +189,25 @@ async def test_a_named_failure_category_is_used_as_is_not_reclassified() -> None
     failed = factory.uow.jobs.job
     assert failed.status is ExecutionJobStatus.FAILED
     assert failed.failure_category == "no_enabled_agent"
+
+
+@pytest.mark.asyncio
+async def test_worker_refuses_to_execute_a_job_claimed_under_the_wrong_organization() -> None:
+    """Regression: if claim_next() ever hands back a job whose own
+    organization_id disagrees with the org the claim was scoped to (the
+    production incident's root cause), the worker must not execute it under
+    either organization's actor -- it should log and move on, not run
+    cross-tenant work."""
+    factory = Factory(job(organization_id=OTHER_TENANT_ID))
+    executor = Executor()
+    worker = ExecutionJobWorker(
+        unit_of_work_factory=factory,
+        executor=executor,
+        worker_id="worker-a",
+        now=lambda: NOW,
+    )
+
+    worked = await worker.run_once()
+
+    assert worked is False
+    assert executor.calls == []

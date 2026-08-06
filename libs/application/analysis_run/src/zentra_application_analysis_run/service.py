@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from time import perf_counter
 from uuid import UUID
-
-_log = logging.getLogger(__name__)
 
 from zentra_domain_agent_execution import (
     ConfidenceOutcome,
@@ -209,7 +206,9 @@ class AnalysisRunService:
         async with self._unit_of_work_factory(
             organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=organization_id
+            )
         if analysis_run is not None:
             await self._fail(actor, analysis_run, failure_category)
 
@@ -230,7 +229,7 @@ class AnalysisRunService:
             organization_id, UUID(int=0), UUID(int=0)
         ) as unit_of_work:
             analysis_run = await unit_of_work.analysis_runs.get(
-                analysis_run_id, for_update=True
+                analysis_run_id, organization_id=organization_id, for_update=True
             )
             if analysis_run is None or analysis_run.status in TERMINAL_STATUSES:
                 return
@@ -264,14 +263,16 @@ class AnalysisRunService:
             actor.organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
             analysis_run = await unit_of_work.analysis_runs.get(
-                analysis_run_id, for_update=True
+                analysis_run_id, organization_id=actor.organization_id, for_update=True
             )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
             if analysis_run.status in TERMINAL_STATUSES:
                 raise ConflictError("A terminal AnalysisRun cannot be cancelled")
             job = await unit_of_work.jobs.get_for_analysis_run(
-                analysis_run_id, for_update=True
+                analysis_run_id,
+                organization_id=actor.organization_id,
+                for_update=True,
             )
             if job is None:
                 raise ConflictError("AnalysisRun execution is unavailable")
@@ -318,7 +319,7 @@ class AnalysisRunService:
             actor.organization_id, actor.trace_id, actor.span_id
         ) as unit_of_work:
             original = await unit_of_work.analysis_runs.get(
-                analysis_run_id, for_update=True
+                analysis_run_id, organization_id=actor.organization_id, for_update=True
             )
             if original is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
@@ -332,7 +333,9 @@ class AnalysisRunService:
             sequence = None
             if original.thread_id is not None:
                 latest = await unit_of_work.analysis_runs.latest_for_thread(
-                    original.thread_id, for_update=True
+                    original.thread_id,
+                    organization_id=actor.organization_id,
+                    for_update=True,
                 )
                 if latest is None or latest.analysis_run_id != analysis_run_id:
                     raise ConflictError(
@@ -405,7 +408,9 @@ class AnalysisRunService:
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
             threshold = await unit_of_work.policies.confidence_threshold(
@@ -414,14 +419,6 @@ class AnalysisRunService:
             model_tier = await unit_of_work.policies.model_tier(actor.organization_id)
 
         try:
-            _log.warning(
-                "[DEBUG-rls01] _execute analysis_run_id=%s actor_org=%s "
-                "analysis_run_org=%s data_connection_id=%r",
-                analysis_run_id,
-                actor.organization_id,
-                analysis_run.organization_id,
-                analysis_run.data_connection_id,
-            )
             result = await self._pipeline.run(
                 analysis_run_id=analysis_run_id,
                 organization_id=actor.organization_id,
@@ -579,21 +576,25 @@ class AnalysisRunService:
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
             approval = await unit_of_work.approvals.get_for_analysis_run(
-                analysis_run_id
+                analysis_run_id, organization_id=actor.organization_id
             )
             # Read inside the same organization-scoped transaction, so RLS decides
             # visibility rather than a second unguarded round trip.
             draft = await unit_of_work.draft_findings.latest_for_analysis_run(
-                analysis_run_id
+                analysis_run_id, organization_id=actor.organization_id
             )
-            citations = await unit_of_work.citations.for_analysis_run(analysis_run_id)
+            citations = await unit_of_work.citations.for_analysis_run(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             usage = (
                 await unit_of_work.agent_executions.usage_for_analysis_run(
-                    analysis_run_id
+                    analysis_run_id, organization_id=actor.organization_id
                 )
                 if hasattr(unit_of_work.agent_executions, "usage_for_analysis_run")
                 else UsageSummary()
@@ -641,7 +642,9 @@ class AnalysisRunService:
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
 
@@ -676,6 +679,7 @@ class AnalysisRunService:
                 operation = await unit_of_work.erasures.erase(
                     analysis_run_id=analysis_run_id,
                     category=category,
+                    organization_id=actor.organization_id,
                     now=now,
                 )
                 if operation.progress is not ErasureProgress.COMPLETED:
@@ -694,6 +698,7 @@ class AnalysisRunService:
                 if hasattr(unit_of_work, "visualizations"):
                     await unit_of_work.visualizations.erase(
                         analysis_run_id,
+                        organization_id=actor.organization_id,
                         category=category.value,
                         now=now,
                     )
@@ -746,12 +751,15 @@ class AnalysisRunService:
         ) as unit_of_work:
             # The AnalysisRun first, so a citation id from a readable
             # AnalysisRun cannot be used to probe an unreadable one.
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 raise AnalysisRunNotFoundError("AnalysisRun was not found")
             citation = await unit_of_work.citations.resolve(
                 analysis_run_id,
                 citation_id,
+                organization_id=actor.organization_id,
             )
         if citation is None:
             raise AnalysisRunNotFoundError("Evidence was not found")
@@ -778,10 +786,12 @@ class AnalysisRunService:
         ) as unit_of_work:
             analysis_run = await unit_of_work.analysis_runs.get(
                 analysis_run_id,
+                organization_id=actor.organization_id,
                 for_update=True,
             )
             approval = await unit_of_work.approvals.get_for_analysis_run(
                 analysis_run_id,
+                organization_id=actor.organization_id,
                 approval_id=approval_id,
                 for_update=True,
             )
@@ -826,11 +836,11 @@ class AnalysisRunService:
                             event_id=self._new_id(),
                         )
                     draft = await unit_of_work.draft_findings.latest_for_analysis_run(
-                        analysis_run_id
+                        analysis_run_id, organization_id=actor.organization_id
                     )
                     if decision is ApprovalDecision.APPROVE:
                         citations = await unit_of_work.citations.for_analysis_run(
-                            analysis_run_id
+                            analysis_run_id, organization_id=actor.organization_id
                         )
                         await prepare_published_visualization(
                             unit_of_work=unit_of_work,
@@ -854,7 +864,7 @@ class AnalysisRunService:
                     await unit_of_work.commit()
                 else:
                     draft = await unit_of_work.draft_findings.latest_for_analysis_run(
-                        analysis_run_id
+                        analysis_run_id, organization_id=actor.organization_id
                     )
             except AnalysisRunTransitionError as error:
                 raise ConflictError(str(error)) from error
@@ -967,11 +977,13 @@ class AnalysisRunService:
             actor.trace_id,
             actor.span_id,
         ) as unit_of_work:
-            analysis_run = await unit_of_work.analysis_runs.get(analysis_run_id)
+            analysis_run = await unit_of_work.analysis_runs.get(
+                analysis_run_id, organization_id=actor.organization_id
+            )
             if analysis_run is None:
                 return
             approval = await unit_of_work.approvals.get_for_analysis_run(
-                analysis_run_id
+                analysis_run_id, organization_id=actor.organization_id
             )
             if (
                 approval is None

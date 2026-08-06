@@ -73,6 +73,7 @@ class PostgresExecutionJobRepository:
     async def claim_next(
         self,
         *,
+        organization_id: UUID,
         worker_id: str,
         now: datetime,
         lease_for: timedelta,
@@ -80,6 +81,7 @@ class PostgresExecutionJobRepository:
         statement = (
             select(execution_jobs)
             .where(
+                execution_jobs.c.organization_id == organization_id,
                 or_(
                     and_(
                         execution_jobs.c.status == ExecutionJobStatus.QUEUED.value,
@@ -110,9 +112,12 @@ class PostgresExecutionJobRepository:
         return job
 
     async def get_job(
-        self, job_id: UUID, *, for_update: bool = False
+        self, job_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> ExecutionJob | None:
-        statement = select(execution_jobs).where(execution_jobs.c.job_id == job_id)
+        statement = select(execution_jobs).where(
+            execution_jobs.c.job_id == job_id,
+            execution_jobs.c.organization_id == organization_id,
+        )
         if for_update:
             statement = statement.with_for_update()
         row = (await self._connection.execute(statement)).one_or_none()
@@ -122,10 +127,12 @@ class PostgresExecutionJobRepository:
         self,
         analysis_run_id: UUID,
         *,
+        organization_id: UUID,
         for_update: bool = False,
     ) -> ExecutionJob | None:
         statement = select(execution_jobs).where(
             execution_jobs.c.analysis_run_id == analysis_run_id,
+            execution_jobs.c.organization_id == organization_id,
             execution_jobs.c.job_kind == ExecutionJobKind.ANALYSIS_RUN.value,
         )
         if for_update:
@@ -136,6 +143,9 @@ class PostgresExecutionJobRepository:
     async def save_job(self, job: ExecutionJob) -> None:
         await self._connection.execute(
             update(execution_jobs)
-            .where(execution_jobs.c.job_id == job.job_id)
+            .where(
+                execution_jobs.c.job_id == job.job_id,
+                execution_jobs.c.organization_id == job.organization_id,
+            )
             .values(**_values(job))
         )

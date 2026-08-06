@@ -20,12 +20,29 @@ class SequenceRepository(Protocol):
     async def add_sequence(self, sequence: Sequence) -> None: ...
 
     async def get_sequence(
-        self, sequence_id: UUID, *, for_update: bool = False
+        self, sequence_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> Sequence | None: ...
 
     async def list_sequences(
         self, *, organization_id: UUID, dataset_workspace_id: UUID
     ) -> tuple[SequenceListItem, ...]: ...
+
+    async def mark_final(
+        self,
+        *,
+        sequence_id: UUID,
+        prepared_table_id: UUID,
+        organization_id: UUID,
+        marked_at: object,
+    ) -> None: ...
+
+    async def unmark_final(
+        self,
+        *,
+        sequence_id: UUID,
+        prepared_table_id: UUID,
+        organization_id: UUID,
+    ) -> None: ...
 
 
 class SequenceUnitOfWork(Protocol):
