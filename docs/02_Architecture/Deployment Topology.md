@@ -6,13 +6,19 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-29
-updated: 2026-08-05
-reviewed: 2026-08-05
+updated: 2026-08-06
+reviewed: 2026-08-06
 confidence: verified
 implementation: current
 priority: high
 tags: [deployment, infrastructure, architecture]
-related: ["[[Architecture MOC]]", "[[Infrastructure Topology]]", "[[Managed Service Readiness]]", "[[Phase 3 Data Execution]]"]
+related:
+  [
+    '[[Architecture MOC]]',
+    '[[Infrastructure Topology]]',
+    '[[Managed Service Readiness]]',
+    '[[Phase 3 Data Execution]]',
+  ]
 repo_path: infra
 code_refs: [docker-compose.yml, apps/api/Dockerfile, infra/terraform/main.tf]
 ---
@@ -39,6 +45,20 @@ configuration lives at the repository root in `vercel.json` and rewrites deep
 links to `index.html`, allowing the browser router to resolve application
 routes such as `/chats`. The API is a separate Render service; it is not on the
 request path when Vercel resolves a frontend route.
+
+The public Nexus landing page is a second Vite application deployed through the
+separate Vercel project `nexus-landing`. Its source lives in `apps/landing`, its
+app-local deployment configuration lives in `apps/landing/vercel.json`, and its
+production hostname is `landing.nexus.openzentra.com`. The Vercel project uses
+`apps/landing` as its Root Directory with source files outside that directory
+enabled so the landing build can consume the shared design system. The landing
+page has no API or identity dependency; every product CTA crosses to the
+existing authenticated application at `nexus.openzentra.com`.
+
+The first production deployment is live on the Vercel-managed project aliases.
+The custom hostname is assigned to the project but remains pending external DNS
+ownership verification and CNAME configuration. No Vercel project identifiers
+or credentials are committed.
 
 Delivery-pipeline, secret-manager, rollback, and release-promotion details are
 still not defined in the repository.

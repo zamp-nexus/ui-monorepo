@@ -1,0 +1,13 @@
+{
+  "name": "landing-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "landing"
+    ]
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1"
+  }
+}

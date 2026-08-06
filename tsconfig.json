@@ -68,6 +68,12 @@
     },
     {
       "path": "./libs/foundation/authz"
+    },
+    {
+      "path": "./apps/landing-e2e"
+    },
+    {
+      "path": "./apps/landing"
     }
   ]
 }

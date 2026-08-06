@@ -1,0 +1,202 @@
+@keyframes status-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes architecture-flow {
+  0%,
+  100% {
+    transform: translateX(-300px);
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+  90% {
+    transform: translateX(300px);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .site-header {
+    grid-template-columns: 1fr auto;
+  }
+  .site-nav {
+    display: none;
+  }
+  .hero {
+    min-height: auto;
+    padding-top: 9rem;
+  }
+  .hero__content {
+    grid-template-columns: 1fr;
+  }
+  .hero__copy {
+    max-width: 780px;
+  }
+  .hero__visual {
+    max-width: 760px;
+  }
+  .principles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .principle:nth-child(2) {
+    border-right: 0;
+  }
+  .principle:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--landing-line);
+  }
+  .platform-story {
+    grid-template-columns: minmax(300px, 1fr) minmax(330px, 1fr);
+  }
+  .story-monitor {
+    padding: 2.5rem;
+  }
+  .operations__layout {
+    grid-template-columns: 1fr;
+  }
+  .operations__layout > div:last-child {
+    max-width: 760px;
+  }
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    min-height: 68px;
+    gap: 1rem;
+  }
+  .site-header > :last-child {
+    height: 40px;
+    padding: 0 0.85rem;
+    font-size: 0.8rem;
+  }
+  .wordmark {
+    font-size: 0.88rem;
+  }
+  .hero {
+    padding-top: 7.5rem;
+    padding-bottom: 5.5rem;
+  }
+  .hero__mark {
+    margin-top: 3.5rem;
+  }
+  .hero h1 {
+    font-size: clamp(3.35rem, 15vw, 5.4rem);
+  }
+  .hero__actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .hero__footnote {
+    right: var(--landing-gutter);
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .execution-visual__bar > span:nth-child(2) {
+    display: none;
+  }
+  .execution-rail li {
+    grid-template-columns: 2rem 1.6rem 1fr;
+  }
+  .execution-rail li > span:last-child {
+    display: none;
+  }
+  .execution-visual__footer {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    padding-block: 0.7rem;
+  }
+  .execution-visual::before {
+    left: 4.3rem;
+  }
+  .section-heading--split {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .principles {
+    grid-template-columns: 1fr;
+  }
+  .principle,
+  .principle + .principle {
+    min-height: 210px;
+    padding: 1.5rem 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--landing-line);
+  }
+  .principle h3 {
+    margin-top: 3rem;
+  }
+  .platform-story {
+    display: block;
+  }
+  .platform-story__steps {
+    padding: 0 var(--landing-gutter);
+  }
+  .story-step {
+    min-height: 54vh;
+    padding-right: 0;
+  }
+  .platform-story__sticky {
+    display: none;
+  }
+  .architecture-map {
+    margin-right: calc(var(--landing-gutter) * -0.6);
+    margin-left: calc(var(--landing-gutter) * -0.6);
+    overflow-x: auto;
+  }
+  .architecture-map svg {
+    width: 900px;
+    max-width: none;
+  }
+  .operations-trace__summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .operations-trace__summary span:nth-child(2) {
+    border-right: 0;
+  }
+  .operations-trace__summary span:nth-child(-n + 2) {
+    border-bottom: 1px solid color-mix(in srgb, var(--text-inverted) 12%, transparent);
+  }
+  .operations-trace__lines {
+    overflow-x: auto;
+  }
+  .operations-trace__lines li {
+    min-width: 600px;
+  }
+  .operations-trace__header > span:last-child,
+  .operations-trace__footer > span:last-child {
+    display: none;
+  }
+  .security__item {
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.5rem 1rem;
+    padding: 1.35rem 0;
+  }
+  .security__item p {
+    grid-column: 2;
+  }
+  .site-footer {
+    grid-template-columns: 1fr auto;
+  }
+  .site-footer > span:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

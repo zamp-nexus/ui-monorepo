@@ -1,0 +1,19 @@
+{
+  "name": "@open-zentra/landing",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "landing",
+    "tags": [
+      "layer:app",
+      "platform:react",
+      "scope:marketing"
+    ]
+  },
+  "dependencies": {
+    "@open-zentra/foundation-design-system": "workspace:*",
+    "@open-zentra/foundation-icons": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "motion": "^12.43.0"
+  }
+}

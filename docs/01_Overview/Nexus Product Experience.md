@@ -6,12 +6,18 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-08-04
-updated: 2026-08-05
-reviewed: 2026-08-05
+updated: 2026-08-06
+reviewed: 2026-08-06
 confidence: verified
 priority: high
 tags: [product, experience, design-system, nexus]
-related: ["[[Overview MOC]]", "[[User Workflows]]", "[[Phase 3 - Governed Bring Your Own Data]]", "[[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]"]
+related:
+  [
+    '[[Overview MOC]]',
+    '[[User Workflows]]',
+    '[[Phase 3 - Governed Bring Your Own Data]]',
+    '[[adr/0035-workflow-studio-v1-persists-but-does-not-execute-custom-workflows]]',
+  ]
 repo_path: apps/nexus
 ---
 
@@ -20,6 +26,26 @@ repo_path: apps/nexus
 Nexus is a self-service analytical workspace for a person who needs to bring
 data, ask a question, and understand the answer without being a specialist
 analyst.
+
+## Public landing experience
+
+The independently deployed `apps/landing` application introduces Nexus to
+engineers and technical decision-makers at `landing.nexus.openzentra.com`. It
+positions Nexus as the governed runtime for analytical agents and explains the
+intended platform through one continuous path: governed data, bounded agent
+execution, independent evaluation, Human Approval, evidence-backed publication,
+and immutable Replay.
+
+The landing page is public, static, and deliberately separate from Clerk and
+the product API. It does not duplicate sign-in or workspace routing. Its
+primary action, **Open Nexus**, crosses to the authenticated product at
+`nexus.openzentra.com`; the existing `apps/nexus` entry and organization
+resolution behavior remain authoritative.
+
+The landing page may communicate the accepted platform direction, including
+data intake, Sequences, semantic context, orchestration, and Replay. It must not
+invent customer logos, testimonials, adoption metrics, or quantitative product
+claims.
 
 ## Product loop
 
