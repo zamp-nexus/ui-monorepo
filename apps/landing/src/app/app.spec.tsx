@@ -53,12 +53,12 @@ describe('Nexus landing page', () => {
     render(<App />);
 
     expect(
-      screen.getByRole('heading', { name: /governed platform for agentic workflows/i }),
+      screen.getByRole('heading', { name: /agentic work needs a control plane/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { name: /extensibility without invisible automation/i }),
+      screen.getByRole('heading', { name: /make the work inspectable before making it autonomous/i }),
     ).toBeTruthy();
-    expect(screen.getByRole('link', { name: /explore the product/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /explore nexus/i }).getAttribute('href')).toBe(
       PRODUCT_URL,
     );
   });

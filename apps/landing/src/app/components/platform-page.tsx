@@ -1,34 +1,34 @@
 import { m, useReducedMotion } from 'motion/react';
 
-import { LANDING_URL, PRODUCT_URL } from '../constants';
+import { PRODUCT_URL } from '../constants';
 import { ProductWordmark } from './product-mark';
 
 const runtimeStages = [
-  ['01', 'Question', 'A tenant-scoped business question starts a durable run.'],
-  ['02', 'Governed query', 'The Analyst works only through approved semantic definitions.'],
-  ['03', 'Independent check', 'The Evaluator re-derives the result and bounds confidence.'],
-  ['04', 'Human decision', 'Policy opens approval when automation should stop.'],
-  ['05', 'Replay', 'Evidence, decisions, and attribution remain traceable.'],
+  ['01', 'Question', 'A tenant-scoped question opens a durable run.'],
+  ['02', 'Semantic query', 'The Analyst can use governed business definitions only.'],
+  ['03', 'Independent evaluation', 'A separate agent re-derives the result and bounds confidence.'],
+  ['04', 'Decision', 'Policy asks for a human when the evidence is not enough.'],
+  ['05', 'Replay', 'The process survives the answer as a traceable record.'],
 ] as const;
 
 const boundaries = [
-  ['Workflow roles', 'Registered and evaluation-gated before they can run.'],
-  ['Data connections', 'Tenant-scoped semantic catalogs, not arbitrary schemas.'],
-  ['Evidence and outcomes', 'Typed evidence, confidence bounds, and visible contradictions.'],
-  ['Human operations', 'Explicit approval authority at irreversible edges.'],
+  ['Workflow roles', 'Specialists are registered and evaluation-gated before they run.'],
+  ['Data scope', 'Connections resolve through tenant-scoped semantic catalogs.'],
+  ['Evidence rules', 'Claims carry typed evidence, confidence bounds, and contradictions.'],
+  ['Decision authority', 'Approval is an explicit product state, never an afterthought.'],
 ] as const;
 
 const architecture = [
-  ['React + Nx', 'A responsive workspace for workflows, state, approvals, and replay.'],
-  ['FastAPI control plane', 'Authenticated tenant resolution and durable job lifecycle.'],
-  ['Agent runtime', 'Registered Analyst, Evaluator, Orchestrator, and Insight roles.'],
-  ['Governed data layer', 'Cube-backed semantics constrain how agents retrieve measures.'],
-  ['Durable records', 'Postgres operational state plus ClickHouse audit metadata.'],
+  ['01', 'React + Nx', 'A responsive workspace for system state, approvals, and replay.'],
+  ['02', 'FastAPI control plane', 'Authenticated tenant resolution and durable jobs.'],
+  ['03', 'Agent runtime', 'Analyst, Evaluator, Orchestrator, and Insight roles.'],
+  ['04', 'Governed data', 'Cube-backed semantics constrain analytical access.'],
+  ['05', 'Durable record', 'Postgres operational state and ClickHouse audit metadata.'],
 ] as const;
 
 export const PlatformPage = () => {
   const reduceMotion = useReducedMotion();
-  const intro = {
+  const enter = {
     hidden: { opacity: 0, y: reduceMotion ? 0 : 18 },
     visible: { opacity: 1, y: 0 },
   };
@@ -38,85 +38,96 @@ export const PlatformPage = () => {
       <header className="platform-header">
         <a className="platform-header__brand" href="/" aria-label="Nexus home">
           <ProductWordmark />
+          <span>Platform</span>
         </a>
         <nav aria-label="Platform navigation">
           <a href="#runtime">Runtime</a>
-          <a href="#boundaries">Boundaries</a>
+          <a href="#controls">Controls</a>
           <a href="#architecture">Architecture</a>
         </nav>
-        <a className="platform-header__product" href={PRODUCT_URL}>Open Nexus ↗</a>
       </header>
 
       <main>
         <section className="platform-hero" aria-labelledby="platform-title">
-          <div className="platform-hero__grid" aria-hidden="true" />
+          <div className="platform-hero__grain" aria-hidden="true" />
           <m.div
-            className="platform-hero__content"
+            className="platform-hero__copy"
             initial="hidden"
             animate="visible"
             variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
           >
-            <m.p className="eyebrow platform-hero__eyebrow" variants={intro}>Nexus / platform</m.p>
-            <m.h1 id="platform-title" variants={intro}>The governed platform for agentic workflows.</m.h1>
-            <m.p className="platform-hero__lede" variants={intro}>
-              Bring data and define meaningful work without surrendering the boundaries that make
-              an agent trustworthy in production.
+            <m.p className="platform-kicker" variants={enter}>Nexus / Platform systems</m.p>
+            <m.h1 id="platform-title" variants={enter}>Agentic work needs a control plane.</m.h1>
+            <m.p className="platform-hero__lede" variants={enter}>
+              Nexus gives teams a governed surface for building, running, reviewing, and replaying
+              analytical workflows over their own data.
             </m.p>
-            <m.div className="platform-hero__actions" variants={intro}>
-              <a className="platform-action" href={PRODUCT_URL}>Explore the product ↗</a>
-              <a className="platform-link" href="#runtime">Inspect the runtime ↓</a>
+            <m.div className="platform-hero__actions" variants={enter}>
+              <a className="platform-action" href={PRODUCT_URL}>Explore Nexus <span>↗</span></a>
+              <a className="platform-text-link" href="#runtime">Read the system <span>↓</span></a>
             </m.div>
           </m.div>
+
           <m.div
-            className="execution-topology"
-            aria-label="The Nexus workflow: question, governed query, independent evaluation, human decision, and replay"
-            initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            className="hero-run"
+            initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.85, delay: 0.15 }}
+            aria-label="A governed analysis run with completed, review, and audit states"
           >
-            <div className="execution-topology__line execution-topology__line--one" aria-hidden="true" />
-            <div className="execution-topology__line execution-topology__line--two" aria-hidden="true" />
-            <div className="execution-topology__line execution-topology__line--three" aria-hidden="true" />
-            <span className="execution-node execution-node--question">Question</span>
-            <span className="execution-node execution-node--query">Semantic<br />query</span>
-            <span className="execution-node execution-node--evaluate">Independent<br />evaluation</span>
-            <span className="execution-node execution-node--decision">Human<br />decision</span>
-            <span className="execution-node execution-node--replay">Replay</span>
-            <span className="execution-topology__signal" aria-hidden="true" />
+            <div className="hero-run__topline"><span>RUN / 042</span><span>GOVERNED</span></div>
+            <div className="hero-run__question">
+              <span>Question</span>
+              <strong>Which revenue segment changed most this quarter?</strong>
+            </div>
+            <div className="hero-run__path" aria-hidden="true"><i /><i /><i /><i /></div>
+            <div className="hero-run__steps">
+              <div><span>01</span><strong>Analyst</strong><em>complete</em></div>
+              <div><span>02</span><strong>Evaluator</strong><em>verified</em></div>
+              <div><span>03</span><strong>Insight</strong><em>drafted</em></div>
+              <div><span>04</span><strong>Approval</strong><em>review</em></div>
+            </div>
+            <div className="hero-run__finding">
+              <span>Validated finding</span>
+              <p>EMEA enterprise expansion accounts for the largest quarter-over-quarter gain.</p>
+              <div><b>Evidence attached</b><b>Recheck converged</b></div>
+            </div>
+            <div className="hero-run__footer"><span>SEMANTIC DATA ACCESS</span><span>REPLAY READY</span></div>
           </m.div>
+          <p className="platform-hero__side-note">Designed for human judgment at the edge of automation.</p>
         </section>
 
-        <section className="platform-section platform-thesis" aria-labelledby="platform-thesis-title">
+        <section className="platform-manifesto" aria-labelledby="manifesto-title">
+          <div className="platform-manifesto__rule" aria-hidden="true" />
           <m.div
-            initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
+            initial={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 0.55 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
           >
-            <p className="platform-overline">The product thesis</p>
-            <h2 id="platform-thesis-title">Extensibility without invisible automation.</h2>
+            <p className="platform-kicker">The platform thesis</p>
+            <h2 id="manifesto-title">Make the work inspectable before making it autonomous.</h2>
             <p>
-              Generic workflows are useful only when a user can understand the data boundary,
-              validation path, and decision authority behind them. Nexus makes those conditions
-              part of the product surface, not an implementation detail.
+              A workflow is only useful when operators can understand what it can access, how it was
+              validated, and who has the authority to act on its output. Nexus turns those constraints
+              into product primitives.
             </p>
           </m.div>
         </section>
 
-        <section className="platform-section platform-runtime" id="runtime" aria-labelledby="runtime-title">
-          <div className="platform-section__label">01 / Runtime</div>
-          <div className="platform-section__heading">
-            <h2 id="runtime-title">A question becomes a finding through visible work.</h2>
-            <p>Each stage has a distinct responsibility, state, and operational consequence.</p>
+        <section className="platform-runtime" id="runtime" aria-labelledby="runtime-title">
+          <div className="platform-section-head">
+            <p className="platform-kicker">01 / Runtime</p>
+            <h2 id="runtime-title">One continuous record, from question to decision.</h2>
           </div>
-          <ol className="runtime-list">
+          <ol className="runtime-rail">
             {runtimeStages.map(([index, title, description]) => (
               <m.li
                 key={index}
-                initial={{ opacity: 0, x: reduceMotion ? 0 : -14 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.35 }}
-                transition={{ duration: 0.45, delay: Number(index) * 0.04 }}
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.45, delay: Number(index) * 0.05 }}
               >
                 <span>{index}</span><h3>{title}</h3><p>{description}</p>
               </m.li>
@@ -124,75 +135,65 @@ export const PlatformPage = () => {
           </ol>
         </section>
 
-        <section className="platform-boundaries" id="boundaries" aria-labelledby="boundaries-title">
-          <div className="platform-section platform-boundaries__inner">
-            <div className="platform-section__label">02 / Boundaries</div>
-            <div className="platform-boundaries__header">
-              <h2 id="boundaries-title">What can change—and what must remain enforced.</h2>
-              <p>Workflows can grow. The controls around data, evidence, and approval should not disappear as they do.</p>
-            </div>
-            <div className="boundary-list">
-              {boundaries.map(([title, description], index) => (
-                <m.article
-                  key={title}
-                  initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.25 }}
-                  transition={{ duration: 0.5, delay: index * 0.06 }}
-                >
-                  <span>0{index + 1}</span><h3>{title}</h3><p>{description}</p>
-                </m.article>
-              ))}
-            </div>
+        <section className="platform-controls" id="controls" aria-labelledby="controls-title">
+          <div className="platform-controls__intro">
+            <p className="platform-kicker">02 / Controls</p>
+            <h2 id="controls-title">Flexible where the work changes. Strict where trust depends on it.</h2>
+            <p>People can shape the workflow. The system keeps the controls around data, evidence, and decisions explicit.</p>
           </div>
-        </section>
-
-        <section className="platform-section platform-frontend" aria-labelledby="frontend-title">
-          <div className="platform-section__label">03 / Frontend system</div>
-          <div className="platform-frontend__layout">
-            <div>
-              <h2 id="frontend-title">The frontend is where an agent becomes operational software.</h2>
-            </div>
-            <div className="platform-frontend__copy">
-              <p>Queued, running, evaluated, approval-required, completed, and failed are different product states—not one generic loading experience.</p>
-              <p>That means making handoffs, evidence, retries, and choices legible while keeping hidden reasoning and raw customer rows out of the interface.</p>
-              <p>It also means responsive, accessible primitives that stay coherent as agents, workflows, and deployment options grow.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="platform-section platform-architecture" id="architecture" aria-labelledby="platform-architecture-title">
-          <div className="platform-section__label">04 / Architecture</div>
-          <div className="platform-section__heading">
-            <h2 id="platform-architecture-title">Clear seams make the platform easier to evolve.</h2>
-          </div>
-          <div className="architecture-list">
-            {architecture.map(([title, description]) => (
-              <article key={title}><h3>{title}</h3><p>{description}</p></article>
+          <div className="control-matrix">
+            <div className="control-matrix__axis"><span>Configurable</span><span>Enforced</span></div>
+            {boundaries.map(([title, description], index) => (
+              <m.article
+                key={title}
+                initial={{ opacity: 0, x: reduceMotion ? 0 : 18 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.45, delay: index * 0.06 }}
+              >
+                <span>0{index + 1}</span><h3>{title}</h3><p>{description}</p><i aria-hidden="true" />
+              </m.article>
             ))}
           </div>
         </section>
 
-        <section className="platform-section platform-scope" aria-labelledby="scope-title">
-          <div className="platform-section__label">05 / Scope</div>
-          <h2 id="scope-title">Built for a real system, not a perfect demo.</h2>
-          <p>
-            Nexus currently demonstrates governed analytical workflows and their trust surface. The
-            broader direction is safe workflow composition—not a claim that every arbitrary agent
-            workflow is already self-service or infallible.
-          </p>
-          <div className="scope-points">
-            <span>Next: safer composition</span><span>Next: sharper follow-up planning</span><span>Next: operator diagnostics</span>
+        <section className="platform-interface" aria-labelledby="interface-title">
+          <div className="platform-interface__number">03</div>
+          <div>
+            <p className="platform-kicker">The frontend system</p>
+            <h2 id="interface-title">The interface is where an agent becomes operational software.</h2>
+          </div>
+          <div className="platform-interface__copy">
+            <p>Queued, running, evaluated, approval-required, completed, and failed are different product states—not one generic loading experience.</p>
+            <p>Nexus makes handoffs, evidence, retries, and choices legible while keeping hidden reasoning and raw customer rows out of the interface.</p>
           </div>
         </section>
 
-        <section className="platform-cta" aria-labelledby="platform-cta-title">
-          <p className="platform-overline">See the work</p>
-          <h2 id="platform-cta-title">Build intelligence people can inspect.</h2>
-          <div>
-            <a className="platform-action" href={PRODUCT_URL}>Open Nexus ↗</a>
-            <a className="platform-link" href={`${LANDING_URL}/#top`}>Return to the story</a>
+        <section className="platform-architecture" id="architecture" aria-labelledby="architecture-title">
+          <div className="platform-section-head">
+            <p className="platform-kicker">04 / Architecture</p>
+            <h2 id="architecture-title">A platform with clear seams.</h2>
           </div>
+          <div className="architecture-stack">
+            {architecture.map(([index, title, description]) => (
+              <article key={index}><span>{index}</span><h3>{title}</h3><p>{description}</p></article>
+            ))}
+          </div>
+        </section>
+
+        <section className="platform-scope" aria-labelledby="scope-title">
+          <div className="platform-scope__meta"><p className="platform-kicker">05 / Scope</p></div>
+          <div className="platform-scope__content">
+            <h2 id="scope-title">A real system, with an honest edge.</h2>
+            <p>Nexus demonstrates governed analytical workflows today. The direction is safe workflow composition—not a claim that every arbitrary agent workflow is already self-service or infallible.</p>
+            <div><span>Next / safer composition</span><span>Next / sharper planning</span><span>Next / operator diagnostics</span></div>
+          </div>
+        </section>
+
+        <section className="platform-close" aria-labelledby="close-title">
+          <p className="platform-kicker">Nexus / governed intelligence</p>
+          <h2 id="close-title">Build workflows people can trust.</h2>
+          <a className="platform-action" href={PRODUCT_URL}>Open Nexus <span>↗</span></a>
         </section>
       </main>
       <footer className="platform-footer"><span>Nexus by OpenZentra</span><a href="/">Home</a></footer>

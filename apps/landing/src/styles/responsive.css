@@ -94,43 +94,46 @@
     flex: 1;
     white-space: nowrap;
   }
-  .execution-visual__bar > span:nth-child(2) {
-    display: none;
-  }
   .execution-visual__bar {
-    grid-template-columns: 1fr 1fr;
+    min-height: 44px;
+    padding: 0 1rem;
   }
-  .execution-visual__workspace {
-    min-height: auto;
-    grid-template-columns: 1fr;
+  .execution-visual__state {
+    font-size: 0;
   }
-  .execution-sidebar {
-    display: none;
+  .execution-visual__state i {
+    margin-right: 0;
   }
-  .execution-main {
-    padding: 0.85rem;
+  .execution-visual__body {
+    padding: 1rem;
   }
-  .scope-chip {
+  .execution-question em {
     display: none;
   }
   .execution-stages li {
-    min-height: 46px;
-    grid-template-columns: 1fr auto;
-    padding: 0 0.45rem;
+    min-height: 70px;
+    padding-right: 0.5rem;
   }
-  .execution-stages li > span {
+  .execution-stages li + li {
+    padding-left: 0.5rem;
+  }
+  .execution-stages li > span,
+  .execution-stages em {
     display: none;
   }
   .execution-finding {
+    padding: 1rem;
+  }
+  .execution-record {
     grid-template-columns: 1fr;
   }
-  .evidence-panel {
+  .evidence-register {
     display: none;
   }
-  .approval-bar > span {
+  .execution-approval > span {
     display: none;
   }
-  .approval-bar {
+  .execution-approval {
     justify-content: center;
   }
   .hero__proof {
