@@ -116,23 +116,29 @@ export const PlatformPage = () => {
         </section>
 
         <section className="platform-runtime" id="runtime" aria-labelledby="runtime-title">
-          <div className="platform-section-head">
-            <p className="platform-kicker">01 / Runtime</p>
-            <h2 id="runtime-title">One continuous record, from question to decision.</h2>
+          <div className="platform-runtime__intro">
+            <p className="platform-kicker">02 / Runtime</p>
+            <h2 id="runtime-title">A record that stays with the work.</h2>
+            <p>Every run begins with a bounded question and ends with a decision that can be inspected later.</p>
           </div>
-          <ol className="runtime-rail">
-            {runtimeStages.map(([index, title, description]) => (
-              <m.li
-                key={index}
-                initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.45, delay: Number(index) * 0.05 }}
-              >
-                <span>{index}</span><h3>{title}</h3><p>{description}</p>
-              </m.li>
-            ))}
-          </ol>
+          <div className="runtime-system">
+            <div className="runtime-system__signal" aria-hidden="true">
+              <span>Run / 042</span><i /><i /><i /><i /><b>Decision</b>
+            </div>
+            <ol className="runtime-rail">
+              {runtimeStages.map(([index, title, description]) => (
+                <m.li
+                  key={index}
+                  initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.25 }}
+                  transition={{ duration: 0.45, delay: Number(index) * 0.05 }}
+                >
+                  <span>{index}</span><h3>{title}</h3><p>{description}</p>
+                </m.li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         <section className="platform-controls" id="controls" aria-labelledby="controls-title">
@@ -158,7 +164,7 @@ export const PlatformPage = () => {
         </section>
 
         <section className="platform-interface" aria-labelledby="interface-title">
-          <div className="platform-interface__number">03</div>
+          <div className="platform-interface__number">04</div>
           <div>
             <p className="platform-kicker">The frontend system</p>
             <h2 id="interface-title">The interface is where an agent becomes operational software.</h2>
@@ -166,12 +172,13 @@ export const PlatformPage = () => {
           <div className="platform-interface__copy">
             <p>Queued, running, evaluated, approval-required, completed, and failed are different product states—not one generic loading experience.</p>
             <p>Nexus makes handoffs, evidence, retries, and choices legible while keeping hidden reasoning and raw customer rows out of the interface.</p>
+            <div className="interface-states"><span>Queued</span><span>Evaluated</span><span>Approval required</span><span>Replay ready</span></div>
           </div>
         </section>
 
         <section className="platform-architecture" id="architecture" aria-labelledby="architecture-title">
           <div className="platform-section-head">
-            <p className="platform-kicker">04 / Architecture</p>
+            <p className="platform-kicker">05 / Architecture</p>
             <h2 id="architecture-title">A platform with clear seams.</h2>
           </div>
           <div className="architecture-stack">
@@ -182,7 +189,7 @@ export const PlatformPage = () => {
         </section>
 
         <section className="platform-scope" aria-labelledby="scope-title">
-          <div className="platform-scope__meta"><p className="platform-kicker">05 / Scope</p></div>
+          <div className="platform-scope__meta"><p className="platform-kicker">06 / Scope</p></div>
           <div className="platform-scope__content">
             <h2 id="scope-title">A real system, with an honest edge.</h2>
             <p>Nexus demonstrates governed analytical workflows today. The direction is safe workflow composition—not a claim that every arbitrary agent workflow is already self-service or infallible.</p>
