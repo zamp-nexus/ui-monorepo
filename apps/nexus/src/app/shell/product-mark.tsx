@@ -31,14 +31,17 @@ export const ProductLogo = ({ className = 'h-9 w-9' }: { readonly className?: st
 };
 
 /**
- * The standalone product mark, and the only link back to the launcher.
+ * The product mark and wordmark together, and the only link back to the launcher.
  */
 export const ProductMark = () => (
   <Link
-    className="inline-flex h-10 w-10 items-center justify-center text-primary no-underline"
+    className="inline-flex items-center gap-2 text-primary no-underline"
     to="/"
     aria-label={`${PRODUCT_NAME} home`}
   >
-    <ProductLogo />
+    <ProductLogo className="h-10 w-10" />
+    <span className="text-lg font-semibold tracking-[-0.025em] text-foreground">
+      {PRODUCT_NAME}
+    </span>
   </Link>
 );

@@ -76,7 +76,12 @@ def classify_execution_failure(error: Exception) -> ExecutionFailure:
         return ExecutionFailure("provider_rate_limited", True)
     if "unavailable" in name or "connection" in name or "timeout" in name:
         return ExecutionFailure("dependency_unavailable", True)
-    if isinstance(error, (ValueError, TypeError, AssertionError)):
+    if isinstance(error, (ValueError, TypeError, AssertionError, LookupError)):
+        # `LookupError` is this codebase's convention for "the referenced
+        # domain object doesn't exist" (`DataSourceNotFoundError`,
+        # `CatalogVersionNotFoundError`, etc.) -- e.g. a Thread's Data
+        # Connection was disconnected after the Thread was created. Retrying
+        # cannot fix a reference that is gone.
         return ExecutionFailure("domain_failure", False)
     return ExecutionFailure("unexpected", False)
 
