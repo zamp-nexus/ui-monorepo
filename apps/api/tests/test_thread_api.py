@@ -67,6 +67,7 @@ class ThreadStub:
     def __init__(self) -> None:
         self.deleted = False
         self.last_content: str | None = None
+        self.last_title: str | None = None
 
     async def create(
         self, *args: object, content: str, **kwargs: object
@@ -102,6 +103,12 @@ class ThreadStub:
         return detail(status=ThreadStatus.ARCHIVED)
 
     async def restore(self, *args: object, **kwargs: object) -> ThreadDetail:
+        return detail()
+
+    async def rename(
+        self, *args: object, title: str, **kwargs: object
+    ) -> ThreadDetail:
+        self.last_title = title
         return detail()
 
     async def delete(self, *args: object, **kwargs: object) -> None:
@@ -165,6 +172,21 @@ def test_thread_requests_forbid_extra_fields(monkeypatch) -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_a_chat_title_can_be_renamed(monkeypatch) -> None:
+    bind_identity(monkeypatch)
+    threads = ThreadStub()
+
+    with client(threads=threads) as test_client:
+        response = test_client.patch(
+            f"/v1/chats/{THREAD_ID}",
+            headers=AUTH,
+            json={"title": "How was the yearly performance?"},
+        )
+
+    assert response.status_code == 200
+    assert threads.last_title == "How was the yearly performance?"
 
 
 def test_thread_conflicts_have_stable_codes(monkeypatch) -> None:

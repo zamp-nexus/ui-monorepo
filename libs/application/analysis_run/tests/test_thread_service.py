@@ -563,6 +563,25 @@ async def test_an_archived_thread_rejects_new_messages() -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_mutator_can_rename_a_thread() -> None:
+    value = repository()
+    threads = service(value)
+    acting_actor = actor()
+    created = await threads.create(
+        acting_actor,
+        project_id=GROUP_ID,
+        content="How is the business doing?",
+    )
+
+    renamed = await threads.rename(
+        acting_actor, created.thread_id, title="EU refund investigation"
+    )
+
+    assert renamed.title == "EU refund investigation"
+    assert value.threads[created.thread_id].title == "EU refund investigation"
+
+
+@pytest.mark.asyncio
 async def test_archived_parent_rejects_thread_creation() -> None:
     value = repository()
     value.groups[GROUP_ID].archive(NOW)
