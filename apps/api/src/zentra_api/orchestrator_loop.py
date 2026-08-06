@@ -14,6 +14,7 @@ the analysis run is finished, are decided by rule here.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ from datetime import UTC, datetime
 from itertools import count
 from time import perf_counter
 from uuid import UUID, uuid4
+
+_log = logging.getLogger(__name__)
 
 from zentra_adapter_cube import CubeSemanticLayer
 from zentra_adapter_langgraph import (
@@ -302,6 +305,13 @@ class OrchestratorLoop:
         model_tier: str = ModelTier.FREE.value,
         data_connection_id: UUID | tuple[UUID, ...] | None = None,
     ) -> PipelineResult:
+        _log.warning(
+            "[DEBUG-rls01] orchestrator._run analysis_run_id=%s organization_id=%s "
+            "data_connection_id=%r",
+            analysis_run_id,
+            organization_id,
+            data_connection_id,
+        )
         semantic_layer = await self._semantic_layers.resolve(
             organization_id=organization_id, data_connection_id=data_connection_id
         )

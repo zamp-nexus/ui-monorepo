@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from time import perf_counter
 from uuid import UUID
+
+_log = logging.getLogger(__name__)
 
 from zentra_domain_agent_execution import (
     ConfidenceOutcome,
@@ -411,6 +414,14 @@ class AnalysisRunService:
             model_tier = await unit_of_work.policies.model_tier(actor.organization_id)
 
         try:
+            _log.warning(
+                "[DEBUG-rls01] _execute analysis_run_id=%s actor_org=%s "
+                "analysis_run_org=%s data_connection_id=%r",
+                analysis_run_id,
+                actor.organization_id,
+                analysis_run.organization_id,
+                analysis_run.data_connection_id,
+            )
             result = await self._pipeline.run(
                 analysis_run_id=analysis_run_id,
                 organization_id=actor.organization_id,
