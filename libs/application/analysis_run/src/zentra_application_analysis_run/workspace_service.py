@@ -64,7 +64,10 @@ class GroupService:
         after = GroupCursor.decode(cursor) if cursor is not None else None
         async with self._uow(actor) as unit_of_work:
             page = await unit_of_work.groups.list_groups(
-                include_archived=include_archived, limit=limit, after=after
+                actor.organization_id,
+                include_archived=include_archived,
+                limit=limit,
+                after=after,
             )
         return GroupPage(
             items=tuple(self._group_detail(group, actor) for group in page.items),

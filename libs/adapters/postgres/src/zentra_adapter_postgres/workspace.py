@@ -92,12 +92,15 @@ class PostgresGroupRepository:
 
     async def list_groups(
         self,
+        organization_id: UUID,
         *,
         include_archived: bool,
         limit: int,
         after: GroupCursor | None,
     ) -> GroupSlice[Group]:
-        statement = select(workspace_groups)
+        statement = select(workspace_groups).where(
+            workspace_groups.c.organization_id == organization_id
+        )
         if not include_archived:
             statement = statement.where(workspace_groups.c.archived_at.is_(None))
         if after is not None:

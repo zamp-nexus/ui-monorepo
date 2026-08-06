@@ -42,7 +42,11 @@ class CubeClient:
             return False
 
     async def meta(self) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=10) as client:
+        # A tenant's first `/meta` call within `ScopedCubeSemanticLayers`'s
+        # cache TTL is Cube compiling that tenant's dynamic schema from its
+        # Join Graph, not a cached read -- the same order of magnitude as
+        # `load()`'s timeout below, not a lightweight metadata fetch.
+        async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(
                 f"{self._base_url}/cubejs-api/v1/meta",
                 headers=self._headers(),

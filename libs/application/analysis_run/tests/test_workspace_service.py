@@ -39,6 +39,7 @@ class Repository:
 
     async def list_groups(
         self,
+        organization_id: UUID,
         *,
         include_archived: bool,
         limit: int,
@@ -49,7 +50,8 @@ class Repository:
                 (
                     group
                     for group in self.groups.values()
-                    if include_archived or group.archived_at is None
+                    if group.organization_id == organization_id
+                    and (include_archived or group.archived_at is None)
                 ),
                 key=lambda group: (group.updated_at, group.group_id),
                 reverse=True,

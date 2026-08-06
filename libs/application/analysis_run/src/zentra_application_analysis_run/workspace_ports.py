@@ -20,6 +20,7 @@ class GroupRepository(Protocol):
 
     async def list_groups(
         self,
+        organization_id: UUID,
         *,
         include_archived: bool,
         limit: int,

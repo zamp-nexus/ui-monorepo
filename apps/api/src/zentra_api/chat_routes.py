@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated, NoReturn
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import (
     APIRouter,
     Depends,
@@ -35,6 +36,7 @@ from zentra_application_analysis_run import (
     ThreadStreamSnapshot,
 )
 from zentra_application_connector import CatalogVersionNotFoundError
+from zentra_domain_agent_execution import InvalidSemanticQueryError
 from zentra_domain_analysis_run import ThreadMessageError, ThreadTransitionError
 
 from .active_connection import active_data_connection_id
@@ -58,6 +60,12 @@ _THREAD_ERRORS = (
     ThreadNotFoundError,
     ThreadConflictError,
     ThreadMessageError,
+    # Intake resolution reads the scoped Cube catalog before routing a
+    # message -- a Cube outage/timeout or refused query there is the same
+    # "not ready yet" failure `connector_rows_routes.py` maps for table
+    # browsing, not a caller mistake.
+    httpx.HTTPError,
+    InvalidSemanticQueryError,
 )
 
 router = APIRouter(prefix="/v1")
@@ -136,6 +144,11 @@ def _error_code(error: Exception) -> tuple[str, int]:
         return "thread_not_found", status.HTTP_404_NOT_FOUND
     if isinstance(error, (ThreadConflictError, ThreadTransitionError)):
         return "thread_conflict", status.HTTP_409_CONFLICT
+    # Checked before the bare `ValueError` branch below --
+    # `InvalidSemanticQueryError` is itself a `ValueError`, and a Cube
+    # refusal/outage is "not ready yet", not a caller mistake.
+    if isinstance(error, (httpx.HTTPError, InvalidSemanticQueryError)):
+        return "data_not_reachable", status.HTTP_503_SERVICE_UNAVAILABLE
     if isinstance(error, (ThreadMessageError, ThreadCursorError, ValueError)):
         return "invalid_thread", status.HTTP_422_UNPROCESSABLE_ENTITY
     raise error  # pragma: no cover
