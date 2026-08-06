@@ -7,8 +7,8 @@ one of those through, and a journey asserting against state the product could
 never produce proves nothing about the product.
 
 Fixed UUIDs, because #25 asks that "refresh and deep links reconstruct the same
-Finding" — a deep link needs an id a spec can write down. Re-running replaces
-what it made rather than accumulating, so a journey never sees two of anything.
+Finding" — a deep link needs an id a spec can write down. Re-running replaces 
+what it made rather than accumulating, so a journey never sees two of anything. 
 """
 
 from __future__ import annotations
