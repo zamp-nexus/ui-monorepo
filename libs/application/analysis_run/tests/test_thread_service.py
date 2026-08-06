@@ -74,9 +74,12 @@ class Repository:
         return self.visibility[thread_id], self.created_by[thread_id]
 
     async def get_thread(
-        self, thread_id: UUID, *, for_update: bool = False
+        self, thread_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> AnalysisRunThread | None:
-        return self.threads.get(thread_id)
+        thread = self.threads.get(thread_id)
+        if thread is None or thread.organization_id != organization_id:
+            return None
+        return thread
 
     async def save_thread(self, thread: AnalysisRunThread) -> None:
         self.threads[thread.thread_id] = thread
@@ -88,7 +91,12 @@ class Repository:
     async def add_message(self, message: ThreadMessage) -> None:
         self.messages[message.thread_id].append(message)
 
-    async def messages_for_thread(self, thread_id: UUID) -> tuple[ThreadMessage, ...]:
+    async def messages_for_thread(
+        self, thread_id: UUID, organization_id: UUID
+    ) -> tuple[ThreadMessage, ...]:
+        thread = self.threads.get(thread_id)
+        if thread is None or thread.organization_id != organization_id:
+            return ()
         return tuple(self.messages[thread_id])
 
     async def list_threads(

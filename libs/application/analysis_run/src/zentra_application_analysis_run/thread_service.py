@@ -268,7 +268,9 @@ class ThreadService:
         now = self._now()
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             await self._require_writable_project(
@@ -310,7 +312,9 @@ class ThreadService:
                 )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
-            messages = await unit_of_work.threads.messages_for_thread(thread_id)
+            messages = await unit_of_work.threads.messages_for_thread(
+                thread_id, actor.organization_id
+            )
         return build_thread_detail(thread, messages, None, None, actor)
 
     async def create_streaming(
@@ -422,7 +426,9 @@ class ThreadService:
         now = self._now()
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             await self._require_writable_project(
@@ -444,7 +450,7 @@ class ThreadService:
                 now=now,
             )
             existing_messages = await unit_of_work.threads.messages_for_thread(
-                thread_id
+                thread_id, actor.organization_id
             )
             source_scope = _source_scope(thread.source_ids)
             routing = routing or await self._intake.resolve(
@@ -474,7 +480,9 @@ class ThreadService:
             )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
-            messages = await unit_of_work.threads.messages_for_thread(thread_id)
+            messages = await unit_of_work.threads.messages_for_thread(
+                thread_id, actor.organization_id
+            )
             detail = build_thread_detail(
                 thread, messages, analysis_run_id, routing, actor
             )
@@ -502,7 +510,9 @@ class ThreadService:
         is_active: bool
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             await self._require_writable_project(
@@ -522,7 +532,7 @@ class ThreadService:
                     now=now,
                 )
                 existing_messages = await unit_of_work.threads.messages_for_thread(
-                    thread_id
+                    thread_id, actor.organization_id
                 )
                 source_scope = _source_scope(thread.source_ids)
                 routing = routing or await self._intake.resolve(
@@ -554,7 +564,9 @@ class ThreadService:
                 )
                 await unit_of_work.threads.save_thread(thread)
                 await unit_of_work.commit()
-                messages = await unit_of_work.threads.messages_for_thread(thread_id)
+                messages = await unit_of_work.threads.messages_for_thread(
+                    thread_id, actor.organization_id
+                )
 
         if not is_active:
             await self._flush_audit(actor, analysis_run_id)
@@ -708,7 +720,9 @@ class ThreadService:
             )
         await unit_of_work.threads.save_thread(thread)
         await unit_of_work.commit()
-        messages = await unit_of_work.threads.messages_for_thread(thread.thread_id)
+        messages = await unit_of_work.threads.messages_for_thread(
+            thread.thread_id, actor.organization_id
+        )
         await self._flush_audit(actor, analysis_run_id)
         return build_thread_detail(thread, messages, analysis_run_id, routing, actor)
 
@@ -835,7 +849,9 @@ class ThreadService:
                 )
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
-            messages = await unit_of_work.threads.messages_for_thread(thread.thread_id)
+            messages = await unit_of_work.threads.messages_for_thread(
+                thread.thread_id, actor.organization_id
+            )
         await self._flush_audit(actor, analysis_run_id)
 
         yield ThreadStreamRouting(
@@ -861,10 +877,12 @@ class ThreadService:
     async def get(self, actor: AuthenticatedActor, thread_id: UUID) -> ThreadDetail:
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id)
+                await unit_of_work.threads.get_thread(thread_id, actor.organization_id)
             )
             await self._require_visible(unit_of_work, actor, thread_id)
-            messages = await unit_of_work.threads.messages_for_thread(thread_id)
+            messages = await unit_of_work.threads.messages_for_thread(
+                thread_id, actor.organization_id
+            )
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
                 thread_id
             )
@@ -953,14 +971,14 @@ class ThreadService:
         if after < 0 or limit < 1 or limit > 500:
             raise ValueError("Work Feed cursor or limit is invalid")
         async with self._uow(actor) as unit_of_work:
-            self._require_thread(await unit_of_work.threads.get_thread(thread_id))
+            self._require_thread(await unit_of_work.threads.get_thread(thread_id, actor.organization_id))
             return await unit_of_work.work_feed.events_after(
                 thread_id, after=after, limit=limit
             )
 
     async def event_cursor(self, actor: AuthenticatedActor, thread_id: UUID) -> int:
         async with self._uow(actor) as unit_of_work:
-            self._require_thread(await unit_of_work.threads.get_thread(thread_id))
+            self._require_thread(await unit_of_work.threads.get_thread(thread_id, actor.organization_id))
             return await unit_of_work.work_feed.latest_sequence(thread_id)
 
     async def list(
@@ -1002,7 +1020,9 @@ class ThreadService:
         self._require_mutator(actor)
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             thread.rename(title, self._now())
@@ -1014,7 +1034,9 @@ class ThreadService:
         self._require_mutator(actor)
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
@@ -1035,7 +1057,9 @@ class ThreadService:
         now = self._now()
         async with self._uow(actor) as unit_of_work:
             thread = self._require_thread(
-                await unit_of_work.threads.get_thread(thread_id, for_update=True)
+                await unit_of_work.threads.get_thread(
+                    thread_id, actor.organization_id, for_update=True
+                )
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             if restore:
@@ -1047,7 +1071,9 @@ class ThreadService:
                 thread.archive(now)
             await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
-            messages = await unit_of_work.threads.messages_for_thread(thread_id)
+            messages = await unit_of_work.threads.messages_for_thread(
+                thread_id, actor.organization_id
+            )
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
                 thread_id
             )

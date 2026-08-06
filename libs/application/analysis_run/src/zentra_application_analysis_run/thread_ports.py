@@ -52,7 +52,7 @@ class ThreadRepository(Protocol):
     async def add_thread(self, thread: AnalysisRunThread) -> None: ...
 
     async def get_thread(
-        self, thread_id: UUID, *, for_update: bool = False
+        self, thread_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> AnalysisRunThread | None: ...
 
     async def save_thread(self, thread: AnalysisRunThread) -> None: ...
@@ -62,7 +62,7 @@ class ThreadRepository(Protocol):
     async def add_message(self, message: ThreadMessage) -> None: ...
 
     async def messages_for_thread(
-        self, thread_id: UUID
+        self, thread_id: UUID, organization_id: UUID
     ) -> tuple[ThreadMessage, ...]: ...
 
     async def list_threads(

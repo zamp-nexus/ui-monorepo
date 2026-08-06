@@ -98,10 +98,11 @@ class PostgresThreadRepository:
         )
 
     async def get_thread(
-        self, thread_id: UUID, *, for_update: bool = False
+        self, thread_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> AnalysisRunThread | None:
         statement = select(chat_sessions).where(
-            chat_sessions.c.chat_session_id == thread_id
+            chat_sessions.c.chat_session_id == thread_id,
+            chat_sessions.c.organization_id == organization_id,
         )
         if for_update:
             statement = statement.with_for_update()
@@ -159,10 +160,15 @@ class PostgresThreadRepository:
             )
         )
 
-    async def messages_for_thread(self, thread_id: UUID) -> tuple[ThreadMessage, ...]:
+    async def messages_for_thread(
+        self, thread_id: UUID, organization_id: UUID
+    ) -> tuple[ThreadMessage, ...]:
         statement = (
             select(messages)
-            .where(messages.c.chat_session_id == thread_id)
+            .where(
+                messages.c.chat_session_id == thread_id,
+                messages.c.organization_id == organization_id,
+            )
             .order_by(
                 messages.c.created_at,
                 messages.c.sequence,
