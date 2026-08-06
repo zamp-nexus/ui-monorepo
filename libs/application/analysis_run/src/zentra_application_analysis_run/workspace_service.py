@@ -49,7 +49,7 @@ class GroupService:
 
     async def get_group(self, actor: AuthenticatedActor, group_id: UUID) -> GroupDetail:
         async with self._uow(actor) as unit_of_work:
-            group = await unit_of_work.groups.get_group(group_id)
+            group = await unit_of_work.groups.get_group(group_id, actor.organization_id)
         return self._group_detail(self._require_group(group), actor)
 
     async def list_groups(
@@ -101,7 +101,9 @@ class GroupService:
         self._require_manager(actor)
         async with self._uow(actor) as unit_of_work:
             group = self._require_group(
-                await unit_of_work.groups.get_group(group_id, for_update=True)
+                await unit_of_work.groups.get_group(
+                    group_id, actor.organization_id, for_update=True
+                )
             )
             change(group)
             await unit_of_work.groups.save_group(group)

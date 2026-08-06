@@ -213,9 +213,12 @@ class Repository:
         return len(self.feed_events[thread_id])
 
     async def get_group(
-        self, group_id: UUID, *, for_update: bool = False
+        self, group_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> Group | None:
-        return self.groups.get(group_id)
+        group = self.groups.get(group_id)
+        if group is None or group.organization_id != organization_id:
+            return None
+        return group
 
 
 class UnitOfWork:

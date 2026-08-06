@@ -20,6 +20,7 @@ from zentra_application_connector import (
     CatalogVersionNotFoundError,
     DataSourceNotFoundError,
 )
+from zentra_domain_agent_execution import InvalidSemanticQueryError
 
 from .connector_rows import (
     ROW_PAGE_SIZE,
@@ -45,10 +46,12 @@ def _handle_rows():
 
     A read open to any Organization member — same policy as `latest_catalog` and
     `list_agent_access`, no role gate. `TableNotInCatalogError` and
-    `CubeNotReadyError`/`httpx.HTTPError` both answer with a status the
-    frontend recognises as "not ready yet" rather than a generic failure —
-    see `datasets/api.ts`. Deliberately merged for v1: a stale/mistyped
-    table or data-source id reads the same as a genuine sync delay.
+    `CubeNotReadyError`/`httpx.HTTPError`/`InvalidSemanticQueryError` all answer
+    with a status the frontend recognises as "not ready yet" rather than a
+    generic failure — see `datasets/api.ts`. Deliberately merged for v1: a
+    stale/mistyped table or data-source id, and a Cube-side refusal of this
+    bypass query (misconfiguration, unsupported column type), all read the
+    same as a genuine sync delay.
     """
     try:
         yield
@@ -58,7 +61,7 @@ def _handle_rows():
         TableNotInCatalogError,
     ) as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
-    except (CubeNotReadyError, httpx.HTTPError) as error:
+    except (CubeNotReadyError, httpx.HTTPError, InvalidSemanticQueryError) as error:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "This table's data is not reachable yet — it may still be syncing.",

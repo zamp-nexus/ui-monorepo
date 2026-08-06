@@ -100,6 +100,14 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
     saveExpandedGroupIds(identity.organization_id, expandedGroupIds);
   }, [expandedGroupIds, expandedGroupsState.organizationId, identity.organization_id]);
 
+  // An in-SPA organization switch must not leave the previous organization's
+  // Group active: `initialGroup` itself re-resolves per organization, but the
+  // effect below only ever fills an *empty* `groupId`, so the stale value has
+  // to be cleared here first.
+  useEffect(() => {
+    setGroupId(null);
+  }, [identity.organization_id]);
+
   // The first available Group is a sensible initial destination, but every
   // later selection is intentional: opening a Group or one of its chats
   // makes it the destination for the next new chat.
@@ -131,7 +139,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   }, [updateExpandedGroupIds]);
 
   const groupsQuery = useQuery({
-    queryKey: ['groups'],
+    queryKey: ['groups', identity.organization_id],
     queryFn: () => listGroups(getToken),
     enabled: Boolean(initialGroup.data),
   });

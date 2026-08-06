@@ -155,7 +155,7 @@ class ThreadService:
             source_ids=_source_ids(data_connection_id),
         )
         async with self._uow(actor) as unit_of_work:
-            await self._require_writable_project(unit_of_work, project_id)
+            await self._require_writable_project(unit_of_work, project_id, actor.organization_id)
             await unit_of_work.threads.add_thread(thread)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
@@ -234,7 +234,7 @@ class ThreadService:
         )
         thread.activate(now)
         async with self._uow(actor) as unit_of_work:
-            await self._require_writable_project(unit_of_work, project_id)
+            await self._require_writable_project(unit_of_work, project_id, actor.organization_id)
             await unit_of_work.threads.add_thread(thread)
             for message in (user_message, assistant_message):
                 await unit_of_work.threads.add_message(message)
@@ -271,7 +271,9 @@ class ThreadService:
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
             await self._require_visible(unit_of_work, actor, thread_id)
-            await self._require_writable_project(unit_of_work, thread.project_id)
+            await self._require_writable_project(
+                unit_of_work, thread.project_id, actor.organization_id
+            )
             if thread.status is ThreadStatus.ARCHIVED:
                 raise ThreadConflictError("Archived Threads cannot accept messages")
             user_message = ThreadMessage.create(
@@ -356,7 +358,7 @@ class ThreadService:
             source_ids=_source_ids(data_connection_id),
         )
         async with self._uow(actor) as unit_of_work:
-            await self._require_writable_project(unit_of_work, project_id)
+            await self._require_writable_project(unit_of_work, project_id, actor.organization_id)
             await unit_of_work.threads.add_thread(thread)
             await unit_of_work.threads.add_message(message)
             await unit_of_work.work_feed.append(
@@ -423,7 +425,9 @@ class ThreadService:
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
             await self._require_visible(unit_of_work, actor, thread_id)
-            await self._require_writable_project(unit_of_work, thread.project_id)
+            await self._require_writable_project(
+                unit_of_work, thread.project_id, actor.organization_id
+            )
             if thread.status is ThreadStatus.ARCHIVED:
                 raise ThreadConflictError("Archived Threads cannot accept messages")
             if thread.status is ThreadStatus.ACTIVE:
@@ -501,7 +505,9 @@ class ThreadService:
                 await unit_of_work.threads.get_thread(thread_id, for_update=True)
             )
             await self._require_visible(unit_of_work, actor, thread_id)
-            await self._require_writable_project(unit_of_work, thread.project_id)
+            await self._require_writable_project(
+                unit_of_work, thread.project_id, actor.organization_id
+            )
             if thread.status is ThreadStatus.ARCHIVED:
                 raise ThreadConflictError("Archived Threads cannot accept messages")
             is_active = thread.status is ThreadStatus.ACTIVE
@@ -969,7 +975,9 @@ class ThreadService:
         limit = validate_page_size(limit, MAX_PAGE_SIZE)
         after = ThreadCursor.decode(cursor) if cursor else None
         async with self._uow(actor) as unit_of_work:
-            require_group(await unit_of_work.groups.get_group(project_id))
+            require_group(
+                await unit_of_work.groups.get_group(project_id, actor.organization_id)
+            )
             page = await unit_of_work.threads.list_threads(
                 project_id=project_id,
                 viewer_id=actor.user_id,
@@ -1031,7 +1039,9 @@ class ThreadService:
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             if restore:
-                await self._require_writable_project(unit_of_work, thread.project_id)
+                await self._require_writable_project(
+                    unit_of_work, thread.project_id, actor.organization_id
+                )
                 thread.restore(now)
             else:
                 thread.archive(now)
@@ -1333,11 +1343,16 @@ class ThreadService:
         )
 
     async def _require_writable_project(
-        self, unit_of_work: ThreadUnitOfWork, project_id: UUID
+        self,
+        unit_of_work: ThreadUnitOfWork,
+        project_id: UUID,
+        organization_id: UUID,
     ) -> None:
         # `project_id` names a Group directly now -- Groups own Chat Sessions
         # directly, with no Project layer between them (ADR-0028).
-        group = require_group(await unit_of_work.groups.get_group(project_id))
+        group = require_group(
+            await unit_of_work.groups.get_group(project_id, organization_id)
+        )
         if group.archived_at is not None:
             raise ThreadConflictError("Archived Groups cannot accept Thread messages")
 

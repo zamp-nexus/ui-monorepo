@@ -64,10 +64,11 @@ class PostgresGroupRepository:
             _translate_integrity(error)
 
     async def get_group(
-        self, group_id: UUID, *, for_update: bool = False
+        self, group_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> Group | None:
         statement = select(workspace_groups).where(
-            workspace_groups.c.group_id == group_id
+            workspace_groups.c.group_id == group_id,
+            workspace_groups.c.organization_id == organization_id,
         )
         if for_update:
             statement = statement.with_for_update()

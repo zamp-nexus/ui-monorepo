@@ -13,6 +13,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { useAuth } from '@open-zentra/foundation-auth';
+
 import { ApiError, type TokenSource } from '../../api';
 import { createGroup, listGroups } from './api';
 
@@ -53,12 +55,17 @@ const resolveGroupId = async (getToken: TokenSource): Promise<string> => {
   return created.group_id;
 };
 
-export const useActiveGroup = (getToken: TokenSource) =>
-  useQuery({
-    queryKey: activeGroupKey,
+export const useActiveGroup = (getToken: TokenSource) => {
+  const { tenant } = useAuth();
+  return useQuery({
+    // Scoped by organization: an in-SPA org switch must resolve (and, for a
+    // fresh org, provision) a Group of its own rather than reusing the
+    // previous organization's answer.
+    queryKey: [...activeGroupKey, tenant?.id],
     queryFn: () => resolveGroupId(getToken),
     // The answer changes about once per tenant lifetime.
     staleTime: Number.POSITIVE_INFINITY,
     // Retrying a create that already succeeded is how duplicates happen.
     retry: false,
   });
+};
