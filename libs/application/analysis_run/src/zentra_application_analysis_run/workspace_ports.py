@@ -16,9 +16,7 @@ class GroupRepository(Protocol):
         self, group_id: UUID, organization_id: UUID, *, for_update: bool = False
     ) -> Group | None: ...
 
-    async def save_group(
-        self, group: Group, *, organization_id: UUID
-    ) -> None: ...
+    async def save_group(self, group: Group) -> None: ...
 
     async def list_groups(
         self,

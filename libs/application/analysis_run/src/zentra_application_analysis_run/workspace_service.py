@@ -109,7 +109,7 @@ class GroupService:
                 )
             )
             change(group)
-            await unit_of_work.groups.save_group(group, organization_id=actor.organization_id)
+            await unit_of_work.groups.save_group(group)
             await unit_of_work.commit()
         return self._group_detail(group, actor)
 

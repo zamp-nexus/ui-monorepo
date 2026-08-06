@@ -109,14 +109,12 @@ class PostgresThreadRepository:
         row = (await self._connection.execute(statement)).first()
         return _thread_from_row(row) if row else None
 
-    async def save_thread(
-        self, thread: AnalysisRunThread, *, organization_id: UUID
-    ) -> None:
+    async def save_thread(self, thread: AnalysisRunThread) -> None:
         await self._connection.execute(
             update(chat_sessions)
             .where(
                 chat_sessions.c.chat_session_id == thread.thread_id,
-                chat_sessions.c.organization_id == organization_id,
+                chat_sessions.c.organization_id == thread.organization_id,
             )
             .values(
                 title=thread.title,

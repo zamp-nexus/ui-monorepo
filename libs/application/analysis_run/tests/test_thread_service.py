@@ -81,9 +81,7 @@ class Repository:
             return None
         return thread
 
-    async def save_thread(
-        self, thread: AnalysisRunThread, *, organization_id: UUID
-    ) -> None:
+    async def save_thread(self, thread: AnalysisRunThread) -> None:
         self.threads[thread.thread_id] = thread
 
     async def delete_thread(self, thread_id: UUID, *, organization_id: UUID) -> None:

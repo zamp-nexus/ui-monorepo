@@ -249,7 +249,7 @@ class ThreadService:
                     occurred_at=now,
                     event_id=self._new_id(),
                 )
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
         return build_thread_detail(
             thread, (user_message, assistant_message), None, None, actor
@@ -310,7 +310,7 @@ class ThreadService:
                     occurred_at=now,
                     event_id=self._new_id(),
                 )
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(
                 thread_id, actor.organization_id
@@ -478,7 +478,7 @@ class ThreadService:
                 now,
                 data_connection_id=source_scope,
             )
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(
                 thread_id, actor.organization_id
@@ -562,7 +562,7 @@ class ThreadService:
                         data_connection_id=source_scope,
                     )
                 )
-                await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+                await unit_of_work.threads.save_thread(thread)
                 await unit_of_work.commit()
                 messages = await unit_of_work.threads.messages_for_thread(
                     thread_id, actor.organization_id
@@ -718,7 +718,7 @@ class ThreadService:
                 occurred_at=now,
                 event_id=self._new_id(),
             )
-        await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+        await unit_of_work.threads.save_thread(thread)
         await unit_of_work.commit()
         messages = await unit_of_work.threads.messages_for_thread(
             thread.thread_id, actor.organization_id
@@ -847,7 +847,7 @@ class ThreadService:
                     occurred_at=now,
                     event_id=self._new_id(),
                 )
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(
                 thread.thread_id, actor.organization_id
@@ -1072,7 +1072,7 @@ class ThreadService:
                 thread.restore(now)
             else:
                 thread.archive(now)
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             await unit_of_work.commit()
             messages = await unit_of_work.threads.messages_for_thread(
                 thread_id, actor.organization_id
@@ -1101,7 +1101,7 @@ class ThreadService:
             # ordinary greeting followed by an unrelated real question.
             thread.title = deterministic_thread_title(message.content)
             thread.activate(now)
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             reply_message = await self._conversational_reply(
                 unit_of_work, actor, thread, message.content, routing
             )
@@ -1147,7 +1147,7 @@ class ThreadService:
         await unit_of_work.analysis_runs.add(analysis_run)
         await unit_of_work.jobs.add_job(job)
         await unit_of_work.outbox.enqueue(analysis_run.events)
-        await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+        await unit_of_work.threads.save_thread(thread)
         await unit_of_work.work_feed.append(
             organization_id=actor.organization_id,
             thread_id=thread.thread_id,
@@ -1190,7 +1190,7 @@ class ThreadService:
         if routing.disposition is RoutingDisposition.NOT_ANALYTICAL:
             thread.title = deterministic_thread_title(message.content)
             thread.activate(now)
-            await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+            await unit_of_work.threads.save_thread(thread)
             return None, (), message.content
         if routing.disposition is not RoutingDisposition.RESOLVED:
             router_messages = self._router_messages(thread, routing, now)
@@ -1230,7 +1230,7 @@ class ThreadService:
         await unit_of_work.analysis_runs.add(analysis_run)
         await unit_of_work.jobs.add_job(job)
         await unit_of_work.outbox.enqueue(analysis_run.events)
-        await unit_of_work.threads.save_thread(thread, organization_id=actor.organization_id)
+        await unit_of_work.threads.save_thread(thread)
         await unit_of_work.work_feed.append(
             organization_id=actor.organization_id,
             thread_id=thread.thread_id,

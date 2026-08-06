@@ -75,15 +75,13 @@ class PostgresGroupRepository:
         row = (await self._connection.execute(statement)).first()
         return _group_from_row(row) if row is not None else None
 
-    async def save_group(
-        self, group: Group, *, organization_id: UUID
-    ) -> None:
+    async def save_group(self, group: Group) -> None:
         try:
             await self._connection.execute(
                 update(workspace_groups)
                 .where(
                     workspace_groups.c.group_id == group.group_id,
-                    workspace_groups.c.organization_id == organization_id,
+                    workspace_groups.c.organization_id == group.organization_id,
                 )
                 .values(
                     name=group.name,

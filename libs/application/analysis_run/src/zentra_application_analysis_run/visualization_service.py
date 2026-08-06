@@ -136,7 +136,6 @@ class VisualizationService:
                 VisualizationArtifactStatus.TOMBSTONED,
             }:
                 return
-            assert artifact.organization_id == organization_id
             brief = await uow.visualizations.brief(
                 artifact.brief_id, organization_id=organization_id
             )
@@ -165,7 +164,6 @@ class VisualizationService:
                 or current.status is VisualizationArtifactStatus.TOMBSTONED
             ):
                 return
-            assert current.organization_id == organization_id
             ready = current.model_copy(
                 update={
                     "status": VisualizationArtifactStatus.READY,
@@ -204,7 +202,6 @@ class VisualizationService:
                 or artifact.status is VisualizationArtifactStatus.TOMBSTONED
             ):
                 return
-            assert artifact.organization_id == organization_id
             failed = artifact.model_copy(
                 update={
                     "status": VisualizationArtifactStatus.FAILED,
