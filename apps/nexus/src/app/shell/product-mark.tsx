@@ -15,8 +15,11 @@ export const ProductLogo = ({ className = 'h-9 w-9' }: { readonly className?: st
       <defs>
         <filter id={filterId} colorInterpolationFilters="sRGB">
           <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="luminance" />
-          <feComponentTransfer in="luminance" result="mark">
+          <feComponentTransfer in="luminance" result="invertedLuminance">
             <feFuncA type="table" tableValues="1 0" />
+          </feComponentTransfer>
+          <feComponentTransfer in="invertedLuminance" result="mark">
+            <feFuncA type="gamma" amplitude="1.25" exponent="2.4" offset="-0.07" />
           </feComponentTransfer>
           <feFlood floodColor="currentColor" result="brandColor" />
           <feComposite in="brandColor" in2="mark" operator="in" />

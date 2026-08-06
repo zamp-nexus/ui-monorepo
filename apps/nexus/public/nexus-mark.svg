@@ -2,7 +2,8 @@
   <defs>
     <filter id="mark" color-interpolation-filters="sRGB">
       <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="luminance"/>
-      <feComponentTransfer in="luminance" result="shape"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+      <feComponentTransfer in="luminance" result="invertedLuminance"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+      <feComponentTransfer in="invertedLuminance" result="shape"><feFuncA type="gamma" amplitude="1.25" exponent="2.4" offset="-0.07"/></feComponentTransfer>
       <feFlood flood-color="currentColor" result="brandColor"/>
       <feComposite in="brandColor" in2="shape" operator="in"/>
     </filter>
