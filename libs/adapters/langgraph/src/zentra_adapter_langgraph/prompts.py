@@ -73,6 +73,11 @@ human-confirmed joins. data_query takes a structured Cube query against exactly
 one selected source_id. It can use compiled members beyond the governed catalog,
 but never SQL or a cross-source join.
 
+Every table also has a `count` measure (its row count) and, for each numeric
+field, a `total_<field>` sum measure — schema_inspect lists these explicitly
+under `measures`, each with its exact `query_member` string. Use that string
+as given; do not guess a measure name or invent your own.
+
 For a catalog or schema question, answer from the first two tools. For a
 question with figures, run data_query, refine it when needed, then answer.
 

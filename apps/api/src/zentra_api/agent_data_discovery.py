@@ -23,6 +23,8 @@ from zentra_application_connector import (
 )
 from zentra_domain_connector import CatalogVersion, FieldProfile
 
+from .connector_model import _cube_type
+
 
 @dataclass(frozen=True, slots=True)
 class DiscoveryRunMetrics:
@@ -127,6 +129,11 @@ class ConnectorDataDiscovery:
                         "database": table.database,
                         "field_count": len(table.fields),
                         "estimated_rows": table.estimated_rows,
+                        # Every table gets this measure (Connector.js's
+                        # `measures = { count: { type: 'count' } }`) -- surfaced
+                        # here so a row-count question never needs a second
+                        # schema_inspect call just to learn it exists.
+                        "count_measure": f"{connection_id}::{table.name}.count",
                     }
                     for table in tables
                 ],
@@ -146,11 +153,37 @@ class ConnectorDataDiscovery:
             if relation.left.startswith(f"{table.name}.")
             or relation.right.startswith(f"{table.name}.")
         ]
+        # Mirrors exactly what Connector.js compiles onto this cube -- a
+        # `count` measure always, plus a `total_<field>` sum measure for
+        # every numeric field (infra/cube/model/cubes/Connector.js:88-115).
+        # Without these, a "how many"/"total" question has no tool-confirmed
+        # member name and the Cube Analyst has to guess, burning its step
+        # budget on refused data_query attempts.
+        measures: list[dict[str, JsonValue]] = [
+            {
+                "name": "count",
+                "query_member": f"{connection_id}::{table.name}.count",
+                "type": "count",
+                "description": "Row count.",
+            }
+        ]
+        for field in sorted(table.fields, key=lambda field: field.position):
+            if _cube_type(field.normalised_type) != "number":
+                continue
+            measures.append(
+                {
+                    "name": f"total_{field.name}",
+                    "query_member": f"{connection_id}::{table.name}.total_{field.name}",
+                    "type": "sum",
+                    "description": f"Sum of {field.name}.",
+                }
+            )
         return {
             "connection_id": str(connection_id),
             "table": {
                 "name": table.name,
                 "database": table.database,
+                "measures": measures,
                 "fields": [
                     {
                         "name": field.name,

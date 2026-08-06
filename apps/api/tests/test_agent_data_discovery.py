@@ -29,6 +29,7 @@ class Connector:
         field = SimpleNamespace(
             name="customer_id",
             declared_type="UInt64",
+            normalised_type="UInt64",
             family=SimpleNamespace(value="integer"),
             nullable=False,
             position=0,
@@ -92,6 +93,20 @@ async def test_inventory_and_schema_are_safe_and_cached_per_run() -> None:
     assert schema["table"]["fields"][0]["query_member"] == (
         f"{CONNECTION_ID}::orders.customer_id"
     )
+    assert schema["table"]["measures"] == [
+        {
+            "name": "count",
+            "query_member": f"{CONNECTION_ID}::orders.count",
+            "type": "count",
+            "description": "Row count.",
+        },
+        {
+            "name": "total_customer_id",
+            "query_member": f"{CONNECTION_ID}::orders.total_customer_id",
+            "type": "sum",
+            "description": "Sum of customer_id.",
+        },
+    ]
     assert "sample_values" not in str(schema)
     assert schema["table"]["confirmed_joins"] == [
         {
