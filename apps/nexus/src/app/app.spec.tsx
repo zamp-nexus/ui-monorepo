@@ -23,8 +23,8 @@ const clerkUiMocks = vi.hoisted(() => ({
 
 vi.mock('@open-zentra/foundation-auth/clerk-ui', () => ({
   ...clerkUiMocks,
-  SignIn: () => null,
-  SignUp: () => null,
+  SignIn: ({ path }: { readonly path: string }) => <p>Sign in route: {path}</p>,
+  SignUp: ({ path }: { readonly path: string }) => <p>Sign up route: {path}</p>,
   CreateOrganization: () => null,
 }));
 
@@ -106,6 +106,11 @@ describe('App', () => {
     });
     renderApp();
     expect(screen.getByRole('heading', { name: /trust is the product/i })).toBeTruthy();
+  });
+
+  it('keeps Clerk sign-up verification subroutes mounted', () => {
+    renderApp('/sign-up/verify-email-address');
+    expect(screen.getByText('Sign up route: /sign-up')).toBeTruthy();
   });
 
   it('offers to create an organization when the user has none', () => {

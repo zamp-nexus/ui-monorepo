@@ -192,7 +192,7 @@ export function App({ clerkConfigured = false }: AppProps) {
   return (
     <Routes>
       <Route
-        path="/sign-in"
+        path="/sign-in/*"
         element={
           <AuthLayout>
             <SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" />
@@ -200,7 +200,7 @@ export function App({ clerkConfigured = false }: AppProps) {
         }
       />
       <Route
-        path="/sign-up"
+        path="/sign-up/*"
         element={
           <AuthLayout>
             <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" />

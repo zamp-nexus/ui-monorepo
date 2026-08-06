@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-07-30
-updated: 2026-07-30
-reviewed: 2026-07-30
+updated: 2026-08-06
+reviewed: 2026-08-06
 confidence: verified
 implementation: current
 priority: high
@@ -82,6 +82,11 @@ Clerk's own roles are never consulted. Authorization comes from
 The signed-out screen offers one button, **Enter the observatory**, which
 redirects to Clerk's hosted sign-in. Sign up there. A Clerk *dashboard* account
 is not an application user; they are separate.
+
+Clerk advances its prebuilt flows through child paths such as
+`/sign-up/verify-email-address`. The app router must therefore mount both
+`/sign-in/*` and `/sign-up/*`; an exact route sends verification back through
+the authenticated catch-all and abandons the sign-up.
 
 ## 4. Bind the organization to a tenant
 
