@@ -1,4 +1,4 @@
-import { NAVIGATION, PRODUCT_URL } from '../constants';
+import { NAVIGATION, PLATFORM_URL, PRODUCT_URL } from '../constants';
 import { ProductWordmark } from './product-mark';
 
 export const SiteHeader = () => (
@@ -7,6 +7,7 @@ export const SiteHeader = () => (
       <ProductWordmark />
     </a>
     <nav className="site-nav" aria-label="Primary navigation">
+      <a href={PLATFORM_URL}>Platform</a>
       {NAVIGATION.map((item) => (
         <a key={item.href} href={item.href}>
           {item.label}

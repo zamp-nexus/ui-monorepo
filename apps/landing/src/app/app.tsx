@@ -2,12 +2,17 @@ import { ArchitectureMap } from './components/architecture-map';
 import { ExecutionVisual } from './components/execution-visual';
 import { OperationsTrace } from './components/operations-trace';
 import { PlatformStory } from './components/platform-story';
+import { PlatformPage } from './components/platform-page';
 import { ProductLogo } from './components/product-mark';
 import { Reveal } from './components/reveal';
 import { SiteHeader } from './components/site-header';
 import { PRODUCT_URL, TRUST_PRINCIPLES } from './constants';
 
 export function App() {
+  if (window.location.pathname === '/platform') {
+    return <PlatformPage />;
+  }
+
   return (
     <div className="landing-shell">
       <SiteHeader />

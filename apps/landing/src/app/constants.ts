@@ -1,6 +1,7 @@
 export const PRODUCT_NAME = 'Nexus';
 export const PRODUCT_URL = 'https://nexus.openzentra.com';
 export const LANDING_URL = 'https://landing.nexus.openzentra.com';
+export const PLATFORM_URL = '/platform';
 
 export interface NavigationItem {
   readonly label: string;

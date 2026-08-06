@@ -55,6 +55,12 @@ enabled so the landing build can consume the shared design system. The landing
 page has no API or identity dependency; every product CTA crosses to the
 existing authenticated application at `nexus.openzentra.com`.
 
+The landing app additionally serves the public `/platform` route. Vercel
+rewrites that deep link to the landing SPA entry point, and the landing shell
+renders the technical platform narrative there: workflow boundaries, runtime
+visibility, architecture, and scope. It remains a static public page and does
+not expose analytical data or authenticated controls.
+
 The first production deployment is live on the Vercel-managed project aliases.
 The custom hostname is assigned to the project but remains pending external DNS
 ownership verification and CNAME configuration. No Vercel project identifiers

@@ -1,9 +1,13 @@
 import { render, screen } from '@testing-library/react';
 
 import App from './app';
-import { PRODUCT_URL } from './constants';
+import { PLATFORM_URL, PRODUCT_URL } from './constants';
 
 describe('Nexus landing page', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
   it('communicates the governed analytical runtime', () => {
     render(<App />);
 
@@ -39,5 +43,23 @@ describe('Nexus landing page', () => {
       '#operations',
     );
     expect(screen.getByRole('link', { name: 'Security' }).getAttribute('href')).toBe('#security');
+    expect(screen.getByRole('link', { name: 'Platform' }).getAttribute('href')).toBe(
+      PLATFORM_URL,
+    );
+  });
+
+  it('renders the public platform narrative at its direct URL', () => {
+    window.history.pushState({}, '', PLATFORM_URL);
+    render(<App />);
+
+    expect(
+      screen.getByRole('heading', { name: /governed platform for agentic workflows/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /extensibility without invisible automation/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: /explore the product/i }).getAttribute('href')).toBe(
+      PRODUCT_URL,
+    );
   });
 });
