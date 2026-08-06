@@ -19,10 +19,10 @@ class Outbox:
     async def pending(self, **kwargs: object) -> tuple[OutboxRecord, ...]:
         return () if self.dispatched else (self.record,)
 
-    async def mark_failed(self, *args: object) -> None:
+    async def mark_failed(self, *args: object, **kwargs: object) -> None:
         self.attempts += 1
 
-    async def mark_dispatched(self, *args: object) -> None:
+    async def mark_dispatched(self, *args: object, **kwargs: object) -> None:
         self.dispatched = True
 
 
@@ -218,7 +218,7 @@ async def test_an_event_in_both_sources_appears_once() -> None:
             ]
 
     class Outbox:
-        async def all_for_analysis_run(self, _analysis_run_id):
+        async def all_for_analysis_run(self, _analysis_run_id, **_kwargs):
             # The same event, not yet marked dispatched.
             return [
                 OutboxRecord(

@@ -112,7 +112,10 @@ class PostgresThreadRepository:
     async def save_thread(self, thread: AnalysisRunThread) -> None:
         await self._connection.execute(
             update(chat_sessions)
-            .where(chat_sessions.c.chat_session_id == thread.thread_id)
+            .where(
+                chat_sessions.c.chat_session_id == thread.thread_id,
+                chat_sessions.c.organization_id == thread.organization_id,
+            )
             .values(
                 title=thread.title,
                 status=thread.status.value,
@@ -127,10 +130,11 @@ class PostgresThreadRepository:
             )
         )
 
-    async def delete_thread(self, thread_id: UUID) -> None:
+    async def delete_thread(self, thread_id: UUID, *, organization_id: UUID) -> None:
         await self._connection.execute(
             delete(chat_sessions).where(
-                chat_sessions.c.chat_session_id == thread_id
+                chat_sessions.c.chat_session_id == thread_id,
+                chat_sessions.c.organization_id == organization_id,
             )
         )
 
@@ -138,7 +142,10 @@ class PostgresThreadRepository:
         sequence = (
             await self._connection.execute(
                 update(chat_sessions)
-                .where(chat_sessions.c.chat_session_id == message.thread_id)
+                .where(
+                    chat_sessions.c.chat_session_id == message.thread_id,
+                    chat_sessions.c.organization_id == message.organization_id,
+                )
                 .values(
                     next_message_sequence=(
                         chat_sessions.c.next_message_sequence + 1
@@ -180,6 +187,7 @@ class PostgresThreadRepository:
     async def list_threads(
         self,
         *,
+        organization_id: UUID,
         project_id: UUID,
         viewer_id: UUID,
         include_archived: bool,
@@ -197,6 +205,7 @@ class PostgresThreadRepository:
             chat_sessions,
             latest_analysis_run.label("analysis_run_id"),
         ).where(
+            chat_sessions.c.organization_id == organization_id,
             chat_sessions.c.group_id == project_id,
             # A private Chat Session is invisible to every Group member
             # except its creator, in listings too -- filtered here, not
@@ -244,36 +253,50 @@ class PostgresThreadRepository:
             ThreadCursor(last.latest_activity_at, last.thread_id),
         )
 
-    async def analysis_run_id_for_thread(self, thread_id: UUID) -> UUID | None:
+    async def analysis_run_id_for_thread(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None:
         statement = (
             select(analysis_runs.c.analysis_run_id)
-            .where(analysis_runs.c.chat_session_id == thread_id)
+            .where(
+                analysis_runs.c.chat_session_id == thread_id,
+                analysis_runs.c.organization_id == organization_id,
+            )
             .order_by(analysis_runs.c.chat_sequence.desc())
             .limit(1)
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
 
     async def visibility_and_creator(
-        self, thread_id: UUID
+        self, thread_id: UUID, *, organization_id: UUID
     ) -> tuple[str, UUID | None] | None:
         statement = select(
             chat_sessions.c.visibility, chat_sessions.c.created_by
-        ).where(chat_sessions.c.chat_session_id == thread_id)
+        ).where(
+            chat_sessions.c.chat_session_id == thread_id,
+            chat_sessions.c.organization_id == organization_id,
+        )
         row = (await self._connection.execute(statement)).one_or_none()
         return (row.visibility, row.created_by) if row else None
 
-    async def source_scope_id(self, thread_id: UUID) -> UUID | None:
+    async def source_scope_id(
+        self, thread_id: UUID, *, organization_id: UUID
+    ) -> UUID | None:
         statement = select(chat_sessions.c.source_scope_id).where(
-            chat_sessions.c.chat_session_id == thread_id
+            chat_sessions.c.chat_session_id == thread_id,
+            chat_sessions.c.organization_id == organization_id,
         )
         return (await self._connection.execute(statement)).scalar_one_or_none()
 
     async def set_source_scope_id(
-        self, thread_id: UUID, source_scope_id: UUID | None
+        self, thread_id: UUID, source_scope_id: UUID | None, *, organization_id: UUID
     ) -> None:
         await self._connection.execute(
             update(chat_sessions)
-            .where(chat_sessions.c.chat_session_id == thread_id)
+            .where(
+                chat_sessions.c.chat_session_id == thread_id,
+                chat_sessions.c.organization_id == organization_id,
+            )
             .values(source_scope_id=source_scope_id)
         )
 

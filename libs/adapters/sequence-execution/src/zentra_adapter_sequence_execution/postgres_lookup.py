@@ -19,5 +19,7 @@ class PostgresRawTableLookup:
         async with self._unit_of_work_factory(
             organization_id, UUID(int=0), UUID(int=0)
         ) as unit_of_work:
-            sequence = await unit_of_work.sequences.get_sequence(sequence_id)
+            sequence = await unit_of_work.sequences.get_sequence(
+                sequence_id, organization_id=organization_id
+            )
         return sequence.raw_table_reference if sequence is not None else None

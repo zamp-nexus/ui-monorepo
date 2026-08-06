@@ -185,7 +185,9 @@ async def test_sequence_lineage_and_immutability_survive_a_full_reload() -> None
 
     # Reload from a fresh connection/unit of work — no in-memory state reused.
     async with factory(organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
-        reloaded = await unit_of_work.sequences.get_sequence(sequence_id)
+        reloaded = await unit_of_work.sequences.get_sequence(
+            sequence_id, organization_id=organization_id
+        )
 
     assert reloaded is not None
     assert reloaded.sequence_id == original.sequence_id
@@ -242,7 +244,9 @@ async def test_cross_tenant_isolation_is_enforced_by_rls() -> None:
         await unit_of_work.commit()
 
     async with factory(other_organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
-        invisible = await unit_of_work.sequences.get_sequence(sequence_id)
+        invisible = await unit_of_work.sequences.get_sequence(
+            sequence_id, organization_id=organization_id
+        )
 
     assert invisible is None
 
@@ -269,7 +273,9 @@ async def test_thread_id_round_trips_through_a_full_reload() -> None:
         await unit_of_work.commit()
 
     async with factory(organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
-        reloaded = await unit_of_work.sequences.get_sequence(sequence_id)
+        reloaded = await unit_of_work.sequences.get_sequence(
+            sequence_id, organization_id=organization_id
+        )
 
     assert reloaded is not None
     assert reloaded.thread_id == thread_id

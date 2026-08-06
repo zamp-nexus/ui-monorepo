@@ -191,7 +191,7 @@ async def test_a_draft_and_its_claim_order_survive_a_round_trip() -> None:
             await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_analysis_run(ANALYSIS_RUN_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A, organization_id=TENANT_A)
 
         assert loaded is not None
         assert loaded.draft_finding_id == stored.draft_finding_id
@@ -240,7 +240,7 @@ async def test_a_refresh_returns_the_latest_stored_draft() -> None:
             await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_analysis_run(ANALYSIS_RUN_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A, organization_id=TENANT_A)
 
         assert loaded is not None
         assert loaded.version == 2
@@ -269,7 +269,7 @@ async def test_another_tenants_draft_is_invisible_rather_than_filtered() -> None
             await set_organization_context(connection, TENANT_B)
             intruder = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_analysis_run(ANALYSIS_RUN_A)
+            ).latest_for_analysis_run(ANALYSIS_RUN_A, organization_id=TENANT_B)
             visible_drafts = await connection.scalar(
                 select(func.count()).select_from(draft_findings)
             )
@@ -329,7 +329,7 @@ async def test_a_draft_cannot_be_written_into_another_tenant() -> None:
             assert (
                 await PostgresDraftFindingRepository(
                     connection
-                ).latest_for_analysis_run(ANALYSIS_RUN_A)
+                ).latest_for_analysis_run(ANALYSIS_RUN_A, organization_id=TENANT_A)
                 is None
             )
     finally:

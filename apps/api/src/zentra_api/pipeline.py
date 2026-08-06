@@ -186,7 +186,9 @@ class PostgresExecutionRecorder:
         async with self._unit_of_work_factory(
             organization_id, SYSTEM_TRACE_ID, SYSTEM_SPAN_ID
         ) as unit_of_work:
-            job = await unit_of_work.jobs.get_for_analysis_run(analysis_run_id)
+            job = await unit_of_work.jobs.get_for_analysis_run(
+                analysis_run_id, organization_id=organization_id
+            )
         if job is not None and job.cancel_requested_at is not None:
             raise CancellationRequested("Cancellation was requested")
 

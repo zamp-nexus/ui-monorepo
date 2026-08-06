@@ -180,9 +180,12 @@ class PostgresSequenceRepository:
         )
 
     async def get_sequence(
-        self, sequence_id: UUID, *, for_update: bool = False
+        self, sequence_id: UUID, *, organization_id: UUID, for_update: bool = False
     ) -> Sequence | None:
-        statement = select(sequences).where(sequences.c.sequence_id == sequence_id)
+        statement = select(sequences).where(
+            sequences.c.sequence_id == sequence_id,
+            sequences.c.organization_id == organization_id,
+        )
         if for_update:
             statement = statement.with_for_update()
         row = (await self._connection.execute(statement)).first()
@@ -193,28 +196,38 @@ class PostgresSequenceRepository:
         step_rows = (
             await self._connection.execute(
                 select(sequence_steps)
-                .where(sequence_steps.c.sequence_id == sequence_id)
+                .where(
+                    sequence_steps.c.sequence_id == sequence_id,
+                    sequence_steps.c.organization_id == organization_id,
+                )
                 .order_by(sequence_steps.c.created_at)
             )
         ).all()
         table_rows = (
             await self._connection.execute(
                 select(prepared_tables)
-                .where(prepared_tables.c.sequence_id == sequence_id)
+                .where(
+                    prepared_tables.c.sequence_id == sequence_id,
+                    prepared_tables.c.organization_id == organization_id,
+                )
                 .order_by(prepared_tables.c.created_at)
             )
         ).all()
         run_rows = (
             await self._connection.execute(
                 select(sequence_runs)
-                .where(sequence_runs.c.sequence_id == sequence_id)
+                .where(
+                    sequence_runs.c.sequence_id == sequence_id,
+                    sequence_runs.c.organization_id == organization_id,
+                )
                 .order_by(sequence_runs.c.attempted_at)
             )
         ).all()
         final_rows = (
             await self._connection.execute(
                 select(sequence_final_tables.c.prepared_table_id).where(
-                    sequence_final_tables.c.sequence_id == sequence_id
+                    sequence_final_tables.c.sequence_id == sequence_id,
+                    sequence_final_tables.c.organization_id == organization_id,
                 )
             )
         ).all()
@@ -368,11 +381,18 @@ class PostgresSequenceRepository:
             )
         )
 
-    async def unmark_final(self, *, sequence_id: UUID, prepared_table_id: UUID) -> None:
+    async def unmark_final(
+        self,
+        *,
+        sequence_id: UUID,
+        prepared_table_id: UUID,
+        organization_id: UUID,
+    ) -> None:
         await self._connection.execute(
             sequence_final_tables.delete().where(
                 sequence_final_tables.c.sequence_id == sequence_id,
                 sequence_final_tables.c.prepared_table_id == prepared_table_id,
+                sequence_final_tables.c.organization_id == organization_id,
             )
         )
 

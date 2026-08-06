@@ -135,12 +135,16 @@ class EvidenceCitationRepository(Protocol):
     async def for_analysis_run(
         self,
         analysis_run_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> tuple[EvidenceCitation, ...]: ...
 
     async def resolve(
         self,
         analysis_run_id: UUID,
         citation_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> EvidenceCitation | Tombstone | None: ...
 
 
@@ -210,6 +214,8 @@ class DraftFindingRepository(Protocol):
     async def latest_for_analysis_run(
         self,
         analysis_run_id: UUID,
+        *,
+        organization_id: UUID,
     ) -> DraftFinding | None: ...
 
 
@@ -247,10 +253,10 @@ class WorkFeedRepository(Protocol):
     ) -> ThreadEvent | None: ...
 
     async def events_after(
-        self, thread_id: UUID, *, after: int, limit: int = 500
+        self, thread_id: UUID, *, organization_id: UUID, after: int, limit: int = 500
     ) -> tuple[ThreadEvent, ...]: ...
 
-    async def latest_sequence(self, thread_id: UUID) -> int: ...
+    async def latest_sequence(self, thread_id: UUID, *, organization_id: UUID) -> int: ...
 
 
 class AnalysisRunBoardRepository(Protocol):

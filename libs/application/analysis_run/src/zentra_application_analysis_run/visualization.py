@@ -60,7 +60,7 @@ async def prepare_published_visualization(
     if not hasattr(unit_of_work, "visualizations"):
         return None
     existing = await unit_of_work.visualizations.latest_for_analysis_run(
-        analysis_run.analysis_run_id
+        analysis_run.analysis_run_id, organization_id=analysis_run.organization_id
     )
     if existing is not None:
         return existing

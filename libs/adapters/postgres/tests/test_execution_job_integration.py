@@ -52,6 +52,7 @@ async def _claim(
 ) -> ExecutionJob | None:
     async with factory(organization_id, UUID(int=0), UUID(int=0)) as unit_of_work:
         job = await unit_of_work.jobs.claim_next(
+            organization_id=organization_id,
             worker_id=worker_id,
             now=now,
             lease_for=timedelta(seconds=60),

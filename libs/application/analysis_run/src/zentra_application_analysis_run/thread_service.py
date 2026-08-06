@@ -613,7 +613,7 @@ class ThreadService:
         # (ADR-0028): job leasing is per-job, not per-Thread, so nothing
         # downstream assumes only one AnalysisRun runs per Thread at a time.
         latest = await unit_of_work.analysis_runs.latest_for_thread(
-            thread.thread_id, for_update=True
+            thread.thread_id, organization_id=actor.organization_id, for_update=True
         )
         message = ThreadMessage.create(
             message_id=self._new_id(),
@@ -744,7 +744,7 @@ class ThreadService:
         conversational_content: str | None = None
         async with self._uow(actor) as unit_of_work:
             latest = await unit_of_work.analysis_runs.latest_for_thread(
-                thread.thread_id, for_update=True
+                thread.thread_id, organization_id=actor.organization_id, for_update=True
             )
             message = ThreadMessage.create(
                 message_id=self._new_id(),
@@ -884,26 +884,28 @@ class ThreadService:
                 thread_id, actor.organization_id
             )
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
-                thread_id
+                thread_id, organization_id=actor.organization_id
             )
-            analysis_runs = await unit_of_work.analysis_runs.all_for_thread(thread_id)
-            event_cursor = await unit_of_work.work_feed.latest_sequence(thread_id)
+            analysis_runs = await unit_of_work.analysis_runs.all_for_thread(
+                thread_id, organization_id=actor.organization_id
+            )
+            event_cursor = await unit_of_work.work_feed.latest_sequence(thread_id, organization_id=actor.organization_id)
             summaries: list[ThreadAnalysisRunSummary] = []
             for analysis_run in analysis_runs:
                 approval = await unit_of_work.approvals.get_for_analysis_run(
-                    analysis_run.analysis_run_id
+                    analysis_run.analysis_run_id, organization_id=actor.organization_id
                 )
                 draft = await unit_of_work.draft_findings.latest_for_analysis_run(
-                    analysis_run.analysis_run_id
+                    analysis_run.analysis_run_id, organization_id=actor.organization_id
                 )
                 citations = await unit_of_work.citations.for_analysis_run(
-                    analysis_run.analysis_run_id
+                    analysis_run.analysis_run_id, organization_id=actor.organization_id
                 )
                 usage = await unit_of_work.agent_executions.usage_for_analysis_run(
-                    analysis_run.analysis_run_id
+                    analysis_run.analysis_run_id, organization_id=actor.organization_id
                 )
                 audit = await unit_of_work.outbox.all_for_analysis_run(
-                    analysis_run.analysis_run_id
+                    analysis_run.analysis_run_id, organization_id=actor.organization_id
                 )
                 summaries.append(
                     ThreadAnalysisRunSummary(
@@ -973,13 +975,13 @@ class ThreadService:
         async with self._uow(actor) as unit_of_work:
             self._require_thread(await unit_of_work.threads.get_thread(thread_id, actor.organization_id))
             return await unit_of_work.work_feed.events_after(
-                thread_id, after=after, limit=limit
+                thread_id, organization_id=actor.organization_id, after=after, limit=limit
             )
 
     async def event_cursor(self, actor: AuthenticatedActor, thread_id: UUID) -> int:
         async with self._uow(actor) as unit_of_work:
             self._require_thread(await unit_of_work.threads.get_thread(thread_id, actor.organization_id))
-            return await unit_of_work.work_feed.latest_sequence(thread_id)
+            return await unit_of_work.work_feed.latest_sequence(thread_id, organization_id=actor.organization_id)
 
     async def list(
         self,
@@ -997,6 +999,7 @@ class ThreadService:
                 await unit_of_work.groups.get_group(project_id, actor.organization_id)
             )
             page = await unit_of_work.threads.list_threads(
+                organization_id=actor.organization_id,
                 project_id=project_id,
                 viewer_id=actor.user_id,
                 include_archived=include_archived,
@@ -1040,7 +1043,7 @@ class ThreadService:
             )
             await self._require_visible(unit_of_work, actor, thread_id)
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
-                thread_id
+                thread_id, organization_id=actor.organization_id
             )
             try:
                 thread.ensure_deletable(
@@ -1048,7 +1051,7 @@ class ThreadService:
                 )
             except ThreadTransitionError as error:
                 raise ThreadConflictError(str(error)) from error
-            await unit_of_work.threads.delete_thread(thread_id)
+            await unit_of_work.threads.delete_thread(thread_id, organization_id=actor.organization_id)
             await unit_of_work.commit()
 
     async def _change_status(
@@ -1075,7 +1078,7 @@ class ThreadService:
                 thread_id, actor.organization_id
             )
             analysis_run_id = await unit_of_work.threads.analysis_run_id_for_thread(
-                thread_id
+                thread_id, organization_id=actor.organization_id
             )
         return build_thread_detail(thread, messages, analysis_run_id, None, actor)
 
@@ -1392,7 +1395,9 @@ class ThreadService:
         # error a nonexistent or cross-Tenant Thread would -- a private
         # Thread another User cannot see should look identical to one that
         # does not exist, not confirm its existence via a different error.
-        visibility = await unit_of_work.threads.visibility_and_creator(thread_id)
+        visibility = await unit_of_work.threads.visibility_and_creator(
+            thread_id, organization_id=actor.organization_id
+        )
         if visibility is None:
             return
         session_visibility, created_by = visibility

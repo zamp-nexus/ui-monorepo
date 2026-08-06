@@ -125,6 +125,7 @@ class AuditDeliveryCoordinator:
                     await unit_of_work.outbox.mark_failed(
                         record.event_id,
                         "clickhouse_unavailable",
+                        organization_id=record.organization_id,
                     )
                     await unit_of_work.commit()
                 continue
@@ -136,6 +137,7 @@ class AuditDeliveryCoordinator:
                 await unit_of_work.outbox.mark_dispatched(
                     record.event_id,
                     datetime.now(UTC),
+                    organization_id=record.organization_id,
                 )
                 await unit_of_work.commit()
         return delivered
@@ -160,7 +162,7 @@ class AuditDeliveryCoordinator:
             SYSTEM_SPAN_ID,
         ) as unit_of_work:
             outbox_rows = await unit_of_work.outbox.all_for_analysis_run(
-                analysis_run_id
+                analysis_run_id, organization_id=organization_id
             )
 
         entries: dict[UUID, TimelineEntry] = {}
@@ -256,10 +258,17 @@ class AuditDeliveryCoordinator:
                         SYSTEM_SPAN_ID,
                     ) as unit_of_work:
                         pending = await unit_of_work.outbox.pending()
-                    analysis_run_ids = {record.analysis_run_id for record in pending}
-                    for analysis_run_id in analysis_run_ids:
+                    # Use each record's own organization_id, not the loop
+                    # variable it was fetched under -- the same defense-in-depth
+                    # already applied in `_entry()` below, and in the fix for
+                    # the analogous bug in ExecutionJobWorker.
+                    runs_by_org = {
+                        (record.organization_id, record.analysis_run_id)
+                        for record in pending
+                    }
+                    for record_organization_id, analysis_run_id in runs_by_org:
                         await self.flush(
-                            organization_id=organization_id,
+                            organization_id=record_organization_id,
                             analysis_run_id=analysis_run_id,
                         )
                 except Exception:

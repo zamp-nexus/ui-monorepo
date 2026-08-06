@@ -15,17 +15,14 @@ nothing, not a cross-organization read.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, text, update
+from sqlalchemy import delete, insert, select, update
 from zentra_domain_connector import DataSource, SourceHealth, SourceKind
 
 from .database import Database
 from .schema_connector import data_sources
-
-_log = logging.getLogger(__name__)
 
 
 def _to_entity(row: object) -> DataSource:
@@ -100,18 +97,6 @@ class PostgresDataSourceRepository:
         async with self._database.organization_connection(
             organization_id
         ) as connection:
-            effective_org = (
-                await connection.execute(
-                    text("SELECT current_setting('app.organization_id', true)")
-                )
-            ).scalar_one()
-            _log.warning(
-                "[DEBUG-rls01] get data_source_id=%s requested_org=%s "
-                "effective_app_organization_id=%s",
-                data_source_id,
-                organization_id,
-                effective_org,
-            )
             row = (
                 await connection.execute(
                     select(data_sources).where(
@@ -120,11 +105,6 @@ class PostgresDataSourceRepository:
                     )
                 )
             ).one_or_none()
-            _log.warning(
-                "[DEBUG-rls01] get data_source_id=%s found=%s",
-                data_source_id,
-                row is not None,
-            )
         return None if row is None else _to_entity(row)
 
     async def list(self, *, organization_id: UUID) -> Sequence[DataSource]:

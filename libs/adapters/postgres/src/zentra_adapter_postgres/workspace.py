@@ -79,7 +79,10 @@ class PostgresGroupRepository:
         try:
             await self._connection.execute(
                 update(workspace_groups)
-                .where(workspace_groups.c.group_id == group.group_id)
+                .where(
+                    workspace_groups.c.group_id == group.group_id,
+                    workspace_groups.c.organization_id == group.organization_id,
+                )
                 .values(
                     name=group.name,
                     normalized_name=group.normalized_name,

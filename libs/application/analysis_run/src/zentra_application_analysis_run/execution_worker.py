@@ -120,7 +120,20 @@ class ExecutionJobWorker:
             job = await self._claim(organization_id)
             if job is None:
                 continue
-            await self._execute(organization_id, job)
+            if job.organization_id != organization_id:
+                # Should be unreachable once claim_next() filters by
+                # organization_id -- kept as a fail-loud safety net so a
+                # future regression there executes nothing cross-tenant
+                # rather than silently running under the wrong actor.
+                _log.error(
+                    "Claimed job %s belongs to organization %s, not %s it "
+                    "was claimed under -- refusing to execute cross-tenant.",
+                    job.job_id,
+                    job.organization_id,
+                    organization_id,
+                )
+                continue
+            await self._execute(job.organization_id, job)
             return True
         return False
 
@@ -136,6 +149,7 @@ class ExecutionJobWorker:
     async def _claim(self, organization_id: UUID) -> ExecutionJob | None:
         async with self._uow(organization_id) as unit_of_work:
             job = await unit_of_work.jobs.claim_next(
+                organization_id=organization_id,
                 worker_id=self._worker_id,
                 now=self._now(),
                 lease_for=self._lease_for,
@@ -193,13 +207,17 @@ class ExecutionJobWorker:
         self, organization_id: UUID, job_id: UUID
     ) -> bool:
         async with self._uow(organization_id) as unit_of_work:
-            job = await unit_of_work.jobs.get_job(job_id)
+            job = await unit_of_work.jobs.get_job(
+                job_id, organization_id=organization_id
+            )
             return job is not None and job.cancel_requested_at is not None
 
     async def _cancel(self, organization_id: UUID, job_id: UUID) -> None:
         cancelled: ExecutionJob | None = None
         async with self._uow(organization_id) as unit_of_work:
-            job = await unit_of_work.jobs.get_job(job_id, for_update=True)
+            job = await unit_of_work.jobs.get_job(
+                job_id, organization_id=organization_id, for_update=True
+            )
             if job is None or job.status is not ExecutionJobStatus.LEASED:
                 return
             job.cancel(worker_id=self._worker_id, now=self._now())
@@ -213,7 +231,9 @@ class ExecutionJobWorker:
 
     async def _complete(self, organization_id: UUID, job_id: UUID) -> None:
         async with self._uow(organization_id) as unit_of_work:
-            job = await unit_of_work.jobs.get_job(job_id, for_update=True)
+            job = await unit_of_work.jobs.get_job(
+                job_id, organization_id=organization_id, for_update=True
+            )
             if job is None:
                 return
             job.complete(worker_id=self._worker_id, now=self._now())
@@ -225,7 +245,9 @@ class ExecutionJobWorker:
     ) -> None:
         terminal: ExecutionJob | None = None
         async with self._uow(organization_id) as unit_of_work:
-            job = await unit_of_work.jobs.get_job(job_id, for_update=True)
+            job = await unit_of_work.jobs.get_job(
+                job_id, organization_id=organization_id, for_update=True
+            )
             if job is None:
                 return
             now = self._now()
@@ -267,7 +289,9 @@ class ExecutionJobWorker:
         while True:
             await asyncio.sleep(self._renew_every.total_seconds())
             async with self._uow(organization_id) as unit_of_work:
-                job = await unit_of_work.jobs.get_job(job_id, for_update=True)
+                job = await unit_of_work.jobs.get_job(
+                    job_id, organization_id=organization_id, for_update=True
+                )
                 if job is None or job.status is not ExecutionJobStatus.LEASED:
                     return
                 job.renew(

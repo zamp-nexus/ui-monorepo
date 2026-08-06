@@ -175,7 +175,7 @@ async def test_a_claim_keeps_the_order_of_the_evidence_it_cites() -> None:
             await set_organization_context(connection, TENANT_A)
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_analysis_run(ANALYSIS_RUN)
+            ).latest_for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_A)
 
         assert loaded is not None
         assert loaded.claims[0].citation_ids == (JUNE, JULY)
@@ -211,7 +211,7 @@ async def test_two_claims_share_one_stored_citation() -> None:
             )
             loaded = await PostgresDraftFindingRepository(
                 connection
-            ).latest_for_analysis_run(ANALYSIS_RUN)
+            ).latest_for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_A)
 
         assert stored == 1
         assert loaded.claims[0].citation_ids == loaded.claims[1].citation_ids
@@ -236,7 +236,7 @@ async def test_another_tenant_cannot_read_or_plant_a_citation() -> None:
             await set_organization_context(connection, TENANT_B)
             visible = await PostgresEvidenceCitationRepository(
                 connection
-            ).for_analysis_run(ANALYSIS_RUN)
+            ).for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_B)
         assert visible == ()
 
         # And the WITH CHECK half: B cannot write one owned by A.
@@ -267,7 +267,7 @@ async def test_a_citation_round_trips_its_governed_context() -> None:
             await set_organization_context(connection, TENANT_A)
             loaded = await PostgresEvidenceCitationRepository(
                 connection
-            ).for_analysis_run(ANALYSIS_RUN)
+            ).for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_A)
 
         stored = loaded[0]
         assert stored.metric == "refund_amount"
@@ -338,8 +338,8 @@ async def test_resolution_is_blind_to_another_tenants_citation() -> None:
             await set_organization_context(connection, TENANT_B)
             repository = PostgresEvidenceCitationRepository(connection)
             # Another Tenant's citation, and one that never existed.
-            foreign = await repository.resolve(ANALYSIS_RUN, JULY)
-            unknown = await repository.resolve(ANALYSIS_RUN, uuid4())
+            foreign = await repository.resolve(ANALYSIS_RUN, JULY, organization_id=TENANT_B)
+            unknown = await repository.resolve(ANALYSIS_RUN, uuid4(), organization_id=TENANT_B)
 
         assert foreign is None
         assert unknown is None
@@ -366,7 +366,7 @@ async def test_a_citation_from_another_analysis_run_does_not_resolve() -> None:
             await set_organization_context(connection, TENANT_A)
             mismatched = await PostgresEvidenceCitationRepository(
                 connection
-            ).resolve(uuid4(), JULY)
+            ).resolve(uuid4(), JULY, organization_id=TENANT_A)
 
         assert mismatched is None
     finally:
@@ -422,11 +422,11 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
         async with runtime.begin() as connection:
             await set_organization_context(connection, TENANT_A)
             before = await PostgresEvidenceCitationRepository(connection).resolve(
-                ANALYSIS_RUN, JULY
+                ANALYSIS_RUN, JULY, organization_id=TENANT_A
             )
             inline_before = await PostgresEvidenceCitationRepository(
                 connection
-            ).for_analysis_run(ANALYSIS_RUN)
+            ).for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_A)
         assert before is not None
         assert before.state is CitationState.ACTIVE
         # Both surfaces agree. One deriving state and the other not would show
@@ -447,11 +447,11 @@ async def test_a_citation_survives_its_execution_and_becomes_unavailable() -> No
         async with runtime.begin() as connection:
             await set_organization_context(connection, TENANT_A)
             after = await PostgresEvidenceCitationRepository(connection).resolve(
-                ANALYSIS_RUN, JULY
+                ANALYSIS_RUN, JULY, organization_id=TENANT_A
             )
             inline_after = await PostgresEvidenceCitationRepository(
                 connection
-            ).for_analysis_run(ANALYSIS_RUN)
+            ).for_analysis_run(ANALYSIS_RUN, organization_id=TENANT_A)
 
         assert after is not None
         assert after.state is CitationState.UNAVAILABLE
