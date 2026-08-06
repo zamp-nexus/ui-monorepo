@@ -1,27 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssistantRuntimeProvider, ThreadPrimitive } from '@assistant-ui/react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { Button, IconButton, Input, Modal } from '@open-zentra/foundation-design-system';
+import { Icon } from '@open-zentra/foundation-icons';
+
 import { requestJson, type TokenSource } from '../../api';
+import { useWorkspace } from '../../shell/app-shell';
 import type { CatalogSummary, IdentityContext, ThreadEvent } from '../../types';
+import { listWorkflows } from '../workflows/api';
 import { groupEventsByAnalysisRun } from './agent-activity-block';
 import { getChat, getLatestWorkflowExecution, listAgents, renameChat } from './api';
 import { ChatComposer } from './chat-composer';
-import { ChatThinkingIndicator } from './chat-thinking-indicator';
 import { ChatContextProvider } from './chat-context';
 import { ChatEmptyState } from './chat-empty-state';
 import { AssistantMessage, UserMessage } from './chat-messages';
 import { useChatRuntime } from './chat-runtime';
 import { suggestionsFromCatalog } from './chat-suggestions';
+import { ChatThinkingIndicator } from './chat-thinking-indicator';
 import { useSendMessage } from './use-send-message';
-import { listWorkflows } from '../workflows/api';
 import { useThreadEvents } from './use-thread-events';
-import { useWorkspace } from '../../shell/app-shell';
-import { useMutation } from '@tanstack/react-query';
-import { IconButton, Input, Modal } from '@open-zentra/foundation-design-system';
-import { Icon } from '@open-zentra/foundation-icons';
 
 /** The composer is open but no Thread exists yet — the first message makes one. */
 const NEW_THREAD = null;
@@ -51,6 +51,7 @@ export const ChatPage = ({
   const sourceName = new URLSearchParams(location.search).get('sourceName');
 
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const activeThreadId = chatId ?? NEW_THREAD;
 
   const renameMutation = useMutation({
@@ -150,7 +151,9 @@ export const ChatPage = ({
 
   const submit = (content: string) => {
     setDraft('');
-    const selectedWorkflow = workflows.data?.find((workflow) => workflow.workflow_id === workflowId);
+    const selectedWorkflow = workflows.data?.find(
+      (workflow) => workflow.workflow_id === workflowId,
+    );
     void send.send({
       threadId: activeThreadId,
       groupId,
@@ -204,7 +207,10 @@ export const ChatPage = ({
               size="sm"
               aria-label="Rename Chat"
               className="opacity-0 group-hover/header:opacity-100 transition-opacity"
-              onClick={() => setIsRenameModalOpen(true)}
+              onClick={() => {
+                setRenameValue(thread?.title ?? '');
+                setIsRenameModalOpen(true);
+              }}
             >
               <Icon name="edit" size="xs" />
             </IconButton>
@@ -221,13 +227,14 @@ export const ChatPage = ({
             <Modal.Body>
               <Input
                 autoFocus
-                defaultValue={thread?.title}
+                value={renameValue}
                 placeholder="e.g. Sales analysis"
+                onChange={(e) => setRenameValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== thread?.title) {
-                      renameMutation.mutate(e.currentTarget.value.trim());
+                    if (renameValue.trim() && renameValue.trim() !== thread?.title) {
+                      renameMutation.mutate(renameValue.trim());
                     } else {
                       setIsRenameModalOpen(false);
                     }
@@ -235,16 +242,36 @@ export const ChatPage = ({
                 }}
               />
             </Modal.Body>
+            <Modal.Footer>
+              <Button intent="ghost" onClick={() => setIsRenameModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  renameValue.trim().length === 0 ||
+                  renameValue.trim() === thread?.title ||
+                  renameMutation.isPending
+                }
+                onClick={() => renameMutation.mutate(renameValue.trim())}
+              >
+                {renameMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </Modal.Footer>
           </Modal.Content>
         </Modal>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {workflowExecution.data ? (
             <div className="mx-auto mt-3 flex max-w-3xl items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground-muted">
-              <span className="font-medium text-foreground">{workflowExecution.data.selection_mode === 'auto' ? 'Auto chose' : 'Workflow run'} {workflowExecution.data.workflow_name} · v{workflowExecution.data.workflow_version}</span>
+              <span className="font-medium text-foreground">
+                {workflowExecution.data.selection_mode === 'auto' ? 'Auto chose' : 'Workflow run'}{' '}
+                {workflowExecution.data.workflow_name} · v{workflowExecution.data.workflow_version}
+              </span>
               <span>{workflowExecution.data.status}</span>
               <span className="truncate">{(workflowExecution.data.nodes ?? []).join(' → ')}</span>
-              {workflowExecution.data.selection_reason ? <span className="truncate">{workflowExecution.data.selection_reason}</span> : null}
+              {workflowExecution.data.selection_reason ? (
+                <span className="truncate">{workflowExecution.data.selection_reason}</span>
+              ) : null}
             </div>
           ) : null}
           <ChatContextProvider
@@ -282,26 +309,29 @@ export const ChatPage = ({
               </div>
             ) : null}
             {send.error ? (
-              <p className="mx-auto w-full max-w-3xl px-5 pb-4 text-sm text-danger sm:px-6" role="alert">
+              <p
+                className="mx-auto w-full max-w-3xl px-5 pb-4 text-sm text-danger sm:px-6"
+                role="alert"
+              >
                 {send.error.message}
               </p>
             ) : null}
           </ChatContextProvider>
         </div>
 
-          <ChatComposer
+        <ChatComposer
           draft={draft}
           onDraftChange={setDraft}
           onSend={submit}
           disabled={send.isPending || !canSend}
           workflowId={workflowId}
-            onWorkflowChange={(nextWorkflowId) => {
-              setWorkflowId(nextWorkflowId);
-              setWorkflowVersion(
-                workflows.data?.find((workflow) => workflow.workflow_id === nextWorkflowId)
-                  ?.published_version ?? null,
-              );
-            }}
+          onWorkflowChange={(nextWorkflowId) => {
+            setWorkflowId(nextWorkflowId);
+            setWorkflowVersion(
+              workflows.data?.find((workflow) => workflow.workflow_id === nextWorkflowId)
+                ?.published_version ?? null,
+            );
+          }}
           workflows={workflows.data}
         />
       </section>

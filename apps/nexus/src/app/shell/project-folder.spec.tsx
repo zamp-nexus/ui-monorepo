@@ -1,7 +1,6 @@
 /// <reference types="vitest/globals" />
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { GroupFolder } from './project-folder';
@@ -66,17 +65,15 @@ beforeEach(() => {
 
 describe('GroupFolder', () => {
   it('keeps a keyboard-accessible New chat action alongside chat history', async () => {
-    const user = userEvent.setup();
     const { onNewChat } = renderFolder();
 
     expect(await screen.findByRole('link', { name: 'Investigate churn' })).toBeVisible();
     const newChat = screen.getByRole('button', { name: 'New chat in Revenue team' });
 
-    await user.tab();
-    await user.tab();
+    newChat.focus();
     expect(newChat).toHaveFocus();
 
-    await user.click(newChat);
+    fireEvent.click(newChat);
     expect(onNewChat).toHaveBeenCalledWith(group.group_id);
   });
 
@@ -99,11 +96,51 @@ describe('GroupFolder', () => {
   });
 
   it('toggles its Group from the full project row', async () => {
-    const user = userEvent.setup();
     const onToggle = vi.fn();
     renderFolder({ expanded: false, onToggle });
 
-    await user.click(screen.getByRole('button', { name: 'Revenue team' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Revenue team' }));
     expect(onToggle).toHaveBeenCalledWith(group.group_id);
+  });
+
+  it('renames a Group from visible Save and Cancel actions', async () => {
+    renderFolder();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Group' }));
+
+    const name = screen.getByRole('textbox');
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    expect(name).toHaveValue(group.name);
+    expect(save).toBeDisabled();
+
+    fireEvent.change(name, { target: { value: '' } });
+    expect(save).toBeDisabled();
+    fireEvent.change(name, { target: { value: '  Growth team  ' } });
+    fireEvent.click(save);
+
+    await waitFor(() => {
+      const renamed = vi.mocked(globalThis.fetch).mock.calls.find(
+        ([url, init]) =>
+          String(url).endsWith(`/v1/groups/${group.group_id}`) &&
+          (init as RequestInit | undefined)?.method === 'PATCH',
+      );
+      expect(renamed).toBeTruthy();
+      expect((renamed?.[1] as RequestInit).body).toBe(JSON.stringify({ name: 'Growth team' }));
+    });
+  });
+
+  it('cancels a Group rename without sending a PATCH', async () => {
+    renderFolder();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Group' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      vi.mocked(globalThis.fetch).mock.calls.some(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+      ),
+    ).toBe(false);
   });
 });

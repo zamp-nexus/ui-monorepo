@@ -28,6 +28,13 @@ def create_app(
     dependencies: AppDependencies | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
+    if resolved_settings.environment != "development" and not resolved_settings.clerk_webhook_secret:
+        raise RuntimeError(
+            "CLERK_WEBHOOK_SECRET is not configured outside development. "
+            "Every Clerk organization.created event will be rejected and no new "
+            "sign-up can ever be provisioned. Set it from the Clerk Dashboard's "
+            "webhook endpoint signing secret."
+        )
     resolved_dependencies = dependencies or AppDependencies.from_settings(
         resolved_settings
     )

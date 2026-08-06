@@ -101,6 +101,14 @@ _Avoid_: Evaluator run, confidence check
 Deterministic evidence stating which declared checks passed and which issues remain; it never invents confidence.
 _Avoid_: Fake confidence, quality score
 
+**Catalog-only sample sentinel**:
+Both the Analyst and Evaluator report `sample_size = 0` when an answer is about
+the semantic catalog rather than sampled data. This is not zero observations:
+the statistical confidence ceiling and observed-claim evidence gate do not
+apply, while convergence, model independence, and contradiction checks remain.
+Missing sample sizes are unknown, not catalog-only, and stay conservatively
+bounded.
+
 **Visualization Artifact**:
 One independently metered terminal presentation of a Visualization Brief,
 including renderer status, retry lineage, and erasure state.

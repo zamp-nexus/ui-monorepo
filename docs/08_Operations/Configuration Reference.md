@@ -34,7 +34,7 @@ Never record values or tokens in this vault.
 | ClickHouse | `CLICKHOUSE_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `DATABASE`, `SECURE` |
 | Optional upload ClickHouse override | `UPLOAD_CLICKHOUSE_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `SECURE` |
 | Cube | `CUBE_URL`, `CUBE_API_SECRET` |
-| Clerk | `CLERK_ISSUER`, `CLERK_AUDIENCE` |
+| Clerk | `CLERK_ISSUER`, `CLERK_AUDIENCE`, `CLERK_WEBHOOK_SECRET` |
 | Model providers | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` |
 | Thesys terminal presentation | `THESYS_API_KEY`, pinned `THESYS_MODEL`, input/output per-million prices |
 | Durable worker | `EXECUTION_WORKER_ENABLED`, optional stable `EXECUTION_WORKER_ID` |
@@ -65,6 +65,15 @@ to mint a matching `aud` claim. The app requests a default session token, which
 carries no such claim, and a blank value is treated as unconfigured — an empty
 string is not an absent one, and conflating them rejected every valid token
 until it was fixed. See [[Set Up Clerk for Local Development]].
+
+`CLERK_WEBHOOK_SECRET` is the Svix signing secret Clerk's Dashboard shows for
+the `POST /v1/webhooks/clerk` endpoint (Configure > Webhooks). It is what lets
+`organization.created`/`organizationMembership.*` events auto-provision the
+matching Organization instead of a developer running
+`tools/evals/bind_clerk_identity.py` by hand. The API refuses to start
+without it in any non-`development` environment, since the alternative is a
+silent 400 on every webhook delivery and no new sign-up ever getting past
+"not bound to an organization".
 
 That rule is no longer specific to one key. `Settings` normalises a blank value
 to `None` for **every** optional variable above, so writing `CUBE_API_SECRET=`

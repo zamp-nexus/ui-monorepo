@@ -111,6 +111,15 @@ It creates the tenant, the user, an owner membership, and both bindings.
 Re-running is safe. Get the ids from the dashboard, or from the browser console
 once signed in:
 
+Local development has no public URL for Clerk to call, so this manual step
+stays necessary here. Any deployed environment instead registers
+`POST /v1/webhooks/clerk` as a Clerk webhook endpoint (`CLERK_WEBHOOK_SECRET`,
+see [[Configuration Reference]]), which provisions the same rows automatically
+from `organization.created`/`organizationMembership.*` events — the API
+refuses to start without that secret outside development for exactly this
+reason. Reach for this script in a deployed environment only to backfill an
+organization that was created before the webhook was wired up.
+
 ```js
 await window.Clerk.session.getToken().then(t => {
   const c = JSON.parse(atob(t.split('.')[1]));

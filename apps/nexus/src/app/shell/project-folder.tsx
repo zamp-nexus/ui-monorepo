@@ -1,16 +1,16 @@
-
-
 import { useState } from 'react';
+
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Link, useMatch } from 'react-router-dom';
 
-import { Button, Modal, IconButton, Input } from '@open-zentra/foundation-design-system';
+import { Button, IconButton, Input, Modal } from '@open-zentra/foundation-design-system';
 import { Icon } from '@open-zentra/foundation-icons';
 
 import type { TokenSource } from '../api';
-import type { Group } from '../types';
 import { listChats, renameGroup } from '../pages/chat/api';
+import type { Group } from '../types';
+
 interface GroupFolderProps {
   readonly group: Group;
   readonly getToken: TokenSource;
@@ -34,6 +34,7 @@ export const GroupFolder = ({
   const match = useMatch('/chats/:chatId');
   const activeThreadId = match?.params.chatId ?? null;
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState(group.name);
   const prefersReducedMotion = useReducedMotion();
   const chatPanelId = `group-chats-${group.group_id}`;
 
@@ -68,7 +69,11 @@ export const GroupFolder = ({
           onClick={() => onToggle(group.group_id)}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <Icon name={expanded ? 'folder_open' : 'folder'} size="sm" className="shrink-0 text-foreground" />
+            <Icon
+              name={expanded ? 'folder_open' : 'folder'}
+              size="sm"
+              className="shrink-0 text-foreground"
+            />
             <span className="truncate font-medium tracking-[-0.01em]">{group.name}</span>
           </span>
         </button>
@@ -90,6 +95,7 @@ export const GroupFolder = ({
             aria-label="Rename Group"
             onClick={(event) => {
               event.stopPropagation();
+              setRenameValue(group.name);
               setIsRenameModalOpen(true);
             }}
           >
@@ -108,13 +114,14 @@ export const GroupFolder = ({
           <Modal.Body>
             <Input
               autoFocus
-              defaultValue={group.name}
+              value={renameValue}
               placeholder="e.g. Sales Team"
+              onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  if (e.currentTarget.value.trim() && e.currentTarget.value.trim() !== group.name) {
-                    renameMutation.mutate(e.currentTarget.value.trim());
+                  if (renameValue.trim() && renameValue.trim() !== group.name) {
+                    renameMutation.mutate(renameValue.trim());
                   } else {
                     setIsRenameModalOpen(false);
                   }
@@ -122,6 +129,21 @@ export const GroupFolder = ({
               }}
             />
           </Modal.Body>
+          <Modal.Footer>
+            <Button intent="ghost" onClick={() => setIsRenameModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                renameValue.trim().length === 0 ||
+                renameValue.trim() === group.name ||
+                renameMutation.isPending
+              }
+              onClick={() => renameMutation.mutate(renameValue.trim())}
+            >
+              {renameMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </Modal.Footer>
         </Modal.Content>
       </Modal>
 

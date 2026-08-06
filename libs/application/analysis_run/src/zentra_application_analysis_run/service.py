@@ -1060,7 +1060,7 @@ def _publication_decision(
         substantive_claims=substantive,
         resolvable_claims=resolvable,
         unresolved_contradictions=contradictions,
-        evidence_applicable=draft is not None,
+        evidence_applicable=draft is not None and not _is_not_a_sampled_claim(result),
     )
 
 
@@ -1072,6 +1072,19 @@ def _sample_sizes_diverge(result: PipelineResult) -> bool:
     return high > low * _SAMPLE_DIVERGENCE_FACTOR
 
 
+def _is_not_a_sampled_claim(result: PipelineResult) -> bool:
+    """True when both agents reported the catalog-only sample sentinel.
+
+    A `sample_size` of exactly 0 is this pipeline's convention (enforced by
+    the Cube Analyst's own accept callback) for "the question was about the
+    catalog, not the data" -- not "zero observations." When both sides agree
+    on that, there is no statistical claim for the sample-size ceiling or the
+    OBSERVED-evidence requirement to apply to. Missing sample sizes remain
+    unknown and therefore retain the conservative statistical ceiling.
+    """
+    return result.analyst_sample_size == 0 and result.evaluator_sample_size == 0
+
+
 def bounded_outcome(result: PipelineResult) -> OutcomeSignal:
     """Bound the reported confidence by what the evidence and the recheck support.
 
@@ -1079,6 +1092,8 @@ def bounded_outcome(result: PipelineResult) -> OutcomeSignal:
     actually was — a second call to one model shares its blind spots, however
     differently it words the answer. And how many records the claim rests on —
     four transactions cannot support near-certainty whatever a model asserts.
+    Neither ceiling applies to a claim that was never about sampled data in
+    the first place, per `_is_not_a_sampled_claim`.
 
     The model may always be less confident than these allow, never more, and the
     calibration method records which bound actually bit so Replay shows why a
@@ -1089,14 +1104,18 @@ def bounded_outcome(result: PipelineResult) -> OutcomeSignal:
         return outcome
 
     independence = independence_of(result.analyst_model, result.evaluator_model)
-    sample = min(
-        filter(None, (result.analyst_sample_size, result.evaluator_sample_size)),
-        default=None,
-    )
+    if _is_not_a_sampled_claim(result):
+        sample_bound = (1.0, "not_a_sampled_claim")
+    else:
+        sample = min(
+            filter(None, (result.analyst_sample_size, result.evaluator_sample_size)),
+            default=None,
+        )
+        sample_bound = (confidence_ceiling(sample), "capped_sample_size")
     bounds = (
         (outcome.score, outcome.calibration_method),
         (independence.confidence_ceiling, f"capped_independence_{independence.value}"),
-        (confidence_ceiling(sample), "capped_sample_size"),
+        sample_bound,
     )
     score, method = min(bounds, key=lambda bound: bound[0])
     return ConfidenceOutcome(score=score, calibration_method=method)

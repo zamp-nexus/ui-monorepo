@@ -498,6 +498,59 @@ async def test_small_sample_gates_however_confident_the_models_were() -> None:
 
 
 @pytest.mark.asyncio
+async def test_catalog_only_answers_are_not_capped_as_small_samples() -> None:
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=0, evaluator_sample_size=0)
+    )
+
+    assert detail.status == "completed"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.95
+    assert detail.outcome.calibration_method == "evaluator_independent_recheck"
+
+
+@pytest.mark.asyncio
+async def test_unknown_sample_sizes_remain_conservatively_capped() -> None:
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=None, evaluator_sample_size=None)
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.5
+    assert detail.outcome.calibration_method == "capped_sample_size"
+
+
+@pytest.mark.asyncio
+async def test_catalog_only_interpretation_does_not_require_observed_evidence() -> None:
+    draft = structured_draft()
+    interpretation = replace(draft.claims[0], kind=ClaimKind.INTERPRETATION)
+
+    detail = await run_policy(
+        UnitOfWork(),
+        score=0.95,
+        analyst_sample_size=0,
+        evaluator_sample_size=0,
+        draft_finding=replace(draft, claims=(interpretation,)),
+    )
+
+    assert detail.status == "completed"
+    assert detail.pending_approval is None
+
+
+@pytest.mark.asyncio
+async def test_three_observations_still_receive_the_small_sample_cap() -> None:
+    detail = await outcome_of(
+        Pipeline(score=0.95, analyst_sample_size=3, evaluator_sample_size=3)
+    )
+
+    assert detail.status == "awaiting_approval"
+    assert isinstance(detail.outcome, ConfidenceOutcome)
+    assert detail.outcome.score == 0.5
+    assert detail.outcome.calibration_method == "capped_sample_size"
+
+
+@pytest.mark.asyncio
 async def test_the_lower_of_two_independently_counted_samples_is_used() -> None:
     detail = await outcome_of(
         Pipeline(score=0.95, analyst_sample_size=120, evaluator_sample_size=90)
