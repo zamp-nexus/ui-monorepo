@@ -12,9 +12,23 @@ confidence: verified
 implementation: current
 priority: critical
 tags: [domain, sequence, data-steward, semantic-modeler, chdb]
-related: ["[[Domains MOC]]", "[[Data Source Domain]]", "[[Connector Domain]]", "[[Agent Execution Domain]]", "[[Semantic Modeling]]", "[[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]]", "[[adr/0041-sequence-prepared-tables-live-in-nexus-managed-clickhouse]]"]
+related:
+  [
+    '[[Domains MOC]]',
+    '[[Data Source Domain]]',
+    '[[Connector Domain]]',
+    '[[Agent Execution Domain]]',
+    '[[Semantic Modeling]]',
+    '[[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]]',
+    '[[adr/0041-sequence-prepared-tables-live-in-nexus-managed-clickhouse]]',
+  ]
 repo_path: libs/domain/sequence
-code_refs: [libs/domain/sequence/CONTEXT.md, libs/domain/sequence/src/zentra_domain_sequence/sequence.py, libs/adapters/sequence-execution/src/zentra_adapter_sequence_execution/chdb_execution.py]
+code_refs:
+  [
+    libs/domain/sequence/CONTEXT.md,
+    libs/domain/sequence/src/zentra_domain_sequence/sequence.py,
+    libs/adapters/sequence-execution/src/zentra_adapter_sequence_execution/chdb_execution.py,
+  ]
 ---
 
 # Sequence Domain
@@ -45,7 +59,7 @@ Table.
 
 Sequence Step execution runs on chDB (embedded ClickHouse) inside AWS
 Lambda — a deliberate, documented departure from [[adr/0012-complete-phase-3-as-governed-bring-your-own-data]]'s
-DuckDB/Cloud Run engine for governed *queries*, since Sequence Step
+DuckDB/Cloud Run engine for governed _queries_, since Sequence Step
 execution is a different workload entirely. See
 [[adr/0022-sequence-step-execution-is-distinct-from-phase-3-query-execution]]
 for the full reasoning.

@@ -13,19 +13,15 @@ export function App() {
       <SiteHeader />
       <main>
         <section className="hero" id="top" aria-labelledby="hero-title">
-          <div className="hero__grid" aria-hidden="true" />
-          <div className="hero__glow" aria-hidden="true" />
+          <div className="hero__mesh" aria-hidden="true" />
+          <div className="hero__signal" aria-hidden="true" />
           <div className="hero__content">
             <Reveal className="hero__copy">
-              <p className="eyebrow">
-                <span /> AI-native analytical infrastructure
-              </p>
-              <ProductLogo className="hero__mark" />
-              <p className="hero__brand">Nexus</p>
+              <p className="eyebrow"><span /> AI-native analytical infrastructure</p>
               <h1 id="hero-title">The governed runtime for analytical agents.</h1>
               <p className="hero__lede">
-                Connect data, models, evidence, and human judgment in one execution layer built for
-                answers people can verify.
+                Run analytical agents across your data with semantics, evaluation, human approval,
+                and replay built into every answer.
               </p>
               <div className="hero__actions">
                 <a
@@ -35,19 +31,21 @@ export function App() {
                 >
                   Open Nexus <span aria-hidden="true">↗</span>
                 </a>
-                <a className="text-link" href="#trust-loop">
-                  Explore the trust loop <span aria-hidden="true">↓</span>
+                <a className="secondary-link" href="#trust-loop">
+                  See how trust works <span aria-hidden="true">↓</span>
                 </a>
               </div>
+              <dl className="hero__proof" aria-label="Nexus governance capabilities">
+                <div><dt>01</dt><dd>Governed semantics</dd></div>
+                <div><dt>02</dt><dd>Independent evaluation</dd></div>
+                <div><dt>03</dt><dd>Human approval</dd></div>
+              </dl>
             </Reveal>
-            <Reveal className="hero__visual" delay={0.18}>
+            <Reveal className="hero__visual" delay={0.12}>
               <ExecutionVisual />
             </Reveal>
           </div>
-          <div className="hero__footnote">
-            <span>Governed by evidence</span>
-            <span>Designed for human judgment</span>
-          </div>
+          <div className="hero__scroll" aria-hidden="true"><span /> Scroll to inspect</div>
         </section>
 
         <section className="thesis section" aria-labelledby="thesis-title">
