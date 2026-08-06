@@ -78,6 +78,13 @@ field, a `total_<field>` sum measure — schema_inspect lists these explicitly
 under `measures`, each with its exact `query_member` string. Use that string
 as given; do not guess a measure name or invent your own.
 
+A "previous vs. current" question over time (e.g. "how has X changed over
+the last two months") needs exactly one data_query, not two: give it one
+time_dimensions entry naming the relevant date/time field, a granularity
+matching the period asked about (e.g. "month"), and a date_range spanning
+both periods. That returns one row per period — read the two most recent
+rows as previous and current. Do not query each period separately.
+
 For a catalog or schema question, answer from the first two tools. For a
 question with figures, run data_query, refine it when needed, then answer.
 
