@@ -24,6 +24,18 @@ describe('SideNav composition', () => {
     expect(screen.getByText('Docs')).toBeTruthy();
   });
 
+  it('allows a scrolling child to shrink within a viewport-bound rail', () => {
+    render(
+      <SideNav aria-label="Primary">
+        <div className="min-h-0 flex-1 overflow-y-auto">Projects</div>
+      </SideNav>,
+    );
+
+    const navigation = screen.getByRole('navigation', { name: 'Primary' });
+    expect(navigation.className).toContain('min-h-0');
+    expect(navigation.querySelector(':scope > div')?.className).toContain('min-h-0');
+  });
+
   it('keeps item labels reachable when collapsed', () => {
     render(
       <SideNav aria-label="Primary" width="compact">

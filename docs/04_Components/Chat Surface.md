@@ -6,8 +6,8 @@ status: active
 owner: unassigned
 source: repository
 created: 2026-08-01
-updated: 2026-08-05
-reviewed: 2026-08-05
+updated: 2026-08-06
+reviewed: 2026-08-06
 confidence: verified
 implementation: current
 priority: high
@@ -18,6 +18,7 @@ depends_on: ["[[FastAPI Service]]", "[[TypeScript Foundation Library Catalog]]"]
 repo_path: apps/nexus/src/app/pages/chat
 code_refs:
   - apps/nexus/src/app/pages/chat/chat-page.tsx
+  - apps/nexus/src/app/shell/app-shell.tsx
   - apps/nexus/src/app/pages/chat/api.ts
   - apps/nexus/src/app/pages/chat/use-thread-events.ts
   - apps/nexus/src/app/pages/chat/use-active-group.ts
@@ -70,6 +71,14 @@ Groups, create `Workspace` if there are none — in a single query so
 concurrent mounts share one resolution instead of racing to create two. A
 viewer who cannot provision gets an explanation, not a 403 loop. The hook is
 the seam where a Group picker would replace auto-provisioning.
+
+## Viewport containment
+
+The authenticated app shell owns the viewport height and clips document-level
+overflow. The chat transcript and the Project list are independent internal
+scroll regions; neither may extend the navigation rail or create a second page
+scrollbar. Flex ancestors at those boundaries explicitly allow shrinking so a
+long chat or project list remains contained.
 
 ## Composer commands
 

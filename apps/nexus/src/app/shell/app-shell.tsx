@@ -221,7 +221,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
   );
 
   return (
-    <div className="flex h-screen bg-background text-foreground selection:bg-primary/15 selection:text-primary-foreground">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-background text-foreground selection:bg-primary/15 selection:text-primary-foreground">
       <SideNav
         aria-label="Primary"
         className="hidden w-72 md:flex"
@@ -306,7 +306,7 @@ export const AppShell = ({ children, identity, readiness, getToken }: AppShellPr
         </div>
       </SideNav>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
           <ProductMark />
           <nav className="flex items-center gap-1" aria-label="Mobile primary">
