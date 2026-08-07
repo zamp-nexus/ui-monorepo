@@ -91,7 +91,13 @@ class AuditDeliveryCoordinator:
         *,
         unit_of_work_factory: PostgresAnalysisRunUnitOfWorkFactory,
         audit: AuditRepository,
-        retry_interval_seconds: float = 1,
+        # This loop is a catch-up sweep for outbox entries whose inline
+        # delivery did not complete; the common path delivers immediately via
+        # `flush()`. It re-scans every bound organization each tick, so at the
+        # previous 1s cadence it ran 24/7 and was a major idle-traffic source.
+        # 30s means a *missed* delivery is retried within half a minute --
+        # ample for an async audit ledger -- while cutting the sweep ~30x.
+        retry_interval_seconds: float = 30,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._audit = audit
