@@ -99,7 +99,13 @@ class ExecutionJobWorker:
         now: Callable[[], datetime],
         lease_for: timedelta = timedelta(seconds=60),
         renew_every: timedelta = timedelta(seconds=20),
-        poll_every: float = 0.5,
+        # Only the *idle* gap: `run_forever` loops immediately while there is
+        # work and sleeps this long only when a full pass found no job, so a
+        # longer value costs nothing but a few seconds of pickup latency on a
+        # newly-enqueued job. It was 0.5s, which -- multiplied by the per-org
+        # claim fan-out, running 24/7 -- was the dominant source of idle
+        # database traffic (public-network egress).
+        poll_every: float = 5.0,
     ) -> None:
         if not worker_id.strip():
             raise ValueError("Execution worker ID is required")
