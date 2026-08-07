@@ -213,9 +213,12 @@ async def list_workflows(
     ) as connection:
         rows = (
             await connection.execute(
-                select(workflow_definitions).order_by(
-                    workflow_definitions.c.updated_at.desc()
+                select(workflow_definitions)
+                .where(
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id
                 )
+                .order_by(workflow_definitions.c.updated_at.desc())
             )
         ).all()
         published = (
@@ -223,7 +226,12 @@ async def list_workflows(
                 select(
                     workflow_versions.c.workflow_id,
                     func.max(workflow_versions.c.version).label("version"),
-                ).group_by(workflow_versions.c.workflow_id)
+                )
+                .where(
+                    workflow_versions.c.organization_id
+                    == context.actor.organization_id
+                )
+                .group_by(workflow_versions.c.workflow_id)
             )
         ).all()
     versions = {row.workflow_id: row.version for row in published}
@@ -266,7 +274,9 @@ async def get_workflow(
         row = (
             await connection.execute(
                 select(workflow_definitions).where(
-                    workflow_definitions.c.workflow_id == parsed
+                    workflow_definitions.c.workflow_id == parsed,
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).first()
@@ -274,7 +284,11 @@ async def get_workflow(
             (
                 await connection.execute(
                     select(workflow_versions.c.version)
-                    .where(workflow_versions.c.workflow_id == parsed)
+                    .where(
+                        workflow_versions.c.workflow_id == parsed,
+                        workflow_versions.c.organization_id
+                        == context.actor.organization_id,
+                    )
                     .order_by(workflow_versions.c.version)
                 )
             )
@@ -315,7 +329,9 @@ async def clone_default(
         row = (
             await connection.execute(
                 select(workflow_definitions).where(
-                    workflow_definitions.c.workflow_id == workflow_id
+                    workflow_definitions.c.workflow_id == workflow_id,
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).one()
@@ -347,7 +363,9 @@ async def create_workflow(
         row = (
             await connection.execute(
                 select(workflow_definitions).where(
-                    workflow_definitions.c.workflow_id == workflow_id
+                    workflow_definitions.c.workflow_id == workflow_id,
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).one()
@@ -370,7 +388,11 @@ async def save_workflow(
     ) as connection:
         result = await connection.execute(
             update(workflow_definitions)
-            .where(workflow_definitions.c.workflow_id == workflow_id)
+            .where(
+                workflow_definitions.c.workflow_id == workflow_id,
+                workflow_definitions.c.organization_id
+                == context.actor.organization_id,
+            )
             .values(
                 name=body.name.strip(),
                 draft_definition=body.definition,
@@ -384,7 +406,9 @@ async def save_workflow(
             (
                 await connection.execute(
                     select(workflow_versions.c.version).where(
-                        workflow_versions.c.workflow_id == workflow_id
+                        workflow_versions.c.workflow_id == workflow_id,
+                        workflow_versions.c.organization_id
+                        == context.actor.organization_id,
                     )
                 )
             )
@@ -407,7 +431,9 @@ async def publish_workflow(
         row = (
             await connection.execute(
                 select(workflow_definitions).where(
-                    workflow_definitions.c.workflow_id == workflow_id
+                    workflow_definitions.c.workflow_id == workflow_id,
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).first()
@@ -420,7 +446,9 @@ async def publish_workflow(
         version = (
             await connection.execute(
                 select(func.coalesce(func.max(workflow_versions.c.version), 0)).where(
-                    workflow_versions.c.workflow_id == workflow_id
+                    workflow_versions.c.workflow_id == workflow_id,
+                    workflow_versions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).scalar_one() + 1
@@ -439,7 +467,11 @@ async def publish_workflow(
             (
                 await connection.execute(
                     select(workflow_versions.c.version)
-                    .where(workflow_versions.c.workflow_id == workflow_id)
+                    .where(
+                        workflow_versions.c.workflow_id == workflow_id,
+                        workflow_versions.c.organization_id
+                        == context.actor.organization_id,
+                    )
                     .order_by(workflow_versions.c.version)
                 )
             )
@@ -463,12 +495,15 @@ async def execute_workflow(
         definition_row = (
             await connection.execute(
                 select(workflow_definitions).where(
-                    workflow_definitions.c.workflow_id == workflow_id
+                    workflow_definitions.c.workflow_id == workflow_id,
+                    workflow_definitions.c.organization_id
+                    == context.actor.organization_id,
                 )
             )
         ).first()
         version_query = select(workflow_versions).where(
-            workflow_versions.c.workflow_id == workflow_id
+            workflow_versions.c.workflow_id == workflow_id,
+            workflow_versions.c.organization_id == context.actor.organization_id,
         )
         if body.workflow_version is not None:
             version_query = version_query.where(
@@ -518,7 +553,11 @@ async def execute_workflow(
         ) as connection:
             await connection.execute(
                 update(workflow_executions)
-                .where(workflow_executions.c.workflow_execution_id == execution_id)
+                .where(
+                    workflow_executions.c.workflow_execution_id == execution_id,
+                    workflow_executions.c.organization_id
+                    == context.actor.organization_id,
+                )
                 .values(
                     status="failed", error=str(error), finished_at=datetime.now(UTC)
                 )
