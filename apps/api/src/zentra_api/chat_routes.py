@@ -96,13 +96,22 @@ async def _auto_workflow_selection(
     async with request.app.state.dependencies.database.organization_connection(
         actor.organization_id
     ) as connection:
-        definitions = (await connection.execute(select(workflow_definitions))).all()
+        definitions = (
+            await connection.execute(
+                select(workflow_definitions).where(
+                    workflow_definitions.c.organization_id == actor.organization_id
+                )
+            )
+        ).all()
         candidates: list[WorkflowCandidate] = []
         for definition in definitions:
             version = (
                 await connection.execute(
                     select(workflow_versions)
-                    .where(workflow_versions.c.workflow_id == definition.workflow_id)
+                    .where(
+                        workflow_versions.c.workflow_id == definition.workflow_id,
+                        workflow_versions.c.organization_id == actor.organization_id,
+                    )
                     .order_by(workflow_versions.c.version.desc())
                     .limit(1)
                 )
